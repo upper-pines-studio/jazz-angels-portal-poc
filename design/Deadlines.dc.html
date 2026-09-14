@@ -1,0 +1,356 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+/* Jazz Angels Grants — artboard kit.
+   Every value is lifted from src/design-system (tokens + component source). Do not invent new values.
+   Classes below reproduce the design-system components' anatomy so artboards look exactly like the app. */
+
+:root{
+  --blue-50:#eaf4fa;--blue-100:#cbe4f1;--blue-200:#95c7e2;--blue-300:#5aa6cf;--blue-400:#2483b8;--blue-500:#00649b;--blue-600:#005382;--blue-700:#004067;--blue-800:#002e4b;--blue-900:#001e31;
+  --teal-50:#eef4f4;--teal-100:#d3e3e3;--teal-200:#a6c6c6;--teal-300:#75a6a7;--teal-400:#568e8f;--teal-500:#437f80;--teal-600:#376869;--teal-700:#2a5152;
+  --olive-50:#f6f5e6;--olive-100:#e9e7c2;--olive-300:#bab54c;--olive-500:#9a9422;--olive-600:#7f7a1c;--olive-700:#635f16;
+  --gold-50:#fdf6e6;--gold-100:#fbeac1;--gold-200:#f8d88b;--gold-300:#f4bf4f;--gold-400:#e2a92f;--gold-500:#c68f1c;--gold-600:#a17316;--gold-700:#7b5711;
+  --neutral-0:#ffffff;--neutral-25:#fbfaf7;--neutral-50:#f5f3ee;--neutral-100:#ebe8e1;--neutral-200:#dcd8ce;--neutral-300:#c3beb2;--neutral-400:#9d9789;--neutral-500:#7b7568;--neutral-600:#5d5850;--neutral-700:#453f39;--neutral-800:#2e2a26;--neutral-900:#1b1815;
+  --danger-50:#faeeec;--danger-500:#a83a2c;--danger-600:#8c2f23;
+  --text-strong:#1b1815;--text-body:#453f39;--text-muted:#7b7568;--text-faint:#9d9789;--text-on-dark:#fff;--text-on-dark-muted:#b9cfdd;
+  --font-display:"Jost",'Futura','Century Gothic',system-ui,sans-serif;
+  --font-sans:"Archivo",system-ui,-apple-system,'Helvetica Neue',sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,'SFMono-Regular',Menlo,monospace;
+  --shadow-xs:0 1px 2px rgba(27,24,21,.06);
+  --shadow-sm:0 1px 3px rgba(27,24,21,.07),0 1px 2px rgba(27,24,21,.04);
+  --shadow-md:0 4px 12px rgba(27,24,21,.08);
+  --shadow-lg:0 12px 28px rgba(27,24,21,.11);
+  --shadow-inset:inset 0 1px 2px rgba(27,24,21,.07);
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:#fbfaf7;color:#453f39;font:400 16px/1.65 var(--font-sans);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;color:#1b1815;letter-spacing:-0.015em}
+p{margin:0}
+a{color:#00649b;text-decoration:none}a:hover{color:#004067;text-decoration:underline}
+svg{display:block}
+
+/* ---------- shell: 1440×900 frame, 236px rail, 60px top bar ---------- */
+.app{width:1440px;height:900px;display:flex;background:#fbfaf7;overflow:hidden}
+.rail{width:236px;flex:0 0 236px;background:#002e4b;color:#fff;display:flex;flex-direction:column}
+.rail-brand{height:60px;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid rgba(255,255,255,.10)}
+.rail-brand span{background:#fff;border-radius:3px;padding:5px 8px;display:flex}
+.rail-brand img{height:20px;width:auto}
+.rail-nav{padding:16px 12px;display:flex;flex-direction:column;gap:2px;flex:1}
+.rail-section{font:600 12px/1.2 var(--font-display);letter-spacing:.11em;text-transform:uppercase;color:#b9cfdd;padding:20px 12px 8px}
+.rail-item{display:flex;align-items:center;gap:12px;width:100%;padding:0 12px;height:38px;border-radius:5px;color:#b9cfdd;font:400 14px/1 var(--font-sans)}
+.rail-item.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600}
+.rail-item svg{width:16px;height:16px;flex:0 0 auto}
+.rail-item .count{margin-left:auto;font:500 11px/1.3 var(--font-mono);color:#f4bf4f}
+.rail-foot{padding:16px;border-top:1px solid rgba(255,255,255,.10);display:flex;align-items:center;gap:12px}
+.rail-foot .name{font:600 13px/1.3 var(--font-sans);color:#fff}
+.rail-foot .role{font:400 11px/1.3 var(--font-sans);color:#b9cfdd}
+.frame{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{min-height:60px;display:flex;align-items:center;gap:20px;padding:16px 32px;background:#fff;border-bottom:1px solid #dcd8ce}
+.topbar h1{font:600 21px/1.2 var(--font-display);color:#1b1815}
+.topbar .sub{margin:3px 0 0;font:400 14px/1.5 var(--font-sans);color:#7b7568}
+.topbar .actions{display:flex;align-items:center;gap:12px;flex:0 0 auto;margin-left:auto}
+.crumbs{display:flex;gap:8px;align-items:center;font:400 13px/1.3 var(--font-sans);color:#7b7568;margin-bottom:4px}
+.crumbs a{color:#00649b}
+.main{flex:1;overflow:hidden;padding:32px;position:relative}
+.page{max-width:1200px;display:flex;flex-direction:column;gap:20px}
+
+/* ---------- card ---------- */
+.card{background:#fff;border:1px solid #ebe8e1;border-radius:8px;box-shadow:var(--shadow-sm);overflow:hidden}
+.card-accent{height:3px}
+.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 24px;border-bottom:1px solid #ebe8e1}
+.card-head h3{font:600 18px/1.2 var(--font-sans);color:#1b1815;letter-spacing:0}
+.card-head .sub{margin:4px 0 0;font:400 14px/1.5 var(--font-sans);color:#7b7568}
+.card-body{padding:24px}
+.card-body.flush{padding:0}
+
+/* ---------- stat card (3px left rule) ---------- */
+.stat{background:#fff;border:1px solid #ebe8e1;border-radius:8px;box-shadow:var(--shadow-sm);padding:20px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--stat-accent,#00649b)}
+.stat .label{font:600 12px/1.2 var(--font-display);letter-spacing:.11em;text-transform:uppercase;color:#7b7568}
+.stat .value{font:700 33px/1 var(--font-display);color:#1b1815;letter-spacing:-0.015em}
+.stat .row{display:flex;align-items:baseline;gap:8px}
+.stat .delta{margin-left:auto;font:500 13px/1 var(--font-mono)}
+.stat .foot{font:400 13px/1.5 var(--font-sans);color:#7b7568}
+
+/* ---------- eyebrow / type helpers ---------- */
+.eyebrow{font:600 12px/1.2 var(--font-display);letter-spacing:.11em;text-transform:uppercase;color:#437f80}
+.mono{font:500 14px/1.3 var(--font-mono)}
+.muted{color:#7b7568}
+.small{font-size:13px}
+
+/* ---------- buttons (Jost, 38px md, 30px sm) ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:600 14px/1 var(--font-display);letter-spacing:.04em;border:1px solid transparent;border-radius:5px;height:38px;padding:0 20px;white-space:nowrap;cursor:pointer;text-decoration:none}
+.btn.sm{height:30px;padding:0 12px;font-size:12px}
+.btn.primary{background:#00649b;color:#fff;box-shadow:var(--shadow-xs)}
+.btn.secondary{background:#fff;color:#005382;border-color:#dcd8ce;box-shadow:var(--shadow-xs)}
+.btn.ghost{background:transparent;color:#005382}
+.btn.danger{background:#a83a2c;color:#fff}
+.btn.accent{background:#f4bf4f;color:#1b1815;box-shadow:var(--shadow-xs)}
+.btn svg{width:15px;height:15px}
+.iconbtn{width:38px;height:38px;border-radius:5px;border:1px solid #dcd8ce;background:#fff;display:inline-flex;align-items:center;justify-content:center;color:#453f39;box-shadow:var(--shadow-xs)}
+.iconbtn svg{width:16px;height:16px}
+
+/* ---------- badge (uppercase status) ---------- */
+.badge{display:inline-flex;align-items:center;gap:8px;font:600 11px/1 var(--font-sans);letter-spacing:.04em;text-transform:uppercase;padding:5px 8px;border-radius:3px;background:#ebe8e1;color:#453f39;white-space:nowrap}
+.badge.dot::before{content:"";width:6px;height:6px;border-radius:999px;background:currentColor}
+.badge.blue{background:#eaf4fa;color:#004067}
+.badge.teal{background:#eef4f4;color:#2a5152}
+.badge.olive{background:#f6f5e6;color:#635f16}
+.badge.gold{background:#fdf6e6;color:#7b5711}
+.badge.danger{background:#faeeec;color:#8c2f23}
+.badge.solid{background:#00649b;color:#fff}
+
+/* ---------- tag (pill with colour dot) ---------- */
+.tag{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #dcd8ce;border-radius:999px;padding:4px 12px;font:400 14px/1.5 var(--font-sans);color:#453f39}
+.tag::before{content:"";width:7px;height:7px;border-radius:999px;background:var(--tag-color,#437f80)}
+
+/* ---------- data table (CSS grid rows, 48px) ---------- */
+.table{width:100%}
+.thead,.tr{display:grid;grid-template-columns:var(--cols);gap:16px;align-items:center;padding:12px 20px}
+.thead{background:#f5f3ee;border-bottom:1px solid #dcd8ce;font:600 11px/1.2 var(--font-sans);letter-spacing:.04em;text-transform:uppercase;color:#7b7568}
+.tr{min-height:48px;border-bottom:1px solid #ebe8e1;background:#fff;font:400 14px/1.5 var(--font-sans);color:#453f39}
+.tr.hover{background:#eaf4fa}
+.tr>*{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr .strong{color:#1b1815;font-weight:500}
+.tr .num,.thead .num{text-align:right}
+.tr .mono{font:500 14px/1.3 var(--font-mono)}
+
+/* ---------- tabs (underline) ---------- */
+.tabs{display:flex;gap:24px;border-bottom:1px solid #dcd8ce}
+.tab{padding:0 0 12px;margin-bottom:-1px;display:flex;align-items:center;gap:8px;border-bottom:2px solid transparent;color:#7b7568;font:400 14px/1.4 var(--font-sans)}
+.tab.active{border-bottom-color:#00649b;color:#1b1815;font-weight:600}
+.tab .count{font:500 11px/1.3 var(--font-mono);background:#ebe8e1;color:#7b7568;border-radius:3px;padding:2px 5px}
+
+/* ---------- progress bar ---------- */
+.progress{display:flex;flex-direction:column;gap:8px}
+.progress .top{display:flex;justify-content:space-between;gap:12px;font:400 14px/1.5 var(--font-sans);color:#453f39}
+.progress .track{height:8px;background:#ebe8e1;border-radius:999px;overflow:hidden}
+.progress .fill{height:100%;border-radius:999px;background:#00649b}
+.progress .cap{font:400 13px/1.5 var(--font-sans);color:#7b7568}
+
+/* ---------- forms ---------- */
+.field{display:flex;flex-direction:column;gap:8px}
+.field label{font:500 14px/1.3 var(--font-sans);color:#1b1815}
+.field label .req{color:#a83a2c;margin-left:4px}
+.field .hint{font:400 13px/1.5 var(--font-sans);color:#7b7568}
+.input{display:flex;align-items:center;gap:8px;width:100%;height:38px;padding:0 12px;background:#fff;border:1px solid #dcd8ce;border-radius:5px;box-shadow:var(--shadow-inset);font:400 14px/1.5 var(--font-sans);color:#1b1815}
+.input.placeholder{color:#9d9789}
+.input .prefix{color:#9d9789;display:flex}
+.input .prefix svg{width:15px;height:15px}
+.select{position:relative;width:100%}
+.select .input{padding-right:40px}
+.select::after{content:"\25BE";position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#7b7568;font:10px/1 var(--font-sans)}
+.checkbox{width:18px;height:18px;border-radius:3px;border:1px solid #c3beb2;background:#fff;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.checkbox.on{background:#00649b;border-color:#00649b}
+.switch{width:34px;height:20px;border-radius:999px;background:#c3beb2;position:relative;flex:0 0 auto}
+.switch.on{background:#437f80}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:999px;background:#fff}
+.switch.on::after{left:16px}
+
+/* ---------- avatar (initials disc) ---------- */
+.avatar{width:28px;height:28px;border-radius:999px;background:#437f80;color:#fff;display:inline-flex;align-items:center;justify-content:center;font:600 11px/1 var(--font-sans);flex:0 0 auto}
+.avatar.gold{background:#e2a92f;color:#1b1815}
+.avatar.blue{background:#00649b}
+.avatar.olive{background:#9a9422}
+
+/* ---------- dialog (absolute scrim inside .main) ---------- */
+.scrim{position:absolute;inset:0;background:rgba(27,24,21,.44);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:32px;z-index:50}
+.dialog{width:560px;max-width:100%;background:#fff;border-radius:12px;box-shadow:var(--shadow-lg);overflow:hidden}
+.dialog-head{padding:24px 24px 16px;display:flex;gap:16px;align-items:flex-start}
+.dialog-head h2{font:600 21px/1.25 var(--font-display);color:#1b1815;letter-spacing:-0.015em}
+.dialog-head .desc{margin:8px 0 0;font:400 14px/1.5 var(--font-sans);color:#7b7568}
+.dialog-head .x{margin-left:auto;color:#9d9789;font:20px/1 var(--font-sans)}
+.dialog-body{padding:0 24px 24px}
+.dialog-foot{padding:16px 24px;background:#f5f3ee;border-top:1px solid #ebe8e1;display:flex;justify-content:flex-end;gap:12px}
+
+/* ---------- phase stepper (grants-specific, new) ---------- */
+.stepper{display:flex;align-items:flex-start}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;text-align:center}
+.step::before{content:"";position:absolute;top:11px;left:50%;right:-50%;height:2px;background:#dcd8ce}
+.step:last-child::before{display:none}
+.step .dot{width:24px;height:24px;border-radius:999px;border:2px solid #dcd8ce;background:#fff;position:relative;z-index:1;display:flex;align-items:center;justify-content:center}
+.step.done::before{background:#437f80}
+.step.done .dot{background:#437f80;border-color:#437f80}
+.step.done .dot svg{width:12px;height:12px;stroke:#fff}
+.step.current .dot{border-color:#00649b;background:#00649b;box-shadow:0 0 0 4px #eaf4fa}
+.step .name{font:600 12px/1.2 var(--font-display);letter-spacing:.11em;text-transform:uppercase;color:#9d9789}
+.step.done .name,.step.current .name{color:#1b1815}
+.step .when{font:500 11px/1.3 var(--font-mono);color:#7b7568}
+
+/* ---------- empty state ---------- */
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:64px 24px}
+.empty .ico{width:44px;height:44px;border-radius:999px;background:#eaf4fa;color:#00649b;display:flex;align-items:center;justify-content:center}
+.empty .ico svg{width:22px;height:22px}
+.empty h3{font:600 18px/1.3 var(--font-display)}
+.empty p{max-width:360px;font:400 14px/1.5 var(--font-sans);color:#7b7568}
+
+/* ---------- layout helpers ---------- */
+.row{display:flex;align-items:center;gap:12px}
+.col{display:flex;flex-direction:column;gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.two-col{display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #ebe8e1;font:400 14px/1.5 var(--font-sans)}
+.kv:last-child{border-bottom:0}
+.kv .k{color:#7b7568}
+.kv .v{color:#1b1815;text-align:right}
+
+/* ---------- screen: Deadlines (calendar) ---------- */
+.cal-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;border-bottom:1px solid #dcd8ce}
+.cal-toolbar .tabs{border-bottom:0;flex:0 0 auto}
+.cal-tools{display:flex;align-items:center;gap:12px;padding-bottom:10px}
+.cal-tools .select{width:136px}
+.cal-month{font:600 18px/1.2 var(--font-display);color:#1b1815;letter-spacing:-0.015em;min-width:136px;text-align:right}
+.cal-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.cal-dow{background:#f5f3ee;border-bottom:1px solid #dcd8ce;padding:10px 12px;font:600 11px/1.2 var(--font-sans);letter-spacing:.04em;text-transform:uppercase;color:#7b7568}
+.cal-cell{height:120px;padding:8px;display:flex;flex-direction:column;gap:5px;border-right:1px solid #ebe8e1;border-bottom:1px solid #ebe8e1;background:#fff;min-width:0}
+.cal-week .cal-cell:nth-child(7n){border-right:0}
+.cal-week:last-child .cal-cell{border-bottom:0}
+.cal-cell.out{background:#fbfaf7}
+.cal-num{font:500 12px/1.3 var(--font-mono);color:#453f39;height:22px;display:flex;align-items:center}
+.cal-cell.out .cal-num{color:#c3beb2}
+.cal-cell.today .cal-num{width:22px;height:22px;border-radius:999px;background:#00649b;color:#fff;justify-content:center;line-height:1}
+.cal-chip{display:block;height:22px;padding:0 8px;border-left:3px solid var(--k,#9d9789);background:var(--kbg,#f5f3ee);border-radius:3px;font:400 12px/22px var(--font-sans);color:#453f39;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-legend{display:flex;align-items:center;gap:10px;padding:0 2px}
+.cal-legend .lab{font:400 13px/1.5 var(--font-sans);color:#9d9789;margin-right:2px}
+.cal-legend .badge{padding:4px 8px}
+  </style>
+</helmet>
+<div class="app">
+  <nav class="rail">
+    <div class="rail-brand"><span><img src="logo.png" alt="Jazz Angels"></span></div>
+    <div class="rail-nav">
+      <div class="rail-section">Overview</div>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg><span>Dashboard</span></a>
+      <a class="rail-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path></svg><span>Deadlines</span><span class="count">3</span></a>
+      <div class="rail-section">Grants</div>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="22" y2="22"></line><line x1="6" x2="6" y1="18" y2="11"></line><line x1="10" x2="10" y1="18" y2="11"></line><line x1="14" x2="14" y1="18" y2="11"></line><line x1="18" x2="18" y1="18" y2="11"></line><polygon points="12 2 20 7 4 7"></polygon></svg><span>All grants</span></a>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></svg><span>Funders</span></a>
+      <div class="rail-section">Office</div>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg><span>Playbook</span></a>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg><span>Settings</span></a>
+    </div>
+    <div class="rail-foot">
+      <span class="avatar gold" style="width:30px;height:30px">BC</span>
+      <div style="min-width:0;flex:1"><div class="name">Barry Cogert</div><div class="role">Program Director</div></div>
+    </div>
+  </nav>
+  <div class="frame">
+    <header class="topbar">
+      <div style="min-width:0;flex:1">
+        <h1>Deadlines</h1>
+        <p class="sub">Every date across every grant</p>
+      </div>
+      <div class="actions">
+        <span class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg></span>
+        <a class="btn primary sm" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add grant</a>
+      </div>
+    </header>
+    <div class="main">
+      <div class="page" style="gap:20px">
+
+        <div class="cal-toolbar">
+          <div class="tabs">
+            <a class="tab" href="#">List</a>
+            <a class="tab active" href="#">Calendar</a>
+          </div>
+          <div class="cal-tools">
+            <div class="select"><div class="input">All owners</div></div>
+            <div class="select"><div class="input">All kinds</div></div>
+            <span class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></span>
+            <a class="btn secondary" href="#">Today</a>
+            <span class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></span>
+            <div class="cal-month">September 2026</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body flush">
+            <div class="cal-week">
+              <div class="cal-dow">Mon</div>
+              <div class="cal-dow">Tue</div>
+              <div class="cal-dow">Wed</div>
+              <div class="cal-dow">Thu</div>
+              <div class="cal-dow">Fri</div>
+              <div class="cal-dow">Sat</div>
+              <div class="cal-dow">Sun</div>
+            </div>
+
+            <div class="cal-week">
+              <div class="cal-cell out"><div class="cal-num">31</div></div>
+              <div class="cal-cell"><div class="cal-num">1</div></div>
+              <div class="cal-cell"><div class="cal-num">2</div></div>
+              <div class="cal-cell"><div class="cal-num">3</div></div>
+              <div class="cal-cell"><div class="cal-num">4</div></div>
+              <div class="cal-cell"><div class="cal-num">5</div><span class="cal-chip" style="--k:#a83a2c;--kbg:#faeeec">Submit application · Arts Council LB</span></div>
+              <div class="cal-cell"><div class="cal-num">6</div></div>
+            </div>
+
+            <div class="cal-week">
+              <div class="cal-cell"><div class="cal-num">7</div></div>
+              <div class="cal-cell"><div class="cal-num">8</div></div>
+              <div class="cal-cell"><div class="cal-num">9</div></div>
+              <div class="cal-cell"><div class="cal-num">10</div></div>
+              <div class="cal-cell"><div class="cal-num">11</div></div>
+              <div class="cal-cell"><div class="cal-num">12</div></div>
+              <div class="cal-cell today"><div class="cal-num">13</div></div>
+            </div>
+
+            <div class="cal-week">
+              <div class="cal-cell"><div class="cal-num">14</div></div>
+              <div class="cal-cell"><div class="cal-num">15</div><span class="cal-chip" style="--k:#9d9789;--kbg:#f5f3ee">Update program narrative · Port of LB</span></div>
+              <div class="cal-cell"><div class="cal-num">16</div></div>
+              <div class="cal-cell"><div class="cal-num">17</div></div>
+              <div class="cal-cell"><div class="cal-num">18</div></div>
+              <div class="cal-cell"><div class="cal-num">19</div><span class="cal-chip" style="--k:#9a9422;--kbg:#f6f5e6">Draft LOI · Parsons</span></div>
+              <div class="cal-cell"><div class="cal-num">20</div></div>
+            </div>
+
+            <div class="cal-week">
+              <div class="cal-cell"><div class="cal-num">21</div><span class="cal-chip" style="--k:#9d9789;--kbg:#f5f3ee">Board chair review · Parsons</span></div>
+              <div class="cal-cell"><div class="cal-num">22</div><span class="cal-chip" style="--k:#9d9789;--kbg:#f5f3ee">Build project budget · Port of LB</span></div>
+              <div class="cal-cell"><div class="cal-num">23</div></div>
+              <div class="cal-cell"><div class="cal-num">24</div></div>
+              <div class="cal-cell"><div class="cal-num">25</div></div>
+              <div class="cal-cell"><div class="cal-num">26</div><span class="cal-chip" style="--k:#9a9422;--kbg:#f6f5e6">LOI due · Parsons</span><span class="cal-chip" style="--k:#9d9789;--kbg:#f5f3ee">Director review · Port of LB</span></div>
+              <div class="cal-cell"><div class="cal-num">27</div></div>
+            </div>
+
+            <div class="cal-week">
+              <div class="cal-cell"><div class="cal-num">28</div></div>
+              <div class="cal-cell"><div class="cal-num">29</div></div>
+              <div class="cal-cell"><div class="cal-num">30</div><span class="cal-chip" style="--k:#e2a92f;--kbg:#fdf6e6">Final report · LA County</span></div>
+              <div class="cal-cell out"><div class="cal-num">1</div><span class="cal-chip" style="--k:#9d9789;--kbg:#f5f3ee">Start working · Cal Arts Council</span></div>
+              <div class="cal-cell out"><div class="cal-num">2</div></div>
+              <div class="cal-cell out"><div class="cal-num">3</div><span class="cal-chip" style="--k:#00649b;--kbg:#eaf4fa">Application due · Port of LB</span></div>
+              <div class="cal-cell out"><div class="cal-num">4</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cal-legend">
+          <span class="lab">Kinds</span>
+          <span class="badge dot">Task</span>
+          <span class="badge dot olive">LOI</span>
+          <span class="badge dot blue">Application</span>
+          <span class="badge dot gold">Report</span>
+          <span class="badge dot teal">Payment</span>
+          <span class="badge dot danger">Overdue</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html",          "title": "1 · Dashboard",                 "x": 0,    "y": 0,    "w": 1440, "h": 900 },
+    { "file": "Grants.dc.html",        "title": "2 · All grants",                "x": 1540, "y": 0,    "w": 1440, "h": 900 },
+    { "file": "AddGrant.dc.html",      "title": "3 · Add grant (step 2 of 3)",   "x": 3080, "y": 0,    "w": 1440, "h": 900 },
+    { "file": "GrantApplying.dc.html", "title": "4 · Grant detail — Applying",   "x": 0,    "y": 1040, "w": 1440, "h": 900 },
+    { "file": "GrantActive.dc.html",   "title": "5 · Grant detail — Active (Money)", "x": 1540, "y": 1040, "w": 1440, "h": 900 },
+    { "file": "Deadlines.dc.html",     "title": "6 · Deadlines calendar",        "x": 3080, "y": 1040, "w": 1440, "h": 900 },
+    { "file": "Playbook.dc.html",      "title": "7 · Playbook (checklist templates)", "x": 0, "y": 2080, "w": 1440, "h": 900 }
+  ],
+  "annotations": [
+    { "id": "brief", "x": 0, "y": -200, "w": 520, "text": "Jazz Angels Grants — proof of concept\n\nOne place for every grant: where it is in its life (Prospect → LOI → Applying → Submitted → Awarded → Active → Reporting → Closed), what is due when, and once awarded, where the money went.\n\nRead left to right, top to bottom. Screens reuse the Jazz Angels staff-portal design system (blue rail, warm paper, Jost headings)." },
+    { "id": "playbook-note", "x": 1540, "y": 2080, "w": 420, "text": "Why the Playbook matters\n\nToday one person knows the whole process. The Playbook turns that into checklist templates: adding a grant copies one, and every task gets a due date worked out from the application deadline. Anyone in the office can follow it." }
+  ],
+  "launch": { "view": "canvas" }
+}

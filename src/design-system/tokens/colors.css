@@ -1,0 +1,121 @@
+/* Every brand hue is sampled directly from assets/jazz-angels-logo.png. */
+:root{
+  /* --- brand base, straight off the logo --- */
+  --ja-blue:#00649b;
+  --ja-teal:#437f80;
+  --ja-olive:#9a9422;
+  --ja-gold:#f4bf4f;
+
+  /* --- blue ramp (primary) --- */
+  --blue-50:#eaf4fa;
+  --blue-100:#cbe4f1;
+  --blue-200:#95c7e2;
+  --blue-300:#5aa6cf;
+  --blue-400:#2483b8;
+  --blue-500:#00649b;
+  --blue-600:#005382;
+  --blue-700:#004067;
+  --blue-800:#002e4b;
+  --blue-900:#001e31;
+
+  /* --- teal ramp (secondary) --- */
+  --teal-50:#eef4f4;
+  --teal-100:#d3e3e3;
+  --teal-200:#a6c6c6;
+  --teal-300:#75a6a7;
+  --teal-400:#568e8f;
+  --teal-500:#437f80;
+  --teal-600:#376869;
+  --teal-700:#2a5152;
+  --teal-800:#1e3b3c;
+  --teal-900:#132626;
+
+  /* --- olive ramp (tertiary) --- */
+  --olive-50:#f6f5e6;
+  --olive-100:#e9e7c2;
+  --olive-200:#d3cf86;
+  --olive-300:#bab54c;
+  --olive-400:#a8a230;
+  --olive-500:#9a9422;
+  --olive-600:#7f7a1c;
+  --olive-700:#635f16;
+  --olive-800:#474410;
+  --olive-900:#2d2b0a;
+
+  /* --- gold ramp (accent / highlight) --- */
+  --gold-50:#fdf6e6;
+  --gold-100:#fbeac1;
+  --gold-200:#f8d88b;
+  --gold-300:#f4bf4f;
+  --gold-400:#e2a92f;
+  --gold-500:#c68f1c;
+  --gold-600:#a17316;
+  --gold-700:#7b5711;
+  --gold-800:#553b0b;
+  --gold-900:#332305;
+
+  /* --- warm neutrals: paper, not cold grey --- */
+  --neutral-0:#ffffff;
+  --neutral-25:#fbfaf7;
+  --neutral-50:#f5f3ee;
+  --neutral-100:#ebe8e1;
+  --neutral-200:#dcd8ce;
+  --neutral-300:#c3beb2;
+  --neutral-400:#9d9789;
+  --neutral-500:#7b7568;
+  --neutral-600:#5d5850;
+  --neutral-700:#453f39;
+  --neutral-800:#2e2a26;
+  --neutral-900:#1b1815;
+
+  /* --- semantic status --- */
+  --success-500:#437f80;
+  --success-50:#eef4f4;
+  --warning-500:#c68f1c;
+  --warning-50:#fdf6e6;
+  --danger-500:#a83a2c;
+  --danger-600:#8c2f23;
+  --danger-50:#faeeec;
+  --info-500:#00649b;
+  --info-50:#eaf4fa;
+
+  /* --- semantic aliases: use these in components --- */
+  --text-strong:var(--neutral-900);
+  --text-body:var(--neutral-700);
+  --text-muted:var(--neutral-500);
+  --text-faint:var(--neutral-400);
+  --text-on-dark:var(--neutral-0);
+  --text-on-dark-muted:#b9cfdd;
+  --text-link:var(--blue-500);
+  --text-link-hover:var(--blue-700);
+
+  --surface-page:var(--neutral-25);
+  --surface-card:var(--neutral-0);
+  --surface-sunken:var(--neutral-50);
+  --surface-raised:var(--neutral-0);
+  --surface-inverse:var(--blue-800);
+  --surface-brand:var(--blue-500);
+  --surface-brand-soft:var(--blue-50);
+  --surface-accent:var(--gold-300);
+  --surface-accent-soft:var(--gold-50);
+
+  --border-subtle:var(--neutral-100);
+  --border-default:var(--neutral-200);
+  --border-strong:var(--neutral-300);
+  --border-brand:var(--blue-500);
+  --border-focus:var(--blue-400);
+
+  --action-primary-bg:var(--blue-500);
+  --action-primary-bg-hover:var(--blue-600);
+  --action-primary-bg-active:var(--blue-700);
+  --action-primary-fg:var(--neutral-0);
+  --action-secondary-bg:var(--neutral-0);
+  --action-secondary-fg:var(--blue-600);
+  --action-accent-bg:var(--gold-300);
+  --action-accent-bg-hover:var(--gold-400);
+  --action-accent-fg:var(--neutral-900);
+  --action-danger-bg:var(--danger-500);
+  --action-danger-fg:var(--neutral-0);
+
+  --focus-ring:0 0 0 3px rgba(0,100,155,.28);
+}

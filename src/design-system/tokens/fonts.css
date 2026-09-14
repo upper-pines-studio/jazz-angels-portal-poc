@@ -1,0 +1,10 @@
+/* Fonts are Google Fonts SUBSTITUTIONS — see docs/design-system.md "Font substitution".
+   Jost stands in for the Futura-class geometric sans of mid-century jazz record sleeves.
+   Archivo carries UI/body text. IBM Plex Mono carries tabular numerals and IDs. */
+@import url("https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+:root{
+  --font-display:"Jost",'Futura','Century Gothic',system-ui,sans-serif;
+  --font-sans:"Archivo",system-ui,-apple-system,'Helvetica Neue',sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,'SFMono-Regular',Menlo,monospace;
+}

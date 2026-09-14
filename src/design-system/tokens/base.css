@@ -1,0 +1,12 @@
+/* Minimal element defaults. Components carry their own styling. */
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--surface-page);color:var(--text-body);font:var(--type-body);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+h1,h2,h3,h4,h5,h6{margin:0;color:var(--text-strong);letter-spacing:var(--tracking-display)}
+h1{font:var(--type-h1)}h2{font:var(--type-h2)}h3{font:var(--type-h3)}h4{font:var(--type-h4)}
+p{margin:0 0 var(--space-4)}
+a{color:var(--text-link);text-decoration:none}
+a:hover{color:var(--text-link-hover);text-decoration:underline}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+small{font-size:var(--text-xs)}
+code,kbd{font-family:var(--font-mono);font-size:.92em}
+::selection{background:var(--gold-200);color:var(--neutral-900)}
