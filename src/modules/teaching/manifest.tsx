@@ -1,49 +1,50 @@
 import React from 'react';
-import { addDays } from 'date-fns';
-import { toDate, toISO } from '../../core';
 import type { AttentionItem, ModuleManifest, PortalState, StatSpec } from '../../core';
 import {
-  attendanceSummary, ensembleById, enrolledCount, teachingSlice, termForDate,
-  timeLabel, unsubmittedRollCalls,
+  ensembleById, enrolledCount, recentAttendance, sessionWeekLabel, teachingSlice,
+  termForDate, timeLabel, unsubmittedRollCalls,
 } from './domain';
 import { TodayPanel } from './screens/TodayPanel';
 import Schedule from './screens/Schedule';
 import RollCall from './screens/RollCall';
 import Students from './screens/Students';
 
-/** The dashboard's attendance figure looks back four weeks of submitted rolls. */
-const TREND_DAYS = 27;
-
 function stats(state: PortalState, today: string): StatSpec[] {
   const term = termForDate(state, today);
   const ensembles = state.teaching.ensembles.length;
 
-  const recent = attendanceSummary(state, {
-    from: toISO(addDays(toDate(today), -TREND_DAYS)),
-    to: today,
-  });
+  const enrolled: StatSpec = {
+    id: 'teaching-enrolled',
+    label: 'Enrolled',
+    value: String(enrolledCount(state)),
+    accent: 'var(--blue-500)',
+    href: '/students',
+    footnote: `${term?.name ?? 'No session scheduled'} · ${ensembles} ${ensembles === 1 ? 'ensemble' : 'ensembles'}`,
+  };
+
+  // Week 1 of a session has one roll call in it, so the figure comes from the
+  // last term until there are four weeks of this one to average. No rolls
+  // anywhere and the stat stays off the row rather than reading as zero.
+  const attendance = recentAttendance(state, today);
+  if (!attendance) return [enrolled];
 
   return [
-    {
-      id: 'teaching-enrolled',
-      label: 'Enrolled',
-      value: String(enrolledCount(state)),
-      accent: 'var(--blue-500)',
-      href: '/students',
-      footnote: `${term?.name ?? 'No session scheduled'} · ${ensembles} ${ensembles === 1 ? 'ensemble' : 'ensembles'}`,
-    },
+    enrolled,
     {
       id: 'teaching-attendance',
       label: 'Attendance',
-      value: recent.meetings ? String(Math.round(recent.attendanceRate * 100)) : '—',
-      unit: recent.meetings ? '%' : undefined,
+      value: String(Math.round(attendance.rate * 100)),
+      unit: '%',
       accent: 'var(--teal-500)',
       href: '/schedule',
-      footnote: recent.meetings
-        ? `Last 4 weeks · ${recent.meetings} ${recent.meetings === 1 ? 'class' : 'classes'}`
-        : 'No roll calls in the last 4 weeks',
+      footnote: attendance.footnote,
     },
   ];
+}
+
+/** "Fall session week 1", once a session is running. */
+function subtitle(state: PortalState, today: string): string | undefined {
+  return sessionWeekLabel(state, today);
 }
 
 function attention(state: PortalState, today: string): AttentionItem[] {
@@ -83,6 +84,6 @@ export const manifest: ModuleManifest = {
     { path: '/roll/:meetingId', element: <RollCall /> },
     { path: '/students', element: <Students /> },
   ],
-  dashboard: { stats, attention, panels: [TodayPanel] },
+  dashboard: { stats, subtitle, attention, panels: [TodayPanel] },
   slice: teachingSlice,
 };

@@ -27,3 +27,26 @@
     border-left: 0;
   }
 }
+
+/* Reports tab: Meetings held / Students served / Attendance / Teaching hours.
+ * Same four-across shape as the money summary, and the same fold on a phone. */
+.ja-program-numbers {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ja-program-numbers > div + div {
+  padding-left: var(--space-5);
+  border-left: var(--border-width) solid var(--border-subtle);
+}
+
+@media (max-width: 640px) {
+  .ja-program-numbers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: var(--space-4);
+  }
+  .ja-program-numbers > div:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+}

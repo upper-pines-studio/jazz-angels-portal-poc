@@ -29,7 +29,7 @@ export function TodayPanel() {
       title="Today's classes"
       subtitle={format(toDate(today), 'EEEE, MMM d')}
       padding="0"
-      action={<Button variant="ghost" size="sm" onClick={() => nav('/schedule')}>Schedule</Button>}
+      action={<Button variant="ghost" size="sm" onClick={() => nav('/schedule')}>Open the schedule</Button>}
     >
       {meetings.length === 0 ? (
         <EmptyState

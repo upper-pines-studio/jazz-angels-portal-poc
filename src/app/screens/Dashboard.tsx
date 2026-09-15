@@ -44,9 +44,15 @@ export default function Dashboard() {
 
   const canAddGrant = state.core.settings.enabledModules.includes('grants');
 
+  // Core says the day and the fiscal year; each module adds its own few words.
+  const subtitle = [
+    `${format(toDate(today), 'EEEE, MMMM d')} · ${fy.label}`,
+    ...enabled.flatMap(m => m.dashboard?.subtitle?.(state, today) ?? []),
+  ].join(' · ');
+
   usePageHeader({
     title: 'Dashboard',
-    subtitle: `${format(toDate(today), 'EEEE, MMMM d')} · ${fy.label}`,
+    subtitle,
     actions: canAddGrant ? (
       <Button variant="primary" size="sm" iconLeft={<Icon name="plus" size={15} />} onClick={() => nav('/grants?add=1')}>
         Add grant

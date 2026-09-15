@@ -4,9 +4,12 @@ import type { PortalState } from '../../../../core/types';
 import {
   attendanceSummary,
   enrolledCount,
+  ensembleOptions,
   ensembleTrend,
   meetingsForWeek,
+  recentAttendance,
   rosterForEnsemble,
+  sessionWeekLabel,
   todaysMeetings,
   unsubmittedRollCalls,
 } from '../derive';
@@ -68,6 +71,53 @@ describe('enrolledCount', () => {
     const byProgram = state.core.programs.map((p) => enrolledCount(state, p.id));
     expect(byProgram.reduce((a, b) => a + b, 0)).toBe(enrolledCount(state));
     expect(enrolledCount(state, 'in-school')).toBe(6);
+  });
+});
+
+describe('recentAttendance', () => {
+  it('falls back to the previous term when four weeks hold too few roll calls', () => {
+    // Week 1 of the Fall session: one submitted roll call, so the figure would
+    // read 100% off a single class. Last spring answers instead, and says so.
+    const headline = recentAttendance(state, today);
+    expect(headline).toBeDefined();
+    expect(headline!.footnote).toBe('Spring 2026 session');
+    expect(headline!.rate).toBeCloseTo(attendanceSummary(state, SPRING).attendanceRate, 5);
+    expect(headline!.rate).toBeLessThan(1);
+  });
+
+  it('uses the last four weeks once they hold enough classes', () => {
+    // Four weeks after the spring term ended, its last four weeks are the window.
+    const headline = recentAttendance(state, '2026-04-26');
+    expect(headline).toBeDefined();
+    expect(headline!.footnote).toMatch(/^Last 4 weeks · \d+ classes$/);
+    expect(headline!.rate).toBeGreaterThan(0.8);
+  });
+
+  it('has nothing to say before any roll call is taken', () => {
+    const empty = { ...state, teaching: { ...state.teaching, attendance: [], meetings: [] } };
+    expect(recentAttendance(empty as PortalState, today)).toBeUndefined();
+  });
+});
+
+describe('sessionWeekLabel', () => {
+  it('drops the year and counts the week', () => {
+    expect(sessionWeekLabel(state, today)).toBe('Fall session week 1');
+    expect(sessionWeekLabel(state, '2026-09-20')).toBe('Fall session week 2');
+  });
+
+  it('is undefined between sessions', () => {
+    expect(sessionWeekLabel(state, '2026-08-01')).toBeUndefined();
+  });
+});
+
+describe('ensembleOptions', () => {
+  it('gives id and name only, and narrows to one program', () => {
+    expect(ensembleOptions(state)).toHaveLength(state.teaching.ensembles.length);
+    expect(ensembleOptions(state)[0]).toEqual({ id: 'e-combo-a', name: 'Combo A' });
+    expect(ensembleOptions(state, 'homeschool').map((e) => e.name)).toEqual([
+      'Homeschool I',
+      'Homeschool II',
+    ]);
   });
 });
 

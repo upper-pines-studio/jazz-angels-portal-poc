@@ -44,6 +44,14 @@ export function termWeek(term: Term | undefined, dateISO: string): number | unde
   return Math.floor(days / 7) + 1;
 }
 
+/** "Fall 2026 session" in week 1 reads "Fall session week 1". Undefined outside a term. */
+export function sessionWeekLabel(state: PortalState, today: string): string | undefined {
+  const term = termForDate(state, today);
+  const week = termWeek(term, today);
+  if (!term || !week) return undefined;
+  return `${term.name.replace(/ \d{4}/, '')} week ${week}`;
+}
+
 // --- The schedule -----------------------------------------------------------
 
 /** The Sunday on or before `dateISO`. Weeks on the schedule run Sunday to Saturday. */
@@ -196,6 +204,52 @@ export function attendanceSummary(state: PortalState, window: AttendanceWindow):
   };
 }
 
+/** Four weeks back, counting today. */
+const RECENT_DAYS = 27;
+
+/** Fewer submitted rolls than this and one class would be speaking for the lot. */
+const RECENT_MINIMUM = 4;
+
+/** An attendance figure worth showing, and the words that say what it covers. */
+export interface AttendanceHeadline {
+  /** 0–1. */
+  rate: number;
+  /** "Last 4 weeks · 12 classes", or the name of the term it came from. */
+  footnote: string;
+}
+
+/** The term that finished most recently before `dateISO`. */
+function lastFinishedTerm(state: PortalState, dateISO: string): Term | undefined {
+  return [...state.teaching.terms]
+    .filter((t) => t.end < dateISO)
+    .sort((a, b) => a.end.localeCompare(b.end))
+    .pop();
+}
+
+/**
+ * The attendance rate the dashboard quotes. The last four weeks once they hold
+ * enough submitted rolls to mean anything; on the first Sunday of a session
+ * they do not, so the previous term answers instead and says so.
+ */
+export function recentAttendance(state: PortalState, today: string): AttendanceHeadline | undefined {
+  const recent = attendanceSummary(state, {
+    from: toISO(addDays(toDate(today), -RECENT_DAYS)),
+    to: today,
+  });
+  if (recent.meetings >= RECENT_MINIMUM) {
+    return {
+      rate: recent.attendanceRate,
+      footnote: `Last 4 weeks · ${recent.meetings} ${recent.meetings === 1 ? 'class' : 'classes'}`,
+    };
+  }
+
+  const previous = lastFinishedTerm(state, today);
+  if (!previous) return undefined;
+  const term = attendanceSummary(state, { from: previous.start, to: previous.end });
+  if (term.meetings === 0) return undefined;
+  return { rate: term.attendanceRate, footnote: previous.name };
+}
+
 /** How many students are on the roster, for the whole studio or one program. */
 export function enrolledCount(state: PortalState, programId?: ProgramId): number {
   return state.teaching.students.filter(
@@ -208,6 +262,20 @@ export function ensembleCount(state: PortalState, ensembleId: string): number {
   return state.teaching.students.filter(
     (s) => s.status === 'enrolled' && s.ensembleId === ensembleId,
   ).length;
+}
+
+/**
+ * The ensembles a picker can offer: id and name, nothing else. This is what
+ * other modules read through `src/modules/teaching/index.ts`, so nobody has to
+ * reach into `state.teaching`. `programId` narrows it to one program's groups.
+ */
+export function ensembleOptions(
+  state: PortalState,
+  programId?: ProgramId,
+): Array<{ id: string; name: string }> {
+  return state.teaching.ensembles
+    .filter((e) => !programId || e.programId === programId)
+    .map((e) => ({ id: e.id, name: e.name }));
 }
 
 // --- Display helpers --------------------------------------------------------

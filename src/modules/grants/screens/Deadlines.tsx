@@ -49,7 +49,7 @@ export default function Deadlines() {
   const grantLine = (d: Deadline) => {
     const g = grantById(state, d.grantId);
     const f = g && funderById(state, g.funderId);
-    return `${g?.title ?? 'Grant'} — ${f?.name ?? 'Unknown funder'}`;
+    return `${g?.title ?? 'Grant'} · ${f?.name ?? 'Unknown funder'}`;
   };
 
   const columns = [

@@ -15,7 +15,7 @@ const WHAT_HAPPENS: Record<Phase, string> = {
   awarded: 'This records the award amount and the grant period, and moves the grant to Awarded.',
   active: 'This records that the agreement is signed and moves the grant to Active, where payments and spending are tracked.',
   reporting: 'This moves the grant to Reporting while the report is written. It goes back to Active once the report is in.',
-  closed: 'This closes the grant. Nothing is deleted — it stays here for history.',
+  closed: 'This closes the grant. Nothing is deleted. It stays here for history.',
   declined: 'This records the funder\'s decision. The grant stays for history, so next year starts from what happened.',
   withdrawn: 'This records that we are not pursuing this grant. It stays for history.',
 };

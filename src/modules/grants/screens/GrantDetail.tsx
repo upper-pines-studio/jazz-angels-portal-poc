@@ -11,6 +11,7 @@ import { ChecklistTab } from './grant/ChecklistTab';
 import { DocumentsTab } from './grant/DocumentsTab';
 import { MoneyTab } from './grant/MoneyTab';
 import { ReportsTab } from './grant/ReportsTab';
+import { ProgramNumbers } from './grant/ProgramNumbers';
 import { ActivityTab } from './grant/ActivityTab';
 import { SideCards } from './grant/SideCards';
 
@@ -79,18 +80,24 @@ export default function GrantDetail() {
       <PhaseStepper grant={grant} />
 
       <div className="ja-split" style={{ gap: 'var(--space-5)' }}>
-        <Card padding="0">
-          <div style={{ padding: 'var(--space-3) var(--space-6) 0' }}>
-            <div className="ja-tabs-scroll">
-              <Tabs tabs={TABS} active={tab} onChange={setTab} style={{ borderBottom: 0 }} />
+        {/* The tab panel, and under it any card the tab hangs off itself: one
+            card never nests inside another. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', minWidth: 0 }}>
+          <Card padding="0">
+            <div style={{ padding: 'var(--space-3) var(--space-6) 0' }}>
+              <div className="ja-tabs-scroll">
+                <Tabs tabs={TABS} active={tab} onChange={setTab} style={{ borderBottom: 0 }} />
+              </div>
             </div>
-          </div>
-          {tab === 'checklist' && <ChecklistTab grant={grant} />}
-          {tab === 'documents' && <DocumentsTab grant={grant} />}
-          {tab === 'money' && <MoneyTab grant={grant} />}
-          {tab === 'reports' && <ReportsTab grant={grant} />}
-          {tab === 'activity' && <ActivityTab grant={grant} />}
-        </Card>
+            {tab === 'checklist' && <ChecklistTab grant={grant} />}
+            {tab === 'documents' && <DocumentsTab grant={grant} />}
+            {tab === 'money' && <MoneyTab grant={grant} />}
+            {tab === 'reports' && <ReportsTab grant={grant} />}
+            {tab === 'activity' && <ActivityTab grant={grant} />}
+          </Card>
+
+          {tab === 'reports' && <ProgramNumbers grant={grant} />}
+        </div>
 
         <SideCards grant={grant} />
       </div>

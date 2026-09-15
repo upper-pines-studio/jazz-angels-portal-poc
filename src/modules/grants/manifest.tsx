@@ -65,7 +65,7 @@ function attention(state: PortalState, today: string): AttentionItem[] {
       id: d.id,
       date: d.date,
       label: d.label,
-      detail: `${grant?.title ?? 'Grant'} — ${funder?.name ?? 'Unknown funder'}`,
+      detail: `${grant?.title ?? 'Grant'} · ${funder?.name ?? 'Unknown funder'}`,
       status: d.status === 'overdue' ? 'overdue' : 'due-soon',
       href: `/grants/${d.grantId}`,
       ownerId: d.ownerId,

@@ -54,7 +54,7 @@ fine, because any slice it does not carry is seeded instead.
 | File | What is in it |
 | --- | --- |
 | `types.ts` | `StaffMember`, `Program`, `AppSettings`, `CoreState`, and the augmentable `PortalState` / `PortalActions`. |
-| `module.ts` | `ModuleSlice`, `ModuleManifest`, `NavItem`, `StatSpec`, `AttentionItem`, `DashboardContribution`. |
+| `module.ts` | `ModuleSlice`, `ModuleManifest`, `NavItem`, `StatSpec`, `AttentionItem`, `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
 | `store.tsx` | `StoreProvider`, `useStore`, `coreSlice`, `newId`. |
 | `repository.ts` | localStorage, one key per slice; export / import / reset. |
 | `format.ts` | `money`, `dateShort`, `dateLong`, `dateRange`, `relativeDays`, `daysUntil`, `initials`. |

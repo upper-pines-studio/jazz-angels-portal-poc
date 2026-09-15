@@ -21,8 +21,13 @@ import type { TimeEntry, TimeEntryStatus, TimesheetsState } from './types';
 
 export { SEED_TODAY };
 
-/** `[dayOffset, staffId, programId, activity, hours]` against a week's anchor day. */
-type Shift = [number, string, ProgramId, string, number];
+/**
+ * `[dayOffset, staffId, programId, activity, hours, ensembleId?]` against a
+ * week's anchor day. The ensemble id is the teaching module's own, set when the
+ * hours are one named group's rehearsal; prep, planning and office work leave
+ * it off, and so does a session that covers two ensembles at once.
+ */
+type Shift = [number, string, ProgramId, string, number, string?];
 
 /** Barry approves the teaching artists; Denise signs off Barry's own hours. */
 function approver(staffId: string): string {
@@ -43,7 +48,7 @@ function approvedOn(iso: string): string {
 
 function makeEntry(
   anchorISO: string,
-  [offset, staffId, programId, activity, hours]: Shift,
+  [offset, staffId, programId, activity, hours, ensembleId]: Shift,
   status: TimeEntryStatus,
 ): TimeEntry {
   const date = toISO(addDays(toDate(anchorISO), offset));
@@ -57,6 +62,7 @@ function makeEntry(
     hours,
     status,
   };
+  if (ensembleId) entry.ensembleId = ensembleId;
   if (status === 'approved') {
     entry.approvedBy = approver(staffId);
     entry.approvedAt = approvedOn(date);
@@ -77,14 +83,14 @@ function makeWeek(
 
 /** Anchored on the Sunday: combos and big band Sunday, then the weekday groups. */
 const SPRING_WEEK: Shift[] = [
-  [0, 's-albert', 'studio-sessions', 'Combo A rehearsal, Studio 1', 1],
-  [0, 's-barry', 'studio-sessions', 'Combo B rehearsal, Studio 1', 1],
-  [0, 's-devon', 'studio-sessions', 'Big Band rehearsal, Main room', 1.5],
+  [0, 's-albert', 'studio-sessions', 'Combo A rehearsal, Studio 1', 1, 'e-combo-a'],
+  [0, 's-barry', 'studio-sessions', 'Combo B rehearsal, Studio 1', 1, 'e-combo-b'],
+  [0, 's-devon', 'studio-sessions', 'Big Band rehearsal, Main room', 1.5, 'e-big-band'],
   [1, 's-renee', 'homeschool', 'Homeschool I and II, Studio 2', 2.25],
-  [2, 's-albert', 'jazz-legacy', 'Jazz Legacy rehearsal, Main room', 1.5],
-  [2, 's-barry', 'advanced-workshop', 'Advanced Workshop, Studio 1', 1.5],
+  [2, 's-albert', 'jazz-legacy', 'Jazz Legacy rehearsal, Main room', 1.5, 'e-jazz-legacy'],
+  [2, 's-barry', 'advanced-workshop', 'Advanced Workshop, Studio 1', 1.5, 'e-advanced-workshop'],
   [3, 's-albert', 'general-operating', 'Chart prep', 0.75],
-  [4, 's-devon', 'in-school', 'Paramount MS, in-school band', 2],
+  [4, 's-devon', 'in-school', 'Paramount MS, in-school band', 2, 'e-paramount-ms'],
 ];
 
 /** The eight Sundays of the spring term. */
@@ -104,14 +110,14 @@ const SPRING_SUNDAYS = [
 /** Anchored on the Monday: summer groups, chart prep and the office work around them. */
 const SUMMER_WEEK: Shift[] = [
   [0, 's-albert', 'general-operating', 'Chart prep for the fall books', 1.5],
-  [1, 's-albert', 'jazz-legacy', 'Jazz Legacy rehearsal, Main room', 1.5],
-  [1, 's-barry', 'advanced-workshop', 'Advanced Workshop, Studio 1', 1.5],
+  [1, 's-albert', 'jazz-legacy', 'Jazz Legacy rehearsal, Main room', 1.5, 'e-jazz-legacy'],
+  [1, 's-barry', 'advanced-workshop', 'Advanced Workshop, Studio 1', 1.5, 'e-advanced-workshop'],
   [2, 's-renee', 'homeschool', 'Homeschool summer group, Studio 2', 2],
-  [3, 's-devon', 'in-school', 'Paramount MS summer band', 2],
+  [3, 's-devon', 'in-school', 'Paramount MS summer band', 2, 'e-paramount-ms'],
   [5, 's-renee', 'general-operating', 'Family calls and scheduling', 1],
-  [6, 's-albert', 'studio-sessions', 'Combo A rehearsal, Studio 1', 2],
-  [6, 's-barry', 'studio-sessions', 'Combo B rehearsal, Studio 1', 2],
-  [6, 's-devon', 'studio-sessions', 'Big Band rehearsal, Main room', 1.5],
+  [6, 's-albert', 'studio-sessions', 'Combo A rehearsal, Studio 1', 2, 'e-combo-a'],
+  [6, 's-barry', 'studio-sessions', 'Combo B rehearsal, Studio 1', 2, 'e-combo-b'],
+  [6, 's-devon', 'studio-sessions', 'Big Band rehearsal, Main room', 1.5, 'e-big-band'],
 ];
 
 const SUMMER_MONDAYS = ['2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31'];
@@ -137,9 +143,9 @@ const THIS_WEEK: Array<[Shift, TimeEntryStatus]> = [
   [[3, 's-albert', 'jazz-legacy', 'Jazz Legacy repertoire prep', 1.75], 'draft'],
   [[4, 's-renee', 'homeschool', 'Homeschool I and II lesson plans', 3], 'submitted'],
   [[5, 's-barry', 'advanced-workshop', 'Advanced Workshop syllabus', 1.5], 'draft'],
-  [[6, 's-albert', 'studio-sessions', 'Combo A rehearsal, Studio 1', 2], 'draft'],
-  [[6, 's-barry', 'studio-sessions', 'Combo B rehearsal, Studio 1', 2], 'draft'],
-  [[6, 's-devon', 'studio-sessions', 'Big Band rehearsal and setup, Main room', 3.25], 'submitted'],
+  [[6, 's-albert', 'studio-sessions', 'Combo A rehearsal, Studio 1', 2, 'e-combo-a'], 'draft'],
+  [[6, 's-barry', 'studio-sessions', 'Combo B rehearsal, Studio 1', 2, 'e-combo-b'], 'draft'],
+  [[6, 's-devon', 'studio-sessions', 'Big Band rehearsal and setup, Main room', 3.25, 'e-big-band'], 'submitted'],
 ];
 
 /** The Monday of the week the story opens in. */

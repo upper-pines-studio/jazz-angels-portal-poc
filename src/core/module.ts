@@ -65,6 +65,11 @@ export interface AttentionItem {
 export interface DashboardContribution {
   /** At most two per module. */
   stats?(state: PortalState, today: string): StatSpec[];
+  /**
+   * A few words for the page subtitle, joined after core's date and fiscal
+   * year with ` · `. Undefined when the module has nothing to add today.
+   */
+  subtitle?(state: PortalState, today: string): string | undefined;
   attention?(state: PortalState, today: string): AttentionItem[];
   /** Each panel renders a Card into the dashboard's right column. */
   panels?: React.ComponentType[];

@@ -45,10 +45,13 @@ export const manifest: ModuleManifest = {
   description: 'The class schedule, roll call and the student roster.',
   nav: { section: 'Teaching', items: [{ path: '/schedule', label: 'Schedule', icon: 'calendar' }] },
   routes: [{ path: '/schedule', element: <Schedule /> }],
-  dashboard: { stats, attention, panels: [TodaysClasses] },
+  dashboard: { stats, subtitle, attention, panels: [TodaysClasses] },
   slice: teachingSlice,
 };
 ```
+
+`dashboard.subtitle(state, today)` is the few words the module adds to the
+dashboard's page subtitle, after core's date and fiscal year.
 
 **3. The public API.** `index.ts` exports the manifest and nothing but pure,
 read-only functions of `(state, …)` that other modules may call.

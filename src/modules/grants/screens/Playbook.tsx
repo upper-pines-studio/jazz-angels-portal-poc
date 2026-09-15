@@ -228,7 +228,7 @@ export default function Playbook() {
             </>
           }>
           <Field label="Name" required>
-            <Input value={newName} placeholder="Family foundation — small ask" onChange={e => setNewName(e.target.value)} />
+            <Input value={newName} placeholder="Family foundation, small ask" onChange={e => setNewName(e.target.value)} />
           </Field>
         </Dialog>
       )}

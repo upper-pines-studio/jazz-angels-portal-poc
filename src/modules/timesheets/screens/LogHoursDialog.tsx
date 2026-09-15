@@ -3,6 +3,7 @@ import { Button, Dialog, Field, Input, Select } from '../../../design-system';
 import type { InputProps } from '../../../design-system';
 import { CURRENT_USER, useStore } from '../../../core';
 import type { ProgramId } from '../../../core';
+import { ensembleOptions } from '../../teaching';
 import type { NewTimeEntryInput } from '../domain';
 
 /**
@@ -28,8 +29,16 @@ export default function LogHoursDialog({
   const [staffId, setStaffId] = React.useState(defaultTeacher);
   const [date, setDate] = React.useState(today);
   const [programId, setProgramId] = React.useState<string>(state.core.programs[0]?.id ?? '');
+  const [ensembleId, setEnsembleId] = React.useState('');
   const [activity, setActivity] = React.useState('');
   const [hours, setHours] = React.useState('2.00');
+
+  // Only the groups that meet inside the chosen program, so an entry never
+  // names a combo the program does not run.
+  const ensembles = state.core.settings.enabledModules.includes('teaching')
+    ? ensembleOptions(state, programId ? (programId as ProgramId) : undefined)
+    : [];
+  const ensemble = ensembles.some((e) => e.id === ensembleId) ? ensembleId : '';
 
   const parsed = Number(hours);
   const valid = activity.trim().length > 0 && Number.isFinite(parsed) && parsed > 0 && !!programId;
@@ -40,6 +49,7 @@ export default function LogHoursDialog({
       staffId,
       date,
       programId: programId as ProgramId,
+      ensembleId: ensemble || undefined,
       activity: activity.trim(),
       hours: parsed,
     };
@@ -83,6 +93,18 @@ export default function LogHoursDialog({
             options={state.core.programs.map((p) => ({ value: p.id, label: p.name }))}
           />
         </Field>
+        {ensembles.length > 0 && (
+          <Field label="Ensemble" hint="Leave it blank for prep, planning and office work.">
+            <Select
+              value={ensemble}
+              onChange={(e) => setEnsembleId(e.target.value)}
+              options={[
+                { value: '', label: 'No ensemble' },
+                ...ensembles.map((e) => ({ value: e.id, label: e.name })),
+              ]}
+            />
+          </Field>
+        )}
         <Field label="Activity" required>
           <Input
             value={activity}

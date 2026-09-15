@@ -221,7 +221,7 @@ export default function Settings() {
             <Field label="Name" required>
               <Input value={person.name} placeholder="Dana Whitfield" onChange={e => setPerson({ ...person, name: e.target.value })} />
             </Field>
-            <Field label="Role" hint="How they show up on a grant or a class — Program Director, Bookkeeper, Teaching Artist.">
+            <Field label="Role" hint="How they show up on a grant or a class: Program Director, Bookkeeper, Teaching Artist.">
               <Input value={person.role} placeholder="Program Director" onChange={e => setPerson({ ...person, role: e.target.value })} />
             </Field>
             <Field label="Teaches" hint="Teaching artists lead ensembles and log hours.">

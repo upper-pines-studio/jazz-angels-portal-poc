@@ -108,7 +108,7 @@ function DocumentDialog({ title, doc, onClose, onSave, onDelete }: {
   const [url, setUrl] = React.useState(doc?.url ?? '');
 
   return (
-    <Dialog open title={title} description="A row in the register — the file itself stays in the grant folder."
+    <Dialog open title={title} description="A row in the register. The file itself stays in the grant folder."
       onClose={onClose} width={480}
       footer={<>
         {onDelete && <Button variant="secondary" style={{ marginRight: 'auto', color: 'var(--danger-500)' }} onClick={onDelete}>Delete</Button>}

@@ -47,7 +47,7 @@ export function ActivityTab({ grant }: { grant: Grant }) {
   return (
     <div>
       <div style={{ padding: 'var(--space-5) var(--space-6)', borderBottom: 'var(--border-width) solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-        <Textarea rows={2} value={note} placeholder="Add a note — a call, a promise, something the next person should know."
+        <Textarea rows={2} value={note} placeholder="Add a note: a call, a promise, something the next person should know."
           onChange={e => setNote(e.target.value)} />
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Button variant="primary" size="sm" disabled={!note.trim()} onClick={add}>Add note</Button>
