@@ -1,0 +1,62 @@
+/*
+ * Timesheets. Two bits of layout the design-system components cannot express
+ * on their own: the week card's header controls, and the program bars.
+ */
+
+/* Prev week · Today · next week · teacher · Log hours. Wraps under the card
+   title at 640px, where the card header itself already wraps. */
+.ja-ts-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.ja-ts-weeknav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ja-ts-teacher {
+  width: 170px;
+}
+
+@media (max-width: 640px) {
+  .ja-ts-controls {
+    width: 100%;
+    justify-content: flex-start;
+    gap: var(--space-2);
+  }
+  .ja-ts-teacher {
+    flex: 1 1 140px;
+    width: auto;
+  }
+}
+
+/* One row per program: name, bar, hours. */
+.ja-ts-programs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ja-ts-program {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) 68px;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .ja-ts-program {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2) var(--space-3);
+  }
+  /* The bar drops to its own full-width line under the name and the number. */
+  .ja-ts-program__bar {
+    order: 3;
+    grid-column: 1 / -1;
+  }
+}

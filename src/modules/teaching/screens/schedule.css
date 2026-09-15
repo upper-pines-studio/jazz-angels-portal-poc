@@ -1,0 +1,156 @@
+/*
+ * The week grid — the one layout shape the teaching module adds.
+ *
+ * Proportions come from the staff-portal POC: an 88px time column, five day
+ * columns, and a cell at least 78px tall so a class block can carry its
+ * ensemble, its room and its lead without crowding. The 3px rule down the left
+ * of a block is the one sanctioned left rule in the system; it identifies the
+ * ensemble, and it lives on a block, never on a card.
+ *
+ * Breakpoints match src/app/responsive.css (1100 / 900 / 640). Below 900px the
+ * grid keeps its full width and scrolls sideways inside a TableScroll.
+ */
+
+.ja-week {
+  display: grid;
+  grid-template-columns: 88px repeat(5, minmax(150px, 1fr));
+}
+
+/* The empty square above the time column. */
+.ja-week__corner {
+  background: var(--surface-sunken);
+  border-bottom: var(--border-width) solid var(--border-default);
+}
+
+.ja-week__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-3);
+  background: var(--surface-sunken);
+  border-bottom: var(--border-width) solid var(--border-default);
+  border-left: var(--border-width) solid var(--border-subtle);
+}
+.ja-week__day-name {
+  font: var(--weight-semibold) var(--text-3xs)/1.2 var(--font-sans);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.ja-week__day-date {
+  font: var(--type-numeric);
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+}
+
+/* Today reads as the column you are standing in. */
+.ja-week__day.is-today {
+  background: var(--blue-50);
+  box-shadow: inset 0 -2px 0 var(--blue-500);
+}
+.ja-week__day.is-today .ja-week__day-name,
+.ja-week__day.is-today .ja-week__day-date {
+  color: var(--blue-700);
+}
+
+.ja-week__slot {
+  padding: var(--space-3);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  font: var(--type-numeric);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.ja-week__cell {
+  min-height: 78px;
+  padding: 6px;
+  border-left: var(--border-width) solid var(--border-subtle);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+.ja-week__cell.is-today { background: var(--neutral-25); }
+
+.ja-week__block {
+  width: 100%;
+  height: 100%;
+  min-height: 66px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  cursor: pointer;
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-subtle);
+  border-left: 3px solid var(--block-tone, var(--neutral-300));
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition-control, all 120ms ease);
+}
+.ja-week__block:hover { background: var(--blue-50); }
+
+.ja-week__block-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.ja-week__block-name {
+  font: var(--weight-semibold) var(--text-xs)/1.25 var(--font-sans);
+  color: var(--text-strong);
+}
+.ja-week__block-room {
+  font: var(--text-3xs)/1.3 var(--font-sans);
+  color: var(--text-muted);
+}
+.ja-week__block-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+/* The term tab: the eight Sundays of the session. */
+.ja-term-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+.ja-term-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 56px;
+}
+.ja-term-dot__mark {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thick) solid var(--border-strong);
+  background: var(--neutral-0);
+}
+.ja-term-dot__mark.is-done {
+  border-color: var(--teal-500);
+  background: var(--teal-500);
+}
+.ja-term-dot__mark.is-now {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 3px var(--blue-50);
+}
+.ja-term-dot__date {
+  font: var(--type-numeric);
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+}
+.ja-term-dot__week {
+  font: var(--text-3xs)/1.2 var(--font-sans);
+  color: var(--text-faint);
+}
+
+@media (max-width: 640px) {
+  .ja-week__slot { padding: var(--space-2); }
+  .ja-term-dots { gap: var(--space-4); }
+}

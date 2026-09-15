@@ -1,0 +1,17 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html",         "title": "1 · Dashboard (all modules)",            "x": 0,    "y": 0,    "w": 1440, "h": 900 },
+    { "file": "Schedule.dc.html",     "title": "2 · Schedule",                           "x": 1540, "y": 0,    "w": 1440, "h": 900 },
+    { "file": "RollCall.dc.html",     "title": "3 · Roll call",                          "x": 3080, "y": 0,    "w": 1440, "h": 900 },
+    { "file": "Students.dc.html",     "title": "4 · Students",                           "x": 0,    "y": 1040, "w": 1440, "h": 900 },
+    { "file": "Timesheets.dc.html",   "title": "5 · Timesheets",                         "x": 1540, "y": 1040, "w": 1440, "h": 900 },
+    { "file": "GrantReports.dc.html", "title": "6 · Grant reports (program numbers)",    "x": 3080, "y": 1040, "w": 1440, "h": 900 },
+    { "file": "Modules.dc.html",      "title": "7 · Settings (modules)",                 "x": 0,    "y": 2080, "w": 1440, "h": 900 },
+    { "file": "Architecture.dc.html", "title": "8 · How it fits together",               "x": 1540, "y": 2080, "w": 1440, "h": 900 }
+  ],
+  "annotations": [
+    { "id": "brief", "x": 0, "y": -220, "w": 520, "text": "Jazz Angels Portal — platform iteration\n\nOne rail, one dashboard, one design system. Grants, Teaching and Timesheets are modules on a shared core (people, programs, fiscal year). A grant report can pull attendance and hours without anyone retyping them.\n\nRead left to right, top to bottom." },
+    { "id": "architecture-note", "x": 3080, "y": 2080, "w": 420, "text": "Why this is a platform\n\nAdding a module is one folder under src/modules plus one line in the registry. The rail, the dashboard and Settings read that registry, so a new workflow arrives with its own section, its own stats and its own attention items, and nothing already built has to change.\n\nTurning a module off in Settings hides its rail section, routes and dashboard items. Its data stays." }
+  ],
+  "launch": { "view": "canvas" }
+}
