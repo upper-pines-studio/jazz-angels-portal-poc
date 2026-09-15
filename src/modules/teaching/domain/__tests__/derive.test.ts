@@ -3,6 +3,7 @@ import { makeCoreSeed } from '../../../../core/seed';
 import type { PortalState } from '../../../../core/types';
 import {
   attendanceSummary,
+  classesAtVenue,
   enrolledCount,
   ensembleOptions,
   ensembleTrend,
@@ -157,5 +158,18 @@ describe('the schedule', () => {
     expect(trend).toHaveLength(5);
     expect(trend[trend.length - 1].date).toBe(today);
     expect(trend.every((p) => p.rate > 0 && p.rate <= 1)).toBe(true);
+  });
+});
+
+describe('classesAtVenue', () => {
+  it('lists the ensembles that meet at a venue with their next meeting', () => {
+    const atSchool = classesAtVenue(state, 'v-paramount-ms', today);
+    expect(atSchool.map((c) => c.name)).toEqual(['Paramount MS']);
+    expect(atSchool[0]).toMatchObject({ room: 'Band room B-12', leadStaffId: 's-devon', enrolled: 6 });
+    // Week 1 of the Fall term: the first Thursday class is Sep 17.
+    expect(atSchool[0].when).toBe('Thursday · 3:00pm – 4:00pm');
+
+    expect(classesAtVenue(state, 'v-studio', today)).toHaveLength(7);
+    expect(classesAtVenue(state, 'v-alondra-ms', today)).toEqual([]);
   });
 });

@@ -17,7 +17,7 @@ per module.
 - `src/design-system/` — the 27 shared components (JSX + `.d.ts`). Import from the barrel: `import { Card, Button } from '../design-system'`. Do not edit these; they are shared with the staff-portal POC.
 - `src/core/` — the shared nouns (staff, programs, fiscal year, settings), the store, the repository, formatting. `src/core/README.md` documents the API.
 - `src/modules/` — one folder per workflow: `grants/`, `teaching/`, `timesheets/`, plus `index.ts`, the registry. `src/modules/README.md` says how to add one.
-- `src/app/` — App, Shell, the two core screens (Dashboard, Settings), shared app components.
+- `src/app/` — App, Shell, the core screens (Dashboard, Partners with its detail pages, Settings), shared app components.
 - `design/` — the design-canvas artboards (`*.dc.html`), `kit.css`, `canvas.json`. Mockups only; the app is the source of truth once built.
 
 ## Conventions

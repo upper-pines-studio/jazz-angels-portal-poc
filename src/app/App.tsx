@@ -6,6 +6,9 @@ import { Shell } from './Shell';
 import { ToastHost } from './ToastHost';
 import Dashboard from './screens/Dashboard';
 import Settings from './screens/Settings';
+import Partners from './screens/partners/Partners';
+import OrganizationDetail from './screens/partners/OrganizationDetail';
+import VenueDetail from './screens/partners/VenueDetail';
 
 /** Every registered module's slice, in registry order. Core is added by the store. */
 const SLICES = MODULES.map(m => m.slice);
@@ -19,6 +22,9 @@ function Frame() {
     <Shell>
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/partners" element={<Partners />} />
+        <Route path="/partners/organizations/:id" element={<OrganizationDetail />} />
+        <Route path="/partners/venues/:id" element={<VenueDetail />} />
         <Route path="/settings" element={<Settings />} />
         {routes.map(r => <Route key={r.path} path={r.path} element={r.element} />)}
         {/* A route from a module that has just been switched off. */}

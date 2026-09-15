@@ -71,7 +71,8 @@ agreed); a `Venue` is the physical place, and may belong to an organization,
 so a district lists its schools. Jazz Angels' own studio is a venue of kind
 `studio` with no organization. Modules point at venues by id and never copy
 the name: `placeLabel(state, venueId, room)` renders "Studio 1" for the studio
-and "Paramount Middle School · Band room B-12" for anywhere else.
+and "Paramount Middle School · Band room B-12" for anywhere else. The office
+manages both on the Partners screen (`src/app/screens/partners/`).
 
 ## Core actions
 

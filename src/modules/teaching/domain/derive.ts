@@ -278,6 +278,44 @@ export function ensembleOptions(
     .map((e) => ({ id: e.id, name: e.name }));
 }
 
+/** One ensemble as a venue page lists it: what meets here, when, led by whom. */
+export interface VenueClass {
+  ensembleId: string;
+  name: string;
+  programId: ProgramId;
+  room: string;
+  leadStaffId: string;
+  enrolled: number;
+  /** "Thursday · 3:00pm – 4:00pm", from the next meeting on or after today, else the last one. */
+  when?: string;
+}
+
+/**
+ * The ensembles that meet at one venue, for the Partners screens in `app/`.
+ * Read through `src/modules/teaching/index.ts`; core itself never asks.
+ */
+export function classesAtVenue(state: PortalState, venueId: string, today: string): VenueClass[] {
+  return state.teaching.ensembles
+    .filter((e) => e.venueId === venueId)
+    .map((e) => {
+      const meetings = state.teaching.meetings
+        .filter((m) => m.ensembleId === e.id && m.venueId === venueId)
+        .sort((x, y) => x.date.localeCompare(y.date));
+      const next = meetings.find((m) => m.date >= today) ?? meetings.at(-1);
+      return {
+        ensembleId: e.id,
+        name: e.name,
+        programId: e.programId,
+        room: e.room,
+        leadStaffId: e.leadStaffId,
+        enrolled: ensembleCount(state, e.id),
+        when: next ? `${WEEKDAYS[toDate(next.date).getDay()]} · ${timeRange(next)}` : undefined,
+      };
+    });
+}
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 // --- Display helpers --------------------------------------------------------
 
 /** '16:00' → '4:00pm'. Times are stored 24-hour and read 12-hour. */

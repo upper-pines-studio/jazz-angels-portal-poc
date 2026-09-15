@@ -42,7 +42,8 @@ src/
     App.tsx                StoreProvider + Shell + routes built from MODULES
     Shell.tsx              rail built from MODULES (sections + items + badge counts)
     screens/Dashboard.tsx  composed from every enabled module's dashboard contributions
-    screens/Settings.tsx   core: staff, venues and organizations, programs, fiscal year, Modules on/off, export/import/reset
+    screens/Settings.tsx   core: staff, programs, fiscal year, Modules on/off, export/import/reset
+    screens/partners/      core: Partners list, OrganizationDetail, VenueDetail, shared dialogs
     components/            shared app-level bits (badges, TableScroll)
     responsive.css
   design-system/           untouched
@@ -280,14 +281,27 @@ awaiting approval" as `info` when > 0; no panel.
   (mono), what, detail, a small `source` Badge (Grants / Teaching / Timesheets), owner avatar,
   status Badge. Right column (1fr): each module's panels stacked. Empty attention: "Nothing needs
   attention. The next deadline is <date>." Add-grant button stays in the top bar.
-- **Settings** `/settings` — Cards: Staff (name, role, "teaches" Switch), Programs, Fiscal year,
+- **Partners** `/partners` — Core, because ensembles and meetings point at venues by id. Two
+  tables: Venues (name, kind, organization, address, on-site contact; sorted by organization then
+  name) and Organizations (name, kind, contact, its venues). Top-bar buttons Add organization and
+  Add venue; a row opens its detail page.
+  - **Organization** `/partners/organizations/:id` — Contact card (kind, contact, email, phone,
+    website, notes) and a Venues table of the places under it, with Add venue prefilled to this
+    organization. Edit organization in the top bar.
+  - **Venue** `/partners/venues/:id` — Details card (kind, organization link, address, on-site
+    contact, phone, email, notes) and **Classes here**: the ensembles that meet at this venue
+    (program, when, room, lead, students), read from the teaching module's public index and shown
+    only while Teaching is on. Edit venue in the top bar.
+- **Settings** `/settings` — Cards: Staff (name, role, "teaches" Switch), Partners and venues (a
+  count and a button to the Partners screen), Programs, Fiscal year,
   **Modules** (one row per registered module: label, description, Switch; core cannot be turned
   off; copy: "Turning a module off hides it from the rail and the dashboard. Its data stays."),
   Data (Export JSON, Import, Reset demo data).
 - Rail: **Overview** → Dashboard · then each enabled module's section in registry order
   (**Grants**: All grants, Deadlines, Funders, Playbook · **Teaching**: Schedule, Students ·
-  **Office**: Timesheets, Settings). Sections with the same name merge; "Office" is where
-  Timesheets and core Settings meet. Badge counts come from `NavItem.badge`.
+  **Office**: Timesheets, Partners, Settings). Sections with the same name merge; "Office" is
+  where Timesheets and the core Partners and Settings screens meet. Badge counts come from
+  `NavItem.badge`.
   Footer: signed-in person (Barry Cogert, Program Director).
 
 ---

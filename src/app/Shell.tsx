@@ -27,7 +27,8 @@ interface RailItem { id?: string; label?: React.ReactNode; icon?: React.ReactNod
 
 /**
  * The rail: Overview first, then every enabled module's section in registry
- * order (sections with the same name merge), and Settings at the end of Office.
+ * order (sections with the same name merge), then Partners and Settings at the
+ * end of Office: core screens, so they stay whichever modules are on.
  */
 function buildNav(state: PortalState, today: string): RailItem[] {
   const sections: Array<{ name: string; items: RailItem[] }> = [
@@ -56,7 +57,10 @@ function buildNav(state: PortalState, today: string): RailItem[] {
     }
   }
 
-  sectionFor('Office').items.push({ id: '/settings', label: 'Settings', icon: <Icon name="settings" size={16} /> });
+  sectionFor('Office').items.push(
+    { id: '/partners', label: 'Partners', icon: <Icon name="building-2" size={16} /> },
+    { id: '/settings', label: 'Settings', icon: <Icon name="settings" size={16} /> },
+  );
 
   return sections.flatMap(s => (s.items.length ? [{ section: s.name }, ...s.items] : []));
 }

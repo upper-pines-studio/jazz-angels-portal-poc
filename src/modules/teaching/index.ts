@@ -3,9 +3,11 @@
  * deeper: the manifest, plus pure read-only functions of `(state, …)`.
  *
  * `attendanceSummary` is what the grants module's Program numbers card quotes;
- * `ensembleOptions` is what the timesheets Log hours dialog offers.
+ * `ensembleOptions` is what the timesheets Log hours dialog offers;
+ * `classesAtVenue` is what the Partners venue page lists.
  */
 
 export { manifest } from './manifest';
-export { attendanceSummary, enrolledCount, ensembleOptions } from './domain/derive';
+export { attendanceSummary, classesAtVenue, enrolledCount, ensembleOptions } from './domain/derive';
 export type { AttendanceSummary } from './domain/types';
+export type { VenueClass } from './domain/derive';

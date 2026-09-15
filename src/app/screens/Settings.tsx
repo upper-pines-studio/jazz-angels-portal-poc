@@ -7,7 +7,6 @@ import { useToast } from '../ToastHost';
 import { SEED_TODAY, dateLong, dateRange, fiscalYear, useStore } from '../../core';
 import type { ModuleManifest, StaffMember } from '../../core';
 import { MODULES } from '../../modules';
-import Places from './settings/Places';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
@@ -25,7 +24,7 @@ export default function Settings() {
   const [confirmReset, setConfirmReset] = React.useState(false);
   const fileInput = React.useRef<HTMLInputElement>(null);
 
-  usePageHeader({ title: 'Settings', subtitle: 'People, places, programs, modules and your data' });
+  usePageHeader({ title: 'Settings', subtitle: 'People, programs, modules and your data' });
 
   const fy = fiscalYear(today, state.core.settings.fiscalYearStartMonth);
   const enabled = state.core.settings.enabledModules;
@@ -127,8 +126,6 @@ export default function Settings() {
         </div>
       </Card>
 
-      <Places />
-
       <Card title="Modules" subtitle="What this portal does. Core stays on.">
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {MODULES.map(m => (
@@ -152,6 +149,16 @@ export default function Settings() {
         <p style={{ ...MUTED_SM, margin: 'var(--space-4) 0 0' }}>
           Turning a module off hides it from the rail and the dashboard. Its data stays.
         </p>
+      </Card>
+
+      <Card title="Partners and venues" subtitle="Schools, districts and the places classes meet.">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+          <p style={{ ...MUTED_SM, margin: 0, flex: 1, minWidth: 240 }}>
+            {state.core.organizations.length} {state.core.organizations.length === 1 ? 'organization' : 'organizations'} and {state.core.venues.length} venues.
+            They live on their own screen, since the schedule points at them.
+          </p>
+          <Button variant="secondary" size="sm" onClick={() => nav('/partners')}>Open Partners</Button>
+        </div>
       </Card>
 
       <Card title="Programs" subtitle="What the money and the classes are for.">
