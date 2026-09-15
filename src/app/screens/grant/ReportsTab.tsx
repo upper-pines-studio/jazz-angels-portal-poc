@@ -4,6 +4,7 @@ import { dateShort, isPostAward, useStore } from '../../../domain';
 import type { Grant, Report, ReportStatus } from '../../../domain';
 import { useToast } from '../../ToastHost';
 import { AddButton, DialogFields, FooterBand } from './parts';
+import { TableScroll } from '../../components/TableScroll';
 
 /** What the funder is owed and when. */
 
@@ -33,6 +34,7 @@ export function ReportsTab({ grant }: { grant: Grant }) {
 
   return (
     <div>
+      <TableScroll minWidth={620}>
       <DataTable
         columns={[
           {
@@ -60,6 +62,7 @@ export function ReportsTab({ grant }: { grant: Grant }) {
         rows={rows}
         emptyLabel="No reports scheduled yet."
       />
+      </TableScroll>
 
       <FooterBand>
         <AddButton label="Add report" onClick={() => setAdding(true)} />

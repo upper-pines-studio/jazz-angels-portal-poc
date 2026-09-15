@@ -1,0 +1,38 @@
+/*
+ * Playbook: the layout of one step row inside a template.
+ *
+ * Desktop is a single line — grip, title, timing, remove. On a tablet the
+ * timing column gives up some width; on a phone the row becomes two lines,
+ * with the timing label sitting under the title.
+ */
+
+.ja-playbook-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 260px 32px;
+  grid-template-areas: 'grip title timing remove';
+  gap: var(--space-3);
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--space-5);
+}
+
+.ja-playbook-row__grip { grid-area: grip; }
+.ja-playbook-row__title { grid-area: title; }
+.ja-playbook-row__timing { grid-area: timing; }
+.ja-playbook-row__remove { grid-area: remove; }
+
+@media (max-width: 900px) {
+  .ja-playbook-row { grid-template-columns: 28px minmax(0, 1fr) 200px 32px; }
+}
+
+@media (max-width: 640px) {
+  .ja-playbook-row {
+    grid-template-columns: 28px minmax(0, 1fr) 32px;
+    grid-template-areas:
+      'grip title  remove'
+      '.    timing .';
+    row-gap: 2px;
+    padding: var(--space-2) var(--space-4);
+  }
+  .ja-playbook-row__grip { align-self: center; }
+}

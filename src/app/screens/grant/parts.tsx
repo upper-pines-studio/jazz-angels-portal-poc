@@ -39,7 +39,7 @@ export function DialogFields({ children }: { children: React.ReactNode }) {
 
 /** Two fields side by side inside a Dialog. */
 export function FieldRow({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>{children}</div>;
+  return <div className="ja-grid-2">{children}</div>;
 }
 
 /** A teal check followed by a date — "received", "done". */

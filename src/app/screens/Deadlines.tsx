@@ -4,6 +4,7 @@ import { addMonths, format, startOfMonth } from 'date-fns';
 import { Button, Card, DataTable, EmptyState, Icon, IconButton, Select, Tabs } from '../../design-system';
 import { usePageHeader } from '../Shell';
 import { DeadlineKindBadge, DeadlineStatusBadge, OwnerAvatar } from '../components/badges';
+import { TableScroll } from '../components/TableScroll';
 import { CalendarMonth } from './deadlines/CalendarMonth';
 import { DEADLINE_KINDS, KIND_LABELS } from './deadlines/helpers';
 import { dateShort, deadlines, funderById, grantById, toDate, useStore } from '../../domain';
@@ -75,6 +76,7 @@ export default function Deadlines() {
     <>
       <div style={{
         display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 'var(--space-6)',
+        flexWrap: 'wrap', rowGap: 'var(--space-3)',
         borderBottom: 'var(--border-width) solid var(--border-default)',
       }}>
         <Tabs
@@ -83,21 +85,23 @@ export default function Deadlines() {
           onChange={setView}
           style={{ borderBottom: 0, flex: '0 0 auto' }}
         />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', paddingBottom: 10 }}>
-          <Select
-            value={owner}
-            onChange={e => setOwner(e.target.value)}
-            style={{ width: 136 }}
-            options={[{ value: ALL, label: 'All owners' }, ...state.staff.map(s => ({ value: s.id, label: s.name }))]}
-          />
-          <Select
-            value={kind}
-            onChange={e => setKind(e.target.value)}
-            style={{ width: 136 }}
-            options={[{ value: ALL, label: 'All kinds' }, ...DEADLINE_KINDS.map(k => ({ value: k, label: KIND_LABELS[k as DeadlineKind] }))]}
-          />
+        <div className="ja-filter-bar" style={{ paddingBottom: 10, flex: '1 1 auto', justifyContent: 'flex-end' }}>
+          <div className="ja-filter-bar__select">
+            <Select
+              value={owner}
+              onChange={e => setOwner(e.target.value)}
+              options={[{ value: ALL, label: 'All owners' }, ...state.staff.map(s => ({ value: s.id, label: s.name }))]}
+            />
+          </div>
+          <div className="ja-filter-bar__select">
+            <Select
+              value={kind}
+              onChange={e => setKind(e.target.value)}
+              options={[{ value: ALL, label: 'All kinds' }, ...DEADLINE_KINDS.map(k => ({ value: k, label: KIND_LABELS[k as DeadlineKind] }))]}
+            />
+          </div>
           {view === 'calendar' && (
-            <>
+            <div className="ja-actions" style={{ flex: '0 1 auto', justifyContent: 'flex-end' }}>
               <IconButton label="Previous month" variant="outline" onClick={() => setMonth(m => addMonths(m, -1))}>
                 <Icon name="chevron-left" size={16} />
               </IconButton>
@@ -108,11 +112,12 @@ export default function Deadlines() {
               <div style={{
                 font: 'var(--weight-semibold) var(--text-lg)/1.2 var(--font-display)',
                 letterSpacing: 'var(--tracking-display)', color: 'var(--text-strong)',
-                minWidth: 136, textAlign: 'right',
+                minWidth: 0, textAlign: 'right',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
                 {format(month, 'MMMM yyyy')}
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -137,12 +142,16 @@ export default function Deadlines() {
           {overdue.length > 0 && (
             <Card title="Overdue" subtitle={`${overdue.length} ${overdue.length === 1 ? 'date has' : 'dates have'} passed`}
               padding="0" accent="var(--danger-500)">
-              <DataTable columns={columns} rows={overdue} onRowClick={openGrant} />
+              <TableScroll minWidth={700}>
+                <DataTable columns={columns} rows={overdue} onRowClick={openGrant} />
+              </TableScroll>
             </Card>
           )}
           {months.map(m => (
             <Card key={m.key} title={m.label} padding="0">
-              <DataTable columns={columns} rows={m.items} onRowClick={openGrant} />
+              <TableScroll minWidth={700}>
+                <DataTable columns={columns} rows={m.items} onRowClick={openGrant} />
+              </TableScroll>
             </Card>
           ))}
         </>

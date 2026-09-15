@@ -43,7 +43,7 @@ export default function GrantDetail() {
       subtitle: [funder?.name, programName(state, grant.program), owner?.name].filter(Boolean).join(' · '),
       crumbs: [{ label: 'Grants', href: '/grants' }, { label: funder?.name ?? 'Grant' }],
       actions: (
-        <>
+        <div className="ja-actions">
           {transitions.slice().reverse().map(t => (
             <Button key={t.to} size="sm"
               variant={t.kind === 'primary' ? 'primary' : 'secondary'}
@@ -52,7 +52,7 @@ export default function GrantDetail() {
               {t.label}
             </Button>
           ))}
-        </>
+        </div>
       ),
     }
     : { title: 'Grant', crumbs: [{ label: 'Grants', href: '/grants' }] });
@@ -79,10 +79,12 @@ export default function GrantDetail() {
     <>
       <PhaseStepper grant={grant} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--space-5)', alignItems: 'start' }}>
+      <div className="ja-split" style={{ gap: 'var(--space-5)' }}>
         <Card padding="0">
           <div style={{ padding: 'var(--space-3) var(--space-6) 0' }}>
-            <Tabs tabs={TABS} active={tab} onChange={setTab} />
+            <div className="ja-tabs-scroll">
+              <Tabs tabs={TABS} active={tab} onChange={setTab} style={{ borderBottom: 0 }} />
+            </div>
           </div>
           {tab === 'checklist' && <ChecklistTab grant={grant} />}
           {tab === 'documents' && <DocumentsTab grant={grant} />}

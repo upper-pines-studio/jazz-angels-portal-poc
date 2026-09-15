@@ -4,6 +4,7 @@ import { usePageHeader } from '../Shell';
 import { useToast } from '../ToastHost';
 import { KV, PhaseBadge } from '../components/badges';
 import { FunderFields, capitalise, type FunderDraft } from './Funders';
+import { TableScroll } from '../components/TableScroll';
 import { Card, DataTable, Button, Icon, Dialog, EmptyState } from '../../design-system';
 import { useStore, funderById, funderTotals, grantsByFunder, money } from '../../domain';
 import type { Grant } from '../../domain';
@@ -58,7 +59,7 @@ export default function FunderDetail() {
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 'var(--space-5)', alignItems: 'start' }}>
+      <div className="ja-split ja-split--aside-left">
         <Card title="Contact">
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <KV k="Type" v={capitalise(funder.type)} />
@@ -83,27 +84,29 @@ export default function FunderDetail() {
           }}>
             {totals.grants} {totals.grants === 1 ? 'grant' : 'grants'} · {money(totals.requested)} requested · {money(totals.awarded)} awarded
           </div>
-          <DataTable
-            rows={grants.map(g => ({ id: g.id, grant: g }))}
-            onRowClick={(r: { id: string }) => nav(`/grants/${r.id}`)}
-            emptyLabel="No grants with this funder yet. Add one from the Grants screen."
-            columns={[
-              { key: 'title', label: 'Grant', width: '2fr', strong: true, wrap: true, render: (r: { grant: Grant }) => r.grant.title },
-              {
-                key: 'year', label: 'Year', width: '70px', mono: true,
-                render: (r: { grant: Grant }) => (r.grant.dates.applicationDue ?? r.grant.createdAt).slice(0, 4),
-              },
-              { key: 'phase', label: 'Phase', width: '120px', render: (r: { grant: Grant }) => <PhaseBadge phase={r.grant.phase} /> },
-              {
-                key: 'requested', label: 'Requested', width: '110px', align: 'right', mono: true,
-                render: (r: { grant: Grant }) => (r.grant.amountRequested ? money(r.grant.amountRequested) : <Dash />),
-              },
-              {
-                key: 'awarded', label: 'Awarded', width: '110px', align: 'right', mono: true,
-                render: (r: { grant: Grant }) => (r.grant.amountAwarded ? money(r.grant.amountAwarded) : <Dash />),
-              },
-            ]}
-          />
+          <TableScroll minWidth={640}>
+            <DataTable
+              rows={grants.map(g => ({ id: g.id, grant: g }))}
+              onRowClick={(r: { id: string }) => nav(`/grants/${r.id}`)}
+              emptyLabel="No grants with this funder yet. Add one from the Grants screen."
+              columns={[
+                { key: 'title', label: 'Grant', width: '2fr', strong: true, wrap: true, render: (r: { grant: Grant }) => r.grant.title },
+                {
+                  key: 'year', label: 'Year', width: '70px', mono: true,
+                  render: (r: { grant: Grant }) => (r.grant.dates.applicationDue ?? r.grant.createdAt).slice(0, 4),
+                },
+                { key: 'phase', label: 'Phase', width: '120px', render: (r: { grant: Grant }) => <PhaseBadge phase={r.grant.phase} /> },
+                {
+                  key: 'requested', label: 'Requested', width: '110px', align: 'right', mono: true,
+                  render: (r: { grant: Grant }) => (r.grant.amountRequested ? money(r.grant.amountRequested) : <Dash />),
+                },
+                {
+                  key: 'awarded', label: 'Awarded', width: '110px', align: 'right', mono: true,
+                  render: (r: { grant: Grant }) => (r.grant.amountAwarded ? money(r.grant.amountAwarded) : <Dash />),
+                },
+              ]}
+            />
+          </TableScroll>
         </Card>
       </div>
 

@@ -4,6 +4,7 @@ import { dateShort, useStore } from '../../../domain';
 import type { DocumentKind, DocumentStatus, Grant, GrantDocument } from '../../../domain';
 import { useToast } from '../../ToastHost';
 import { AddButton, DialogFields, FooterBand } from './parts';
+import { TableScroll } from '../../components/TableScroll';
 
 /** The register of files that live in the grant folder. The POC links, it does not store. */
 
@@ -43,6 +44,7 @@ export function DocumentsTab({ grant }: { grant: Grant }) {
         The files that live in the grant folder. Link them here; the POC does not store files.
       </p>
 
+      <TableScroll minWidth={620}>
       <DataTable
         columns={[
           { key: 'name', label: 'Name', strong: true, width: '1.6fr' },
@@ -60,6 +62,7 @@ export function DocumentsTab({ grant }: { grant: Grant }) {
         onRowClick={(r: GrantDocument) => setEditing(r)}
         emptyLabel="No documents listed yet. Add the first one below."
       />
+      </TableScroll>
 
       <FooterBand>
         <AddButton label="Add document" onClick={() => setAdding(true)} />

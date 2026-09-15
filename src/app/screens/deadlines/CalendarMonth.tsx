@@ -4,6 +4,7 @@ import { DeadlineKindBadge, deadlineKindColor } from '../../components/badges';
 import { DEADLINE_KINDS, deadlineChipTint, funderShort, monthMatrix, WEEKDAYS } from './helpers';
 import { funderById, grantById, toISO, useStore } from '../../../domain';
 import type { Deadline } from '../../../domain';
+import './calendar.css';
 
 const MAX_CHIPS = 3;
 
@@ -41,14 +42,9 @@ export function CalendarMonth({
       <Card padding="0">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
           {WEEKDAYS.map(d => (
-            <div key={d} style={{
-              background: 'var(--surface-sunken)',
-              borderBottom: 'var(--border-width) solid var(--border-default)',
-              padding: '10px 12px',
-              font: 'var(--weight-semibold) var(--text-3xs)/1.2 var(--font-sans)',
-              letterSpacing: 'var(--tracking-wide)', textTransform: 'uppercase', color: 'var(--text-muted)',
-            }}>
-              {d}
+            <div key={d} className="ja-cal-weekday">
+              <span className="ja-cal-weekday__full">{d}</span>
+              <span className="ja-cal-weekday__short">{d.charAt(0)}</span>
             </div>
           ))}
         </div>
@@ -63,9 +59,9 @@ export function CalendarMonth({
               return (
                 <div
                   key={iso}
+                  className="ja-cal-cell"
                   style={{
-                    minHeight: 110, padding: 'var(--space-2)', display: 'flex', flexDirection: 'column', gap: 5,
-                    minWidth: 0, background: out ? 'var(--surface-page)' : 'var(--surface-card)',
+                    background: out ? 'var(--surface-page)' : 'var(--surface-card)',
                     borderRight: col === 6 ? 'none' : 'var(--border-width) solid var(--border-subtle)',
                     borderBottom: row === weeks.length - 1 ? 'none' : 'var(--border-width) solid var(--border-subtle)',
                   }}
@@ -83,23 +79,20 @@ export function CalendarMonth({
                   {dayItems.slice(0, MAX_CHIPS).map(d => (
                     <span
                       key={d.id}
+                      className="ja-cal-chip"
                       title={chipText(d)}
                       onClick={() => onOpen(d)}
                       style={{
-                        display: 'block', height: 22, padding: '0 var(--space-2)',
-                        borderLeft: `3px solid ${deadlineKindColor(d.kind, d.status)}`,
-                        background: deadlineChipTint(d.kind, d.status),
-                        borderRadius: 'var(--radius-xs)', cursor: 'pointer',
-                        font: 'var(--weight-regular) var(--text-2xs)/22px var(--font-sans)', color: 'var(--text-body)',
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                      }}
+                        '--chip-color': deadlineKindColor(d.kind, d.status),
+                        '--chip-tint': deadlineChipTint(d.kind, d.status),
+                      } as React.CSSProperties}
                     >
-                      {chipText(d)}
+                      <span className="ja-cal-chip__text">{chipText(d)}</span>
                     </span>
                   ))}
                   {dayItems.length > MAX_CHIPS && (
-                    <span style={{ font: 'var(--weight-regular) var(--text-2xs)/1.3 var(--font-sans)', color: 'var(--text-muted)', paddingLeft: 'var(--space-2)' }}>
-                      +{dayItems.length - MAX_CHIPS} more
+                    <span className="ja-cal-more">
+                      +{dayItems.length - MAX_CHIPS}<span className="ja-cal-more__word"> more</span>
                     </span>
                   )}
                 </div>

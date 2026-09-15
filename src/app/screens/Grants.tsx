@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { usePageHeader } from '../Shell';
 import { PhaseBadge, DeadlineStatusBadge, OwnerAvatar } from '../components/badges';
 import AddGrantDialog from './grants/AddGrantDialog';
+import { TableScroll } from '../components/TableScroll';
 import { Card, DataTable, Tabs, Input, Select, Button, Icon, EmptyState } from '../../design-system';
 import {
   useStore, grantsByView, nextDeadline, funderById, programName, fyTotals,
@@ -122,38 +123,47 @@ export default function Grants() {
 
   return (
     <>
-      <Tabs tabs={tabs} active={view} onChange={id => setView(id as GrantView)} />
+      <div className="ja-tabs-scroll">
+        <Tabs tabs={tabs} active={view} onChange={id => setView(id as GrantView)} style={{ borderBottom: 0 }} />
+      </div>
       <Card padding="0">
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+        <div className="ja-filter-bar" style={{
           padding: 'var(--space-4) var(--space-5)',
           borderBottom: 'var(--border-width) solid var(--border-subtle)',
         }}>
-          <Input
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            placeholder="Search funders or grants"
-            prefix={<Icon name="search" size={15} />}
-            style={{ width: 220, flex: '0 0 auto' }}
-          />
-          <Select
-            value={owner}
-            onChange={e => setOwner(e.target.value)}
-            options={[{ value: 'all', label: 'All owners' }, ...state.staff.map(s => ({ value: s.id, label: s.name }))]}
-            style={{ width: 140, flex: '0 0 auto' }}
-          />
-          <Select
-            value={program}
-            onChange={e => setProgram(e.target.value)}
-            options={[{ value: 'all', label: 'All programs' }, ...state.programs.map(p => ({ value: p.id, label: p.name }))]}
-            style={{ width: 160, flex: '0 0 auto' }}
-          />
-          <Select
-            value={phase}
-            onChange={e => setPhase(e.target.value)}
-            options={[{ value: 'all', label: 'All phases' }, ...ALL_PHASES.map((p: Phase) => ({ value: p, label: PHASES[p].label }))]}
-            style={{ width: 140, flex: '0 0 auto' }}
-          />
+          <div className="ja-filter-bar__search">
+            <Input
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              placeholder="Search funders or grants"
+              prefix={<Icon name="search" size={15} />}
+              style={{ width: '100%' }}
+            />
+          </div>
+          <div className="ja-filter-bar__select">
+            <Select
+              value={owner}
+              onChange={e => setOwner(e.target.value)}
+              options={[{ value: 'all', label: 'All owners' }, ...state.staff.map(s => ({ value: s.id, label: s.name }))]}
+              style={{ width: '100%' }}
+            />
+          </div>
+          <div className="ja-filter-bar__select">
+            <Select
+              value={program}
+              onChange={e => setProgram(e.target.value)}
+              options={[{ value: 'all', label: 'All programs' }, ...state.programs.map(p => ({ value: p.id, label: p.name }))]}
+              style={{ width: '100%' }}
+            />
+          </div>
+          <div className="ja-filter-bar__select">
+            <Select
+              value={phase}
+              onChange={e => setPhase(e.target.value)}
+              options={[{ value: 'all', label: 'All phases' }, ...ALL_PHASES.map((p: Phase) => ({ value: p, label: PHASES[p].label }))]}
+              style={{ width: '100%' }}
+            />
+          </div>
         </div>
         {rows.length === 0
           ? (
@@ -164,7 +174,11 @@ export default function Grants() {
               action={<Button variant="primary" size="sm" iconLeft={<Icon name="plus" size={15} />} onClick={() => setAdding(true)}>Add grant</Button>}
             />
           )
-          : <DataTable columns={columns} rows={rows} onRowClick={(r: Row) => nav(`/grants/${r.id}`)} />}
+          : (
+            <TableScroll minWidth={900}>
+              <DataTable columns={columns} rows={rows} onRowClick={(r: Row) => nav(`/grants/${r.id}`)} />
+            </TableScroll>
+          )}
       </Card>
       {adding && <AddGrantDialog open onClose={() => setAdding(false)} />}
     </>

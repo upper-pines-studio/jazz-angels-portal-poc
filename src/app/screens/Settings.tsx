@@ -1,4 +1,5 @@
 import React from 'react';
+import { TableScroll } from '../components/TableScroll';
 import { Button, Card, DataTable, Dialog, Field, Icon, Input, Select, Tag } from '../../design-system';
 import { usePageHeader } from '../Shell';
 import { useToast } from '../ToastHost';
@@ -57,20 +58,22 @@ export default function Settings() {
   return (
     <>
       <Card title="Staff" subtitle="Who can own a grant or a checklist step." padding="0">
-        <DataTable
-          rows={state.staff}
-          columns={[
-            { key: 'name', label: 'Name', strong: true },
-            { key: 'role', label: 'Role' },
-            {
-              key: 'edit', label: '', width: '80px', align: 'right',
-              render: (row: StaffMember) => (
-                <a href="#" onClick={e => { e.preventDefault(); setPerson({ id: row.id, name: row.name, role: row.role }); }}>Edit</a>
-              ),
-            },
-          ]}
-          emptyLabel="No one yet. Add the people who work on grants."
-        />
+        <TableScroll minWidth={420}>
+          <DataTable
+            rows={state.staff}
+            columns={[
+              { key: 'name', label: 'Name', strong: true },
+              { key: 'role', label: 'Role' },
+              {
+                key: 'edit', label: '', width: '80px', align: 'right',
+                render: (row: StaffMember) => (
+                  <a href="#" onClick={e => { e.preventDefault(); setPerson({ id: row.id, name: row.name, role: row.role }); }}>Edit</a>
+                ),
+              },
+            ]}
+            emptyLabel="No one yet. Add the people who work on grants."
+          />
+        </TableScroll>
         <div style={{ display: 'flex', alignItems: 'center', minHeight: 44, padding: '0 var(--space-4)', background: 'var(--surface-sunken)' }}>
           <Button variant="ghost" size="sm" iconLeft={<Icon name="plus" size={15} />} onClick={() => setPerson({ name: '', role: '' })}>
             Add person

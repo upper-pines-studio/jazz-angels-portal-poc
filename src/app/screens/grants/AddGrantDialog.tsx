@@ -13,6 +13,7 @@ import type {
   ChecklistTemplate, ChecklistTemplateItem, FunderType, GrantDates,
   NewGrantInput, Phase, ProgramId, Restriction, Task,
 } from '../../../domain';
+import './add-grant.css';
 
 const NEW_FUNDER = '__new__';
 const NO_CHECKLIST = '__none__';
@@ -227,7 +228,7 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
             <Input value={amount ? plainNumber(Number(amount)) : ''} mono prefix="$" placeholder="30,000"
               onChange={e => setAmount(e.target.value.replace(/\D/g, ''))} />
           </Field>
-          <span />
+          <span className="ja-hide-sm" />
           <SwitchRow label="Funder requires a letter of intent" checked={loiRequired} onChange={setLoiRequired} />
           {loiRequired && (
             <Field label="LOI due">
@@ -297,7 +298,7 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
 
 function StepBars({ step }: { step: number }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+    <div className="ja-grant-steps">
       {STEPS.map((name, i) => (
         <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           <span style={{
@@ -317,7 +318,7 @@ function StepBars({ step }: { step: number }) {
 
 function Grid({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 'var(--space-4)', alignItems: 'start' }}>
+    <div className="ja-grid-2" style={{ alignItems: 'start' }}>
       {children}
     </div>
   );

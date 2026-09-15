@@ -1,0 +1,293 @@
+/*
+ * Responsive layout for the grants POC.
+ *
+ * The design-system components style themselves inline and are shared with the
+ * staff portal, so they stay untouched. Everything that has to bend for a narrow
+ * screen is expressed here as an app-level class (`.ja-*`) that a screen puts on
+ * its own wrapper, plus a few narrowly-scoped overrides of the Shell chrome.
+ *
+ * Breakpoints (max-width):
+ *   1100px  stat rows go from four across to two
+ *    900px  sidebar becomes a drawer; two-column screens stack
+ *    640px  phone: everything single column, filters and actions wrap
+ */
+
+/* ---------------------------------------------------------------------------
+ * Shell
+ * ------------------------------------------------------------------------ */
+
+.ja-shell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  background: var(--surface-page);
+}
+
+.ja-sidebar {
+  flex: 0 0 auto;
+  display: flex;
+  height: 100%;
+}
+.ja-sidebar > nav {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.ja-frame {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sidebar footer: the signed-in person plus the collapse toggle. */
+.ja-rail-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.ja-rail-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1;
+}
+.ja-rail-toggle { display: none; }
+
+/*
+ * Collapsed rail (desktop only). The design-system Sidebar reads its width
+ * from --sidebar-w, so overriding the variable on the wrapper narrows it; the
+ * labels, section eyebrows and logo are then hidden and the icons centred.
+ */
+@media (min-width: 901px) {
+  .ja-rail-toggle { display: inline-flex; }
+  .ja-sidebar.is-collapsed { --sidebar-w: var(--sidebar-w-collapsed); }
+  .ja-sidebar.is-collapsed nav > div:first-child { justify-content: center; }
+  .ja-sidebar.is-collapsed nav > div:first-child > span { display: none !important; }
+  .ja-sidebar.is-collapsed nav > div:nth-child(2) > span { display: none; }
+  .ja-sidebar.is-collapsed nav > div:nth-child(2) > button {
+    justify-content: center;
+    padding: 0 !important;
+  }
+  .ja-sidebar.is-collapsed nav > div:nth-child(2) > button > span:not([data-icon-size]) { display: none; }
+  .ja-sidebar.is-collapsed nav > div:last-child { padding: var(--space-4) var(--space-2) !important; }
+  .ja-sidebar.is-collapsed .ja-rail-user { display: none; }
+  .ja-sidebar.is-collapsed .ja-rail-foot { justify-content: center; }
+}
+
+.ja-topbar {
+  position: relative;
+}
+
+/* The drawer toggle lives over the TopBar's left padding on narrow screens. */
+.ja-menu-btn {
+  display: none;
+  position: absolute;
+  left: var(--space-3);
+  top: 11px;
+  z-index: 1;
+}
+
+.ja-scrim {
+  display: none;
+}
+
+.ja-main {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-7);
+  /* position:relative so the design-system Dialog (position:absolute) scopes to the scrolling area */
+  position: relative;
+}
+
+/* The page fills whatever width the screen gives it. */
+.ja-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* ---------------------------------------------------------------------------
+ * Layout helpers for screens. Desktop values here; media queries below.
+ * Screens keep setting `gap` inline where it differs.
+ * ------------------------------------------------------------------------ */
+
+/* Four stat cards across. */
+.ja-grid-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+/* Main column + aside. Variants change the ratio; all stack at 900px. */
+.ja-split {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+.ja-split--aside-left { grid-template-columns: 1fr 2fr; }
+.ja-split--nav { grid-template-columns: 280px 1fr; }
+
+/* Two equal columns (form fields, budget lines). Single column at 640px. */
+.ja-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+/* Three-ish columns that flow naturally. */
+.ja-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-6);
+}
+
+/* Row of filter controls: search grows, selects hold, everything wraps. */
+.ja-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.ja-filter-bar__search { flex: 1 1 220px; min-width: 180px; max-width: 320px; }
+.ja-filter-bar__select { flex: 0 1 160px; min-width: 130px; }
+
+/* A group of buttons that may wrap onto a second line. */
+.ja-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* Tabs that can scroll sideways instead of overflowing. */
+.ja-tabs-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: var(--border-width) solid var(--border-default);
+  scrollbar-width: none;
+}
+.ja-tabs-scroll::-webkit-scrollbar { display: none; }
+.ja-tabs-scroll > div { min-width: max-content; }
+
+/* DataTable wrapper: the table keeps a sensible minimum width and the wrapper scrolls. */
+.ja-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+/* Horizontal phase stepper that scrolls when the phases no longer fit. */
+.ja-stepper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+.ja-stepper > div { min-width: max-content; }
+
+/*
+ * Dialog overlay. The design-system Dialog is position:absolute inside the
+ * scrolling main and cannot be given a class, so it is matched by the one
+ * inline property unique to it. A panel taller than the viewport scrolls
+ * inside the overlay instead of being clipped at both ends.
+ */
+.ja-main div[style*="z-index: 50"] {
+  overflow-y: auto;
+  align-items: flex-start !important;
+}
+/* auto margins centre the panel when it fits and let it scroll when it does not */
+.ja-main div[style*="z-index: 50"] > div { margin: auto 0; }
+
+/* Hide on narrow screens. */
+@media (max-width: 900px) { .ja-hide-md { display: none !important; } }
+@media (max-width: 640px) { .ja-hide-sm { display: none !important; } }
+
+/* ---------------------------------------------------------------------------
+ * ≤ 1100px
+ * ------------------------------------------------------------------------ */
+@media (max-width: 1100px) {
+  .ja-grid-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------------------------------------------------------------------------
+ * ≤ 900px — drawer sidebar, stacked columns
+ * ------------------------------------------------------------------------ */
+@media (max-width: 900px) {
+  .ja-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform var(--duration-base, 200ms) var(--ease-standard, ease);
+    box-shadow: var(--shadow-lg);
+  }
+  .ja-sidebar.is-open { transform: none; }
+
+  .ja-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: var(--scrim);
+  }
+
+  .ja-menu-btn { display: inline-flex; }
+  .ja-topbar > header { padding-left: 60px !important; }
+
+  .ja-main { padding: var(--space-5); }
+
+  /* With the sidebar out of the way the dialog may own the whole viewport. */
+  .ja-main div[style*="z-index: 50"] {
+    position: fixed !important;
+    padding: var(--space-4) !important;
+  }
+
+  .ja-split,
+  .ja-split--aside-left,
+  .ja-split--nav { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------------------------------------------------------------------------
+ * ≤ 640px — phone
+ * ------------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .ja-main { padding: var(--space-4); }
+  .ja-page { gap: var(--space-4); }
+
+  /* TopBar: title on the first line, actions on their own line. */
+  .ja-topbar > header {
+    flex-wrap: wrap !important;
+    padding-right: var(--space-4) !important;
+    padding-left: 56px !important;
+    gap: var(--space-3) !important;
+  }
+  .ja-topbar > header h1 { font-size: var(--text-lg) !important; }
+  .ja-topbar.has-actions > header > div:first-child { flex: 1 1 100% !important; }
+  .ja-topbar.has-actions > header > div:last-child {
+    flex: 1 1 100% !important;
+    flex-wrap: wrap;
+    margin-left: -40px; /* back under the menu button so actions use the full width */
+  }
+
+  /* Card headers: action drops beneath the title when it does not fit. */
+  .ja-main section > header { flex-wrap: wrap; }
+
+  .ja-grid-2 { grid-template-columns: minmax(0, 1fr); }
+  .ja-grid-3 { grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+
+  /* Toasts span the screen instead of hanging off the right edge. */
+  .ja-toasts { left: var(--space-4); right: var(--space-4) !important; bottom: var(--space-4) !important; }
+
+  .ja-filter-bar__search { flex: 1 1 100%; max-width: none; }
+  .ja-filter-bar__select { flex: 1 1 calc(50% - var(--space-3)); min-width: 0; }
+}
+
+@media (max-width: 480px) {
+  .ja-grid-stats { grid-template-columns: minmax(0, 1fr); }
+}

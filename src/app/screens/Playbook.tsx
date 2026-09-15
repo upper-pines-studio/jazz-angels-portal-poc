@@ -6,6 +6,7 @@ import { useToast } from '../ToastHost';
 import { PhaseBadge } from '../components/badges';
 import { DEFAULT_TEMPLATE_ID, PHASES, PHASE_ORDER, timingLabel, useStore } from '../../domain';
 import type { ChecklistTemplate, ChecklistTemplateItem, DateAnchor, Phase } from '../../domain';
+import './playbook.css';
 
 /** The grant dates a step can hang off, in the order they happen. */
 const ANCHORS: Array<{ value: DateAnchor; label: string }> = [
@@ -98,7 +99,7 @@ export default function Playbook() {
         deadline and grant period. Change the playbook here and every new grant follows it.
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 'var(--space-5)', alignItems: 'start' }}>
+      <div className="ja-split ja-split--nav" style={{ gap: 'var(--space-5)' }}>
         <Card padding="0">
           {templates.map((t, i) => {
             const on = t.id === selected?.id;
@@ -119,7 +120,7 @@ export default function Playbook() {
           <Card padding="0" title={selected.name}
             subtitle={selected.id === DEFAULT_TEMPLATE_ID ? 'Default for new grants' : undefined}
             action={
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flex: '0 0 auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flex: '0 0 auto', flexWrap: 'wrap' }}>
                 {confirmDelete ? (
                   <>
                     <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>Delete this template?</span>
@@ -157,22 +158,22 @@ export default function Playbook() {
                     <span style={{ ...MONO_SM, fontSize: 12 }}>{steps(items.length)}</span>
                   </div>
                   {items.map(item => (
-                    <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '28px 1fr 260px 32px', gap: 'var(--space-3)',
-                      alignItems: 'center', height: 40, padding: '0 var(--space-5)', background: 'var(--neutral-0)',
+                    <div key={item.id} className="ja-playbook-row" style={{ background: 'var(--neutral-0)',
                       borderBottom: 'var(--border-width) solid var(--border-subtle)' }}>
-                      <span style={{ color: 'var(--neutral-300)', display: 'flex' }}><Icon name="grip-vertical" size={14} /></span>
+                      <span className="ja-playbook-row__grip" style={{ color: 'var(--neutral-300)', display: 'flex' }}><Icon name="grip-vertical" size={14} /></span>
                       {editingId === item.id ? (
-                        <TitleEditor value={draft} onChange={setDraft} onSave={() => saveTitle(item)} onCancel={() => setEditingId(null)} />
+                        <TitleEditor className="ja-playbook-row__title" value={draft} onChange={setDraft}
+                          onSave={() => saveTitle(item)} onCancel={() => setEditingId(null)} />
                       ) : (
-                        <span onClick={() => { setDraft(item.title); setEditingId(item.id); }} title="Rename this step"
+                        <span className="ja-playbook-row__title" onClick={() => { setDraft(item.title); setEditingId(item.id); }} title="Rename this step"
                           style={{ font: 'var(--type-body-sm)', color: 'var(--text-body)', cursor: 'text',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</span>
                       )}
-                      <span onClick={() => setTimingItem(item)} title="Change when this step is due"
+                      <span className="ja-playbook-row__timing" onClick={() => setTimingItem(item)} title="Change when this step is due"
                         style={{ ...MONO_SM, cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {timingLabel(item)}
                       </span>
-                      <button onClick={() => removeItem(item)} aria-label={`Remove ${item.title}`}
+                      <button className="ja-playbook-row__remove" onClick={() => removeItem(item)} aria-label={`Remove ${item.title}`}
                         style={{ border: 0, background: 'none', cursor: 'pointer', color: 'var(--neutral-300)',
                           font: '16px/1 var(--font-sans)', padding: 0 }}>&times;</button>
                     </div>
@@ -194,14 +195,17 @@ export default function Playbook() {
             )}
 
             {unused.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-3) var(--space-5)',
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap',
+                padding: 'var(--space-3) var(--space-5)',
                 background: 'var(--surface-sunken)', borderTop: 'var(--border-width) solid var(--border-subtle)' }}>
                 <span style={{ font: 'var(--weight-regular) 13px/1.5 var(--font-sans)', color: 'var(--text-muted)' }}>
                   Add a step to another phase…
                 </span>
-                <Select value="" style={{ width: 220 }}
-                  options={[{ value: '', label: 'Choose a phase' }, ...unused.map(p => ({ value: p, label: PHASES[p].label }))]}
-                  onChange={e => { if (e.target.value) addStep(e.target.value as Phase); }} />
+                <div style={{ flex: '1 1 220px', maxWidth: 320 }}>
+                  <Select value=""
+                    options={[{ value: '', label: 'Choose a phase' }, ...unused.map(p => ({ value: p, label: PHASES[p].label }))]}
+                    onChange={e => { if (e.target.value) addStep(e.target.value as Phase); }} />
+                </div>
               </div>
             )}
           </Card>
@@ -237,7 +241,8 @@ export default function Playbook() {
 }
 
 /** Inline rename: Enter or clicking away saves, Escape abandons. */
-function TitleEditor({ value, onChange, onSave, onCancel }: {
+function TitleEditor({ className, value, onChange, onSave, onCancel }: {
+  className?: string;
   value: string;
   onChange: (next: string) => void;
   onSave: () => void;
@@ -246,7 +251,7 @@ function TitleEditor({ value, onChange, onSave, onCancel }: {
   const box = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => { box.current?.querySelector('input')?.focus(); }, []);
   return (
-    <div ref={box} onBlur={onSave}
+    <div ref={box} className={className} onBlur={onSave}
       onKeyDown={e => { if (e.key === 'Enter') onSave(); if (e.key === 'Escape') onCancel(); }}>
       <Input value={value} onChange={e => onChange(e.target.value)} style={{ height: 30 }} />
     </div>

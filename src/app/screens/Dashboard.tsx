@@ -4,6 +4,7 @@ import { format, startOfWeek } from 'date-fns';
 import { Button, Card, DataTable, EmptyState, Icon, StatCard } from '../../design-system';
 import { usePageHeader } from '../Shell';
 import { DeadlineKindBadge, DeadlineStatusBadge, Eyebrow, OwnerAvatar, PhaseBadge } from '../components/badges';
+import { TableScroll } from '../components/TableScroll';
 import { funderShort } from './deadlines/helpers';
 import {
   dateShort, daysUntil, deadlines, funderById, fyTotals, grantById, isPreAward,
@@ -115,7 +116,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 'var(--space-4)' }}>
+      <div className="ja-grid-stats">
         <StatCard
           label="Awarded this FY"
           value={money(fy.awarded)}
@@ -153,7 +154,7 @@ export default function Dashboard() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--space-4)', alignItems: 'start' }}>
+      <div className="ja-split" style={{ gap: 'var(--space-4)' }}>
         <Card
           title="Attention"
           subtitle="Overdue and due in the next 14 days"
@@ -167,20 +168,22 @@ export default function Dashboard() {
               message="Nothing overdue or due in the next 14 days."
             />
           ) : (
-            <DataTable
-              rows={attention}
-              onRowClick={openGrant}
-              columns={[
-                { key: 'date', label: 'Date', width: '90px', mono: true, render: (d: Deadline) => dateShort(d.date) },
-                { key: 'what', label: 'What', width: '1fr', strong: true, render: (d: Deadline) => d.label },
-                {
-                  key: 'grant', label: 'Grant', width: '1.4fr',
-                  render: (d: Deadline) => <span style={{ color: 'var(--text-muted)' }}>{grantLine(d)}</span>,
-                },
-                { key: 'owner', label: 'Owner', width: '40px', render: (d: Deadline) => <OwnerAvatar staffId={d.ownerId} /> },
-                { key: 'status', label: 'Status', width: '110px', render: (d: Deadline) => <DeadlineStatusBadge status={d.status} /> },
-              ]}
-            />
+            <TableScroll minWidth={620}>
+              <DataTable
+                rows={attention}
+                onRowClick={openGrant}
+                columns={[
+                  { key: 'date', label: 'Date', width: '90px', mono: true, render: (d: Deadline) => dateShort(d.date) },
+                  { key: 'what', label: 'What', width: '1fr', strong: true, render: (d: Deadline) => d.label },
+                  {
+                    key: 'grant', label: 'Grant', width: '1.4fr',
+                    render: (d: Deadline) => <span style={{ color: 'var(--text-muted)' }}>{grantLine(d)}</span>,
+                  },
+                  { key: 'owner', label: 'Owner', width: '40px', render: (d: Deadline) => <OwnerAvatar staffId={d.ownerId} /> },
+                  { key: 'status', label: 'Status', width: '110px', render: (d: Deadline) => <DeadlineStatusBadge status={d.status} /> },
+                ]}
+              />
+            </TableScroll>
           )}
         </Card>
 
@@ -229,7 +232,7 @@ export default function Dashboard() {
             Nothing is due in the next 30 days. Dates appear here as soon as a grant has one.
           </p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 'var(--space-6)' }}>
+          <div className="ja-grid-3">
             {weeks.map(col => (
               <div key={col.label} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                 <Eyebrow style={{ color: 'var(--teal-500)' }}>{col.label}</Eyebrow>
@@ -248,10 +251,13 @@ export default function Dashboard() {
                     }}>
                       {d.label}
                     </span>
-                    <span style={{
-                      flex: '1 1 0', minWidth: 0, font: 'var(--weight-regular) var(--text-2xs)/1.3 var(--font-sans)',
-                      color: 'var(--text-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                    }}>
+                    <span
+                      className="ja-hide-sm"
+                      style={{
+                        flex: '1 1 0', minWidth: 0, font: 'var(--weight-regular) var(--text-2xs)/1.3 var(--font-sans)',
+                        color: 'var(--text-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}
+                    >
                       {funderOf(d)}
                     </span>
                     <span style={{ marginLeft: 'auto', flex: '0 0 auto' }}><DeadlineKindBadge kind={d.kind} /></span>

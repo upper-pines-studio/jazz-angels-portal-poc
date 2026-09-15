@@ -20,7 +20,7 @@ export function ToastHost({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={push}>
       {children}
-      <div style={{ position: 'fixed', right: 'var(--space-6)', bottom: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', zIndex: 100 }}>
+      <div className="ja-toasts" style={{ position: 'fixed', right: 'var(--space-6)', bottom: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', zIndex: 100 }}>
         {items.map(t => <Toast key={t.id} tone={t.tone} title={t.title} message={t.message} onDismiss={() => setItems(xs => xs.filter(x => x.id !== t.id))} />)}
       </div>
     </Ctx.Provider>

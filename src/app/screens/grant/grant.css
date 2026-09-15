@@ -1,0 +1,29 @@
+/*
+ * Layout that belongs to the grant-detail tabs only. App-wide helpers live in
+ * src/app/responsive.css; this file holds the pieces no other screen needs.
+ */
+
+/* Money tab: Awarded / Received / Spent / Remaining, divided by hairlines.
+ * Four across on desktop, two by two on a phone — where the rule has to
+ * disappear from whichever cell starts a row. */
+.ja-money-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ja-money-summary > div + div {
+  padding-left: var(--space-5);
+  border-left: var(--border-width) solid var(--border-subtle);
+}
+
+@media (max-width: 640px) {
+  .ja-money-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: var(--space-4);
+  }
+  /* Cells 1 and 3 start a row, so they carry no rule. */
+  .ja-money-summary > div:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+}

@@ -4,6 +4,8 @@ import { dateShort, grantMoney, isPostAward, money, useStore } from '../../../do
 import type { BudgetLine, Expense, Grant, Payment } from '../../../domain';
 import { useToast } from '../../ToastHost';
 import { AddButton, DeleteX, DialogFields, DoneMark, SectionBand, useRowHover } from './parts';
+import { TableScroll } from '../../components/TableScroll';
+import './grant.css';
 
 /** Post-award money: what was awarded, what arrived, what it was spent on. */
 export function MoneyTab({ grant }: { grant: Grant }) {
@@ -32,15 +34,11 @@ export function MoneyTab({ grant }: { grant: Grant }) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', padding: 'var(--space-5) var(--space-6)' }}>
+      <div className="ja-money-summary" style={{ padding: 'var(--space-5) var(--space-6)' }}>
         {[
           ['Awarded', m.awarded], ['Received', m.received], ['Spent', m.spent], ['Remaining', m.remaining],
-        ].map(([label, value], i) => (
-          <div key={label as string} style={{
-            display: 'flex', flexDirection: 'column', gap: 6,
-            paddingLeft: i === 0 ? 0 : 'var(--space-5)',
-            borderLeft: i === 0 ? undefined : 'var(--border-width) solid var(--border-subtle)',
-          }}>
+        ].map(([label, value]) => (
+          <div key={label as string} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={{ font: 'var(--type-eyebrow)', letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{label}</span>
             <span style={{ font: 'var(--weight-semibold) var(--text-2xl)/1 var(--font-display)', letterSpacing: 'var(--tracking-display)', color: 'var(--text-strong)' }}>
               {money(value as number)}
@@ -50,6 +48,7 @@ export function MoneyTab({ grant }: { grant: Grant }) {
       </div>
 
       <SectionBand title="Payments from funder" action={<AddButton label="Add payment" onClick={() => setAddingPayment(true)} />} />
+      <TableScroll minWidth={560}>
       <DataTable
         columns={[
           { key: 'label', label: 'Label', strong: true, width: '1.4fr' },
@@ -67,6 +66,7 @@ export function MoneyTab({ grant }: { grant: Grant }) {
         rows={payments}
         emptyLabel="No installments recorded yet."
       />
+      </TableScroll>
 
       <SectionBand title="Budget" action={<AddButton label="Add line" onClick={() => setAddingLine(true)} />} />
       {lines.length === 0 ? (
@@ -74,7 +74,7 @@ export function MoneyTab({ grant }: { grant: Grant }) {
           No budget lines yet. Add one to track spending against the award.
         </p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--space-4) var(--space-7)', padding: '2px var(--space-6) var(--space-3)' }}>
+        <div className="ja-grid-2" style={{ gap: 'var(--space-4) var(--space-7)', padding: '2px var(--space-6) var(--space-3)' }}>
           {m.byLine.map(({ line, spent }) => {
             const over = spent > line.planned;
             return (
@@ -102,6 +102,7 @@ export function MoneyTab({ grant }: { grant: Grant }) {
       )}
 
       <SectionBand title="Expenses" action={<AddButton label="Log expense" onClick={() => setLoggingExpense(true)} />} />
+      <TableScroll minWidth={640}>
       <div ref={expenseHover.ref} {...expenseHover.hoverProps}>
       <DataTable
         columns={[
@@ -130,6 +131,7 @@ export function MoneyTab({ grant }: { grant: Grant }) {
         emptyLabel="Nothing spent against this grant yet."
       />
       </div>
+      </TableScroll>
 
       {addingPayment && (
         <PaymentDialog onClose={() => setAddingPayment(false)} onSave={v => {

@@ -83,23 +83,25 @@ export function PhaseStepper({ grant }: { grant: Grant }) {
 
   return (
     <Card padding="var(--space-6) var(--space-7)">
-      <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-        {steps.map((step, i) => (
-          <StepCell key={step.phase} step={step} last={i === cells - 1} />
-        ))}
-        {stopped && (
-          <Cell last
-            dot={<span style={{
-              width: DOT, height: DOT, borderRadius: 'var(--radius-pill)', position: 'relative', zIndex: 1,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: terminalTone, border: `var(--border-width-thick) solid ${terminalTone}`,
-            }}><Icon name="x" size={12} color="var(--neutral-0)" /></span>}
-            connector={undefined}
-            name={PHASES[grant.phase].label}
-            nameColor={grant.phase === 'declined' ? 'var(--danger-600)' : 'var(--text-strong)'}
-            when={grant.dates.decided ? dateShort(grant.dates.decided) : undefined}
-          />
-        )}
+      <div className="ja-stepper">
+        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+          {steps.map((step, i) => (
+            <StepCell key={step.phase} step={step} last={i === cells - 1} />
+          ))}
+          {stopped && (
+            <Cell last
+              dot={<span style={{
+                width: DOT, height: DOT, borderRadius: 'var(--radius-pill)', position: 'relative', zIndex: 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: terminalTone, border: `var(--border-width-thick) solid ${terminalTone}`,
+              }}><Icon name="x" size={12} color="var(--neutral-0)" /></span>}
+              connector={undefined}
+              name={PHASES[grant.phase].label}
+              nameColor={grant.phase === 'declined' ? 'var(--danger-600)' : 'var(--text-strong)'}
+              when={grant.dates.decided ? dateShort(grant.dates.decided) : undefined}
+            />
+          )}
+        </div>
       </div>
     </Card>
   );
@@ -131,7 +133,7 @@ function Cell({ dot, connector, name, nameColor, when, last }: {
 }) {
   return (
     <div style={{
-      flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
+      flex: '1 0 84px', display: 'flex', flexDirection: 'column', alignItems: 'center',
       gap: 'var(--space-2)', position: 'relative', textAlign: 'center',
     }}>
       {!last && (

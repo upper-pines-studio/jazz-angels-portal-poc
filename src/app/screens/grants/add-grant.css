@@ -1,0 +1,19 @@
+/*
+ * Layout that belongs to the Add grant dialog only. App-wide helpers live in
+ * src/app/responsive.css.
+ */
+
+/* The three step bars. They stay three across at every width: the row is the
+ * progress indicator, and a stacked version would read as a list rather than a
+ * journey. On a phone the dialog body is about 260px, so each step gets roughly
+ * 80px — enough for the rule and a label on two lines once the gap tightens. */
+.ja-grant-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+@media (max-width: 640px) {
+  .ja-grant-steps { gap: var(--space-2); }
+}

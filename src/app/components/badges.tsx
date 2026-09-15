@@ -56,7 +56,7 @@ export function KV({ k, v, strong = false }: { k: React.ReactNode; v: React.Reac
   // Divider rules come from `.ja-kv + .ja-kv` in Shell so the last row has no trailing hairline.
   return (
     <div className="ja-kv" style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-3)', padding: '10px 0', font: 'var(--type-body-sm)' }}>
-      <span style={{ color: 'var(--text-muted)' }}>{k}</span>
+      <span style={{ color: 'var(--text-muted)', flex: '0 0 auto' }}>{k}</span>
       <span style={{ color: 'var(--text-strong)', textAlign: 'right', fontWeight: strong ? 'var(--weight-semibold)' as any : undefined }}>{v}</span>
     </div>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePageHeader } from '../Shell';
 import { useToast } from '../ToastHost';
+import { TableScroll } from '../components/TableScroll';
 import { Card, DataTable, Badge, Button, Icon, Dialog, Field, Input, Select, Textarea } from '../../design-system';
 import { useStore, funderTotals, grantsByFunder, money, dateShort } from '../../domain';
 import type { Funder, FunderType } from '../../domain';
@@ -30,7 +31,7 @@ export function FunderFields({ draft, onChange, showErrors }: {
 }) {
   const nameError = !draft.name.trim() ? 'Give the funder a name.' : undefined;
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 'var(--space-4)', alignItems: 'start' }}>
+    <div className="ja-grid-2" style={{ alignItems: 'start' }}>
       <Field label="Name" required error={showErrors ? nameError : undefined}>
         <Input value={draft.name} invalid={!!showErrors && !!nameError} placeholder="Herb Alpert Foundation"
           onChange={e => onChange({ name: e.target.value })} />
@@ -102,29 +103,31 @@ export default function Funders() {
   return (
     <>
       <Card padding="0">
-        <DataTable
-          onRowClick={(r: Row) => nav(`/funders/${r.id}`)}
-          rows={rows}
-          emptyLabel="No funders yet. Add one to start tracking their grants."
-          columns={[
-            { key: 'name', label: 'Name', width: '1.8fr', strong: true, wrap: true, render: (r: Row) => r.funder.name },
-            { key: 'type', label: 'Type', width: '130px', render: (r: Row) => <Badge tone="neutral">{capitalise(r.funder.type)}</Badge> },
-            {
-              key: 'contact', label: 'Contact', width: '1.4fr',
-              render: (r: Row) => r.funder.contactName ?? <span style={{ color: 'var(--text-faint)' }}>—</span>,
-            },
-            { key: 'grants', label: 'Grants', width: '80px', align: 'right', mono: true, render: (r: Row) => r.totals.grants },
-            { key: 'awarded', label: 'Total awarded', width: '130px', align: 'right', mono: true, render: (r: Row) => money(r.totals.awarded) },
-            {
-              key: 'last', label: 'Last activity', width: '120px',
-              render: (r: Row) => (
-                <span style={{ font: 'var(--type-numeric)', color: r.last ? 'var(--text-body)' : 'var(--text-faint)' }}>
-                  {r.last ? dateShort(r.last) : '—'}
-                </span>
-              ),
-            },
-          ]}
-        />
+        <TableScroll minWidth={780}>
+          <DataTable
+            onRowClick={(r: Row) => nav(`/funders/${r.id}`)}
+            rows={rows}
+            emptyLabel="No funders yet. Add one to start tracking their grants."
+            columns={[
+              { key: 'name', label: 'Name', width: '1.8fr', strong: true, wrap: true, render: (r: Row) => r.funder.name },
+              { key: 'type', label: 'Type', width: '130px', render: (r: Row) => <Badge tone="neutral">{capitalise(r.funder.type)}</Badge> },
+              {
+                key: 'contact', label: 'Contact', width: '1.4fr',
+                render: (r: Row) => r.funder.contactName ?? <span style={{ color: 'var(--text-faint)' }}>—</span>,
+              },
+              { key: 'grants', label: 'Grants', width: '80px', align: 'right', mono: true, render: (r: Row) => r.totals.grants },
+              { key: 'awarded', label: 'Total awarded', width: '130px', align: 'right', mono: true, render: (r: Row) => money(r.totals.awarded) },
+              {
+                key: 'last', label: 'Last activity', width: '120px',
+                render: (r: Row) => (
+                  <span style={{ font: 'var(--type-numeric)', color: r.last ? 'var(--text-body)' : 'var(--text-faint)' }}>
+                    {r.last ? dateShort(r.last) : '—'}
+                  </span>
+                ),
+              },
+            ]}
+          />
+        </TableScroll>
       </Card>
       {adding && (
         <Dialog

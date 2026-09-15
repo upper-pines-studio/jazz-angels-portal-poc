@@ -1,0 +1,89 @@
+/*
+ * Month calendar: cell, chip and weekday-header layout.
+ *
+ * Seven columns stay seven at every width, so on a phone a cell is only ~45px
+ * wide and chip text is useless. Below 640px the calendar switches to a compact
+ * mode: chips drop their text and become small colour bars, the "+N more" line
+ * keeps only its count, weekdays shrink to a single letter and the cells get
+ * short enough that a month still fits on one screen.
+ *
+ * Kind colours are dynamic, so CalendarMonth passes them in as the custom
+ * properties `--chip-color` (the strong colour) and `--chip-tint` (its -50
+ * tint); everything else lives here so the media query can override it without
+ * fighting an inline style.
+ */
+
+.ja-cal-weekday {
+  background: var(--surface-sunken);
+  border-bottom: var(--border-width) solid var(--border-default);
+  padding: 10px 12px;
+  font: var(--weight-semibold) var(--text-3xs)/1.2 var(--font-sans);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.ja-cal-weekday__short { display: none; }
+
+.ja-cal-cell {
+  min-height: 110px;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ja-cal-chip {
+  display: block;
+  flex: 0 0 auto;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-left: 3px solid var(--chip-color);
+  background: var(--chip-tint);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  font: var(--weight-regular) var(--text-2xs)/22px var(--font-sans);
+  color: var(--text-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ja-cal-more {
+  font: var(--weight-regular) var(--text-2xs)/1.3 var(--font-sans);
+  color: var(--text-muted);
+  padding-left: var(--space-2);
+}
+
+/* ---------------------------------------------------------------------------
+ * ≤ 640px — compact: colour bars instead of labelled chips
+ * ------------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .ja-cal-weekday {
+    padding: var(--space-2) 0;
+    text-align: center;
+  }
+  .ja-cal-weekday__full { display: none; }
+  .ja-cal-weekday__short { display: inline; }
+
+  .ja-cal-cell {
+    min-height: 64px;
+    padding: var(--space-1);
+    gap: 3px;
+  }
+
+  .ja-cal-chip {
+    height: 6px;
+    padding: 0;
+    border-left-width: 0;
+    background: var(--chip-color);
+  }
+  .ja-cal-chip__text { display: none; }
+
+  .ja-cal-more {
+    padding-left: 0;
+    text-align: center;
+    font-size: var(--text-3xs);
+  }
+  .ja-cal-more__word { display: none; }
+}
