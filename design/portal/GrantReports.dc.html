@@ -204,7 +204,7 @@ svg{display:block}
 .kv .k{color:#7b7568}
 .kv .v{color:#1b1815;text-align:right}
 
-/* ---------- screen: Grant detail — Active, Reports tab ---------- */
+/* ---------- screen: Grant detail, Reporting, Reports tab ---------- */
 .gm-tabstrip{padding:12px 24px 0}
 .gm-sec{display:flex;align-items:center;gap:12px;padding:10px 24px;border-top:1px solid #ebe8e1;min-height:42px}
 .gm-sec:first-of-type{border-top:0}
@@ -252,13 +252,12 @@ svg{display:block}
   <div class="frame">
     <header class="topbar">
       <div style="min-width:0;flex:1">
-        <div class="crumbs"><a href="#">Grants</a><span>/</span><span>Herb Alpert Foundation</span></div>
-        <h1>General operating support 2026</h1>
-        <p class="sub">Herb Alpert Foundation &middot; General operating &middot; Barry Cogert</p>
+        <div class="crumbs"><a href="#">Grants</a><span>/</span><span>Los Angeles County Department of Arts and Culture</span></div>
+        <h1>Organizational Grant Program FY26-27</h1>
+        <p class="sub">Los Angeles County Department of Arts and Culture &middot; General operating &middot; Barry Cogert</p>
       </div>
       <div class="actions">
-        <a class="btn secondary sm" href="#">Log expense</a>
-        <a class="btn primary sm" href="#">Start report</a>
+        <a class="btn primary sm" href="#">Close grant</a>
       </div>
     </header>
     <div class="main">
@@ -267,12 +266,12 @@ svg{display:block}
         <div class="card">
           <div style="padding:16px 32px">
             <div class="stepper">
-              <div class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span class="name">Prospect</span><span class="when">Jan 14</span></div>
-              <div class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span class="name">Applying</span><span class="when">Feb 2</span></div>
-              <div class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span class="name">Submitted</span><span class="when">Mar 13</span></div>
-              <div class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span class="name">Awarded</span><span class="when">May 22</span></div>
-              <div class="step current"><span class="dot"></span><span class="name">Active</span><span class="when">since Jul 1</span></div>
-              <div class="step"><span class="dot"></span><span class="name">Reporting</span></div>
+              <div class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span class="name">Prospect</span><span class="when">Jan 15</span></div>
+              <div class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span class="name">Applying</span><span class="when"></span></div>
+              <div class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span class="name">Submitted</span><span class="when">Mar 10</span></div>
+              <div class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span class="name">Awarded</span><span class="when">Jun 20</span></div>
+              <div class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span class="name">Active</span><span class="when">Jul 8</span></div>
+              <div class="step current"><span class="dot" style="border-color:#e2a92f;background:#e2a92f;box-shadow:0 0 0 4px #fdf6e6"></span><span class="name">Reporting</span></div>
               <div class="step"><span class="dot"></span><span class="name">Closed</span></div>
             </div>
           </div>
@@ -298,19 +297,12 @@ svg{display:block}
                 <div class="gm-sec"><h4>Reports to the funder</h4><a class="btn ghost sm" href="#">Add report</a></div>
                 <div class="table" style="--cols:1.2fr 1.5fr 120px 110px 104px">
                   <div class="thead"><span>Report</span><span>Covers</span><span>Due</span><span>Status</span><span></span></div>
-                  <div class="tr hover">
-                    <span class="strong">Interim report</span>
-                    <span class="muted">Jul 1 &ndash; Dec 31, 2026</span>
-                    <span class="mono">Jan 31, 2027</span>
-                    <span><span class="badge">Upcoming</span></span>
-                    <span><a class="btn secondary sm" href="#">Start draft</a></span>
-                  </div>
-                  <div class="tr" style="border-bottom:0">
+                  <div class="tr hover" style="border-bottom:0">
                     <span class="strong">Final report</span>
                     <span class="muted">Full grant period</span>
-                    <span class="mono">Jul 31, 2027</span>
-                    <span><span class="badge">Upcoming</span></span>
-                    <span></span>
+                    <span class="mono">Sep 30, 2026</span>
+                    <span><span class="badge gold">Due soon</span></span>
+                    <span><a class="btn secondary sm" href="#">Mark submitted</a></span>
                   </div>
                 </div>
 
@@ -321,17 +313,17 @@ svg{display:block}
               <div class="card-head" style="padding:16px 24px">
                 <div>
                   <h3>Program numbers</h3>
-                  <p class="sub">What the interim report will need, already counted.</p>
+                  <p class="sub">What the report will need, already counted.</p>
                 </div>
                 <a class="btn ghost sm" href="#">Copy numbers</a>
               </div>
               <div class="gp-body">
-                <div class="eyebrow">From roll call and timesheets &middot; General operating &middot; Jul 1, 2026 &ndash; Jun 30, 2027</div>
+                <div class="eyebrow">From roll call and timesheets &middot; All programs &middot; Jul 1, 2025 &ndash; Jun 30, 2026</div>
                 <div class="gp-nums">
-                  <div><span class="l">Meetings held</span><span class="n">9</span><a class="src" href="#">Teaching</a></div>
-                  <div><span class="l">Students served</span><span class="n">72</span><a class="src" href="#">Teaching</a></div>
-                  <div><span class="l">Attendance</span><span class="n">94%</span><a class="src" href="#">Teaching</a></div>
-                  <div><span class="l">Teaching hours</span><span class="n">46</span><a class="src" href="#">Timesheets</a></div>
+                  <div><span class="l">Meetings held</span><span class="n">64</span><a class="src" href="#">Teaching</a></div>
+                  <div><span class="l">Students served</span><span class="n">45</span><a class="src" href="#">Teaching</a></div>
+                  <div><span class="l">Attendance</span><span class="n">93%</span><a class="src" href="#">Teaching</a></div>
+                  <div><span class="l">Teaching hours</span><span class="n">92.00</span><a class="src" href="#">Timesheets</a></div>
                 </div>
               </div>
             </div>
@@ -346,10 +338,9 @@ svg{display:block}
                 <a class="btn ghost sm" href="#">Edit</a>
               </div>
               <div class="card-body gm-rbody">
-                <div class="kv gm-kv"><span class="k">Decided</span><span class="v mono" style="font-size:13px">May 22, 2026</span></div>
-                <div class="kv gm-kv"><span class="k">Grant period</span><span class="v mono" style="font-size:13px">Jul 1, 2026 &ndash; Jun 30, 2027</span></div>
-                <div class="kv gm-kv"><span class="k">Interim report due</span><span class="v mono" style="font-size:13px;font-weight:500;color:#1b1815">Jan 31, 2027</span></div>
-                <div class="kv gm-kv"><span class="k">Final report due</span><span class="v mono" style="font-size:13px">Jul 31, 2027</span></div>
+                <div class="kv gm-kv"><span class="k">Decided</span><span class="v mono" style="font-size:13px">&mdash;</span></div>
+                <div class="kv gm-kv"><span class="k">Grant period</span><span class="v mono" style="font-size:13px">Jul 1, 2025 &ndash; Jun 30, 2026</span></div>
+                <div class="kv gm-kv"><span class="k">Final report due</span><span class="v mono" style="font-size:13px;font-weight:500;color:#1b1815">Sep 30, 2026</span></div>
               </div>
             </div>
 
@@ -357,10 +348,10 @@ svg{display:block}
               <div class="card-head gm-rhead"><h3>Funder</h3></div>
               <div class="card-body gm-rbody">
                 <div class="col" style="gap:8px;padding-top:4px">
-                  <div class="gm-fname">Herb Alpert Foundation</div>
-                  <div><span class="badge">Foundation</span></div>
-                  <div class="gm-fline">Rona Sebastian &middot; grants@herbalpertfoundation.org</div>
-                  <div class="gm-fcycle">Invitation only. Renewal conversation each spring.</div>
+                  <div class="gm-fname">Los Angeles County Department of Arts and Culture</div>
+                  <div><span class="badge">Government</span></div>
+                  <div class="gm-fline">Program officer</div>
+                  <div class="gm-fcycle">Applications in March, two-year cycle.</div>
                   <div><a href="#" style="font:500 13px/1.5 var(--font-sans)">View funder</a></div>
                 </div>
               </div>
@@ -369,8 +360,9 @@ svg{display:block}
             <div class="card">
               <div class="card-head gm-rhead"><h3>Details</h3></div>
               <div class="card-body gm-rbody">
-                <div class="kv gm-kv"><span class="k">Awarded</span><span class="v mono" style="font-size:13px">$50,000</span></div>
-                <div class="kv gm-kv"><span class="k">Restriction</span><span class="v">Unrestricted</span></div>
+                <div class="kv gm-kv"><span class="k">Requested</span><span class="v mono" style="font-size:13px">$25,000</span></div>
+                <div class="kv gm-kv"><span class="k">Awarded</span><span class="v mono" style="font-size:13px">$22,000</span></div>
+                <div class="kv gm-kv"><span class="k">Restriction</span><span class="v">Restricted</span></div>
                 <div class="kv gm-kv"><span class="k">Program</span><span class="v">General operating</span></div>
                 <div class="kv gm-kv"><span class="k">Owner</span><span class="v">Barry Cogert</span></div>
               </div>

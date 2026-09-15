@@ -4,7 +4,7 @@ import { TableScroll } from '../components/TableScroll';
 import { Button, Card, DataTable, Dialog, Field, Icon, Input, Select, Switch, Tag } from '../../design-system';
 import { usePageHeader } from '../Shell';
 import { useToast } from '../ToastHost';
-import { dateRange, fiscalYear, useStore } from '../../core';
+import { SEED_TODAY, dateLong, dateRange, fiscalYear, useStore } from '../../core';
 import type { ModuleManifest, StaffMember } from '../../core';
 import { MODULES } from '../../modules';
 
@@ -28,6 +28,16 @@ export default function Settings() {
 
   const fy = fiscalYear(today, state.core.settings.fiscalYearStartMonth);
   const enabled = state.core.settings.enabledModules;
+  const demoToday = state.core.settings.demoToday;
+
+  function setDemoToday(iso: string | undefined) {
+    actions.core.updateSettings({ demoToday: iso });
+    toast({
+      tone: 'success',
+      title: iso ? 'Demo date in use' : 'Real date in use',
+      message: iso ? `The portal reads today as ${dateLong(iso)}.` : 'The portal reads today from the clock.',
+    });
+  }
 
   function savePerson() {
     if (!person || !person.name.trim()) return;
@@ -192,8 +202,29 @@ export default function Settings() {
             <Button variant="secondary" style={{ color: 'var(--danger-500)' }} onClick={() => setConfirmReset(true)}>Reset demo data</Button>
           )}
         </div>
+        <div
+          style={{
+            display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap',
+            marginTop: 'var(--space-5)', paddingTop: 'var(--space-4)',
+            borderTop: 'var(--border-width) solid var(--border-subtle)',
+          }}
+        >
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ font: 'var(--weight-semibold) var(--text-sm)/1.4 var(--font-sans)', color: 'var(--text-strong)' }}>
+              Today in the demo
+            </div>
+            <div style={MUTED_SM}>{dateLong(today)}</div>
+          </div>
+          {demoToday ? (
+            <Button variant="secondary" onClick={() => setDemoToday(undefined)}>Use the real date</Button>
+          ) : (
+            <Button variant="secondary" onClick={() => setDemoToday(SEED_TODAY)}>Use the demo date</Button>
+          )}
+        </div>
+
         <p style={{ ...MUTED_SM, margin: 'var(--space-4) 0 0' }}>
-          Data lives in this browser only. Export before switching computers.
+          Data lives in this browser only. Export before switching computers. The demo date keeps the
+          sample story on the day it was written for.
         </p>
       </Card>
 

@@ -31,6 +31,10 @@ export function makeCoreSeed(): CoreState {
   return {
     staff: JSON.parse(JSON.stringify(STAFF)),
     programs: JSON.parse(JSON.stringify(PROGRAMS)),
-    settings: { fiscalYearStartMonth: 7, enabledModules: [...DEFAULT_ENABLED_MODULES] },
+    settings: {
+      fiscalYearStartMonth: 7,
+      enabledModules: [...DEFAULT_ENABLED_MODULES],
+      demoToday: SEED_TODAY,
+    },
   };
 }

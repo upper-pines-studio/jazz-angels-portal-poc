@@ -84,6 +84,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       settings: {
         fiscalYearStartMonth: settings.fiscalYearStartMonth ?? 7,
         enabledModules: settings.enabledModules ?? [...DEFAULT_ENABLED_MODULES],
+        demoToday: typeof settings.demoToday === 'string' ? settings.demoToday : undefined,
       },
     };
   },
@@ -115,6 +116,14 @@ export function makeReducer(slices: PortalSlice[]) {
   };
 }
 
+/**
+ * The day the portal treats as today: the demo date the office set, else the
+ * clock. Screens read it as `useStore().today`.
+ */
+export function resolveToday(settings: AppSettings | undefined, clock: string): string {
+  return settings?.demoToday ?? clock;
+}
+
 export interface StoreValue {
   state: PortalState;
   /** Today as an ISO `YYYY-MM-DD` string; pass it to every derive function. */
@@ -130,17 +139,20 @@ export interface StoreProviderProps {
    * passes `MODULES.map(m => m.slice)`; tests pass whatever they need.
    */
   slices?: PortalSlice[];
-  /** Overrides today, for tests and screenshots. */
+  /** Overrides today and the demo date, for tests and screenshots. */
   today?: string;
   children: ReactNode;
 }
 
 export function StoreProvider({ slices, today: fixedToday, children }: StoreProviderProps) {
-  const today = useMemo(() => fixedToday ?? toISO(new Date()), [fixedToday]);
+  const clock = useMemo(() => fixedToday ?? toISO(new Date()), [fixedToday]);
   const all = useMemo<PortalSlice[]>(() => [coreSlice as PortalSlice, ...(slices ?? [])], [slices]);
 
   const reducer = useMemo(() => makeReducer(all), [all]);
-  const [state, dispatch] = useReducer(reducer, undefined, () => repository.loadState(all, today));
+  const [state, dispatch] = useReducer(reducer, undefined, () => repository.loadState(all, clock));
+
+  // Recomputed whenever the setting changes, so Settings can move the demo day.
+  const today = fixedToday ?? resolveToday(state.core.settings, clock);
 
   // `state` is read by exportJson and by actions that need the latest value.
   const stateRef = React.useRef(state);

@@ -53,7 +53,7 @@ function attention(state: PortalState, today: string): AttentionItem[] {
     return {
       id: `teaching-roll-${meeting.id}`,
       date: meeting.date,
-      label: 'Roll call not submitted',
+      label: 'Roll call due',
       detail: `${ensemble?.name ?? 'Class'} · ${timeLabel(meeting.start)}`,
       status: meeting.date === today ? 'due-soon' : 'overdue',
       href: `/roll/${meeting.id}`,

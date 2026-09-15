@@ -33,8 +33,9 @@ actions.grants.transition(id, 'submitted', { date: today });
 - `state: PortalState` — `{ core, grants, teaching, timesheets }`. Each module
   adds its own key with `declare module '../../../core/types'`, so core never
   names a module.
-- `today: string` — today as `YYYY-MM-DD`. Pass it to every derive function
-  rather than calling `new Date()` in a screen.
+- `today: string` — today as `YYYY-MM-DD`: `settings.demoToday` when the office
+  has set a demo date in Settings, else the clock. Pass it to every derive
+  function rather than calling `new Date()` in a screen.
 - `actions: PortalActions` — one namespace per slice. Every change is persisted.
 
 **Routing.** An action's type is `<sliceId>/<name>`, so `grants/toggle-task`

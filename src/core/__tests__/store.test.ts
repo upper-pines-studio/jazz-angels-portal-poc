@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ModuleSlice } from '../module';
 import * as repository from '../repository';
 import type { PortalSlice } from '../repository';
-import { coreSlice, makeReducer, newId } from '../store';
+import { SEED_TODAY } from '../seed';
+import { coreSlice, makeReducer, newId, resolveToday } from '../store';
 import type { PortalState } from '../types';
 
 /**
@@ -99,6 +100,7 @@ describe('the core slice', () => {
     expect(state.settings).toEqual({
       fiscalYearStartMonth: 7,
       enabledModules: ['grants', 'teaching', 'timesheets'],
+      demoToday: SEED_TODAY,
     });
   });
 
@@ -138,6 +140,19 @@ describe('the core slice', () => {
     expect(state.settings.enabledModules).toEqual(['grants', 'timesheets', 'teaching']);
   });
 
+  it('reads today from the demo date setting, and from the clock without one', () => {
+    const clock = '2027-03-04';
+    let state = seed();
+    // Seeded: the demo story's day, whatever the clock says.
+    expect(resolveToday(state.settings, clock)).toBe(SEED_TODAY);
+
+    state = coreSlice.reducer(state, { type: 'core/update-settings', patch: { demoToday: undefined } });
+    expect(resolveToday(state.settings, clock)).toBe(clock);
+
+    state = coreSlice.reducer(state, { type: 'core/update-settings', patch: { demoToday: SEED_TODAY } });
+    expect(resolveToday(state.settings, clock)).toBe(SEED_TODAY);
+  });
+
   it('fills teaches, short and enabledModules in from an older payload', () => {
     const filled = coreSlice.normalise?.({
       staff: [{ id: 's-1', name: 'Barry Cogert', role: 'Program Director' }],
@@ -147,5 +162,6 @@ describe('the core slice', () => {
     expect(filled?.staff[0].teaches).toBe(false);
     expect(filled?.programs[0].short).toBe('In-School Program');
     expect(filled?.settings.enabledModules).toEqual(['grants', 'teaching', 'timesheets']);
+    expect(filled?.settings.demoToday).toBeUndefined();
   });
 });

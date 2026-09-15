@@ -129,6 +129,9 @@
   gap: var(--space-5);
   align-items: start;
 }
+/* A grid child is min-width:auto by default, which lets a wide table push the
+   page past the viewport instead of scrolling inside its own wrapper. */
+.ja-split > * { min-width: 0; }
 .ja-split--aside-left { grid-template-columns: 1fr 2fr; }
 .ja-split--nav { grid-template-columns: 280px 1fr; }
 
@@ -178,6 +181,7 @@
 .ja-table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  min-width: 0;
   max-width: 100%;
 }
 
@@ -278,6 +282,7 @@
   /* Card headers: action drops beneath the title when it does not fit. */
   .ja-main section > header { flex-wrap: wrap; }
 
+  .ja-grid-stats { grid-template-columns: minmax(0, 1fr); }
   .ja-grid-2 { grid-template-columns: minmax(0, 1fr); }
   .ja-grid-3 { grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
 
@@ -286,8 +291,4 @@
 
   .ja-filter-bar__search { flex: 1 1 100%; max-width: none; }
   .ja-filter-bar__select { flex: 1 1 calc(50% - var(--space-3)); min-width: 0; }
-}
-
-@media (max-width: 480px) {
-  .ja-grid-stats { grid-template-columns: minmax(0, 1fr); }
 }

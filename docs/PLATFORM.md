@@ -217,7 +217,7 @@ for its period and "attendance trend" has history.
 
 **Dashboard contribution:** stats *Enrolled* (blue; footnote "Fall session · 8 ensembles") and
 *Attendance* (teal; average this term, footnote "last 4 weeks"); attention: past meetings with
-no roll submitted ("Roll call not submitted · Combo B") as `due-soon` if today, `overdue` if
+no roll submitted ("Roll call due · Combo B") as `due-soon` if today, `overdue` if
 earlier; panel **Today's classes** (time, ensemble, room, lead, students, "Take roll" button)
 which reads "No classes today. The next class is Mon Sep 14, Homeschool I at 4:00pm." on a day
 with none.

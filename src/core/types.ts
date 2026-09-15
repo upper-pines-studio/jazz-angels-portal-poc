@@ -35,6 +35,11 @@ export interface AppSettings {
   fiscalYearStartMonth: number;
   /** Module ids the office has switched on. */
   enabledModules: string[];
+  /**
+   * The day the portal treats as today, so the demo story reads the way it was
+   * written. Unset means the real clock.
+   */
+  demoToday?: string;
 }
 
 export interface CoreState {
