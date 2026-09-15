@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
 import { useToast } from '../../../../app/ToastHost';
-import { useStore } from '../../../../core';
+import { placeLabel, useStore } from '../../../../core';
 import type { ProgramId } from '../../../../core';
 import { ensembleById } from '../../domain';
 
@@ -119,7 +119,7 @@ export default function EnrollStudentDialog({
             onChange={(e) => setEnsembleId(e.target.value)}
             options={[
               { value: WAITLIST, label: 'Waitlist' },
-              ...ensembles.map((e) => ({ value: e.id, label: `${e.name} · ${e.room}` })),
+              ...ensembles.map((e) => ({ value: e.id, label: `${e.name} · ${placeLabel(state, e.venueId, e.room)}` })),
             ]}
             style={{ width: '100%' }}
           />

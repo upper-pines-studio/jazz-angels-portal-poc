@@ -1,12 +1,13 @@
 import React from 'react';
 import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
 import { useToast } from '../../../../app/ToastHost';
-import { dateLong, useStore } from '../../../../core';
+import { dateLong, useStore, venueById } from '../../../../core';
 import { ensembleById, timeLabel } from '../../domain';
 
 /**
- * Add one class to the schedule: which ensemble, which date, the hour and the
- * room. The ensemble's usual room is filled in and can be typed over.
+ * Add one class to the schedule: which ensemble, which date, the hour, and
+ * where. The ensemble's usual venue and room are filled in and can be changed,
+ * so a one-off at a school or a different studio room is one dialog away.
  */
 export default function AddClassDialog({
   open,
@@ -25,23 +26,25 @@ export default function AddClassDialog({
   const [date, setDate] = React.useState(defaultDate || today);
   const [start, setStart] = React.useState('16:00');
   const [end, setEnd] = React.useState('17:00');
-  const [room, setRoom] = React.useState(first?.room ?? '');
-  const [roomTouched, setRoomTouched] = React.useState(false);
+  // Until the office touches them, the place follows the chosen ensemble.
+  const [place, setPlace] = React.useState<{ venueId: string; room: string } | null>(null);
   const [showErrors, setShowErrors] = React.useState(false);
 
   const ensemble = ensembleById(state, ensembleId);
-  const roomValue = roomTouched ? room : ensemble?.room ?? '';
+  const venueId = place?.venueId ?? ensemble?.venueId ?? state.core.venues[0]?.id ?? '';
+  const room = place?.room ?? ensemble?.room ?? '';
+  const venue = venueById(state, venueId);
 
   const dateError = !date ? 'Pick the date the class meets.' : undefined;
   const timeError = start && end && end <= start ? 'The class has to end after it starts.' : undefined;
-  const valid = !dateError && !timeError && Boolean(ensembleId) && Boolean(roomValue.trim());
+  const valid = !dateError && !timeError && Boolean(ensembleId) && Boolean(venueId);
 
   const submit = () => {
     if (!valid) {
       setShowErrors(true);
       return;
     }
-    actions.teaching.addMeeting({ ensembleId, date, start, end, room: roomValue.trim() });
+    actions.teaching.addMeeting({ ensembleId, date, start, end, venueId, room: room.trim() });
     toast({
       title: 'Class added',
       message: `${ensemble?.name ?? 'Class'} · ${dateLong(date)} · ${timeLabel(start)}`,
@@ -67,7 +70,7 @@ export default function AddClassDialog({
         <Field label="Ensemble" required>
           <Select
             value={ensembleId}
-            onChange={(e) => setEnsembleId(e.target.value)}
+            onChange={(e) => { setEnsembleId(e.target.value); setPlace(null); }}
             options={state.teaching.ensembles.map((en) => ({ value: en.id, label: en.name }))}
             style={{ width: '100%' }}
           />
@@ -86,11 +89,20 @@ export default function AddClassDialog({
           </Field>
         </div>
 
-        <Field label="Room" required hint="Where the ensemble usually meets.">
+        <Field label="Venue" required hint="Where the ensemble usually meets. Add venues in Settings.">
+          <Select
+            value={venueId}
+            onChange={(e) => setPlace({ venueId: e.target.value, room: '' })}
+            options={state.core.venues.map((v) => ({ value: v.id, label: v.name }))}
+            style={{ width: '100%' }}
+          />
+        </Field>
+
+        <Field label="Room" hint={venue?.kind === 'studio' ? 'Studio 1, Studio 2, Main room.' : 'The space inside the building, if it matters.'}>
           <Input
-            value={roomValue}
-            onChange={(e) => { setRoomTouched(true); setRoom(e.target.value); }}
-            placeholder="Studio 1"
+            value={room}
+            onChange={(e) => setPlace({ venueId, room: e.target.value })}
+            placeholder={venue?.kind === 'studio' ? 'Studio 1' : 'Band room'}
             style={{ width: '100%' }}
           />
         </Field>

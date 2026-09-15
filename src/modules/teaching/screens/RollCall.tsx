@@ -7,7 +7,7 @@ import {
 import { usePageHeader } from '../../../app/Shell';
 import { Eyebrow, KV, OwnerAvatar } from '../../../app/components/badges';
 import { useToast } from '../../../app/ToastHost';
-import { dateShort, staffById, toDate, useStore } from '../../../core';
+import { dateShort, placeLabel, staffById, toDate, useStore, venueById } from '../../../core';
 import {
   attendanceForMeeting, ensembleById, ensembleTrend, markCounts, meetingById,
   percent, rosterForEnsemble, timeLabel, timeRange,
@@ -30,6 +30,7 @@ export default function RollCall() {
 
   const meeting = meetingById(state, meetingId);
   const ensemble = ensembleById(state, meeting?.ensembleId);
+  const venue = venueById(state, meeting?.venueId);
   const roster = meeting ? rosterForEnsemble(state, meeting.ensembleId) : [];
   const records = meeting ? attendanceForMeeting(state, meeting.id) : [];
   const counts = markCounts(records);
@@ -46,7 +47,7 @@ export default function RollCall() {
   usePageHeader({
     title: ensemble?.name ?? 'Roll call',
     subtitle: meeting
-      ? `${format(toDate(meeting.date), 'EEEE, MMM d')} · ${timeLabel(meeting.start)} · ${meeting.room}`
+      ? `${format(toDate(meeting.date), 'EEEE, MMM d')} · ${timeLabel(meeting.start)} · ${placeLabel(state, meeting.venueId, meeting.room)}`
       : 'This class is not on the schedule',
     crumbs: [{ label: 'Schedule', href: '/schedule' }, { label: ensemble?.name ?? 'Roll call' }],
     actions: submitted ? (
@@ -156,7 +157,10 @@ export default function RollCall() {
 
           <div style={{ marginTop: 'var(--space-5)' }}>
             <KV k="Lead" v={lead?.name ?? '—'} />
-            <KV k="Room" v={meeting.room} />
+            <KV k="Where" v={placeLabel(state, meeting.venueId, meeting.room)} />
+            {venue && venue.kind !== 'studio' && venue.contactName && (
+              <KV k="On site" v={[venue.contactName, venue.contactPhone].filter(Boolean).join(' · ')} />
+            )}
             <KV k="Attendance" v={percent(counts.marked ? (counts.present + counts.late) / counts.marked : undefined)} strong />
           </div>
 

@@ -42,7 +42,7 @@ src/
     App.tsx                StoreProvider + Shell + routes built from MODULES
     Shell.tsx              rail built from MODULES (sections + items + badge counts)
     screens/Dashboard.tsx  composed from every enabled module's dashboard contributions
-    screens/Settings.tsx   core: staff, programs, fiscal year, Modules on/off, export/import/reset
+    screens/Settings.tsx   core: staff, venues and organizations, programs, fiscal year, Modules on/off, export/import/reset
     components/            shared app-level bits (badges, TableScroll)
     responsive.css
   design-system/           untouched
@@ -55,8 +55,19 @@ src/
 export interface StaffMember { id: string; name: string; role: string; teaches: boolean }
 export interface Program { id: ProgramId; name: string; short: string }   // short: "Studio", "In-school"
 export type ProgramId = 'studio-sessions'|'in-school'|'homeschool'|'jazz-legacy'|'advanced-workshop'|'general-operating';
+
+// Places. An Organization is a partner (a school district, a community centre): the
+// relationship, who to call, what was agreed. A Venue is a physical place a class or a
+// performance happens. A district has many schools, so a venue may belong to an
+// organization; Jazz Angels' own studio belongs to none.
+export interface Organization { id; name; kind: 'school-district'|'school'|'community'|'government'|'other';
+  contactName?; contactEmail?; contactPhone?; website?; notes? }
+export interface Address { street; city; state; zip }
+export interface Venue { id; name; kind: 'studio'|'school'|'community'|'performance'|'other';
+  organizationId?; address?: Address; contactName?; contactEmail?; contactPhone?; notes? }
+
 export interface AppSettings { fiscalYearStartMonth: number; enabledModules: string[] }
-export interface CoreState { staff: StaffMember[]; programs: Program[]; settings: AppSettings }
+export interface CoreState { staff: StaffMember[]; programs: Program[]; organizations: Organization[]; venues: Venue[]; settings: AppSettings }
 
 /** Augmented by each module with `declare module`. */
 export interface PortalState { core: CoreState }
@@ -165,8 +176,8 @@ Everything in `docs/SPEC.md`, moved under `modules/grants/`. Behaviour unchanged
 
 ```ts
 interface Term { id; name: 'Fall 2026 session'; programId; start: '2026-09-13'; end: '2026-11-08'; meetingsPlanned: 8 }
-interface Ensemble { id; name; programId; room; leadStaffId; tone: 'blue'|'teal'|'olive'|'gold'|'neutral' }
-interface ClassMeeting { id; ensembleId; date; start: '16:00'; end: '17:00'; room; rollSubmittedAt?: string; notes?: string }
+interface Ensemble { id; name; programId; venueId; room; leadStaffId; tone: 'blue'|'teal'|'olive'|'gold'|'neutral' }   // venueId: a core Venue; room is the space inside it
+interface ClassMeeting { id; ensembleId; date; start: '16:00'; end: '17:00'; venueId; room; rollSubmittedAt?: string; notes?: string }   // place copied from the ensemble when scheduled
 interface Student { id; name; instrument; yearsIn: number; guardianName; guardianPhone?; programId; ensembleId?; status: 'enrolled'|'waitlist'|'alumni' }
 interface AttendanceRecord { id; meetingId; studentId; mark: 'present'|'late'|'absent' }
 interface TeachingState { terms; ensembles; meetings; students; attendance }
@@ -174,16 +185,23 @@ interface TeachingState { terms; ensembles; meetings; students; attendance }
 
 **Seed** (today Sunday 2026-09-13, Fall session week 1 of 8; weekly pattern repeats for the term):
 
-| Ensemble | Program | When | Room | Lead |
+| Ensemble | Program | When | Venue · room | Lead |
 |---|---|---|---|---|
-| Combo A | studio-sessions | Sun 3:00–4:00pm | Studio 1 | Albert Alva |
-| Combo B | studio-sessions | Sun 4:00–5:00pm | Studio 1 | Barry Cogert |
-| Big Band | studio-sessions | Sun 5:15–6:45pm | Main room | Devon Price |
-| Homeschool I | homeschool | Mon 4:00–5:00pm | Studio 2 | Renee Cole |
-| Homeschool II | homeschool | Mon 5:15–6:15pm | Studio 2 | Renee Cole |
-| Jazz Legacy | jazz-legacy | Tue 4:00–5:30pm | Main room | Albert Alva |
-| Advanced Workshop | advanced-workshop | Tue 6:30–8:00pm | Studio 1 | Barry Cogert |
-| Paramount MS | in-school | Thu 3:00–4:00pm | Off-site | Devon Price |
+| Combo A | studio-sessions | Sun 3:00–4:00pm | Jazz Angels Studio · Studio 1 | Albert Alva |
+| Combo B | studio-sessions | Sun 4:00–5:00pm | Jazz Angels Studio · Studio 1 | Barry Cogert |
+| Big Band | studio-sessions | Sun 5:15–6:45pm | Jazz Angels Studio · Main room | Devon Price |
+| Homeschool I | homeschool | Mon 4:00–5:00pm | Jazz Angels Studio · Studio 2 | Renee Cole |
+| Homeschool II | homeschool | Mon 5:15–6:15pm | Jazz Angels Studio · Studio 2 | Renee Cole |
+| Jazz Legacy | jazz-legacy | Tue 4:00–5:30pm | Jazz Angels Studio · Main room | Albert Alva |
+| Advanced Workshop | advanced-workshop | Tue 6:30–8:00pm | Jazz Angels Studio · Studio 1 | Barry Cogert |
+| Paramount MS | in-school | Thu 3:00–4:00pm | Paramount Middle School · Band room B-12 | Devon Price |
+
+Core seeds the places: one organization, Paramount Unified School District, with two venues
+(Paramount Middle School, where the in-school ensemble meets, and Alondra Middle School, the
+expansion site the Port of Long Beach sponsorship would fund), plus Jazz Angels Studio with no
+organization. On a schedule the studio's classes read as the room alone ("Studio 1"); anywhere
+else the venue comes first ("Paramount Middle School · Band room B-12"). That rule is
+`placeLabel` in `core/derive.ts`.
 
 About 40 students with real-sounding but invented names across the ensembles (8–12 per studio
 combo, 18 in Big Band, 6–8 per homeschool group, 14 at Paramount MS, 4 on the waitlist). Seed

@@ -1,7 +1,8 @@
 # `src/core` — the shared nouns and the store
 
-Core owns the people, the programs, the fiscal year, the module switches, the
-store and the formatting helpers. It owns nothing workflow-specific and it
+Core owns the people, the programs, the places (organizations and their
+venues), the fiscal year, the module switches, the store and the formatting
+helpers. It owns nothing workflow-specific and it
 never imports from `src/modules`.
 
 ```ts
@@ -54,16 +55,23 @@ fine, because any slice it does not carry is seeded instead.
 
 | File | What is in it |
 | --- | --- |
-| `types.ts` | `StaffMember`, `Program`, `AppSettings`, `CoreState`, and the augmentable `PortalState` / `PortalActions`. |
+| `types.ts` | `StaffMember`, `Program`, `Organization`, `Venue`, `Address`, `AppSettings`, `CoreState`, and the augmentable `PortalState` / `PortalActions`. |
 | `module.ts` | `ModuleSlice`, `ModuleManifest`, `NavItem`, `StatSpec`, `AttentionItem`, `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
 | `store.tsx` | `StoreProvider`, `useStore`, `coreSlice`, `newId`. |
 | `repository.ts` | localStorage, one key per slice; export / import / reset. |
 | `format.ts` | `money`, `dateShort`, `dateLong`, `dateRange`, `relativeDays`, `daysUntil`, `initials`. |
-| `seed.ts` | The five staff, the six programs, the settings. |
-| `derive.ts` | `fiscalYear`, `staffById`, `programById`, `programName`. |
+| `seed.ts` | The five staff, the six programs, one district with two schools, the studio, the settings. `STUDIO_VENUE_ID` and `PARAMOUNT_MS_VENUE_ID` are exported for module seeds. |
+| `derive.ts` | `fiscalYear`, `staffById`, `programById`, `programName`, `organizationById`, `venueById`, `venueName`, `venuesForOrganization`, `placeLabel`, `addressLine`. |
 
 **Conventions.** Money is whole dollars as an integer. Dates are ISO
 `YYYY-MM-DD` strings. Format only at render time.
+
+**Places.** An `Organization` is the relationship (who to call, what was
+agreed); a `Venue` is the physical place, and may belong to an organization,
+so a district lists its schools. Jazz Angels' own studio is a venue of kind
+`studio` with no organization. Modules point at venues by id and never copy
+the name: `placeLabel(state, venueId, room)` renders "Studio 1" for the studio
+and "Paramount Middle School · Band room B-12" for anywhere else.
 
 ## Core actions
 
@@ -71,6 +79,10 @@ fine, because any slice it does not carry is seeded instead.
 | --- | --- |
 | `addStaff(input)` | Adds a person. Returns the new id. |
 | `updateStaff(id, patch)` | Patches a person, `teaches` included. |
+| `addOrganization(input)` | Adds a partner: a district, a community centre. Returns the new id. |
+| `updateOrganization(id, patch)` | Patches a partner. |
+| `addVenue(input)` | Adds a place classes meet, optionally under an organization. Returns the new id. |
+| `updateVenue(id, patch)` | Patches a venue. Ensembles point at it by id, so a rename shows everywhere. |
 | `updateSettings(patch)` | Patches the settings. |
 | `setModuleEnabled(id, on)` | Turns a module on or off. Its data stays. |
 | `resetDemo()` | Reseeds every slice. |

@@ -30,11 +30,14 @@ export interface Term {
   meetingsPlanned: number;
 }
 
-/** A standing group: the same students, the same room, the same hour each week. */
+/** A standing group: the same students, the same place, the same hour each week. */
 export interface Ensemble {
   id: string;
   name: string;
   programId: ProgramId;
+  /** Where it meets, by `core` venue id: the studio, or a partner's school. */
+  venueId: string;
+  /** The space inside the venue: "Studio 1", "Band room B-12". */
   room: string;
   /** The teaching artist who leads it, by `core` staff id. */
   leadStaffId: string;
@@ -49,6 +52,8 @@ export interface ClassMeeting {
   /** 24-hour `HH:MM`, e.g. '16:00'. */
   start: string;
   end: string;
+  /** Copied from the ensemble when scheduled, so moving it later keeps history. */
+  venueId: string;
   room: string;
   /** ISO timestamp. Set means the roll call is closed and read-only. */
   rollSubmittedAt?: string;

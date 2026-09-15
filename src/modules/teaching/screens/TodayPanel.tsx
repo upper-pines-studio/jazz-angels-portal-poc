@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Button, Card, EmptyState, Icon } from '../../../design-system';
 import { OwnerAvatar } from '../../../app/components/badges';
-import { staffById, toDate, useStore } from '../../../core';
+import { placeLabel, staffById, toDate, useStore } from '../../../core';
 import {
   ensembleById, ensembleCount, nextMeeting, timeLabel, todaysMeetings,
 } from '../domain';
@@ -68,7 +68,7 @@ export function TodayPanel() {
                   {ensemble?.name ?? 'Class'}
                 </span>
                 <span style={{ display: 'block', font: 'var(--text-xs)/1.4 var(--font-sans)', color: 'var(--text-muted)' }}>
-                  {`${meeting.room} · ${lead?.name ?? 'No lead'} · ${ensembleCount(state, meeting.ensembleId)} students`}
+                  {`${placeLabel(state, meeting.venueId, meeting.room)} · ${lead?.name ?? 'No lead'} · ${ensembleCount(state, meeting.ensembleId)} students`}
                 </span>
               </span>
 

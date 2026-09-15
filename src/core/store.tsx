@@ -4,7 +4,16 @@ import type { AnyAction, ModuleSlice } from './module';
 import * as repository from './repository';
 import type { PortalSlice } from './repository';
 import { DEFAULT_ENABLED_MODULES, makeCoreSeed } from './seed';
-import type { AppSettings, CoreActions, CoreState, PortalActions, PortalState, StaffMember } from './types';
+import type {
+  AppSettings,
+  CoreActions,
+  CoreState,
+  Organization,
+  PortalActions,
+  PortalState,
+  StaffMember,
+  Venue,
+} from './types';
 
 // ---------------------------------------------------------------------------
 // Ids
@@ -27,7 +36,15 @@ export function newId(prefix: string): string {
 type CoreAction =
   | { type: 'core/add-staff'; member: StaffMember }
   | { type: 'core/update-staff'; id: string; patch: Partial<StaffMember> }
+  | { type: 'core/add-organization'; organization: Organization }
+  | { type: 'core/update-organization'; id: string; patch: Partial<Organization> }
+  | { type: 'core/add-venue'; venue: Venue }
+  | { type: 'core/update-venue'; id: string; patch: Partial<Venue> }
   | { type: 'core/update-settings'; patch: Partial<AppSettings> };
+
+function withId<T extends { id: string }>(rows: T[], id: string, patch: Partial<T>): T[] {
+  return rows.map((row) => (row.id === id ? { ...row, ...patch } : row));
+}
 
 function coreReducer(state: CoreState, raw: AnyAction): CoreState {
   const action = raw as CoreAction;
@@ -35,10 +52,15 @@ function coreReducer(state: CoreState, raw: AnyAction): CoreState {
     case 'core/add-staff':
       return { ...state, staff: [...state.staff, action.member] };
     case 'core/update-staff':
-      return {
-        ...state,
-        staff: state.staff.map((s) => (s.id === action.id ? { ...s, ...action.patch } : s)),
-      };
+      return { ...state, staff: withId(state.staff, action.id, action.patch) };
+    case 'core/add-organization':
+      return { ...state, organizations: [...state.organizations, action.organization] };
+    case 'core/update-organization':
+      return { ...state, organizations: withId(state.organizations, action.id, action.patch) };
+    case 'core/add-venue':
+      return { ...state, venues: [...state.venues, action.venue] };
+    case 'core/update-venue':
+      return { ...state, venues: withId(state.venues, action.id, action.patch) };
     case 'core/update-settings':
       return { ...state, settings: { ...state.settings, ...action.patch } };
     default:
@@ -63,6 +85,22 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       updateStaff(id, patch) {
         dispatch({ type: 'core/update-staff', id, patch });
       },
+      addOrganization(input) {
+        const id = newId('org');
+        dispatch({ type: 'core/add-organization', organization: { ...input, id } });
+        return id;
+      },
+      updateOrganization(id, patch) {
+        dispatch({ type: 'core/update-organization', id, patch });
+      },
+      addVenue(input) {
+        const id = newId('v');
+        dispatch({ type: 'core/add-venue', venue: { ...input, id } });
+        return id;
+      },
+      updateVenue(id, patch) {
+        dispatch({ type: 'core/update-venue', id, patch });
+      },
       updateSettings(patch) {
         dispatch({ type: 'core/update-settings', patch });
       },
@@ -78,9 +116,14 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     const c = raw as Partial<CoreState>;
     if (!Array.isArray(c.staff) || !Array.isArray(c.programs)) return undefined;
     const settings = c.settings ?? ({} as AppSettings);
+    // A payload saved before places existed gets the seeded ones, so the
+    // teaching module's venue ids still resolve.
+    const seeded = makeCoreSeed();
     return {
       staff: c.staff.map((s) => ({ ...s, teaches: s.teaches ?? false })),
       programs: c.programs.map((p) => ({ ...p, short: p.short ?? p.name })),
+      organizations: Array.isArray(c.organizations) ? c.organizations : seeded.organizations,
+      venues: Array.isArray(c.venues) ? c.venues : seeded.venues,
       settings: {
         fiscalYearStartMonth: settings.fiscalYearStartMonth ?? 7,
         enabledModules: settings.enabledModules ?? [...DEFAULT_ENABLED_MODULES],

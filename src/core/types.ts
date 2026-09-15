@@ -1,6 +1,7 @@
 /**
- * The shared nouns. Core owns people, programs, the fiscal year and the
- * module switches, and nothing workflow-specific.
+ * The shared nouns. Core owns people, programs, the places classes happen
+ * (organizations and their venues), the fiscal year and the module switches,
+ * and nothing workflow-specific.
  *
  * Conventions: money is whole US dollars as integers, dates are ISO
  * `YYYY-MM-DD` strings. Format only at render time (`core/format.ts`).
@@ -30,6 +31,56 @@ export interface Program {
   short: string;
 }
 
+export type OrganizationKind = 'school-district' | 'school' | 'community' | 'government' | 'other';
+
+/**
+ * A partner Jazz Angels works with: a school district, a community centre, a
+ * city department. The relationship lives here (who to call, what was agreed);
+ * the physical places belong to it as `Venue`s. A district has many schools.
+ */
+export interface Organization {
+  id: string;
+  name: string;
+  kind: OrganizationKind;
+  /** "Ms. Alvarez, VAPA coordinator" — the person the office actually calls. */
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  /** "MOU renews each August. Invoice the district office, not the school." */
+  notes?: string;
+}
+
+export interface Address {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+}
+
+export type VenueKind = 'studio' | 'school' | 'community' | 'performance' | 'other';
+
+/**
+ * A physical place a class or a performance happens. Jazz Angels' own studio
+ * is one; each school in a district is another. A venue may belong to an
+ * `Organization`; the studio and a rented hall do not.
+ */
+export interface Venue {
+  id: string;
+  /** "Paramount Middle School", "Jazz Angels Studio". */
+  name: string;
+  /** `studio` is Jazz Angels' own space, so a schedule names only the room. */
+  kind: VenueKind;
+  organizationId?: string;
+  address?: Address;
+  /** The on-site contact, when it differs from the organization's. */
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  /** "Sign in at the front office. The band room is B-12, behind the gym." */
+  notes?: string;
+}
+
 export interface AppSettings {
   /** 1-12. Jazz Angels runs Jul 1 – Jun 30, so 7. */
   fiscalYearStartMonth: number;
@@ -45,6 +96,8 @@ export interface AppSettings {
 export interface CoreState {
   staff: StaffMember[];
   programs: Program[];
+  organizations: Organization[];
+  venues: Venue[];
   settings: AppSettings;
 }
 
@@ -59,6 +112,12 @@ export interface CoreActions {
   /** Add a person. Returns the new id. */
   addStaff(input: Omit<StaffMember, 'id'>): string;
   updateStaff(id: string, patch: Partial<StaffMember>): void;
+  /** Add a partner organization. Returns the new id. */
+  addOrganization(input: Omit<Organization, 'id'>): string;
+  updateOrganization(id: string, patch: Partial<Organization>): void;
+  /** Add a place classes can meet. Returns the new id. */
+  addVenue(input: Omit<Venue, 'id'>): string;
+  updateVenue(id: string, patch: Partial<Venue>): void;
   updateSettings(patch: Partial<AppSettings>): void;
   /** Turn a module on or off. Its data stays either way. */
   setModuleEnabled(id: string, on: boolean): void;

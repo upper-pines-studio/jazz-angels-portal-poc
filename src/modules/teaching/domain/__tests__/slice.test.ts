@@ -107,6 +107,7 @@ describe('addMeeting', () => {
       date: '2026-09-12',
       start: '15:00',
       end: '16:00',
+      venueId: 'v-studio',
       room: 'Studio 1',
     });
     expect(unsubmittedRollCalls(h.state(), SEED_TODAY).map((m) => m.id)).toContain(id);
@@ -127,5 +128,30 @@ describe('normalise', () => {
     const filled = teachingSlice.normalise?.(raw) as TeachingState;
     expect(filled.students[0].status).toBe('enrolled');
     expect(filled.students[0].yearsIn).toBe(1);
+  });
+});
+
+describe('normalise', () => {
+  it('gives a payload saved before venues existed a venue per ensemble and meeting', () => {
+    const seed = makeSeed();
+    const stripped = {
+      ...seed,
+      ensembles: seed.ensembles.map(({ venueId: _v, ...e }) => ({
+        ...e,
+        room: e.id === 'e-paramount-ms' ? 'Off-site' : e.room,
+      })),
+      meetings: seed.meetings.map(({ venueId: _v, ...m }) => ({
+        ...m,
+        room: m.ensembleId === 'e-paramount-ms' ? 'Off-site' : m.room,
+      })),
+    };
+    const filled = teachingSlice.normalise?.(stripped);
+    expect(filled?.ensembles.find((e) => e.id === 'e-combo-a')).toMatchObject({ venueId: 'v-studio', room: 'Studio 1' });
+    expect(filled?.ensembles.find((e) => e.id === 'e-paramount-ms')).toMatchObject({
+      venueId: 'v-paramount-ms',
+      room: 'Band room B-12',
+    });
+    expect(filled?.meetings.every((m) => Boolean(m.venueId))).toBe(true);
+    expect(filled?.meetings.some((m) => m.room === 'Off-site')).toBe(false);
   });
 });

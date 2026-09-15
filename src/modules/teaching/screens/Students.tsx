@@ -5,7 +5,7 @@ import {
 import { usePageHeader } from '../../../app/Shell';
 import { Eyebrow, KV } from '../../../app/components/badges';
 import { TableScroll } from '../../../app/components/TableScroll';
-import { programName, useStore } from '../../../core';
+import { placeLabel, programName, useStore } from '../../../core';
 import type { ProgramId } from '../../../core';
 import {
   attendanceRateForStudent, ensembleById, enrolledCount, percent, termForDate,
@@ -277,7 +277,7 @@ function StudentCard({ student }: { student: Student }) {
             onChange={(e) => move(e.target.value)}
             options={[
               { value: WAITLIST_OPTION, label: 'Waitlist' },
-              ...ensembles.map((e) => ({ value: e.id, label: `${e.name} · ${e.room}` })),
+              ...ensembles.map((e) => ({ value: e.id, label: `${e.name} · ${placeLabel(state, e.venueId, e.room)}` })),
             ]}
             style={{ width: '100%' }}
           />

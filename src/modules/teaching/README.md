@@ -22,7 +22,7 @@ actions.teaching.setMark(meetingId, studentId, 'present');
 | Noun | What it is |
 | --- | --- |
 | `Term` | A session: eight weeks the office plans and reports on. |
-| `Ensemble` | A standing group: same students, same room, same hour each week. |
+| `Ensemble` | A standing group: same students, same place, same hour each week. `venueId` is a core `Venue`; `room` is the space inside it. |
 | `ClassMeeting` | One class on one date. `rollSubmittedAt` set means roll is closed. |
 | `Student` | On a roster, on the waitlist, or an alum. `ensembleId` is unset while waiting. |
 | `AttendanceRecord` | One mark, `present` / `late` / `absent`, for one student at one meeting. |

@@ -7,7 +7,7 @@ import {
 import { usePageHeader } from '../../../app/Shell';
 import { OwnerAvatar } from '../../../app/components/badges';
 import { TableScroll } from '../../../app/components/TableScroll';
-import { dateRange, dateShort, programName, staffById, toDate, toISO, useStore } from '../../../core';
+import { dateRange, dateShort, placeLabel, programName, staffById, toDate, toISO, useStore } from '../../../core';
 import {
   ensembleById, ensembleCount, meetingsForWeek, termForDate, termWeek,
   timeLabel, timeRange, weekStart,
@@ -192,14 +192,14 @@ function MeetingBlock({
       className="ja-week__block"
       style={{ ['--block-tone' as string]: TONE_COLOR[ensemble?.tone ?? 'neutral'] }}
       onClick={onOpen}
-      title={`${ensemble?.name ?? 'Class'} · ${timeRange(meeting)} · ${meeting.room}`}
+      title={`${ensemble?.name ?? 'Class'} · ${timeRange(meeting)} · ${placeLabel(state, meeting.venueId, meeting.room)}`}
     >
       <span className="ja-week__block-top">
         <span className="ja-week__block-name">{ensemble?.name ?? 'Class'}</span>
         {submitted && <Icon name="check" size={13} color="var(--teal-500)" />}
         {due && <Icon name="circle-alert" size={13} color="var(--gold-500)" />}
       </span>
-      <span className="ja-week__block-room">{meeting.room}</span>
+      <span className="ja-week__block-room">{placeLabel(state, meeting.venueId, meeting.room)}</span>
       <span className="ja-week__block-foot">
         <OwnerAvatar staffId={ensemble?.leadStaffId} size={20} />
       </span>
@@ -300,7 +300,7 @@ function TermView() {
                   ? `${format(toDate(r.first.date), 'EEEE')} · ${timeRange(r.first)}`
                   : <span style={{ color: 'var(--text-faint)' }}>—</span>),
               },
-              { key: 'room', label: 'Room', width: '1fr', render: (r: Row) => r.ensemble.room },
+              { key: 'where', label: 'Where', width: '1.3fr', render: (r: Row) => placeLabel(state, r.ensemble.venueId, r.ensemble.room) },
               {
                 key: 'lead', label: 'Lead', width: '1.2fr',
                 render: (r: Row) => (

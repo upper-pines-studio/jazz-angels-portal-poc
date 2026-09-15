@@ -1,8 +1,10 @@
 import type { AnyAction, ModuleSlice } from '../../../core/module';
+import { PARAMOUNT_MS_VENUE_ID, STUDIO_VENUE_ID } from '../../../core';
 import { makeSeed } from './seed';
 import type {
   AttendanceRecord,
   ClassMeeting,
+  Ensemble,
   Mark,
   Student,
   TeachingActions,
@@ -149,6 +151,16 @@ const COLLECTIONS: Array<keyof TeachingState> = [
   'attendance',
 ];
 
+/**
+ * A payload saved before venues existed named the place with `room` alone,
+ * and wrote "Off-site" for the one in-school ensemble. Give it a venue.
+ */
+function withVenue<T extends { venueId?: string; room: string }>(row: T): T {
+  if (row.venueId) return row;
+  if (row.room === 'Off-site') return { ...row, venueId: PARAMOUNT_MS_VENUE_ID, room: 'Band room B-12' };
+  return { ...row, venueId: STUDIO_VENUE_ID };
+}
+
 export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
   id: 'teaching',
   seed: () => makeSeed(),
@@ -171,6 +183,8 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
       status: s.status ?? 'enrolled',
       yearsIn: s.yearsIn ?? 1,
     }));
-    return { ...(candidate as unknown as TeachingState), students };
+    const ensembles = (candidate.ensembles as Ensemble[]).map(withVenue);
+    const meetings = (candidate.meetings as ClassMeeting[]).map(withVenue);
+    return { ...(candidate as unknown as TeachingState), students, ensembles, meetings };
   },
 };

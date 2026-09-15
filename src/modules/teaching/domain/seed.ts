@@ -1,5 +1,5 @@
 import { addDays, addWeeks } from 'date-fns';
-import { SEED_TODAY, toDate, toISO } from '../../../core';
+import { PARAMOUNT_MS_VENUE_ID, SEED_TODAY, STUDIO_VENUE_ID, toDate, toISO } from '../../../core';
 import type { ProgramId } from '../../../core';
 import type {
   AttendanceRecord,
@@ -59,35 +59,35 @@ interface Pattern {
 
 const PATTERN: Pattern[] = [
   {
-    ensemble: { id: 'e-combo-a', name: 'Combo A', programId: 'studio-sessions', room: 'Studio 1', leadStaffId: 's-albert', tone: 'blue' },
+    ensemble: { id: 'e-combo-a', name: 'Combo A', programId: 'studio-sessions', venueId: STUDIO_VENUE_ID, room: 'Studio 1', leadStaffId: 's-albert', tone: 'blue' },
     weekday: 0, start: '15:00', end: '16:00',
   },
   {
-    ensemble: { id: 'e-combo-b', name: 'Combo B', programId: 'studio-sessions', room: 'Studio 1', leadStaffId: 's-barry', tone: 'teal' },
+    ensemble: { id: 'e-combo-b', name: 'Combo B', programId: 'studio-sessions', venueId: STUDIO_VENUE_ID, room: 'Studio 1', leadStaffId: 's-barry', tone: 'teal' },
     weekday: 0, start: '16:00', end: '17:00',
   },
   {
-    ensemble: { id: 'e-big-band', name: 'Big Band', programId: 'studio-sessions', room: 'Main room', leadStaffId: 's-devon', tone: 'olive' },
+    ensemble: { id: 'e-big-band', name: 'Big Band', programId: 'studio-sessions', venueId: STUDIO_VENUE_ID, room: 'Main room', leadStaffId: 's-devon', tone: 'olive' },
     weekday: 0, start: '17:15', end: '18:45',
   },
   {
-    ensemble: { id: 'e-homeschool-1', name: 'Homeschool I', programId: 'homeschool', room: 'Studio 2', leadStaffId: 's-renee', tone: 'blue' },
+    ensemble: { id: 'e-homeschool-1', name: 'Homeschool I', programId: 'homeschool', venueId: STUDIO_VENUE_ID, room: 'Studio 2', leadStaffId: 's-renee', tone: 'blue' },
     weekday: 1, start: '16:00', end: '17:00',
   },
   {
-    ensemble: { id: 'e-homeschool-2', name: 'Homeschool II', programId: 'homeschool', room: 'Studio 2', leadStaffId: 's-renee', tone: 'teal' },
+    ensemble: { id: 'e-homeschool-2', name: 'Homeschool II', programId: 'homeschool', venueId: STUDIO_VENUE_ID, room: 'Studio 2', leadStaffId: 's-renee', tone: 'teal' },
     weekday: 1, start: '17:15', end: '18:15',
   },
   {
-    ensemble: { id: 'e-jazz-legacy', name: 'Jazz Legacy', programId: 'jazz-legacy', room: 'Main room', leadStaffId: 's-albert', tone: 'olive' },
+    ensemble: { id: 'e-jazz-legacy', name: 'Jazz Legacy', programId: 'jazz-legacy', venueId: STUDIO_VENUE_ID, room: 'Main room', leadStaffId: 's-albert', tone: 'olive' },
     weekday: 2, start: '16:00', end: '17:30',
   },
   {
-    ensemble: { id: 'e-advanced-workshop', name: 'Advanced Workshop', programId: 'advanced-workshop', room: 'Studio 1', leadStaffId: 's-barry', tone: 'blue' },
+    ensemble: { id: 'e-advanced-workshop', name: 'Advanced Workshop', programId: 'advanced-workshop', venueId: STUDIO_VENUE_ID, room: 'Studio 1', leadStaffId: 's-barry', tone: 'blue' },
     weekday: 2, start: '18:30', end: '20:00',
   },
   {
-    ensemble: { id: 'e-paramount-ms', name: 'Paramount MS', programId: 'in-school', room: 'Off-site', leadStaffId: 's-devon', tone: 'neutral' },
+    ensemble: { id: 'e-paramount-ms', name: 'Paramount MS', programId: 'in-school', venueId: PARAMOUNT_MS_VENUE_ID, room: 'Band room B-12', leadStaffId: 's-devon', tone: 'neutral' },
     weekday: 4, start: '15:00', end: '16:00',
   },
 ];
@@ -253,6 +253,7 @@ function buildMeetings(term: Term, suffix: string): ClassMeeting[] {
       date: toISO(addWeeks(first, i)),
       start: p.start,
       end: p.end,
+      venueId: p.ensemble.venueId,
       room: p.ensemble.room,
     }));
   });

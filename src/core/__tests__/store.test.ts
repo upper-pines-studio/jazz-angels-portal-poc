@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ModuleSlice } from '../module';
 import * as repository from '../repository';
 import type { PortalSlice } from '../repository';
+import { venuesForOrganization } from '../derive';
 import { SEED_TODAY } from '../seed';
 import { coreSlice, makeReducer, newId, resolveToday } from '../store';
 import type { PortalState } from '../types';
@@ -97,6 +98,12 @@ describe('the core slice', () => {
       'Renee Cole',
     ]);
     expect(state.programs.every((p) => p.short.length > 0)).toBe(true);
+    expect(state.organizations.map((o) => o.name)).toEqual(['Paramount Unified School District']);
+    expect(state.venues.map((v) => v.name)).toEqual([
+      'Jazz Angels Studio',
+      'Paramount Middle School',
+      'Alondra Middle School',
+    ]);
     expect(state.settings).toEqual({
       fiscalYearStartMonth: 7,
       enabledModules: ['grants', 'teaching', 'timesheets'],
@@ -120,6 +127,28 @@ describe('the core slice', () => {
 
     state = coreSlice.reducer(state, { type: 'core/update-staff', id: 's-denise', patch: { teaches: true } });
     expect(state.staff.find((s) => s.id === 's-denise')?.teaches).toBe(true);
+  });
+
+  it('adds a venue under an organization and patches it', () => {
+    let state = seed();
+    const actions = coreSlice.createActions(
+      (a) => {
+        state = coreSlice.reducer(state, a);
+      },
+      () => ({ core: state }) as PortalState,
+      { today: '2026-09-13', newId },
+    );
+
+    const orgId = actions.addOrganization({ name: 'Long Beach Unified School District', kind: 'school-district' });
+    const venueId = actions.addVenue({ name: 'Wilson High School', kind: 'school', organizationId: orgId });
+    expect(orgId.startsWith('org-')).toBe(true);
+    expect(venueId.startsWith('v-')).toBe(true);
+    expect(venuesForOrganization({ core: state } as PortalState, orgId).map((v) => v.name)).toEqual(['Wilson High School']);
+
+    actions.updateVenue(venueId, { contactName: 'Dana Whitfield, band director' });
+    actions.updateOrganization(orgId, { contactPhone: '(562) 555-0199' });
+    expect(state.venues.at(-1)?.contactName).toBe('Dana Whitfield, band director');
+    expect(state.organizations.at(-1)?.contactPhone).toBe('(562) 555-0199');
   });
 
   it('turns a module off and on again', () => {
@@ -163,5 +192,8 @@ describe('the core slice', () => {
     expect(filled?.programs[0].short).toBe('In-School Program');
     expect(filled?.settings.enabledModules).toEqual(['grants', 'teaching', 'timesheets']);
     expect(filled?.settings.demoToday).toBeUndefined();
+    // Saved before places existed: the seeded venues come along, so venue ids resolve.
+    expect(filled?.venues.map((v) => v.id)).toContain('v-studio');
+    expect(filled?.organizations).toHaveLength(1);
   });
 });

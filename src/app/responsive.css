@@ -13,6 +13,21 @@
  */
 
 /* ---------------------------------------------------------------------------
+ * Icons
+ *
+ * `Icon` renders a span sized to the icon and lets Lucide swap a placeholder
+ * inside it for an SVG. That SVG arrives with Lucide's own 24px width and
+ * height, so without this rule a 15px button icon overflows its box and sits
+ * low and to the right of the label. Fit the drawing to the span.
+ * ------------------------------------------------------------------------ */
+
+[data-icon-size] > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------------------
  * Shell
  * ------------------------------------------------------------------------ */
 

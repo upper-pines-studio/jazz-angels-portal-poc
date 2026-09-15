@@ -7,6 +7,7 @@ import { useToast } from '../ToastHost';
 import { SEED_TODAY, dateLong, dateRange, fiscalYear, useStore } from '../../core';
 import type { ModuleManifest, StaffMember } from '../../core';
 import { MODULES } from '../../modules';
+import Places from './settings/Places';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
@@ -24,7 +25,7 @@ export default function Settings() {
   const [confirmReset, setConfirmReset] = React.useState(false);
   const fileInput = React.useRef<HTMLInputElement>(null);
 
-  usePageHeader({ title: 'Settings', subtitle: 'People, programs, modules and your data' });
+  usePageHeader({ title: 'Settings', subtitle: 'People, places, programs, modules and your data' });
 
   const fy = fiscalYear(today, state.core.settings.fiscalYearStartMonth);
   const enabled = state.core.settings.enabledModules;
@@ -125,6 +126,8 @@ export default function Settings() {
           </Button>
         </div>
       </Card>
+
+      <Places />
 
       <Card title="Modules" subtitle="What this portal does. Core stays on.">
         <div style={{ display: 'flex', flexDirection: 'column' }}>
