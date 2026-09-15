@@ -1,24 +1,29 @@
-# Jazz Angels Grants — POC
+# Jazz Angels Portal — POC
 
-Grant-management tool for Jazz Angels (youth jazz education nonprofit). React 18 + TypeScript + Vite,
-react-router 6, date-fns, vitest. No backend: state lives in localStorage behind `src/domain/repository.ts`.
+Staff portal for Jazz Angels (youth jazz education nonprofit): a shared core plus one module per
+office workflow (grants, teaching, timesheets). React 18 + TypeScript + Vite, react-router 6,
+date-fns, vitest. No backend: state lives in localStorage behind `src/core/repository.ts`, one key
+per module.
 
 ## Commands
 - `npm run dev` — http://localhost:5181
 - `npm run build` — typecheck + vite build (Netlify runs this)
-- `npm test` — vitest (domain layer only)
+- `npm test` — vitest (core and module domain layers only)
 
 ## Where things are
-- `docs/SPEC.md` — the product spec: phases, domain model, seed data, every screen. Read it before changing behaviour.
+- `docs/PLATFORM.md` — the platform spec: architecture, the modules, the core screens. Read it before changing structure.
+- `docs/SPEC.md` — the product spec for the grants module: phases, domain model, seed data, every screen.
 - `docs/design-system.md` — brand rules. Read VISUAL FOUNDATIONS and CONTENT FUNDAMENTALS before adding UI.
 - `src/design-system/` — the 27 shared components (JSX + `.d.ts`). Import from the barrel: `import { Card, Button } from '../design-system'`. Do not edit these; they are shared with the staff-portal POC.
-- `src/domain/` — types, phases, templates, derived data, seed, repository, store. `src/domain/README.md` documents the API.
-- `src/app/` — Shell, routes, screens.
+- `src/core/` — the shared nouns (staff, programs, fiscal year, settings), the store, the repository, formatting. `src/core/README.md` documents the API.
+- `src/modules/` — one folder per workflow: `grants/`, `teaching/`, `timesheets/`, plus `index.ts`, the registry. `src/modules/README.md` says how to add one.
+- `src/app/` — App, Shell, the two core screens (Dashboard, Settings), shared app components.
 - `design/` — the design-canvas artboards (`*.dc.html`), `kit.css`, `canvas.json`. Mockups only; the app is the source of truth once built.
 
 ## Conventions
 - Style with CSS custom properties from the tokens (`var(--space-4)`, `var(--blue-500)`) and the design-system components. No utility classes, no CSS-in-JS libraries, no new colours.
 - Copy: warm, plain, specific. Labels are nouns, buttons are verbs, no emoji.
-- Money is integer dollars; dates are ISO strings. Format only at render time with `src/domain/format.ts`.
+- Money is integer dollars; dates are ISO strings. Format only at render time with `src/core/format.ts`.
+- A module's screens import from their own `domain/` and from `core`; a module reaches another module only through its `index.ts`. Core never imports from `modules/`, except that `app/` reads the registry.
 - Dialog renders `position:absolute`; the scrolling `main` in Shell is `position:relative` so dialogs scope to it.
 - Lucide icons come from the CDN tag in `index.html` via the `Icon` component; call `window.lucide.createIcons()` after renders that add icons (App does this in an effect).
