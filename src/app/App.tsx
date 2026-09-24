@@ -2,9 +2,11 @@ import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { StoreProvider, useStore } from '../core';
 import { MODULES } from '../modules';
+import { AuthProvider, useAuth } from './AuthGate';
 import { Shell } from './Shell';
 import { ToastHost } from './ToastHost';
 import Dashboard from './screens/Dashboard';
+import Login from './screens/Login';
 import Settings from './screens/Settings';
 import Partners from './screens/partners/Partners';
 import OrganizationDetail from './screens/partners/OrganizationDetail';
@@ -34,12 +36,27 @@ function Frame() {
   );
 }
 
-export default function App() {
+/**
+ * Nothing behind the gate mounts until someone signs in, so the login screen
+ * never loads or seeds module state. The router sits above App, so the URL
+ * asked for survives the detour through the login screen.
+ */
+function Gate() {
+  const { user } = useAuth();
+  if (!user) return <Login />;
   return (
     <StoreProvider slices={SLICES}>
       <ToastHost>
         <Frame />
       </ToastHost>
     </StoreProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Gate />
+    </AuthProvider>
   );
 }

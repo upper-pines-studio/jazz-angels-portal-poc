@@ -274,6 +274,10 @@ awaiting approval" as `info` when > 0; no panel.
 
 ### 2.4 Core screens
 
+- **Sign in** `/sign-in` — A username and password field and a Sign in button; the whole portal
+  sits behind it, so nothing else renders until the check passes. Credentials are never shown on
+  the page — no hint, no autofill of a real account. A wrong username or password gives one plain
+  error and clears the password field.
 - **Dashboard** `/` — Composed. Title "Dashboard", subtitle "Sunday, September 13 · FY27 · Fall
   session week 1". Stat row: up to four StatCards in module order (grants 2, teaching 2; timesheets'
   stat appears when a slot is free, otherwise as a footnote in the Attention header). Left column
@@ -302,7 +306,7 @@ awaiting approval" as `info` when > 0; no panel.
   **Office**: Timesheets, Partners, Settings). Sections with the same name merge; "Office" is
   where Timesheets and the core Partners and Settings screens meet. Badge counts come from
   `NavItem.badge`.
-  Footer: signed-in person (Barry Cogert, Program Director).
+  Footer: signed-in person (Barry Cogert, Program Director) and Sign out.
 
 ---
 
