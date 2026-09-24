@@ -54,6 +54,20 @@ npm run build    # typecheck + production build (what Netlify runs)
 - `docs/PLATFORM.md` is the platform spec; `docs/SPEC.md` is the grants product spec.
 - `src/core/README.md` and `src/modules/README.md` say how to add a module: one folder, one line.
 
+## Signing in
+
+The portal asks for a username and password before it shows anything else. There are two
+accounts, `barry` and `intern`; the passwords are not in this repo — the project owner holds
+them. This is POC-grade protection: the check runs client-side and keeps casual visitors out of a
+published demo, not real security. A real login needs a backend.
+
+**Changing a password.** Compute the new hash and paste it into the matching entry of `USERS` in
+`src/core/auth.ts`:
+
+```bash
+node -e "const c=require('crypto');console.log(c.createHash('sha256').update('USERNAME:NEWPASSWORD').digest('hex'))"
+```
+
 ## Demo data
 
 The seed is written around **Sunday, September 13, 2026**, the first day of the Fall session: ten

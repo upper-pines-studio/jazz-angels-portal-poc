@@ -22,3 +22,7 @@ export {
 // tests need the raw storage helpers.
 export * as repository from './repository';
 export { storageKey } from './repository';
+
+// Namespaced like the repository: `auth.verify`, `auth.currentUser`, …
+export * as auth from './auth';
+export type { AuthUser } from './auth';

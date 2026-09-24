@@ -59,9 +59,11 @@ fine, because any slice it does not carry is seeded instead.
 | `module.ts` | `ModuleSlice`, `ModuleManifest`, `NavItem`, `StatSpec`, `AttentionItem`, `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
 | `store.tsx` | `StoreProvider`, `useStore`, `coreSlice`, `newId`. |
 | `repository.ts` | localStorage, one key per slice; export / import / reset. |
+| `auth.ts` | Sign-in against SHA-256 credential hashes (no plaintext passwords in source); the session key. Exported as `auth`. |
 | `format.ts` | `money`, `dateShort`, `dateLong`, `dateRange`, `relativeDays`, `daysUntil`, `initials`. |
 | `seed.ts` | The five staff, the six programs, one district with two schools, the studio, the settings. `STUDIO_VENUE_ID` and `PARAMOUNT_MS_VENUE_ID` are exported for module seeds. |
 | `derive.ts` | `fiscalYear`, `staffById`, `programById`, `programName`, `organizationById`, `venueById`, `venueName`, `venuesForOrganization`, `placeLabel`, `addressLine`. |
+| `auth.ts` | The sign-in check: SHA-256 of `username:password` via Web Crypto, checked against a small table of hashes, no plaintext in source. The session (who, and when) lives in localStorage under `ja-portal:session:v1`. |
 
 **Conventions.** Money is whole dollars as an integer. Dates are ISO
 `YYYY-MM-DD` strings. Format only at render time.
@@ -91,3 +93,9 @@ manages both on the Partners screen (`src/app/screens/partners/`).
 | `exportJson()` | The whole portal as pretty JSON. |
 
 See `src/modules/README.md` for how to add a module.
+
+## Auth exports
+
+`AuthUser`, `Credential`, `SESSION_KEY`, `USERS`, `hashCredential(username, password)`,
+`verify(username, password, users?)`, `currentUser(users?)`, `startSession(user)`,
+`endSession()`.

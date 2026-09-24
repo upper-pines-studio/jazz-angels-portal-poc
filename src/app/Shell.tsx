@@ -4,6 +4,7 @@ import { Sidebar, TopBar, Icon, IconButton, Avatar, Breadcrumb } from '../design
 import { useStore } from '../core';
 import type { PortalState } from '../core';
 import { MODULES } from '../modules';
+import { useAuth } from './AuthGate';
 
 export interface Crumb { label: React.ReactNode; href?: string }
 
@@ -84,6 +85,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const nav = useNavigate();
   const loc = useLocation();
   const { state, today } = useStore();
+  const { user, signOut } = useAuth();
   const [header, setHeader] = React.useState<PageHeader>({ title: '' });
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [collapsed, setCollapsed] = React.useState(() => readCollapsed());
@@ -111,17 +113,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
             footer={
               <div className="ja-rail-foot">
                 <div className="ja-rail-user">
-                  <Avatar name="Barry Cogert" size={30} tone="var(--gold-400)" />
+                  <Avatar name={user?.name ?? ''} size={30} tone="var(--gold-400)" />
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ font: 'var(--weight-semibold) var(--text-xs)/1.3 var(--font-sans)', color: 'var(--neutral-0)' }}>Barry Cogert</div>
-                    <div style={{ font: 'var(--text-3xs)/1.3 var(--font-sans)', color: 'var(--text-on-dark-muted)' }}>Program Director</div>
+                    <div style={{ font: 'var(--weight-semibold) var(--text-xs)/1.3 var(--font-sans)', color: 'var(--neutral-0)' }}>{user?.name}</div>
+                    <div style={{ font: 'var(--text-3xs)/1.3 var(--font-sans)', color: 'var(--text-on-dark-muted)' }}>{user?.role}</div>
                   </div>
                 </div>
-                <span className="ja-rail-toggle">
-                  <IconButton label={collapsed ? 'Expand menu' : 'Collapse menu'} size="sm" variant="ghost"
-                    style={{ color: 'var(--text-on-dark-muted)' }} onClick={toggleCollapsed}>
-                    <Icon name={collapsed ? 'chevrons-right' : 'chevrons-left'} size={16} />
+                <span className="ja-rail-actions">
+                  <IconButton label="Sign out" size="sm" variant="ghost"
+                    style={{ color: 'var(--text-on-dark-muted)' }} onClick={signOut}>
+                    <Icon name="log-out" size={16} />
                   </IconButton>
+                  <span className="ja-rail-toggle">
+                    <IconButton label={collapsed ? 'Expand menu' : 'Collapse menu'} size="sm" variant="ghost"
+                      style={{ color: 'var(--text-on-dark-muted)' }} onClick={toggleCollapsed}>
+                      <Icon name={collapsed ? 'chevrons-right' : 'chevrons-left'} size={16} />
+                    </IconButton>
+                  </span>
                 </span>
               </div>
             } />

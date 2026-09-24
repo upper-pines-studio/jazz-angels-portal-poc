@@ -70,6 +70,13 @@
   flex: 1;
 }
 .ja-rail-toggle { display: none; }
+/* Sign out and the collapse toggle stay reachable in every rail state. */
+.ja-rail-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 0 0 auto;
+}
 
 /*
  * Collapsed rail (desktop only). The design-system Sidebar reads its width
@@ -90,6 +97,8 @@
   .ja-sidebar.is-collapsed nav > div:last-child { padding: var(--space-4) var(--space-2) !important; }
   .ja-sidebar.is-collapsed .ja-rail-user { display: none; }
   .ja-sidebar.is-collapsed .ja-rail-foot { justify-content: center; }
+  /* 64px rail: stack the two buttons so both fit. */
+  .ja-sidebar.is-collapsed .ja-rail-actions { flex-direction: column; }
 }
 
 .ja-topbar {
@@ -306,4 +315,56 @@
 
   .ja-filter-bar__search { flex: 1 1 100%; max-width: none; }
   .ja-filter-bar__select { flex: 1 1 calc(50% - var(--space-3)); min-width: 0; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Sign-in screen: a centred card on the paper page, 16px gutters on a phone.
+ * ------------------------------------------------------------------------ */
+.ja-login {
+  min-height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-7) var(--space-4);
+  background: var(--neutral-25);
+  overflow-x: hidden;
+}
+.ja-login__inner {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.ja-login__logo {
+  display: block;
+  height: 56px;
+  width: auto;
+  align-self: center;
+}
+.ja-login__head {
+  padding: var(--space-5) var(--space-6);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+.ja-login__head h1 {
+  margin: 0;
+  font: var(--type-h4);
+  color: var(--text-strong);
+}
+.ja-login__head p {
+  margin: var(--space-1) 0 0;
+  font: var(--type-body-sm);
+  color: var(--text-muted);
+}
+.ja-login__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+.ja-login__form > button { margin-top: var(--space-2); }
+@media (max-width: 640px) {
+  .ja-login__head { padding: var(--space-4) var(--space-5); }
+  .ja-login__form { padding: var(--space-5); }
 }
