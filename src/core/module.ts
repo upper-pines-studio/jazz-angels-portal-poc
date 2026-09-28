@@ -39,6 +39,12 @@ export interface NavItem {
   badge?(state: PortalState, today: string): number;
 }
 
+/** One titled group of rail items. */
+export interface NavSection {
+  section: string;
+  items: NavItem[];
+}
+
 export interface StatSpec {
   id: string;
   label: string;
@@ -80,9 +86,12 @@ export interface ModuleManifest {
   label: string;
   /** One sentence; it shows in Settings → Modules. */
   description: string;
-  nav: { section: string; items: NavItem[] };
+  /** One rail section, or several when the module is big enough to need them. */
+  nav: NavSection | NavSection[];
   routes: Array<{ path: string; element: React.ReactElement }>;
   dashboard?: DashboardContribution;
+  /** Each renders a Card on the Settings screen, after the Modules card. */
+  settings?: React.ComponentType[];
   // The two positions where a manifest cannot know its own state and action types.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   slice: ModuleSlice<any, any>;

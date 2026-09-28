@@ -1,0 +1,15 @@
+{
+  "artboards": [
+    { "file": "GrantRecord.dc.html",    "title": "1 · Grant record (award terms and letter)", "x": 0,    "y": 0,    "w": 1440, "h": 900 },
+    { "file": "BudgetLines.dc.html",    "title": "2 · Budget lines (mapped to QuickBooks)",   "x": 1540, "y": 0,    "w": 1440, "h": 900 },
+    { "file": "Transactions.dc.html",   "title": "3 · Expense assignment (with a split)",     "x": 3080, "y": 0,    "w": 1440, "h": 900 },
+    { "file": "BudgetVsActual.dc.html", "title": "4 · Budget vs. actual",                     "x": 0,    "y": 1040, "w": 1440, "h": 900 },
+    { "file": "SpendDown.dc.html",      "title": "5 · Spend-down pacing",                     "x": 1540, "y": 1040, "w": 1440, "h": 900 },
+    { "file": "Reminders.dc.html",      "title": "6 · Reporting deadlines and reminders",     "x": 3080, "y": 1040, "w": 1440, "h": 900 },
+    { "file": "Receipts.dc.html",       "title": "7 · Receipts and backup documents",         "x": 0,    "y": 2080, "w": 1440, "h": 900 }
+  ],
+  "annotations": [
+    { "id": "brief", "x": 0, "y": -220, "w": 520, "text": "Grant tracking as a product\n\nSeven screens for the money side of a grant, after the award: what was promised, how the budget maps to QuickBooks, where each expense belongs, and whether the money will be spent by the end date. Jazz Angels is the demo organization.\n\nRead left to right, top to bottom." }
+  ],
+  "launch": { "view": "canvas" }
+}

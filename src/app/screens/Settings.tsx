@@ -151,6 +151,8 @@ export default function Settings() {
         </p>
       </Card>
 
+      {MODULES.filter(m => enabled.includes(m.id)).flatMap(m => m.settings ?? []).map((Panel, i) => <Panel key={i} />)}
+
       <Card title="Partners and venues" subtitle="Schools, districts and the places classes meet.">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
           <p style={{ ...MUTED_SM, margin: 0, flex: 1, minWidth: 240 }}>

@@ -56,7 +56,7 @@ fine, because any slice it does not carry is seeded instead.
 | File | What is in it |
 | --- | --- |
 | `types.ts` | `StaffMember`, `Program`, `Organization`, `Venue`, `Address`, `AppSettings`, `CoreState`, and the augmentable `PortalState` / `PortalActions`. |
-| `module.ts` | `ModuleSlice`, `ModuleManifest`, `NavItem`, `StatSpec`, `AttentionItem`, `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
+| `module.ts` | `ModuleSlice`, `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are Cards for the Settings screen), `NavItem`, `NavSection`, `StatSpec`, `AttentionItem`, `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
 | `store.tsx` | `StoreProvider`, `useStore`, `coreSlice`, `newId`. |
 | `repository.ts` | localStorage, one key per slice; export / import / reset. |
 | `auth.ts` | Sign-in against SHA-256 credential hashes (no plaintext passwords in source); the session key. Exported as `auth`. |

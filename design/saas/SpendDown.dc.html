@@ -1,0 +1,526 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+/* Jazz Angels Grants — artboard kit.
+   Every value is lifted from src/design-system (tokens + component source). Do not invent new values.
+   Classes below reproduce the design-system components' anatomy so artboards look exactly like the app. */
+
+:root{
+  --blue-50:#eaf4fa;--blue-100:#cbe4f1;--blue-200:#95c7e2;--blue-300:#5aa6cf;--blue-400:#2483b8;--blue-500:#00649b;--blue-600:#005382;--blue-700:#004067;--blue-800:#002e4b;--blue-900:#001e31;
+  --teal-50:#eef4f4;--teal-100:#d3e3e3;--teal-200:#a6c6c6;--teal-300:#75a6a7;--teal-400:#568e8f;--teal-500:#437f80;--teal-600:#376869;--teal-700:#2a5152;
+  --olive-50:#f6f5e6;--olive-100:#e9e7c2;--olive-300:#bab54c;--olive-500:#9a9422;--olive-600:#7f7a1c;--olive-700:#635f16;
+  --gold-50:#fdf6e6;--gold-100:#fbeac1;--gold-200:#f8d88b;--gold-300:#f4bf4f;--gold-400:#e2a92f;--gold-500:#c68f1c;--gold-600:#a17316;--gold-700:#7b5711;
+  --neutral-0:#ffffff;--neutral-25:#fbfaf7;--neutral-50:#f5f3ee;--neutral-100:#ebe8e1;--neutral-200:#dcd8ce;--neutral-300:#c3beb2;--neutral-400:#9d9789;--neutral-500:#7b7568;--neutral-600:#5d5850;--neutral-700:#453f39;--neutral-800:#2e2a26;--neutral-900:#1b1815;
+  --danger-50:#faeeec;--danger-500:#a83a2c;--danger-600:#8c2f23;
+  --text-strong:#1b1815;--text-body:#453f39;--text-muted:#7b7568;--text-faint:#9d9789;--text-on-dark:#fff;--text-on-dark-muted:#b9cfdd;
+  --font-display:"Jost",'Futura','Century Gothic',system-ui,sans-serif;
+  --font-sans:"Archivo",system-ui,-apple-system,'Helvetica Neue',sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,'SFMono-Regular',Menlo,monospace;
+  --shadow-xs:0 1px 2px rgba(27,24,21,.06);
+  --shadow-sm:0 1px 3px rgba(27,24,21,.07),0 1px 2px rgba(27,24,21,.04);
+  --shadow-md:0 4px 12px rgba(27,24,21,.08);
+  --shadow-lg:0 12px 28px rgba(27,24,21,.11);
+  --shadow-inset:inset 0 1px 2px rgba(27,24,21,.07);
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:#fbfaf7;color:#453f39;font:400 16px/1.65 var(--font-sans);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;color:#1b1815;letter-spacing:-0.015em}
+p{margin:0}
+a{color:#00649b;text-decoration:none}a:hover{color:#004067;text-decoration:underline}
+svg{display:block}
+
+/* ---------- shell: 1440×900 frame, 236px rail, 60px top bar ---------- */
+.app{width:1440px;height:900px;display:flex;background:#fbfaf7;overflow:hidden}
+.rail{width:236px;flex:0 0 236px;background:#002e4b;color:#fff;display:flex;flex-direction:column}
+.rail-brand{height:60px;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid rgba(255,255,255,.10)}
+.rail-brand span{background:#fff;border-radius:3px;padding:5px 8px;display:flex}
+.rail-brand img{height:20px;width:auto}
+.rail-nav{padding:16px 12px;display:flex;flex-direction:column;gap:2px;flex:1}
+.rail-section{font:600 12px/1.2 var(--font-display);letter-spacing:.11em;text-transform:uppercase;color:#b9cfdd;padding:20px 12px 8px}
+.rail-item{display:flex;align-items:center;gap:12px;width:100%;padding:0 12px;height:38px;border-radius:5px;color:#b9cfdd;font:400 14px/1 var(--font-sans)}
+.rail-item.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600}
+.rail-item svg{width:16px;height:16px;flex:0 0 auto}
+.rail-item .count{margin-left:auto;font:500 11px/1.3 var(--font-mono);color:#f4bf4f}
+.rail-foot{padding:16px;border-top:1px solid rgba(255,255,255,.10);display:flex;align-items:center;gap:12px}
+.rail-foot .name{font:600 13px/1.3 var(--font-sans);color:#fff}
+.rail-foot .role{font:400 11px/1.3 var(--font-sans);color:#b9cfdd}
+.frame{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{min-height:60px;display:flex;align-items:center;gap:20px;padding:16px 32px;background:#fff;border-bottom:1px solid #dcd8ce}
+.topbar h1{font:600 21px/1.2 var(--font-display);color:#1b1815}
+.topbar .sub{margin:3px 0 0;font:400 14px/1.5 var(--font-sans);color:#7b7568}
+.topbar .actions{display:flex;align-items:center;gap:12px;flex:0 0 auto;margin-left:auto}
+.crumbs{display:flex;gap:8px;align-items:center;font:400 13px/1.3 var(--font-sans);color:#7b7568;margin-bottom:4px}
+.crumbs a{color:#00649b}
+.main{flex:1;overflow:hidden;padding:32px;position:relative}
+.page{max-width:1200px;display:flex;flex-direction:column;gap:20px}
+
+/* ---------- card ---------- */
+.card{background:#fff;border:1px solid #ebe8e1;border-radius:8px;box-shadow:var(--shadow-sm);overflow:hidden}
+.card-accent{height:3px}
+.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 24px;border-bottom:1px solid #ebe8e1}
+.card-head h3{font:600 18px/1.2 var(--font-sans);color:#1b1815;letter-spacing:0}
+.card-head .sub{margin:4px 0 0;font:400 14px/1.5 var(--font-sans);color:#7b7568}
+.card-body{padding:24px}
+.card-body.flush{padding:0}
+
+/* ---------- stat card (3px left rule) ---------- */
+.stat{background:#fff;border:1px solid #ebe8e1;border-radius:8px;box-shadow:var(--shadow-sm);padding:20px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--stat-accent,#00649b)}
+.stat .label{font:600 12px/1.2 var(--font-display);letter-spacing:.11em;text-transform:uppercase;color:#7b7568}
+.stat .value{font:700 33px/1 var(--font-display);color:#1b1815;letter-spacing:-0.015em}
+.stat .row{display:flex;align-items:baseline;gap:8px}
+.stat .delta{margin-left:auto;font:500 13px/1 var(--font-mono)}
+.stat .foot{font:400 13px/1.5 var(--font-sans);color:#7b7568}
+
+/* ---------- eyebrow / type helpers ---------- */
+.eyebrow{font:600 12px/1.2 var(--font-display);letter-spacing:.11em;text-transform:uppercase;color:#437f80}
+.mono{font:500 14px/1.3 var(--font-mono)}
+.muted{color:#7b7568}
+.small{font-size:13px}
+
+/* ---------- buttons (Jost, 38px md, 30px sm) ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:600 14px/1 var(--font-display);letter-spacing:.04em;border:1px solid transparent;border-radius:5px;height:38px;padding:0 20px;white-space:nowrap;cursor:pointer;text-decoration:none}
+.btn.sm{height:30px;padding:0 12px;font-size:12px}
+.btn.primary{background:#00649b;color:#fff;box-shadow:var(--shadow-xs)}
+.btn.secondary{background:#fff;color:#005382;border-color:#dcd8ce;box-shadow:var(--shadow-xs)}
+.btn.ghost{background:transparent;color:#005382}
+.btn.danger{background:#a83a2c;color:#fff}
+.btn.accent{background:#f4bf4f;color:#1b1815;box-shadow:var(--shadow-xs)}
+.btn svg{width:15px;height:15px}
+.iconbtn{width:38px;height:38px;border-radius:5px;border:1px solid #dcd8ce;background:#fff;display:inline-flex;align-items:center;justify-content:center;color:#453f39;box-shadow:var(--shadow-xs)}
+.iconbtn svg{width:16px;height:16px}
+
+/* ---------- badge (uppercase status) ---------- */
+.badge{display:inline-flex;align-items:center;gap:8px;font:600 11px/1 var(--font-sans);letter-spacing:.04em;text-transform:uppercase;padding:5px 8px;border-radius:3px;background:#ebe8e1;color:#453f39;white-space:nowrap}
+.badge.dot::before{content:"";width:6px;height:6px;border-radius:999px;background:currentColor}
+.badge.blue{background:#eaf4fa;color:#004067}
+.badge.teal{background:#eef4f4;color:#2a5152}
+.badge.olive{background:#f6f5e6;color:#635f16}
+.badge.gold{background:#fdf6e6;color:#7b5711}
+.badge.danger{background:#faeeec;color:#8c2f23}
+.badge.solid{background:#00649b;color:#fff}
+
+/* ---------- tag (pill with colour dot) ---------- */
+.tag{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #dcd8ce;border-radius:999px;padding:4px 12px;font:400 14px/1.5 var(--font-sans);color:#453f39}
+.tag::before{content:"";width:7px;height:7px;border-radius:999px;background:var(--tag-color,#437f80)}
+
+/* ---------- data table (CSS grid rows, 48px) ---------- */
+.table{width:100%}
+.thead,.tr{display:grid;grid-template-columns:var(--cols);gap:16px;align-items:center;padding:12px 20px}
+.thead{background:#f5f3ee;border-bottom:1px solid #dcd8ce;font:600 11px/1.2 var(--font-sans);letter-spacing:.04em;text-transform:uppercase;color:#7b7568}
+.tr{min-height:48px;border-bottom:1px solid #ebe8e1;background:#fff;font:400 14px/1.5 var(--font-sans);color:#453f39}
+.tr.hover{background:#eaf4fa}
+.tr>*{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr .strong{color:#1b1815;font-weight:500}
+.tr .num,.thead .num{text-align:right}
+.tr .mono{font:500 14px/1.3 var(--font-mono)}
+
+/* ---------- tabs (underline) ---------- */
+.tabs{display:flex;gap:24px;border-bottom:1px solid #dcd8ce}
+.tab{padding:0 0 12px;margin-bottom:-1px;display:flex;align-items:center;gap:8px;border-bottom:2px solid transparent;color:#7b7568;font:400 14px/1.4 var(--font-sans)}
+.tab.active{border-bottom-color:#00649b;color:#1b1815;font-weight:600}
+.tab .count{font:500 11px/1.3 var(--font-mono);background:#ebe8e1;color:#7b7568;border-radius:3px;padding:2px 5px}
+
+/* ---------- progress bar ---------- */
+.progress{display:flex;flex-direction:column;gap:8px}
+.progress .top{display:flex;justify-content:space-between;gap:12px;font:400 14px/1.5 var(--font-sans);color:#453f39}
+.progress .track{height:8px;background:#ebe8e1;border-radius:999px;overflow:hidden}
+.progress .fill{height:100%;border-radius:999px;background:#00649b}
+.progress .cap{font:400 13px/1.5 var(--font-sans);color:#7b7568}
+
+/* ---------- forms ---------- */
+.field{display:flex;flex-direction:column;gap:8px}
+.field label{font:500 14px/1.3 var(--font-sans);color:#1b1815}
+.field label .req{color:#a83a2c;margin-left:4px}
+.field .hint{font:400 13px/1.5 var(--font-sans);color:#7b7568}
+.input{display:flex;align-items:center;gap:8px;width:100%;height:38px;padding:0 12px;background:#fff;border:1px solid #dcd8ce;border-radius:5px;box-shadow:var(--shadow-inset);font:400 14px/1.5 var(--font-sans);color:#1b1815}
+.input.placeholder{color:#9d9789}
+.input .prefix{color:#9d9789;display:flex}
+.input .prefix svg{width:15px;height:15px}
+.select{position:relative;width:100%}
+.select .input{padding-right:40px}
+.select::after{content:"\25BE";position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#7b7568;font:10px/1 var(--font-sans)}
+.checkbox{width:18px;height:18px;border-radius:3px;border:1px solid #c3beb2;background:#fff;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.checkbox.on{background:#00649b;border-color:#00649b}
+.switch{width:34px;height:20px;border-radius:999px;background:#c3beb2;position:relative;flex:0 0 auto}
+.switch.on{background:#437f80}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:999px;background:#fff}
+.switch.on::after{left:16px}
+
+/* ---------- avatar (initials disc) ---------- */
+.avatar{width:28px;height:28px;border-radius:999px;background:#437f80;color:#fff;display:inline-flex;align-items:center;justify-content:center;font:600 11px/1 var(--font-sans);flex:0 0 auto}
+.avatar.gold{background:#e2a92f;color:#1b1815}
+.avatar.blue{background:#00649b}
+.avatar.olive{background:#9a9422}
+
+/* ---------- dialog (absolute scrim inside .main) ---------- */
+.scrim{position:absolute;inset:0;background:rgba(27,24,21,.44);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:32px;z-index:50}
+.dialog{width:560px;max-width:100%;background:#fff;border-radius:12px;box-shadow:var(--shadow-lg);overflow:hidden}
+.dialog-head{padding:24px 24px 16px;display:flex;gap:16px;align-items:flex-start}
+.dialog-head h2{font:600 21px/1.25 var(--font-display);color:#1b1815;letter-spacing:-0.015em}
+.dialog-head .desc{margin:8px 0 0;font:400 14px/1.5 var(--font-sans);color:#7b7568}
+.dialog-head .x{margin-left:auto;color:#9d9789;font:20px/1 var(--font-sans)}
+.dialog-body{padding:0 24px 24px}
+.dialog-foot{padding:16px 24px;background:#f5f3ee;border-top:1px solid #ebe8e1;display:flex;justify-content:flex-end;gap:12px}
+
+/* ---------- phase stepper (grants-specific, new) ---------- */
+.stepper{display:flex;align-items:flex-start}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;text-align:center}
+.step::before{content:"";position:absolute;top:11px;left:50%;right:-50%;height:2px;background:#dcd8ce}
+.step:last-child::before{display:none}
+.step .dot{width:24px;height:24px;border-radius:999px;border:2px solid #dcd8ce;background:#fff;position:relative;z-index:1;display:flex;align-items:center;justify-content:center}
+.step.done::before{background:#437f80}
+.step.done .dot{background:#437f80;border-color:#437f80}
+.step.done .dot svg{width:12px;height:12px;stroke:#fff}
+.step.current .dot{border-color:#00649b;background:#00649b;box-shadow:0 0 0 4px #eaf4fa}
+.step .name{font:600 12px/1.2 var(--font-display);letter-spacing:.11em;text-transform:uppercase;color:#9d9789}
+.step.done .name,.step.current .name{color:#1b1815}
+.step .when{font:500 11px/1.3 var(--font-mono);color:#7b7568}
+
+/* ---------- empty state ---------- */
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:64px 24px}
+.empty .ico{width:44px;height:44px;border-radius:999px;background:#eaf4fa;color:#00649b;display:flex;align-items:center;justify-content:center}
+.empty .ico svg{width:22px;height:22px}
+.empty h3{font:600 18px/1.3 var(--font-display)}
+.empty p{max-width:360px;font:400 14px/1.5 var(--font-sans);color:#7b7568}
+
+/* ---------- layout helpers ---------- */
+.row{display:flex;align-items:center;gap:12px}
+.col{display:flex;flex-direction:column;gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.two-col{display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #ebe8e1;font:400 14px/1.5 var(--font-sans)}
+.kv:last-child{border-bottom:0}
+.kv .k{color:#7b7568}
+.kv .v{color:#1b1815;text-align:right}
+
+/* ---------- screen: Spend-down ---------- */
+.sd-sync{display:flex;align-items:center;gap:6px;font:400 13px/1.3 var(--font-sans);color:var(--text-muted)}
+.sd-sync svg{width:14px;height:14px;stroke:var(--teal-500)}
+.sd-head{padding:12px 20px}
+.sd-head .sub{margin-top:2px}
+.sd-head .right{display:flex;align-items:center;gap:12px;flex:0 0 auto}
+.sd-body{display:grid;grid-template-columns:580px minmax(0,1fr);gap:32px;padding:12px 20px 14px;align-items:start}
+.sd-chart{overflow:visible}
+.sd-grid{stroke:var(--neutral-100);stroke-width:1}
+.sd-axis{stroke:var(--neutral-300);stroke-width:1}
+.sd-tick{stroke:var(--neutral-300);stroke-width:1}
+.sd-award{stroke:var(--neutral-400);stroke-width:1}
+.sd-even{stroke:var(--neutral-300);stroke-width:1.5}
+.sd-actual{fill:none;stroke:var(--blue-500);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.sd-proj{fill:none;stroke-width:2;stroke-dasharray:6 5;stroke-linecap:round}
+.sd-proj-fast{stroke:var(--gold-600)}
+.sd-proj-slow{stroke:var(--olive-600)}
+.sd-today{stroke:var(--neutral-600);stroke-width:1;stroke-dasharray:2 3}
+.sd-pt{fill:var(--blue-500);stroke:var(--neutral-0);stroke-width:1.5}
+.sd-pt-fast{fill:var(--neutral-0);stroke:var(--gold-600);stroke-width:2}
+.sd-pt-slow{fill:var(--neutral-0);stroke:var(--olive-600);stroke-width:2}
+.sd-gap{fill:none;stroke:var(--olive-600);stroke-width:1.5}
+.sd-ax{font:500 10px/1 var(--font-mono);fill:var(--text-muted)}
+.sd-lab{font:500 11px/1 var(--font-sans);fill:var(--text-body)}
+.sd-lab-today{font-weight:600;fill:var(--neutral-600)}
+.sd-lab-actual{font-weight:600;fill:var(--blue-600)}
+.sd-lab-fast{font-weight:600;fill:var(--gold-700)}
+.sd-lab-slow{font-weight:600;fill:var(--olive-700)}
+.sd-lab-muted{fill:var(--text-muted)}
+.sd-kv{display:flex;flex-direction:column}
+.sd-kv .kv{padding:5px 0;font-size:13px;align-items:baseline}
+.sd-kv .v{font:500 13px/1.3 var(--font-mono)}
+.sd-kv .v small{font:400 12px/1.3 var(--font-sans);color:var(--text-muted);margin-left:6px}
+.sd-kv .kv.result .k{color:var(--text-strong);font-weight:600}
+.sd-kv .kv.result .v{font:600 13px/1.3 var(--font-sans)}
+.sd-kv .kv.result.fast .v{color:var(--gold-700)}
+.sd-kv .kv.result.slow .v{color:var(--olive-700)}
+.sd-nums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px;padding-bottom:10px;border-bottom:1px solid var(--neutral-100)}
+.sd-nums > div{display:flex;flex-direction:column;gap:3px}
+.sd-nums .l{font:400 12px/1.3 var(--font-sans);color:var(--text-muted)}
+.sd-nums .n{font:500 15px/1.3 var(--font-mono);color:var(--text-strong)}
+.sd-nums .n small{font:400 12px/1.3 var(--font-sans);color:var(--text-muted);margin-left:6px}
+.sd-result{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px solid var(--neutral-100);font:600 13px/1.4 var(--font-sans);color:var(--text-strong)}
+.sd-result.fast .v{color:var(--gold-700)}
+.sd-result.slow .v{color:var(--olive-700)}
+.sd-do{padding-top:8px;display:flex;flex-direction:column;gap:4px}
+.sd-do strong{font-weight:600;color:var(--text-strong)}
+.sd-do p{font:400 13px/1.55 var(--font-sans);color:var(--text-body)}
+.sd-compact{display:grid;grid-template-columns:330px 340px minmax(0,1fr);gap:28px;padding:10px 20px;align-items:center}
+.sd-compact h3{font:600 16px/1.3 var(--font-sans);color:var(--text-strong);letter-spacing:0}
+.sd-compact .who{font:400 13px/1.45 var(--font-sans);color:var(--text-muted);margin-top:2px}
+.sd-compact .when{font:500 12px/1.3 var(--font-mono);color:var(--text-muted);margin-top:6px}
+.sd-strip{display:flex;flex-wrap:wrap;gap:2px 14px}
+.sd-strip > div{display:flex;align-items:baseline;gap:5px;white-space:nowrap}
+.sd-strip .l{font:400 12px/1.3 var(--font-sans);color:var(--text-muted)}
+.sd-strip .n{font:500 13px/1.3 var(--font-mono);color:var(--text-strong)}
+.sd-strip .n.word{font:500 13px/1.3 var(--font-sans)}
+.sd-strip .n.slow{color:var(--olive-700)}
+  </style>
+</helmet>
+<div class="app">
+  <nav class="rail">
+    <div class="rail-brand"><span><img src="logo.png" alt="Jazz Angels"></span></div>
+    <div class="rail-nav">
+      <div class="rail-section">Overview</div>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg><span>Dashboard</span></a>
+      <div class="rail-section">Grants</div>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="22" y2="22"></line><line x1="6" x2="6" y1="18" y2="11"></line><line x1="10" x2="10" y1="18" y2="11"></line><line x1="14" x2="14" y1="18" y2="11"></line><line x1="18" x2="18" y1="18" y2="11"></line><polygon points="12 2 20 7 4 7"></polygon></svg><span>All grants</span></a>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path></svg><span>Deadlines</span><span class="count">3</span></a>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></svg><span>Funders</span></a>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg><span>Playbook</span></a>
+      <div class="rail-section">Money</div>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg><span>Transactions</span><span class="count">14</span></a>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M7 16h8"></path><path d="M7 11h12"></path><path d="M7 6h3"></path></svg><span>Budget vs. actual</span></a>
+      <a class="rail-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"></path><path d="M3.34 19a10 10 0 1 1 17.32 0"></path></svg><span>Spend-down</span><span class="count">2</span></a>
+      <div class="rail-section">Office</div>
+      <a class="rail-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg><span>Settings</span></a>
+    </div>
+    <div class="rail-foot">
+      <span class="avatar gold" style="width:30px;height:30px">BC</span>
+      <div style="min-width:0;flex:1"><div class="name">Barry Cogert</div><div class="role">Program Director</div></div>
+    </div>
+  </nav>
+  <div class="frame">
+    <header class="topbar">
+      <div style="min-width:0;flex:1">
+        <h1>Spend-down</h1>
+        <p class="sub">Whether each grant's money will be fully spent by its end date if spending continues at today's rate.</p>
+      </div>
+      <div class="actions">
+        <span class="sd-sync"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>QuickBooks synced today, 8:40 am</span>
+        <a class="btn secondary sm" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>Export</a>
+      </div>
+    </header>
+    <div class="main" style="padding:24px 32px">
+      <div class="page" style="gap:16px">
+<!-- Chart scale (computed by script, not drawn by eye).
+     x: days elapsed through the end of each date, counted inclusively (period start = 0, today Sep 13, 2026).
+        Herb Alpert: 365 days over x 48..566 (1.419 px/day); today = day 75 at x 154.4.
+        Long Beach CF: 365 days over x 48..566 (1.419 px/day); today = day 197 at x 327.6.
+        LA County: 365 days over x 44..276 (0.636 px/day); period ended Jun 30, 2026.
+        Month ticks sit on the first of each month.
+     y: cumulative dollars, $0 at the baseline, the award at the top line.
+        Herb Alpert: $50,000 over y 156..24 (0.00264 px/$). Long Beach CF: $8,500 over y 156..24 (0.01553 px/$).
+        LA County: $22,000 over y 72..12 (0.00273 px/$).
+     Even pace: straight line from $0 at the start to the award at the end date.
+     Projection: spending so far divided by days elapsed, carried forward at the same daily rate.
+        Herb Alpert $18,240 / 75 days = $243.20 a day; reaches $50,000 on day 205.6 = Jan 22, 2027.
+        Long Beach CF $2,425 / 197 days = $12.31 a day; day 365 = $4,493, leaving $4,007.
+     Month-end points on the actual lines are illustrative monthly totals that end at the brief's figures. -->
+        
+        <div class="card">
+          <div class="card-head sd-head">
+            <div>
+              <h3>General operating support 2026</h3>
+              <p class="sub">Herb Alpert Foundation &middot; Jul 1, 2026 to Jun 30, 2027 &middot; $50,000 awarded</p>
+            </div>
+            <div class="right"><span class="badge gold dot">Spending fast</span><a class="btn secondary sm" href="#">Open budget</a></div>
+          </div>
+          <div class="sd-body">
+          <svg class="sd-chart" viewBox="0 0 580 184" width="580" height="184" role="img" aria-label="Herb Alpert Foundation cumulative spending: $18,240 spent by Sep 13, 2026; at this rate the $50,000 runs out around Jan 22, 2027">
+            <line class="sd-grid" x1="48" x2="566" y1="156" y2="156"></line>
+            <text class="sd-ax" x="40" y="159.5" text-anchor="end">$0</text>
+            <line class="sd-grid" x1="48" x2="566" y1="129.6" y2="129.6"></line>
+            <text class="sd-ax" x="40" y="133.1" text-anchor="end">$10k</text>
+            <line class="sd-grid" x1="48" x2="566" y1="103.2" y2="103.2"></line>
+            <text class="sd-ax" x="40" y="106.7" text-anchor="end">$20k</text>
+            <line class="sd-grid" x1="48" x2="566" y1="76.8" y2="76.8"></line>
+            <text class="sd-ax" x="40" y="80.3" text-anchor="end">$30k</text>
+            <line class="sd-grid" x1="48" x2="566" y1="50.4" y2="50.4"></line>
+            <text class="sd-ax" x="40" y="53.9" text-anchor="end">$40k</text>
+            <line class="sd-award" x1="48" x2="566" y1="24" y2="24"></line>
+            <text class="sd-ax" x="40" y="27.5" text-anchor="end">$50k</text>
+            <line class="sd-tick" x1="48" x2="48" y1="156" y2="160"></line>
+            <text class="sd-ax" x="51" y="172">Jul</text>
+            <line class="sd-tick" x1="92" x2="92" y1="156" y2="160"></line>
+            <text class="sd-ax" x="95" y="172">Aug</text>
+            <line class="sd-tick" x1="136" x2="136" y1="156" y2="160"></line>
+            <text class="sd-ax" x="139" y="172">Sep</text>
+            <line class="sd-tick" x1="178.6" x2="178.6" y1="156" y2="160"></line>
+            <text class="sd-ax" x="181.6" y="172">Oct</text>
+            <line class="sd-tick" x1="222.6" x2="222.6" y1="156" y2="160"></line>
+            <text class="sd-ax" x="225.6" y="172">Nov</text>
+            <line class="sd-tick" x1="265.1" x2="265.1" y1="156" y2="160"></line>
+            <text class="sd-ax" x="268.1" y="172">Dec</text>
+            <line class="sd-tick" x1="309.1" x2="309.1" y1="156" y2="160"></line>
+            <text class="sd-ax" x="312.1" y="172">Jan</text>
+            <line class="sd-tick" x1="353.1" x2="353.1" y1="156" y2="160"></line>
+            <text class="sd-ax" x="356.1" y="172">Feb</text>
+            <line class="sd-tick" x1="392.9" x2="392.9" y1="156" y2="160"></line>
+            <text class="sd-ax" x="395.9" y="172">Mar</text>
+            <line class="sd-tick" x1="436.9" x2="436.9" y1="156" y2="160"></line>
+            <text class="sd-ax" x="439.9" y="172">Apr</text>
+            <line class="sd-tick" x1="479.4" x2="479.4" y1="156" y2="160"></line>
+            <text class="sd-ax" x="482.4" y="172">May</text>
+            <line class="sd-tick" x1="523.4" x2="523.4" y1="156" y2="160"></line>
+            <text class="sd-ax" x="526.4" y="172">Jun</text>
+            <line class="sd-tick" x1="566" x2="566" y1="156" y2="160"></line>
+            <line class="sd-axis" x1="48" x2="566" y1="156" y2="156"></line>
+            <line class="sd-even" x1="48" y1="156" x2="566" y2="24"></line>
+            <line class="sd-today" x1="154.4" x2="154.4" y1="18" y2="156"></line>
+            <text class="sd-lab sd-lab-today" x="154.4" y="14" text-anchor="middle">Today</text>
+            <polyline class="sd-proj sd-proj-fast" points="154.4,107.8 339.8,24"></polyline>
+            <polyline class="sd-actual" points="48,156 92,135.2 136,116.3 154.4,107.8"></polyline>
+            <circle class="sd-pt" cx="154.4" cy="107.8" r="3.5"></circle>
+            <circle class="sd-pt-fast" cx="339.8" cy="24" r="4"></circle>
+            <text class="sd-lab sd-lab-actual" x="146.4" y="99.8" text-anchor="end">Spent $18,240</text>
+            <text class="sd-lab sd-lab-fast" x="349.8" y="40" text-anchor="start">Runs out Jan 22</text>
+            <text class="sd-lab sd-lab-fast" x="257.1" y="81.9" text-anchor="start">At this rate</text>
+            <text class="sd-lab sd-lab-muted" x="566" y="18" text-anchor="end">Award $50,000</text>
+            <text class="sd-lab sd-lab-muted" x="484" y="64.9" text-anchor="start">Even pace</text>
+          </svg>
+            <div>
+              <div class="sd-nums">
+                <div><span class="l">Money used</span><span class="n">36%<small>$18,240 of $50,000</small></span></div>
+                <div><span class="l">Time gone</span><span class="n">21%<small>75 of 365 days</small></span></div>
+                <div><span class="l">Spent per month so far</span><span class="n">$7,400</span></div>
+                <div><span class="l">Needed per month to finish on time</span><span class="n">$3,300</span></div>
+              </div>
+              <div class="sd-result fast"><span class="k">At this rate</span><span class="v">Runs out around Jan 22, 2027</span></div>
+              <div class="sd-do">
+                <p><strong>What to do:</strong> Bring Teaching artist stipends down to about $980 a month, since they are 58% used and on course to run out around Nov 8, 2026, or move money in from Venue and performances, which is 15% used.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-head sd-head">
+            <div>
+              <h3>Youth Music Access</h3>
+              <p class="sub">Long Beach Community Foundation &middot; Mar 1, 2026 to Feb 28, 2027 &middot; $8,500 awarded, restricted</p>
+            </div>
+            <div class="right"><span class="badge olive dot">Spending slow</span><a class="btn secondary sm" href="#">Open budget</a></div>
+          </div>
+          <div class="sd-body">
+          <svg class="sd-chart" viewBox="0 0 580 184" width="580" height="184" role="img" aria-label="Long Beach Community Foundation cumulative spending: $2,425 spent by Sep 13, 2026; at this rate about $4,500 is spent by Feb 28, 2027, leaving about $4,000">
+            <line class="sd-grid" x1="48" x2="566" y1="156" y2="156"></line>
+            <text class="sd-ax" x="40" y="159.5" text-anchor="end">$0</text>
+            <line class="sd-grid" x1="48" x2="566" y1="124.9" y2="124.9"></line>
+            <text class="sd-ax" x="40" y="128.4" text-anchor="end">$2k</text>
+            <line class="sd-grid" x1="48" x2="566" y1="93.9" y2="93.9"></line>
+            <text class="sd-ax" x="40" y="97.4" text-anchor="end">$4k</text>
+            <line class="sd-grid" x1="48" x2="566" y1="62.8" y2="62.8"></line>
+            <text class="sd-ax" x="40" y="66.3" text-anchor="end">$6k</text>
+            <line class="sd-award" x1="48" x2="566" y1="24" y2="24"></line>
+            <text class="sd-ax" x="40" y="27.5" text-anchor="end">$8.5k</text>
+            <line class="sd-tick" x1="48" x2="48" y1="156" y2="160"></line>
+            <text class="sd-ax" x="51" y="172">Mar</text>
+            <line class="sd-tick" x1="92" x2="92" y1="156" y2="160"></line>
+            <text class="sd-ax" x="95" y="172">Apr</text>
+            <line class="sd-tick" x1="134.6" x2="134.6" y1="156" y2="160"></line>
+            <text class="sd-ax" x="137.6" y="172">May</text>
+            <line class="sd-tick" x1="178.6" x2="178.6" y1="156" y2="160"></line>
+            <text class="sd-ax" x="181.6" y="172">Jun</text>
+            <line class="sd-tick" x1="221.1" x2="221.1" y1="156" y2="160"></line>
+            <text class="sd-ax" x="224.1" y="172">Jul</text>
+            <line class="sd-tick" x1="265.1" x2="265.1" y1="156" y2="160"></line>
+            <text class="sd-ax" x="268.1" y="172">Aug</text>
+            <line class="sd-tick" x1="309.1" x2="309.1" y1="156" y2="160"></line>
+            <text class="sd-ax" x="312.1" y="172">Sep</text>
+            <line class="sd-tick" x1="351.7" x2="351.7" y1="156" y2="160"></line>
+            <text class="sd-ax" x="354.7" y="172">Oct</text>
+            <line class="sd-tick" x1="395.7" x2="395.7" y1="156" y2="160"></line>
+            <text class="sd-ax" x="398.7" y="172">Nov</text>
+            <line class="sd-tick" x1="438.3" x2="438.3" y1="156" y2="160"></line>
+            <text class="sd-ax" x="441.3" y="172">Dec</text>
+            <line class="sd-tick" x1="482.3" x2="482.3" y1="156" y2="160"></line>
+            <text class="sd-ax" x="485.3" y="172">Jan</text>
+            <line class="sd-tick" x1="526.3" x2="526.3" y1="156" y2="160"></line>
+            <text class="sd-ax" x="529.3" y="172">Feb</text>
+            <line class="sd-tick" x1="566" x2="566" y1="156" y2="160"></line>
+            <line class="sd-axis" x1="48" x2="566" y1="156" y2="156"></line>
+            <line class="sd-even" x1="48" y1="156" x2="566" y2="24"></line>
+            <line class="sd-today" x1="327.6" x2="327.6" y1="18" y2="156"></line>
+            <text class="sd-lab sd-lab-today" x="327.6" y="14" text-anchor="middle">Today</text>
+            <polyline class="sd-proj sd-proj-slow" points="327.6,118.3 566,86.2"></polyline>
+            <polyline class="sd-actual" points="48,156 92,152.7 134.6,147.3 178.6,139.2 221.1,133.2 265.1,129.8 309.1,122.1 327.6,118.3"></polyline>
+            <circle class="sd-pt" cx="327.6" cy="118.3" r="3.5"></circle>
+            <circle class="sd-pt-slow" cx="566" cy="86.2" r="4"></circle>
+            <text class="sd-lab sd-lab-actual" x="335.6" y="138.3" text-anchor="start">Spent $2,425</text>
+            <path class="sd-gap" d="M570,24 H574 V86.2 H570"></path>
+            <text class="sd-lab sd-lab-slow" x="558" y="116.2" text-anchor="end">$4,500 by Feb 28</text>
+            <text class="sd-lab sd-lab-slow sd-lab-strong" x="558" y="64.4" text-anchor="end">About $4,000 unspent</text>
+            <text class="sd-lab sd-lab-muted" x="566" y="18" text-anchor="end">Award $8,500</text>
+            <text class="sd-lab sd-lab-slow" x="439.4" y="92.5" text-anchor="end">At this rate</text>
+            <text class="sd-lab sd-lab-muted" x="184" y="111.8" text-anchor="end">Even pace</text>
+          </svg>
+            <div>
+              <div class="sd-nums">
+                <div><span class="l">Money used</span><span class="n">29%<small>$2,425 of $8,500</small></span></div>
+                <div><span class="l">Time gone</span><span class="n">54%<small>197 of 365 days</small></span></div>
+                <div><span class="l">Spent per month so far</span><span class="n">$370</span></div>
+                <div><span class="l">Needed per month to finish on time</span><span class="n">$1,100</span></div>
+              </div>
+              <div class="sd-result slow"><span class="k">At this rate</span><span class="v">About $4,000 unspent on Feb 28, 2027</span></div>
+              <div class="sd-do">
+                <p><strong>What to do:</strong> Venue and performances ($1,200) and Admin and insurance ($800) have no spending yet, so book the spring concert now; the terms require written approval from the foundation to carry funds past Feb 28, 2027.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="sd-compact">
+            <div>
+              <div class="row" style="gap:10px"><h3>Organizational Grant Program FY26-27</h3></div>
+              <p class="who">Los Angeles County Department of Arts and Culture</p>
+              <div class="row" style="gap:10px;margin-top:8px"><span class="badge dot">Period ended</span><span class="when" style="margin-top:0">Jul 1, 2025 to Jun 30, 2026</span></div>
+            </div>
+          <svg class="sd-chart" viewBox="0 0 340 100" width="340" height="100" role="img" aria-label="LA County cumulative spending: $21,460 of $22,000 spent by Jun 30, 2026, close to even pace">
+            <line class="sd-grid" x1="44" x2="276" y1="72" y2="72"></line>
+            <text class="sd-ax" x="36" y="75.5" text-anchor="end">$0</text>
+            <line class="sd-grid" x1="44" x2="276" y1="42" y2="42"></line>
+            <text class="sd-ax" x="36" y="45.5" text-anchor="end">$11k</text>
+            <line class="sd-award" x1="44" x2="276" y1="12" y2="12"></line>
+            <text class="sd-ax" x="36" y="15.5" text-anchor="end">$22k</text>
+            <line class="sd-tick" x1="44" x2="44" y1="72" y2="76"></line>
+            <text class="sd-ax" x="47" y="88">Jul</text>
+            <line class="sd-tick" x1="63.7" x2="63.7" y1="72" y2="76"></line>
+            <line class="sd-tick" x1="83.4" x2="83.4" y1="72" y2="76"></line>
+            <line class="sd-tick" x1="102.5" x2="102.5" y1="72" y2="76"></line>
+            <text class="sd-ax" x="105.5" y="88">Oct</text>
+            <line class="sd-tick" x1="122.2" x2="122.2" y1="72" y2="76"></line>
+            <line class="sd-tick" x1="141.2" x2="141.2" y1="72" y2="76"></line>
+            <line class="sd-tick" x1="161" x2="161" y1="72" y2="76"></line>
+            <text class="sd-ax" x="164" y="88">Jan</text>
+            <line class="sd-tick" x1="180.7" x2="180.7" y1="72" y2="76"></line>
+            <line class="sd-tick" x1="198.5" x2="198.5" y1="72" y2="76"></line>
+            <line class="sd-tick" x1="218.2" x2="218.2" y1="72" y2="76"></line>
+            <text class="sd-ax" x="221.2" y="88">Apr</text>
+            <line class="sd-tick" x1="237.2" x2="237.2" y1="72" y2="76"></line>
+            <line class="sd-tick" x1="256.9" x2="256.9" y1="72" y2="76"></line>
+            <line class="sd-tick" x1="276" x2="276" y1="72" y2="76"></line>
+            <line class="sd-axis" x1="44" x2="276" y1="72" y2="72"></line>
+            <line class="sd-even" x1="44" y1="72" x2="276" y2="12"></line>
+            <polyline class="sd-actual" points="44,72 63.7,68 83.4,64.1 102.5,57.8 122.2,52.1 141.2,47.2 161,43.1 180.7,37.4 198.5,31.4 218.2,25.6 237.2,20.5 256.9,16.1 276,13.5"></polyline>
+            <circle class="sd-pt" cx="276" cy="13.5" r="3.5"></circle>
+            <text class="sd-lab sd-lab-actual" x="284" y="17.5" text-anchor="start">$21,460</text>
+            <text class="sd-lab sd-lab-muted" x="284" y="76" text-anchor="start">Ended</text>
+          </svg>
+            <div class="col" style="gap:6px">
+              <div class="sd-strip">
+                <div><span class="l">Used</span><span class="n">98%</span></div>
+                <div><span class="l">Time gone</span><span class="n">100%</span></div>
+                <div><span class="l">Spent per month</span><span class="n">$1,790</span></div>
+                <div><span class="l">Needed per month</span><span class="n word">None, period over</span></div>
+                <div><span class="l">Result</span><span class="n slow">$540</span><span class="n word slow">unspent</span></div>
+              </div>
+              <p style="font:400 13px/1.55 var(--font-sans);color:var(--text-body)">Nothing more can be spent, so report the $540 in the final report due Sep 30, 2026, 17 days from now, and ask the county whether to return it.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

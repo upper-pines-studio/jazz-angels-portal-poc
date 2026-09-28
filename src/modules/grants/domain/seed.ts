@@ -1,6 +1,7 @@
 import { SEED_TODAY } from '../../../core/seed';
 import { PHASE_ORDER } from './phases';
 import { DEFAULT_TEMPLATES, DEFAULT_TEMPLATE_ID, instantiateTemplate } from './templates';
+import { LAC_BUDGET_LINES, LAC_EXPENSES, PAYMENT_PAGES, makeMoneySeed, mapLine } from './seed-money';
 import type {
   Activity,
   BudgetLine,
@@ -740,16 +741,21 @@ export function makeSeed(): GrantsState {
   const tasks: Task[] = grants.flatMap((grant) => seedTasks(grant, standard, SEED_TODAY));
   const documents: GrantDocument[] = grants.flatMap(seedDocuments);
 
+  // Every budget line is mapped to QuickBooks, and every expense came from it.
+  const budgetLines: BudgetLine[] = [...BUDGET_LINES, ...LAC_BUDGET_LINES].map(mapLine);
+  const moneySeed = makeMoneySeed(budgetLines, JSON.parse(JSON.stringify([...EXPENSES, ...LAC_EXPENSES])));
+  const payments: Payment[] = PAYMENTS.map((p) => ({ ...p, sourcePage: PAYMENT_PAGES[p.id] }));
+
   return {
     funders: JSON.parse(JSON.stringify(FUNDERS)),
     grants,
     tasks,
     documents,
-    payments: JSON.parse(JSON.stringify(PAYMENTS)),
-    budgetLines: JSON.parse(JSON.stringify(BUDGET_LINES)),
-    expenses: JSON.parse(JSON.stringify(EXPENSES)),
+    payments,
+    budgetLines,
     reports: JSON.parse(JSON.stringify(REPORTS)),
     activity: seedActivity(),
     templates,
+    ...moneySeed,
   };
 }

@@ -50,6 +50,11 @@ export const manifest: ModuleManifest = {
 };
 ```
 
+`nav` may also be an array of sections when a module needs more than one: grants
+puts its screens under **Grants** and its money screens under **Money**.
+`settings` is an optional list of components, each a Card the Settings screen
+renders after its Modules card while the module is on.
+
 `dashboard.subtitle(state, today)` is the few words the module adds to the
 dashboard's page subtitle, after core's date and fiscal year.
 
