@@ -32,7 +32,9 @@ function GrantDetail() {
 ```
 
 - `state.grants: GrantsState` — what this module owns: `funders, grants, tasks,
-  documents, payments, budgetLines, expenses, reports, activity, templates`.
+  documents, payments, budgetLines, expenses, reports, activity, templates`,
+  and for the money side `quickbooks, accounts, classes, transactions,
+  incoming, splitRules, files, terms, reminderPlans, reminderDefaults`.
   The people, the programs and the settings live in `state.core`.
 - `today: string` — today as `YYYY-MM-DD`. Pass it to every derive function
   rather than calling `new Date()` in a screen.
@@ -228,3 +230,34 @@ Barry Cogert. The staff and the programs are seeded by `src/core/seed.ts`.
 
 Funder contact names, emails and phone numbers are invented for the demo —
 plausible-looking, but none of them is a real person or address.
+
+---
+
+## The money side (`money.ts`, `seed-money.ts`)
+
+After the award a grant is a record of money. QuickBooks is mocked and
+read-only: `transactions` is what it has sent, `incoming` is what arrives on
+the next `syncQuickBooks()`, and nothing is ever written back.
+
+- **A transaction is assigned, never retyped.** `assignTransaction(id, parts)`
+  turns it into one `Expense` per part, each carrying its `transactionId`, so a
+  split is two expenses with one transaction behind them and `grantMoney` needs
+  no special case. `unassignTransaction(id)` takes them off again, backup
+  included. `markNotGrantFunded(id)` sets overhead aside.
+- **A budget line matches a transaction** when the transaction's account is one
+  of the line's `accountCodes` and, if QuickBooks gave it a class, the class is
+  the line's `classId`. `suggestionFor(state, tx)` returns the one line that
+  fits, a saved split rule, "not grant-funded" for a payee set aside before, or
+  a hint saying why it cannot choose.
+- **Pacing is straight-line.** `grantPace` and `linePaces` compare the share of
+  the money used with the share of the period gone and carry today's daily rate
+  forward: `runsOutOn`, `projectedUnspent`, `perMonthNeeded`. A grant is off
+  pace at ten points either way; a line, being lumpier, warns at twenty-five.
+- **Files** are described in `files`; an expense's backup carries its
+  `expenseId`. `backupSummary` counts what is attached and what is missing.
+- **Reminders.** A report follows `reminderDefaults` until it is given its own
+  `ReminderPlan`. `reminderSchedule` dates each reminder and says which have
+  gone; emails go out in the morning, so one dated today counts as sent.
+
+The seed reproduces `design/saas/SAAS-BRIEF.md` to the dollar and the day;
+`__tests__/money.test.ts` holds it to that.

@@ -162,7 +162,8 @@ Everything in `docs/SPEC.md`, moved under `modules/grants/`. Behaviour unchanged
   *In pipeline* (blue); attention items from `deadlines()` with `source: 'Grants'`; one panel,
   **Pipeline** (the phase strip). The "Coming up" card is dropped from the dashboard (Deadlines
   covers it).
-- Nav section **Grants**: All grants, Deadlines, Funders, Playbook.
+- Nav section **Grants**: All grants, Deadlines, Funders, Playbook. A second section, **Money**
+  (Transactions, Budget vs. actual, Spend-down), holds the screens for a grant after its award.
 - **Reports tab** gains a card **Program numbers** for the grant's period and program: meetings held,
   students served, average attendance, contact hours (from Teaching) and teaching-artist hours
   (from Timesheets). Copy under the card: "From roll call and timesheets for <program>, <period>."
@@ -274,7 +275,7 @@ awaiting approval" as `info` when > 0; no panel.
 
 ### 2.4 Core screens
 
-- **Sign in** `/sign-in` — A username and password field and a Sign in button; the whole portal
+- **Sign in** (a gate, no route of its own) — A username and password field and a Sign in button; the whole portal
   sits behind it, so nothing else renders until the check passes. Credentials are never shown on
   the page — no hint, no autofill of a real account. A wrong username or password gives one plain
   error and clears the password field.
@@ -302,7 +303,8 @@ awaiting approval" as `info` when > 0; no panel.
   off; copy: "Turning a module off hides it from the rail and the dashboard. Its data stays."),
   Data (Export JSON, Import, Reset demo data).
 - Rail: **Overview** → Dashboard · then each enabled module's section in registry order
-  (**Grants**: All grants, Deadlines, Funders, Playbook · **Teaching**: Schedule, Students ·
+  (**Grants**: All grants, Deadlines, Funders, Playbook · **Money**: Transactions, Budget vs.
+  actual, Spend-down · **Teaching**: Schedule, Students ·
   **Office**: Timesheets, Partners, Settings). Sections with the same name merge; "Office" is
   where Timesheets and the core Partners and Settings screens meet. Badge counts come from
   `NavItem.badge`.

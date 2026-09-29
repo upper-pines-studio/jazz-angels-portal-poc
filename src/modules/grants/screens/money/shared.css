@@ -1,0 +1,53 @@
+/*
+ * Pieces the money screens share: the row of figures at the head of a tab, the
+ * QuickBooks status line, and the bar that marks where spending should be by now.
+ */
+
+/* Figures side by side, ruled apart. Folds to two across on a phone. */
+.ja-figures {
+  display: grid;
+  grid-template-columns: repeat(var(--ja-figures, 4), minmax(0, 1fr));
+  padding: var(--space-5) var(--space-6);
+}
+.ja-figures > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ja-figures > div + div {
+  padding-left: var(--space-5);
+  border-left: var(--border-width) solid var(--border-subtle);
+}
+@media (max-width: 760px) {
+  .ja-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-4); }
+  .ja-figures > div:nth-child(odd) { padding-left: 0; border-left: 0; }
+}
+
+/* Spent so far, with a tick where an even pace would have it today. */
+.ja-pace-bar {
+  position: relative;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--neutral-100);
+}
+.ja-pace-bar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--radius-pill);
+  background: var(--blue-500);
+}
+.ja-pace-bar__tick {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--neutral-900);
+}
+
+.ja-link-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font: var(--weight-medium) var(--text-xs)/1.3 var(--font-sans);
+  color: var(--text-link);
+}
+.ja-link-button:hover { color: var(--text-link-hover); text-decoration: underline; }
+.ja-link-button:focus-visible { outline: 0; box-shadow: var(--focus-ring); border-radius: var(--radius-xs); }

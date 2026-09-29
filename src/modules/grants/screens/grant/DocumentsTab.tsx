@@ -3,10 +3,16 @@ import { Badge, Button, DataTable, Dialog, Field, Icon, Input, Select } from '..
 import { dateShort, useStore } from '../../../../core';
 import type { DocumentKind, DocumentStatus, Grant, GrantDocument } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
-import { AddButton, DialogFields, FooterBand } from './parts';
+import { AddButton, DialogFields, FooterBand, SectionBand } from './parts';
 import { TableScroll } from '../../../../app/components/TableScroll';
+import { StoredFiles } from './AwardStoredFiles';
+import './award.css';
 
-/** The register of files that live in the grant folder. The POC links, it does not store. */
+/**
+ * Two lists: the files stored with the grant (award letter, agreement, anything
+ * the funder sent), and the register of what each application still needs,
+ * which links to where each document lives.
+ */
 
 const KIND_LABEL: Record<DocumentKind, string> = {
   narrative: 'Narrative',
@@ -39,10 +45,15 @@ export function DocumentsTab({ grant }: { grant: Grant }) {
   const rows = state.grants.documents.filter(d => d.grantId === grant.id);
 
   return (
-    <div>
+    <div className="ja-docs">
       <p style={{ margin: 0, padding: 'var(--space-4) var(--space-6)', font: 'var(--type-body-sm)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-        The files that live in the grant folder. Link them here; the POC does not store files.
+        Files kept with this grant are stored here, so anyone in the office can open them. The register below tracks
+        what each application still needs, with a link to where each document lives.
       </p>
+
+      <StoredFiles grant={grant} />
+
+      <SectionBand title="Application register" />
 
       <TableScroll minWidth={620}>
       <DataTable

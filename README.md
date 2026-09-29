@@ -22,15 +22,23 @@ npm run build    # typecheck + production build (what Netlify runs)
 | --- | --- |
 | **Dashboard** | Composed from every enabled module: their stats, one merged Attention list, and their panels. Core writes the date and fiscal year; each module adds its own words to the subtitle. |
 | **Grants** · All grants | Every grant in one table, filtered by phase, owner and program. **Add grant** is a 3-step onboarding: funder and program, amounts and dates, the checklist it will follow. |
-| **Grants** · Grant detail | The phase stepper (Prospect to Closed), the checklist, the document register, and after award: payments, budget lines with spend, expenses, reports, and **Program numbers** from Teaching and Timesheets for the grant's period. Phase changes are recorded with the date. |
-| **Grants** · Deadlines | Every date across every grant as a list by month or a calendar. |
+| **Grants** · Grant detail | The phase stepper (Prospect to Closed), the checklist and the document register. After award it becomes a record of the money: **Award** (amount, period, payment schedule, the terms with the award-letter page each came from), **Budget** (lines mapped to QuickBooks accounts and a class), **Expenses** (with the receipts and backup behind each), **Reports** with **Program numbers** from Teaching and Timesheets, and the files stored with the grant. Phase changes are recorded with the date. |
+| **Grants** · Deadlines | Every date across every grant as a list by month or a calendar. Filtered to reports it shows what is owed to funders and who gets reminded; each report has its own reminder schedule, recipients and email preview. |
+| **Money** · Transactions | What QuickBooks sent, waiting for a grant and a budget line. Accept a suggestion, choose a line, set it aside as not grant-funded, or split one transaction across grants and keep the split as a rule. |
+| **Money** · Budget vs. actual | Every grant and budget line, budgeted against spent, with a tick where an even pace would be today. Warns before a line runs out. Exports to a spreadsheet and to print. |
+| **Money** · Spend-down | Whether each grant will be spent by its end date at today's rate: the chart, the figures, and what to do about it. |
 | **Grants** · Funders | The funder directory and each funder's grant history. |
 | **Grants** · Playbook | The checklist templates. Each step has a timing rule such as "21 days before application due", so due dates are computed when a grant is added. |
 | **Teaching** · Schedule | The week grid of classes and the term view. A block opens that meeting's roll call. |
 | **Teaching** · Roll call | The roster with Present / Late / Absent, rehearsal notes, and the ensemble's attendance trend. Submitting closes it; it reopens for edits. |
 | **Teaching** · Students | The roster by program plus the waitlist, with each student's contact, ensemble and attendance. |
 | **Timesheets** | Teaching-artist hours by week, with approvals, **Log hours**, and hours by program for the month. |
-| **Settings** | Staff (and who teaches), programs, fiscal year, which modules are on, export / import / reset. |
+| **Settings** | Staff (and who teaches), programs, fiscal year, which modules are on, the QuickBooks connection, the default report reminders, export / import / reset. |
+
+QuickBooks is mocked: the demo data stands in for the feed, **Sync now** brings in the transactions
+that are waiting, and nothing is ever written back. Files are described in the store; the bytes of a
+file added in a session are held in memory until the page reloads. Reminder emails are previewed,
+not sent.
 
 ## How it is built
 

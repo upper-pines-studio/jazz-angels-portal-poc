@@ -1,0 +1,210 @@
+/*
+ * The Award tab, its award-letter column, and the stored files on the
+ * Documents tab. The tab sits in a column whose width depends on the aside,
+ * so the folds follow the tab's own width (container queries), not the screen.
+ */
+
+.ja-award { container-type: inline-size; }
+
+/* The record at the head of the tab. */
+.ja-award-head { padding: 2px var(--space-6) var(--space-4); }
+
+/* Eight facts in a ruled grid: four across, two on a narrow column. */
+.ja-award-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
+  row-gap: var(--space-3);
+}
+.ja-award-facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding-left: var(--space-5);
+  border-left: var(--border-width) solid var(--border-subtle);
+}
+.ja-award-facts > div:nth-child(4n + 1) { padding-left: 0; border-left: 0; }
+.ja-award-fact__value {
+  font: var(--weight-regular) var(--text-sm)/1.4 var(--font-sans);
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ja-award-fact__value--mono { font: var(--weight-medium) var(--text-sm)/1.4 var(--font-mono); }
+.ja-award-fact__amount {
+  font: var(--weight-semibold) var(--text-2xl)/1 var(--font-display);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-strong);
+}
+
+@container (max-width: 700px) {
+  .ja-award-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ja-award-facts > div:nth-child(4n + 1) { padding-left: var(--space-5); border-left: var(--border-width) solid var(--border-subtle); }
+  .ja-award-facts > div:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .ja-award-fact__value { white-space: normal; }
+}
+
+/* A section band with a quiet note beside the title; wraps on a narrow column. */
+.ja-award-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-height: 42px;
+  padding: 8px var(--space-6);
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+.ja-award-band h4 {
+  font: var(--weight-semibold) var(--text-sm)/1.2 var(--font-sans);
+  color: var(--text-strong);
+  letter-spacing: 0;
+}
+.ja-award-band__note {
+  margin-left: auto;
+  font: var(--type-body-sm);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.ja-award-band__note + .ja-award-band__action { margin-left: 0; }
+.ja-award-band__action { margin-left: auto; }
+
+/* "p. 2": opens the award letter at that page. */
+.ja-page-link {
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  cursor: pointer;
+  font: var(--weight-medium) var(--text-2xs)/1.3 var(--font-mono);
+  color: var(--text-link);
+  white-space: nowrap;
+}
+.ja-page-link:hover { color: var(--text-link-hover); text-decoration: underline; }
+.ja-page-link:focus-visible, .ja-text-button:focus-visible, .ja-term__main:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-xs);
+}
+.ja-page-link--none { cursor: default; color: var(--text-faint); }
+.ja-page-link--none:hover { color: var(--text-faint); text-decoration: none; }
+
+/* A table cell's text that is also the way into the row's dialog. */
+.ja-text-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Terms and restrictions: label, wording, page, delete. */
+.ja-term {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+  padding: 8px var(--space-5) 8px var(--space-5);
+  border-top: var(--border-width) solid var(--border-subtle);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.ja-term:first-child { border-top: 0; }
+.ja-term:hover { background: var(--blue-50); }
+.ja-term__main {
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1fr);
+  gap: var(--space-4);
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.ja-term__label { font: var(--weight-medium) var(--text-xs)/1.5 var(--font-sans); color: var(--text-strong); }
+.ja-term__text { font: var(--type-body-sm); font-size: var(--text-xs); line-height: 1.5; color: var(--text-body); }
+.ja-term__side { display: flex; align-items: center; gap: var(--space-3); padding-top: 1px; min-height: 20px; }
+@container (max-width: 520px) {
+  .ja-term__main { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
+
+/* The award letter card: the page on a sunken stage, then the file. */
+.ja-letter-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6) var(--space-3);
+  background: var(--surface-sunken);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+.ja-letter-stage__paper {
+  width: 188px;
+  max-width: 100%;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: zoom-in;
+}
+.ja-letter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6) var(--space-4);
+}
+.ja-letter-actions__replace { margin-left: auto; }
+.ja-letter { container-type: inline-size; }
+@container (max-width: 280px) {
+  .ja-letter-actions__replace { margin-left: 0; }
+}
+.ja-file-name {
+  font: var(--weight-semibold) var(--text-sm)/1.4 var(--font-sans);
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+.ja-file-meta { font: var(--type-body-sm); font-size: var(--text-xs); line-height: 1.5; color: var(--text-muted); }
+.ja-file-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+.ja-file-row__text { flex: 1; min-width: 0; }
+.ja-file-row__text .ja-file-name,
+.ja-file-row__text .ja-file-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+.ja-file-row__buttons { display: flex; gap: var(--space-1); flex: 0 0 auto; }
+.ja-letter-foot {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-6) var(--space-4);
+  border-top: var(--border-width) solid var(--border-subtle);
+  font: var(--type-body-sm);
+  font-size: var(--text-xs);
+  line-height: 1.55;
+  color: var(--neutral-600);
+}
+
+/* Documents tab: the files stored with the grant. */
+.ja-stored {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-6);
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+.ja-stored__thumb { width: 40px; border: 0; padding: 0; background: none; cursor: zoom-in; }
+.ja-stored__actions { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; justify-content: flex-end; }
+.ja-docs { container-type: inline-size; }
+@container (max-width: 560px) {
+  .ja-stored { grid-template-columns: 40px minmax(0, 1fr); }
+  .ja-stored__actions { grid-column: 2; justify-content: flex-start; }
+}

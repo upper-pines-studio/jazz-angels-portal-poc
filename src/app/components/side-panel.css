@@ -1,0 +1,71 @@
+/*
+ * A page with a panel docked on its right: the split editor on Transactions,
+ * the reminders on Deadlines. The panel runs the full height of the scrolling
+ * area and stays put while the page scrolls beside it. Under 900px it covers
+ * the screen instead.
+ */
+.ja-with-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.ja-with-panel.has-panel { grid-template-columns: minmax(0, 1fr) 412px; }
+
+.ja-with-panel__page {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.ja-side-panel {
+  position: sticky;
+  top: calc(var(--space-7) * -1);
+  /* Reach the edges of the scrolling area, past the page's own padding. */
+  margin: calc(var(--space-7) * -1) calc(var(--space-7) * -1) calc(var(--space-7) * -1) 0;
+  height: var(--ja-panel-h, 100vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-card);
+  border-left: var(--border-width) solid var(--border-default);
+  min-width: 0;
+}
+
+.ja-side-panel__head {
+  flex: 0 0 auto;
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+.ja-side-panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.ja-side-panel__foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  background: var(--surface-sunken);
+  border-top: var(--border-width) solid var(--border-default);
+}
+
+/* A titled block inside the panel body, ruled off from the one above. */
+.ja-side-panel__section { padding: var(--space-5) var(--space-6); }
+.ja-side-panel__section + .ja-side-panel__section { border-top: var(--border-width) solid var(--border-subtle); }
+
+@media (max-width: 1100px) {
+  .ja-with-panel.has-panel { grid-template-columns: minmax(0, 1fr); }
+  .ja-side-panel {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(440px, 100vw);
+    height: auto;
+    margin: 0;
+    z-index: 40;
+    box-shadow: var(--shadow-lg);
+  }
+}

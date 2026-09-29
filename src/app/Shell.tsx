@@ -46,15 +46,17 @@ function buildNav(state: PortalState, today: string): RailItem[] {
 
   for (const module of MODULES) {
     if (!state.core.settings.enabledModules.includes(module.id)) continue;
-    const target = sectionFor(module.nav.section);
-    for (const item of module.nav.items) {
-      const count = item.badge?.(state, today);
-      target.items.push({
-        id: item.path,
-        label: item.label,
-        icon: <Icon name={item.icon} size={16} />,
-        count: count || undefined,
-      });
+    for (const group of Array.isArray(module.nav) ? module.nav : [module.nav]) {
+      const target = sectionFor(group.section);
+      for (const item of group.items) {
+        const count = item.badge?.(state, today);
+        target.items.push({
+          id: item.path,
+          label: item.label,
+          icon: <Icon name={item.icon} size={16} />,
+          count: count || undefined,
+        });
+      }
     }
   }
 

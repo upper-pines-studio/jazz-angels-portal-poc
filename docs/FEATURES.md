@@ -1,0 +1,147 @@
+# Feature map
+
+Every feature in the portal: its route, its status, and the files that own it. Use it to find
+where to work. When you add, move or finish a feature, update its row in the same change.
+
+**Status words**
+
+- **Built**: works end to end on browser-stored data.
+- **Mocked**: the screen works, but something behind it is simulated. The row says what.
+- **Gap**: known to be missing or wrong. Listed under [Known gaps](#known-gaps).
+
+**Paths** are relative to `src/`. `grants/` means `src/modules/grants/`, and likewise for
+`teaching/` and `timesheets/`.
+
+## Working on a feature
+
+Each row names a feature's screen files and the domain functions behind it. A number on a screen
+comes from a derive function, and a change goes through an action on
+`useStore().actions.<module>`, so to change what a screen shows, start at the derive function.
+Tests cover the domain layer only: a domain change needs a test, and a screen change needs a look
+in the browser. The folder layout of a module is in `src/modules/README.md`.
+
+## Core
+
+Shared by every module. Owned by `core/` and `app/`.
+
+| Feature | Route | Status | Screen | Domain |
+| --- | --- | --- | --- | --- |
+| Sign in | (gate) | Mocked: hashes checked in the browser, no server | `app/screens/Login.tsx`, `app/AuthGate.tsx` | `core/auth.ts` |
+| Shell: rail, top bar, page header | (all) | Built | `app/Shell.tsx`, `app/responsive.css` | rail is read from each manifest's `nav` |
+| Dashboard | `/` | Built | `app/screens/Dashboard.tsx` | composed from each manifest's `dashboard` |
+| Partners: organizations and venues | `/partners`, `/partners/organizations/:id`, `/partners/venues/:id` | Built | `app/screens/partners/` | `core/store.tsx`, `core/derive.ts` |
+| Settings: staff, modules, programs, fiscal year, demo date, export, import, reset | `/settings` | Built | `app/screens/Settings.tsx` | `core/store.tsx`, `core/repository.ts` |
+| Storage | | Mocked: localStorage, one key per module | | `core/repository.ts` |
+| Docked side panel | | Built | `app/components/SidePanel.tsx` | |
+| Toasts | | Built | `app/ToastHost.tsx` | |
+
+## Grants
+
+Module folder `modules/grants/`. Wiring in `grants/manifest.tsx`.
+
+### Before the award
+
+| Feature | Route | Status | Screen | Domain |
+| --- | --- | --- | --- | --- |
+| All grants: table, filters, views | `/grants` | Built | `grants/screens/Grants.tsx` | `derive.ts`: `grantsByView` |
+| Add grant: three-step dialog | `/grants?add=1` | Built | `grants/screens/grants/AddGrantDialog.tsx` | `slice.ts`: `addGrant`; `templates.ts` |
+| Grant detail frame: header, tabs, right column | `/grants/:id` | Built | `grants/screens/GrantDetail.tsx` | tab list depends on `isPostAward` |
+| Phase stepper and phase changes | `/grants/:id` | Built | `grant/PhaseStepper.tsx`, `grant/TransitionDialog.tsx` | `phases.ts`; `slice.ts`: `transition` |
+| Checklist tab | `?tab=checklist` | Built | `grant/ChecklistTab.tsx` | `slice.ts`: task actions; `derive.ts`: `checklistProgress` |
+| Activity tab | `?tab=activity` | Built | `grant/ActivityTab.tsx` | `derive.ts`: `grantActivity`; `slice.ts`: `addNote` |
+| Key dates, funder and details cards | right column | Built | `grant/SideCards.tsx` | `slice.ts`: `updateGrant` |
+| Deadlines: list and calendar | `/deadlines`, `?view=calendar` | Built | `grants/screens/Deadlines.tsx`, `deadlines/CalendarMonth.tsx` | `derive.ts`: `deadlines` |
+| Funders | `/funders`, `/funders/:id` | Built | `grants/screens/Funders.tsx`, `FunderDetail.tsx` | `derive.ts`: `funderTotals`, `grantsByFunder` |
+| Playbook: checklist templates | `/playbook` | Built | `grants/screens/Playbook.tsx` | `templates.ts`; `slice.ts`: template actions |
+| Dashboard pipeline card | `/` | Built | `grants/screens/PipelinePanel.tsx` | `derive.ts`: `pipelineCounts` |
+
+Screen paths in this table and the next two are under `grants/screens/`; domain paths are under
+`grants/domain/`.
+
+### After the award: the money side
+
+Grant tabs for a grant that is awarded, active, reporting or closed. Mockups and the facts the
+seed reproduces are in `design/saas/`.
+
+| Feature | Route | Status | Screen | Domain |
+| --- | --- | --- | --- | --- |
+| Award tab: award record, payment schedule, terms | `/grants/:id` (default tab) | Built | `grant/AwardTab.tsx`, `grant/AwardDialogs.tsx` | `slice.ts`: `updateGrant`, payment actions, term actions |
+| Award letter card: preview, open, download, replace | right column of Award | Mocked: file contents are drawn, not stored | `grant/AwardTab.tsx` (`AwardAside`), `money/files.tsx` | `money.ts`: `awardLetter`, `grantFiles` |
+| Budget tab: lines mapped to QuickBooks accounts and a class | `?tab=budget`, `&line=<id>`, `&edit=<id>` | Built | `grant/BudgetTab.tsx`, `grant/BudgetLineEditor.tsx`, `grant/BudgetAccountPicker.tsx` | `money.ts`: `lineMatched`, `accountUsedBy`, `isMapped`; `slice.ts`: budget line actions |
+| Expenses tab: list, filter, backup index download | `?tab=expenses`, `&backup=missing` | Built | `grant/ExpensesTab.tsx`, `grant/expenseList.ts` | `money.ts`: `grantExpenses`, `backupSummary` |
+| Expense detail: receipts, note, reassign, send back | `?tab=expenses&expense=<id>` | Mocked: file contents held in memory for the session | `grant/ExpenseDetail.tsx`, `grant/ExpenseDialogs.tsx`, `money/files.tsx` | `money.ts`: `expenseFiles`; `slice.ts`: `addFile`, `updateExpense`, `unassignTransaction` |
+| Reports tab: reports, reminders column, program numbers | `?tab=reports` | Built | `grant/ReportsTab.tsx`, `grant/ProgramNumbers.tsx` | `slice.ts`: report actions; reads Teaching and Timesheets through their `index.ts` |
+| Documents tab: stored files and the application register | `?tab=documents` | Mocked: as the award letter | `grant/DocumentsTab.tsx`, `grant/AwardStoredFiles.tsx` | `money.ts`: `grantFiles`; `slice.ts`: file and document actions |
+
+### Money section of the rail
+
+| Feature | Route | Status | Screen | Domain |
+| --- | --- | --- | --- | --- |
+| Transactions: tabs, filters, suggestions, accept, undo | `/transactions`, `?tab=`, `?grant=`, `?line=`, `?q=`, `?account=`, `?period=`, `?page=` | Mocked: QuickBooks feed is seed data | `money/Transactions.tsx`, `money/TransactionRow.tsx`, `money/TransactionMenu.tsx` | `money.ts`: `suggestionFor`, `acceptableSuggestions`, `transactionCounts`, `eligibleLines`; `slice.ts`: `assignTransaction`, `markNotGrantFunded`, `acceptSuggestions` |
+| Split a transaction across grants, save as a rule | `/transactions?tx=<id>` | Built | `money/SplitPanel.tsx` | `money.ts`: `splitByPercent`; `slice.ts`: `assignTransaction`, `saveSplitRule` |
+| Sync with QuickBooks | button on Transactions and Settings | Mocked: moves `incoming` into `transactions`, once | | `slice.ts`: `syncQuickBooks` |
+| Budget vs. actual: table, warnings, export, print | `/budget`, `?period=fy\|all\|fy-prev`, `?grant=<id>` | Built | `money/BudgetVsActual.tsx`, `money/bva.ts`, `money/bva.css` (print rules) | `money.ts`: `linePaces`, `grantPace`, `lineNeedsAttention`, `trackedGrantsInFy` |
+| Spend-down: charts, figures, advice | `/spend-down`, `?show=`, `#<grantId>` | Built | `money/SpendDown.tsx`, `money/SpendChart.tsx`, `money/spend.ts` (`whatToDo`) | `money.ts`: `grantPace`, `spendSeries`, `paceDriver` |
+| Dashboard money card | `/` | Built | `money/MoneyPanel.tsx` | `money.ts`: `grantPace`, `transactionCounts`, `expensesMissingBackup` |
+| Dashboard attention rows for money | `/` | Built | `grants/manifest.tsx` (`moneyAttention`) | `money.ts`: `offPaceGrants` |
+
+### Reports and reminders
+
+| Feature | Route | Status | Screen | Domain |
+| --- | --- | --- | --- | --- |
+| Reports owed card | `/deadlines?kind=report` | Built | `deadlines/ReportsOwedCard.tsx` | `money.ts`: `reportsOwed`, `nextReminder` |
+| Reminders panel: schedule, recipients, email preview | `/deadlines?kind=report&report=<id>` | Mocked: emails are previewed, never sent | `deadlines/ReminderPanel.tsx`, `deadlines/ReminderParts.tsx` | `money.ts`: `reminderPlanFor`, `reminderSchedule`; `slice.ts`: `saveReminderPlan`, `resetReminderPlan` |
+| Default reminders | Deadlines and Settings | Built | `deadlines/ReminderDefaults.tsx`, `settings/RemindersCard.tsx` | `slice.ts`: `updateReminderDefaults` |
+| QuickBooks connection card | `/settings` | Mocked: connect is a stand-in dialog | `settings/QuickBooksCard.tsx` | `slice.ts`: `setQuickBooksConnected`, `syncQuickBooks` |
+
+### Shared by the money screens
+
+Reach for these before writing a new one.
+
+| Piece | File |
+| --- | --- |
+| `PaceBadge`, `PaceMark`, `PaceBar`, `Figures`, `QuickBooksStatus`, `LinkButton`, `toCsv`, `downloadText` | `grants/screens/money/shared.tsx` |
+| `FilePaper`, `FileViewerDialog`, `FileDrop`, `PageTurner`, `describeFile`, `rememberFile`, `downloadFile` | `grants/screens/money/files.tsx` |
+| `SectionBand`, `FooterBand`, `AddButton`, `DialogFields`, `FieldRow`, `InlineConfirm`, `DeleteX` | `grants/screens/grant/parts.tsx` |
+| Pacing thresholds and status words | `grants/domain/money.ts`: `GRANT_PACE_MARGIN`, `LINE_FAST_MARGIN`, `PACE_LABEL` |
+| Demo data for the money side | `grants/domain/seed-money.ts` |
+
+## Teaching
+
+Module folder `modules/teaching/`. Spec in `docs/PLATFORM.md` section 2.2.
+
+| Feature | Route | Status | Screen | Domain |
+| --- | --- | --- | --- | --- |
+| Schedule: week grid and term view, add class | `/schedule` | Built | `teaching/screens/Schedule.tsx`, `schedule/AddClassDialog.tsx` | `teaching/domain/derive.ts`, `slice.ts` |
+| Roll call | `/roll/:meetingId` | Built | `teaching/screens/RollCall.tsx` | `teaching/domain/slice.ts` |
+| Students: roster, waitlist, enroll | `/students` | Built | `teaching/screens/Students.tsx`, `students/EnrollStudentDialog.tsx` | `teaching/domain/derive.ts` |
+| Dashboard today's classes card | `/` | Built | `teaching/screens/TodayPanel.tsx` | `teaching/manifest.tsx` |
+
+## Timesheets
+
+Module folder `modules/timesheets/`. Spec in `docs/PLATFORM.md` section 2.3.
+
+| Feature | Route | Status | Screen | Domain |
+| --- | --- | --- | --- | --- |
+| Timesheets: hours by week, approvals, log hours | `/timesheets` | Built | `timesheets/screens/Timesheets.tsx`, `LogHoursDialog.tsx` | `timesheets/domain/derive.ts`, `slice.ts` |
+
+## Known gaps
+
+Work that is known to be missing or wrong. Remove a line when it is fixed.
+
+| Gap | Where |
+| --- | --- |
+| No backend. Everything is localStorage; sign-in is a hash check in the browser. | `core/repository.ts`, `core/auth.ts` |
+| QuickBooks is simulated. No real connection, and a sync brings new transactions only once. | `grants/domain/seed-money.ts` (`INCOMING`), `slice.ts` (`sync`) |
+| File contents are not stored. A file added in a session is lost on reload; a seeded file is a drawn page. | `grants/screens/money/files.tsx` |
+| "Download all backup" produces a spreadsheet index, not a zip of the files. | `grants/screens/grant/ExpensesTab.tsx` |
+| Reminder emails are never sent. | `grants/screens/deadlines/ReminderPanel.tsx` |
+| Repeat reminders after the due date are worked out in the screen, so the banner, the chips and `nextReminder` ignore them. | `deadlines/ReminderParts.tsx`, `grants/domain/money.ts` |
+| Choosing another report while the reminders panel has unsaved edits discards them without asking. | `grants/screens/Deadlines.tsx` |
+| The 75/25 starting split for Signal Hill Properties is written in, not worked out. | `money/SplitPanel.tsx` (`USUAL_SHARES`) |
+| Five separate helpers shorten a funder's name, each by its own rule. They should be one domain function. | `money/transactionHelpers.ts`, `money/bva.ts`, `money/spend.ts`, `deadlines/helpers.ts`, `deadlines/ReminderParts.tsx` |
+| Removing a budget line is blocked while it has expenses, with no way to move them all at once. | `grant/BudgetLineEditor.tsx` |
+| `docs/SPEC.md` section 4.4 still describes the old Money tab, which the Award, Budget and Expenses tabs replaced. | `docs/SPEC.md` |
+| No spec describes the money screens' behaviour. It exists only in the code and the mockup brief. | `docs/SPEC.md`, `design/saas/SAAS-BRIEF.md` |
+| The money side is inside the grants module. If it becomes its own product it needs its own module and slice. | `grants/manifest.tsx`, `grants/domain/` |
+| Screens have no automated tests. | `modules/*/screens/` |

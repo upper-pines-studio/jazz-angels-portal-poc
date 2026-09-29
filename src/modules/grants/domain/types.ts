@@ -128,6 +128,8 @@ export interface Payment {
   expectedDate: string;
   amount: number;
   receivedDate?: string;
+  /** The page of the award letter that promises this installment. */
+  sourcePage?: number;
 }
 
 /** How the award is allocated. */
@@ -137,6 +139,10 @@ export interface BudgetLine {
   /** "Teaching artist stipends" */
   category: string;
   planned: number;
+  /** QuickBooks expense accounts whose spending counts here: ['6700', '6710']. */
+  accountCodes?: string[];
+  /** The QuickBooks class the bookkeeper tags this grant's spending with. */
+  classId?: string;
 }
 
 /** Money spent against a budget line. */
@@ -147,7 +153,143 @@ export interface Expense {
   date: string;
   payee: string;
   amount: number;
+  /** What it was for: "Tenor sax overhaul". */
   note?: string;
+  /** The QuickBooks transaction this came from. Unset for an expense typed in by hand. */
+  transactionId?: string;
+  /** A remark kept with the backup: "Quote approved by Barry on Jul 12." */
+  backupNote?: string;
+}
+
+// ---------------------------------------------------------------------------
+// QuickBooks and the money side of a grant
+// ---------------------------------------------------------------------------
+
+/** The read-only link to QuickBooks Online. Nothing is ever written back. */
+export interface QuickBooksConnection {
+  connected: boolean;
+  /** The company file: "Jazz Angels Inc." */
+  company: string;
+  /** ISO date-time of the last sync. */
+  lastSyncedAt: string;
+}
+
+/** An expense account in the QuickBooks chart of accounts. */
+export interface QbAccount {
+  /** "6200" */
+  code: string;
+  /** "Contract instructors" */
+  name: string;
+}
+
+/** A QuickBooks class: how the bookkeeper tags spending to a grant. */
+export interface QbClass {
+  id: string;
+  /** "Herb Alpert GOS" */
+  name: string;
+}
+
+export type TransactionStatus = 'to-assign' | 'assigned' | 'not-grant-funded';
+
+/**
+ * A transaction as it arrived from QuickBooks. People assign it to a budget
+ * line; they never retype it. Once assigned, its parts are the `Expense` rows
+ * that carry its id, so a split is two expenses with one `transactionId`.
+ */
+export interface Transaction {
+  id: string;
+  date: string;
+  payee: string;
+  memo: string;
+  accountCode: string;
+  classId?: string;
+  amount: number;
+  /** How QuickBooks knows it: "Bill 1047", "Check 2210", "Expense". */
+  ref: string;
+  status: TransactionStatus;
+  /** Staff id of whoever assigned it, and the day they did. */
+  assignedById?: string;
+  assignedAt?: string;
+}
+
+/** One part of an assignment: this much of the transaction, to this line. */
+export interface Allocation {
+  grantId: string;
+  budgetLineId: string;
+  amount: number;
+}
+
+/** "Always split Signal Hill Properties this way." */
+export interface SplitRule {
+  id: string;
+  payee: string;
+  parts: Array<{ grantId: string; budgetLineId: string; percent: number }>;
+}
+
+export type GrantFileKind =
+  | 'award-letter'
+  | 'agreement'
+  | 'receipt'
+  | 'invoice'
+  | 'timesheet'
+  | 'other';
+
+export type GrantFileFormat = 'pdf' | 'jpg' | 'png' | 'heic';
+
+/**
+ * A file stored with a grant: the award letter, or the backup for one expense.
+ * The POC keeps what describes the file; the bytes of a file added in this
+ * session are held in memory only (see `screens/money/files.ts`).
+ */
+export interface GrantFile {
+  id: string;
+  grantId: string;
+  /** Set when the file backs up one expense. */
+  expenseId?: string;
+  kind: GrantFileKind;
+  name: string;
+  format: GrantFileFormat;
+  sizeKb: number;
+  pages?: number;
+  uploadedById: string;
+  uploadedAt: string;
+}
+
+/** One term of the award, as written in the award letter. */
+export interface AwardTerm {
+  id: string;
+  grantId: string;
+  /** "Capital purchases" */
+  label: string;
+  /** "No single equipment purchase over $5,000 without written approval." */
+  text: string;
+  /** The page of the award letter it came from. */
+  page?: number;
+  order: number;
+}
+
+/**
+ * When the reminder emails for one report go out, and to whom. A report with
+ * no plan of its own follows `ReminderDefaults`.
+ */
+export interface ReminderPlan {
+  reportId: string;
+  /** Days before the due date; 0 is the due date itself. */
+  offsets: number[];
+  recipientIds: string[];
+  /** Keep emailing after the due date until someone marks it submitted. */
+  keepReminding: boolean;
+}
+
+export interface ReminderDefaults {
+  offsets: number[];
+  /** Emailed as well as the grant owner. */
+  alsoNotifyIds: string[];
+  keepReminding: boolean;
+  /** Days between emails once the due date has passed. */
+  repeatEveryDays: number;
+  /** 24-hour clock: 8 is 8:00 am. */
+  sendHour: number;
 }
 
 export type ReportStatus = 'upcoming' | 'drafting' | 'submitted' | 'accepted';
@@ -203,6 +345,19 @@ export interface GrantsState {
   reports: Report[];
   activity: Activity[];
   templates: ChecklistTemplate[];
+
+  quickbooks: QuickBooksConnection;
+  accounts: QbAccount[];
+  classes: QbClass[];
+  /** Everything QuickBooks has sent so far. */
+  transactions: Transaction[];
+  /** Waiting in QuickBooks: these arrive on the next sync. */
+  incoming: Transaction[];
+  splitRules: SplitRule[];
+  files: GrantFile[];
+  terms: AwardTerm[];
+  reminderPlans: ReminderPlan[];
+  reminderDefaults: ReminderDefaults;
 }
 
 /** What the "Add grant" dialog (SPEC §4.3) collects. */
@@ -255,6 +410,76 @@ export interface Deadline {
   /** Task assignee, falling back to the grant owner. */
   ownerId?: string;
   status: DeadlineStatus;
+}
+
+/** How spending compares with the share of the grant period that has gone. */
+export type PaceStatus =
+  | 'on-track'
+  | 'spending-fast'
+  | 'spending-slow'
+  /** A budget line running ahead, but not far enough to warn about. */
+  | 'ahead'
+  | 'period-ended'
+  /** The grant period has not started, or has no dates yet. */
+  | 'not-started';
+
+/** Straight-line pacing for a grant or for one budget line. */
+export interface Pace {
+  status: PaceStatus;
+  budget: number;
+  spent: number;
+  remaining: number;
+  /** spent / budget, 0 to 1 and beyond when over. */
+  used: number;
+  /** Share of the grant period gone, 0 to 1. */
+  elapsed: number;
+  /** Counted inclusively, so day one of the period is 1. */
+  daysElapsed: number;
+  daysTotal: number;
+  daysLeft: number;
+  periodStart?: string;
+  periodEnd?: string;
+  /** Average spending per month so far. */
+  perMonthSoFar: number;
+  /** What would have to be spent per month from today to finish on the end date. */
+  perMonthNeeded: number;
+  /** The day the money runs out at today's rate, when that is before the period ends. */
+  runsOutOn?: string;
+  /** Spending by the end date at today's rate, capped at the budget. */
+  projectedSpent: number;
+  /** What would be left on the end date at today's rate. */
+  projectedUnspent: number;
+  /** One plain sentence: "Runs out around Jan 22, 2027". */
+  headline: string;
+}
+
+export interface LinePace extends Pace {
+  line: BudgetLine;
+}
+
+/** What the portal proposes for a transaction that is waiting to be assigned. */
+export type Suggestion =
+  | { kind: 'line'; grantId: string; budgetLineId: string }
+  | { kind: 'split'; rule: SplitRule }
+  | { kind: 'not-grant-funded'; months: number }
+  | { kind: 'ambiguous'; candidates: Array<{ grantId: string; budgetLineId: string }>; hint: string }
+  | { kind: 'none'; hint: string };
+
+export interface ReminderStep {
+  /** Days before the due date; 0 is the due date. */
+  offset: number;
+  date: string;
+  enabled: boolean;
+  state: 'sent' | 'next' | 'scheduled' | 'off';
+}
+
+export interface BackupSummary {
+  expenses: number;
+  total: number;
+  withBackup: number;
+  files: number;
+  missing: number;
+  missingTotal: number;
 }
 
 export interface GrantMoney {
