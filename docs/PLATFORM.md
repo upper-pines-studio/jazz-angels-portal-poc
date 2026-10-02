@@ -222,11 +222,13 @@ for its period and "attendance trend" has history.
   tab: the eight Sundays as a row of dots with performances marked; a list of ensembles with
   enrolled counts. "Add class" opens a small Dialog (ensemble, date, time, room).
 - **Roll call** `/roll/:meetingId` — Header: ensemble, "Sunday, Sep 13 · 4:00pm · Studio 1".
-  Left card: the roster, each row Avatar, name, instrument · year N, a RadioGroup
-  Present / Late / Absent. Targets ≥44px tall; on a phone the radios become full-width
-  segmented buttons under the name. Right column: "This roll call" (ProgressBar marked/total,
-  Badges present/late/absent counts, rehearsal-notes Textarea, **Submit roll call**), and
-  "Attendance trend" (last 5 meetings of this ensemble as bars). Submitting stamps
+  Left card: the roster, each row Avatar, name, instrument · year N, and three circle buttons:
+  check (present), clock (late), cross (absent). Everyone starts present (the check filled
+  teal); the teacher taps the clock or cross for the exceptions, and tapping it again goes back
+  to present. Circles are 36px, growing to 44px on a phone. Right
+  column: "This roll call" (Badges present/late/absent counts, rehearsal-notes Textarea,
+  **Submit roll call**), and "Attendance trend" (last 5 meetings of this ensemble as bars).
+  Submitting writes a present mark for everyone not marked otherwise, stamps
   `rollSubmittedAt`, raises a Toast, and returns to the schedule. Reopening a submitted roll call
   shows the marks read-only with "Edit roll call".
 - **Students** `/students` — Tabs by program with counts plus Waitlist. Left: DataTable (student,

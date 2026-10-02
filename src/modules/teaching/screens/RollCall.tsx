@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import {
-  Avatar, Badge, Button, Card, EmptyState, Field, Icon, ProgressBar, RadioGroup, Textarea,
+  Avatar, Badge, Button, Card, EmptyState, Field, Icon, Textarea,
 } from '../../../design-system';
 import { usePageHeader } from '../../../app/Shell';
 import { Eyebrow, KV, OwnerAvatar } from '../../../app/components/badges';
@@ -10,16 +10,17 @@ import { useToast } from '../../../app/ToastHost';
 import { dateShort, placeLabel, staffById, toDate, useStore, venueById } from '../../../core';
 import {
   attendanceForMeeting, ensembleById, ensembleTrend, markCounts, meetingById,
-  percent, rosterForEnsemble, timeLabel, timeRange,
+  percent, rollCounts, rollMarks, rosterForEnsemble, timeLabel, timeRange,
 } from '../domain';
 import type { Mark } from '../domain';
 import { MarkBadge } from './parts';
 import './rollcall.css';
 
-const MARK_OPTIONS: Array<{ value: Mark; label: string }> = [
-  { value: 'present', label: 'Present' },
-  { value: 'late', label: 'Late' },
-  { value: 'absent', label: 'Absent' },
+/** Everyone starts present, so the teacher only taps the exceptions. */
+const MARK_OPTIONS: Array<{ value: Mark; label: string; icon: string }> = [
+  { value: 'present', label: 'Present', icon: 'check' },
+  { value: 'late', label: 'Late', icon: 'clock' },
+  { value: 'absent', label: 'Absent', icon: 'x' },
 ];
 
 export default function RollCall() {
@@ -33,8 +34,10 @@ export default function RollCall() {
   const venue = venueById(state, meeting?.venueId);
   const roster = meeting ? rosterForEnsemble(state, meeting.ensembleId) : [];
   const records = meeting ? attendanceForMeeting(state, meeting.id) : [];
-  const counts = markCounts(records);
   const submitted = Boolean(meeting?.rollSubmittedAt);
+  // An open roll call counts the unmarked as present; a submitted one counts what was written down.
+  const marks = rollMarks(roster, records);
+  const counts = submitted ? markCounts(records) : rollCounts(marks);
 
   const [notes, setNotes] = React.useState(meeting?.notes ?? '');
   const [showNotesFor, setShowNotesFor] = React.useState(meetingId);
@@ -76,7 +79,11 @@ export default function RollCall() {
   }
 
   const markFor = (studentId: string): Mark | undefined =>
-    records.find((r) => r.studentId === studentId)?.mark;
+    submitted ? records.find((r) => r.studentId === studentId)?.mark : marks.get(studentId);
+
+  // Tapping Late or Absent a second time puts the student back to present.
+  const toggle = (studentId: string, next: Mark) =>
+    actions.teaching.setMark(meeting.id, studentId, markFor(studentId) === next ? 'present' : next);
 
   const submit = () => {
     actions.teaching.submitRollCall(meeting.id, notes.trim() || undefined);
@@ -123,13 +130,21 @@ export default function RollCall() {
                       ? <MarkBadge mark={mark} />
                       : <Badge tone="neutral">Not marked</Badge>)
                     : (
-                      <RadioGroup
-                        direction="row"
-                        name={`mark-${student.id}`}
-                        options={MARK_OPTIONS}
-                        value={mark ?? ''}
-                        onChange={(next) => actions.teaching.setMark(meeting.id, student.id, next as Mark)}
-                      />
+                      <span className="ja-roll-toggle" role="group" aria-label={`${student.name}: mark`}>
+                        {MARK_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            className={`ja-roll-mark ja-roll-mark--${option.value}`}
+                            aria-pressed={mark === option.value}
+                            aria-label={option.label}
+                            title={option.label}
+                            onClick={() => toggle(student.id, option.value)}
+                          >
+                            <Icon name={option.icon} size={16} strokeWidth={2.5} />
+                          </button>
+                        ))}
+                      </span>
                     )}
                 </span>
               </div>
@@ -140,16 +155,13 @@ export default function RollCall() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <Card title="This roll call" padding="var(--space-5)">
-          <ProgressBar
-            label="Marked"
-            value={counts.marked}
-            max={Math.max(1, roster.length)}
-            color="var(--blue-500)"
-            showValue
-            caption={`${counts.marked} of ${roster.length} marked`}
-          />
+          {!submitted && (
+            <p style={{ margin: '0 0 var(--space-4)', font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
+              Everyone starts present. Tap the clock for late or the cross for absent.
+            </p>
+          )}
 
-          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginTop: 'var(--space-4)' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
             <Badge tone="teal" dot>{`${counts.present} present`}</Badge>
             <Badge tone="gold" dot>{`${counts.late} late`}</Badge>
             <Badge tone="danger" dot>{`${counts.absent} absent`}</Badge>
@@ -197,16 +209,11 @@ export default function RollCall() {
                   variant="primary"
                   fullWidth
                   iconLeft={<Icon name="check" size={16} />}
-                  disabled={counts.marked === 0}
+                  disabled={roster.length === 0}
                   onClick={submit}
                 >
                   Submit roll call
                 </Button>
-                {counts.marked === 0 && (
-                  <span style={{ font: 'var(--type-body-sm)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                    Mark at least one student to submit.
-                  </span>
-                )}
               </>
             )}
           </div>

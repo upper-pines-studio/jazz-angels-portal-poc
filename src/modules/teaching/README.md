@@ -37,7 +37,7 @@ up** — that is the one rule every rate in here follows.
 | --- | --- |
 | `addMeeting(input)` | Puts one class on the schedule. Returns the new id. |
 | `setMark(meetingId, studentId, mark)` | Records a mark. Ignored while the roll is submitted. |
-| `submitRollCall(meetingId, notes?)` | Stamps `rollSubmittedAt` and keeps the rehearsal notes. |
+| `submitRollCall(meetingId, notes?)` | Marks everyone on the roster not yet marked as present, stamps `rollSubmittedAt` and keeps the rehearsal notes. |
 | `reopenRollCall(meetingId)` | Clears the stamp so the marks can be edited again. |
 | `enrollStudent(input)` | Adds a student to a roster or the waitlist. Returns the new id. |
 | `updateStudent(id, patch)` | Patches a student, their placement included. |

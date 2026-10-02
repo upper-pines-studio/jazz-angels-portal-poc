@@ -7,6 +7,7 @@ import type {
   AttendanceWindow,
   ClassMeeting,
   Ensemble,
+  Mark,
   Student,
   Term,
 } from './types';
@@ -113,6 +114,22 @@ export interface MarkCounts {
 export function markCounts(records: AttendanceRecord[]): MarkCounts {
   const counts = { present: 0, late: 0, absent: 0, marked: records.length };
   for (const r of records) counts[r.mark] += 1;
+  return counts;
+}
+
+/**
+ * The marks an open roll call shows. Everyone starts present; the teacher only
+ * marks who is late or absent. Submitting writes the present marks down.
+ */
+export function rollMarks(roster: Student[], records: AttendanceRecord[]): Map<string, Mark> {
+  const marks = new Map<string, Mark>();
+  for (const s of roster) marks.set(s.id, records.find((r) => r.studentId === s.id)?.mark ?? 'present');
+  return marks;
+}
+
+export function rollCounts(marks: Map<string, Mark>): MarkCounts {
+  const counts = { present: 0, late: 0, absent: 0, marked: marks.size };
+  for (const mark of marks.values()) counts[mark] += 1;
   return counts;
 }
 
