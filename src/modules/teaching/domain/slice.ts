@@ -72,8 +72,17 @@ export function reducer(state: TeachingState, action: TeachingAction): TeachingS
     case 'submit-roll-call': {
       const meeting = state.meetings.find((m) => m.id === action.meetingId);
       if (!meeting) return state;
+      // Everyone starts present: whoever on the roster was not marked late or
+      // absent is written down as present.
+      const marked = new Set(
+        state.attendance.filter((a) => a.meetingId === meeting.id).map((a) => a.studentId),
+      );
+      const present: AttendanceRecord[] = state.students
+        .filter((s) => s.status === 'enrolled' && s.ensembleId === meeting.ensembleId && !marked.has(s.id))
+        .map((s) => ({ id: `att-${meeting.id}-${s.id}`, meetingId: meeting.id, studentId: s.id, mark: 'present' }));
       return {
         ...state,
+        attendance: present.length ? [...state.attendance, ...present] : state.attendance,
         meetings: withId(state.meetings, meeting.id, {
           rollSubmittedAt: action.at,
           notes: action.notes ?? meeting.notes,

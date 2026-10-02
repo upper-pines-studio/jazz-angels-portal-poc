@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { AnyAction } from '../../../../core/module';
 import type { PortalState } from '../../../../core/types';
-import { attendanceForMeeting, markCounts, unsubmittedRollCalls } from '../derive';
+import {
+  attendanceForMeeting, markCounts, rollCounts, rollMarks, rosterForEnsemble, unsubmittedRollCalls,
+} from '../derive';
 import { SEED_TODAY, makeSeed } from '../seed';
 import { teachingSlice } from '../slice';
 import type { TeachingState } from '../types';
@@ -38,6 +40,22 @@ describe('submitRollCall', () => {
     expect(after.rollSubmittedAt).toBeTruthy();
     expect(Number.isNaN(Date.parse(after.rollSubmittedAt as string))).toBe(false);
     expect(after.notes).toBe('Ran the blues in F, traded fours.');
+  });
+
+  it('writes everyone not marked late or absent down as present', () => {
+    const h = harness();
+    const roster = rosterForEnsemble(h.state(), 'e-combo-b');
+    const [late, absent] = roster;
+
+    h.actions.setMark(COMBO_B, late.id, 'late');
+    h.actions.setMark(COMBO_B, absent.id, 'absent');
+    h.actions.submitRollCall(COMBO_B);
+
+    const records = attendanceForMeeting(h.state(), COMBO_B);
+    expect(records).toHaveLength(roster.length);
+    expect(markCounts(records)).toEqual({
+      present: roster.length - 2, late: 1, absent: 1, marked: roster.length,
+    });
   });
 
   it('takes the meeting off the unsubmitted list', () => {
@@ -153,5 +171,20 @@ describe('normalise', () => {
     });
     expect(filled?.meetings.every((m) => Boolean(m.venueId))).toBe(true);
     expect(filled?.meetings.some((m) => m.room === 'Off-site')).toBe(false);
+  });
+});
+
+describe('rollMarks', () => {
+  it('starts everyone on the roster present until marked otherwise', () => {
+    const h = harness();
+    const roster = rosterForEnsemble(h.state(), 'e-combo-b');
+    expect(rollCounts(rollMarks(roster, []))).toEqual({
+      present: roster.length, late: 0, absent: 0, marked: roster.length,
+    });
+
+    h.actions.setMark(COMBO_B, roster[0].id, 'absent');
+    const marks = rollMarks(roster, attendanceForMeeting(h.state(), COMBO_B));
+    expect(marks.get(roster[0].id)).toBe('absent');
+    expect(rollCounts(marks).present).toBe(roster.length - 1);
   });
 });

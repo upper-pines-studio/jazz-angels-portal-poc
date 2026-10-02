@@ -1,13 +1,10 @@
 /*
  * Roll call, built for a phone held in one hand at 3:50pm in Studio 1.
  *
- * Every row is at least 44px of target. At 640px and below the three marks
- * stop being a row of radios beside the name and become a full-width
- * segmented row underneath it, so a thumb can reach all three without aiming.
- *
- * The design-system RadioGroup styles itself inline and is shared with the
- * other POC, so the segmented shape is applied here with `!important` rather
- * than by changing the component. Breakpoints match src/app/responsive.css.
+ * Everyone starts present: the check circle is filled teal, and the teacher
+ * only taps the clock (late) or the cross (absent) for the exceptions. The
+ * circles stay beside the name; at 640px and below they grow to 44px so a
+ * thumb can hit them. Breakpoints match src/app/responsive.css.
  */
 
 .ja-roll-row {
@@ -37,6 +34,41 @@
 
 .ja-roll-marks {
   flex: 0 0 auto;
+}
+
+.ja-roll-toggle {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+.ja-roll-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-pill);
+  background: var(--surface-card);
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.ja-roll-mark:hover { border-color: var(--border-strong); color: var(--text-body); }
+
+.ja-roll-mark--present[aria-pressed='true'] {
+  border-color: var(--teal-500);
+  background: var(--teal-500);
+  color: var(--neutral-0);
+}
+.ja-roll-mark--late[aria-pressed='true'] {
+  border-color: var(--gold-400);
+  background: var(--gold-400);
+  color: var(--gold-900);
+}
+.ja-roll-mark--absent[aria-pressed='true'] {
+  border-color: var(--danger-500);
+  background: var(--danger-500);
+  color: var(--neutral-0);
 }
 
 /* The trend bars on the side card. */
@@ -74,42 +106,10 @@
 }
 
 /* ---------------------------------------------------------------------------
- * ≤ 640px — phone: the marks become a full-width segmented row
+ * ≤ 640px — phone: the circles grow to full thumb size
  * ------------------------------------------------------------------------ */
 @media (max-width: 640px) {
-  .ja-roll-row {
-    flex-wrap: wrap;
-    align-items: flex-start;
-    row-gap: var(--space-3);
-    padding: var(--space-3);
-  }
-
-  .ja-roll-marks { flex: 1 1 100%; min-width: 0; }
-
-  /* Three equal thumb targets, each free to shrink rather than push the page wide. */
-  .ja-roll-marks > div {
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: var(--space-2) !important;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .ja-roll-marks label {
-    min-width: 0;
-    min-height: 44px;
-    justify-content: center;
-    gap: var(--space-2) !important;
-    padding: 0 var(--space-2);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    border: var(--border-width) solid var(--border-default);
-    border-radius: var(--radius-sm);
-    background: var(--surface-card);
-  }
-  .ja-roll-marks label:has(input:checked) {
-    border-color: var(--blue-500);
-    background: var(--blue-50);
-  }
+  .ja-roll-row { padding: var(--space-3); gap: var(--space-3); }
+  /* A thumb needs the full 44px. */
+  .ja-roll-mark { width: 44px; height: 44px; }
 }
