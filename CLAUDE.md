@@ -12,6 +12,7 @@ per module.
 
 ## Where things are
 - `docs/FEATURES.md` — the feature map: every feature, its route, its status, the files that own it, and the known gaps. Read it to find where to work. Update its row when you add, move or finish a feature.
+- `docs/ROADMAP.md` — grant-management ideas that are not built or decided. When one is built, its row moves to `docs/FEATURES.md`.
 - `docs/PLATFORM.md` — the platform spec: architecture, the modules, the core screens. Read it before changing structure.
 - `docs/SPEC.md` — the product spec for the grants module: phases, domain model, seed data, every screen.
 - `docs/design-system.md` — brand rules. Read VISUAL FOUNDATIONS and CONTENT FUNDAMENTALS before adding UI.
