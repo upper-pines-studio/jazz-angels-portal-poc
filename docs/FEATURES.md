@@ -70,7 +70,7 @@ seed reproduces are in `design/saas/`.
 | --- | --- | --- | --- | --- |
 | Award tab: award record, payment schedule, terms | `/grants/:id` (default tab) | Built | `grant/AwardTab.tsx`, `grant/AwardDialogs.tsx` | `slice.ts`: `updateGrant`, payment actions, term actions |
 | Award letter card: preview, open, download, replace | right column of Award | Mocked: file contents are drawn, not stored | `grant/AwardTab.tsx` (`AwardAside`), `money/files.tsx` | `money.ts`: `awardLetter`, `grantFiles` |
-| Budget tab: lines mapped to QuickBooks accounts and a class | `?tab=budget`, `&line=<id>`, `&edit=<id>` | Built | `grant/BudgetTab.tsx`, `grant/BudgetLineEditor.tsx`, `grant/BudgetAccountPicker.tsx` | `money.ts`: `lineMatched`, `accountUsedBy`, `isMapped`; `slice.ts`: budget line actions |
+| Budget tab: lines mapped to QuickBooks accounts and a class; Remove line moves a line's expenses to another line on the grant, then removes it | `?tab=budget`, `&line=<id>`, `&edit=<id>` | Built | `grant/BudgetTab.tsx`, `grant/BudgetLineEditor.tsx`, `grant/BudgetAccountPicker.tsx` | `money.ts`: `lineMatched`, `accountUsedBy`, `isMapped`, `moveTargets`; `slice.ts`: budget line actions, `moveExpenses` |
 | Expenses tab: list, filter, backup index download | `?tab=expenses`, `&backup=missing` | Built | `grant/ExpensesTab.tsx`, `grant/expenseList.ts` | `money.ts`: `grantExpenses`, `backupSummary` |
 | Expense detail: receipts, note, reassign, send back | `?tab=expenses&expense=<id>` | Mocked: file contents held in memory for the session | `grant/ExpenseDetail.tsx`, `grant/ExpenseDialogs.tsx`, `money/files.tsx` | `money.ts`: `expenseFiles`; `slice.ts`: `addFile`, `updateExpense`, `unassignTransaction` |
 | Reports tab: reports, reminders column, program numbers | `?tab=reports` | Built | `grant/ReportsTab.tsx`, `grant/ProgramNumbers.tsx` | `slice.ts`: report actions; reads Teaching and Timesheets through their `index.ts` |
@@ -143,7 +143,6 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 | Reminder emails are never sent. | `grants/screens/deadlines/ReminderPanel.tsx` |
 | Choosing another report while the reminders panel has unsaved edits discards them without asking. | `grants/screens/Deadlines.tsx` |
 | The 75/25 starting split for Signal Hill Properties is written in, not worked out. | `money/SplitPanel.tsx` (`USUAL_SHARES`) |
-| Removing a budget line is blocked while it has expenses, with no way to move them all at once. | `grant/BudgetLineEditor.tsx` |
 | "Start from the usual five categories" reads its categories and accounts from the demo data. | `grant/BudgetTab.tsx`, `grants/domain/seed-money.ts` (`CATEGORY_ACCOUNTS`) |
 | The award letter card says the terms feed the budget and the spend-down warnings; only Spend-down's "What to do" reads them, and only the terms labelled "Unspent funds" and "Budget changes". | `grant/AwardTab.tsx`, `money/spend.ts` (`whatToDo`) |
 | The dashboard's "expenses missing a receipt" link counts every grant but opens only the first one's Expenses tab. | `money/MoneyPanel.tsx`, `grants/manifest.tsx` |

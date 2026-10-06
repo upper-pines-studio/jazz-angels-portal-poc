@@ -115,6 +115,15 @@ export type GrantsAction =
       whoId: string;
     }
   | {
+      /** Every expense on one budget line moves to another line on the same grant. */
+      type: 'move-expenses';
+      fromLineId: string;
+      toLineId: string;
+      activityId: string;
+      at: string;
+      whoId: string;
+    }
+  | {
       type: 'set-transaction-status';
       id: string;
       status: 'to-assign' | 'not-grant-funded';
@@ -168,6 +177,20 @@ function restoreTransaction(state: GrantsState, snap: TransactionSnapshot): Gran
       assignedAt: snap.assignedAt,
     }),
   };
+}
+
+/** Why expenses may not move from one line to the other, or undefined when they may. */
+export function moveExpensesRefusal(
+  state: GrantsState,
+  fromLineId: string,
+  toLineId: string,
+): string | undefined {
+  const from = state.budgetLines.find(l => l.id === fromLineId);
+  const to = state.budgetLines.find(l => l.id === toLineId);
+  if (!from || !to) return 'That budget line is no longer on the grant.';
+  if (from.id === to.id) return 'Pick a different line to move the expenses to.';
+  if (from.grantId !== to.grantId) return 'Expenses move only between lines on the same grant.';
+  return undefined;
 }
 
 /** The module's own reducer. The store only ever reaches it through the slice. */
@@ -358,6 +381,33 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
     case 'restore-transactions':
       return action.snapshots.reduce(restoreTransaction, state);
 
+    case 'move-expenses': {
+      if (moveExpensesRefusal(state, action.fromLineId, action.toLineId)) return state;
+      const from = state.budgetLines.find(l => l.id === action.fromLineId)!;
+      const to = state.budgetLines.find(l => l.id === action.toLineId)!;
+      const moving = state.expenses.filter(e => e.budgetLineId === from.id);
+      if (moving.length === 0) return state;
+      const total = moving.reduce((sum, e) => sum + e.amount, 0);
+      const n = moving.length;
+      // Only the line changes: ids, notes, backup and transaction links stay as they are.
+      return {
+        ...state,
+        expenses: state.expenses.map(e =>
+          e.budgetLineId === from.id ? { ...e, budgetLineId: to.id } : e,
+        ),
+        activity: [
+          ...state.activity,
+          {
+            id: action.activityId,
+            grantId: from.grantId,
+            at: action.at,
+            whoId: action.whoId,
+            text: `Moved ${n} ${n === 1 ? 'expense' : 'expenses'} ($${DOLLARS.format(total)}) from ${from.category} to ${to.category}`,
+          },
+        ],
+      };
+    }
+
     case 'set-transaction-status': {
       const tx = state.transactions.find(t => t.id === action.id);
       if (!tx) return state;
@@ -442,6 +492,12 @@ export interface GrantsActions {
   addBudgetLine(input: Omit<BudgetLine, 'id'>): string;
   updateBudgetLine(id: string, patch: Partial<BudgetLine>): void;
   deleteBudgetLine(id: string): void;
+  /**
+   * Move every expense on one line to another line of the same grant, in one
+   * change with one activity row. Returns false, changing nothing, when either
+   * line is missing or they are on different grants.
+   */
+  moveExpenses(fromLineId: string, toLineId: string): boolean;
 
   addExpense(input: Omit<Expense, 'id'>): string;
   updateExpense(id: string, patch: Partial<Expense>): void;
@@ -668,6 +724,18 @@ function createActions(
     },
     deleteBudgetLine(id) {
       remove('budgetLines', id);
+    },
+    moveExpenses(fromLineId, toLineId) {
+      if (moveExpensesRefusal(getState().grants, fromLineId, toLineId)) return false;
+      send({
+        type: 'move-expenses',
+        fromLineId,
+        toLineId,
+        activityId: newId('act'),
+        at: now(),
+        whoId,
+      });
+      return true;
     },
 
     addExpense(input) {
@@ -943,6 +1011,7 @@ const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
   addBudgetLine: 'award',
   updateBudgetLine: 'award',
   deleteBudgetLine: 'award',
+  moveExpenses: 'award',
 
   addExpense: 'award',
   updateExpense: 'award',

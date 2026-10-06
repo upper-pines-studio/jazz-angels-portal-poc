@@ -67,6 +67,7 @@ Add/update actions that create something return its new id.
 | `addPayment(input)` / `updatePayment(id, patch)` | Installments from the funder. |
 | `markPaymentReceived(id, date)` | Stamps `receivedDate` and logs activity. |
 | `addBudgetLine(input)` / `updateBudgetLine(id, patch)` / `deleteBudgetLine(id)` | Award allocation. |
+| `moveExpenses(fromLineId, toLineId)` | Moves every expense on a line to another line of the same grant in one change, changing only `budgetLineId`, and logs one activity row. Returns `false`, changing nothing, for a missing line or a line on another grant. Remove line calls it, then `deleteBudgetLine`. |
 | `addExpense(input)` / `deleteExpense(id)` | Spend against a budget line. |
 | `addReport(input)` / `updateReport(id, patch)` | Reports owed to the funder. |
 | `markReportSubmitted(id, date)` | Stamps `submittedDate`, sets status `submitted`, logs activity. |

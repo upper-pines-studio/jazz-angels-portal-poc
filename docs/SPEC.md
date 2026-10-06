@@ -596,9 +596,15 @@ The approved budget, line by line, and how each line maps to QuickBooks.
   spending will match, and warns when another line on the grant has the same account and class:
   "6200 Contract instructors also counts on Teaching artist stipends, so its transactions will ask
   which line." Enter saves, Escape cancels.
-- **Remove line**: allowed only when nothing is matched to it ("Nothing is matched to it yet, so no
-  expense is affected"). With expenses on it, it says how many and links to them; there is no way to
-  move them all at once (tracked in #13).
+- **Remove line**: with nothing matched to it, it goes at once ("Nothing is matched to it yet, so no
+  expense is affected"). With expenses on it, it says how many and links to them, and offers to move
+  them: "Move the expenses to another line, then the line is removed", a picker of the grant's other
+  lines (mapped or not, each with its approved and matched amounts) and **Move and remove**. Every
+  expense moves in one change (`moveExpenses`), only its line changing, so its backup, note and
+  transaction go with it; the Activity tab gets one row: "Moved 2 expenses ($2,020) from Instrument
+  repair to Sheet music and charts". Then the empty line is removed. With no other line on the grant
+  it says so: "…and this grant has no other line to move them to. Add a line first." A split rule
+  that names a removed line stays saved and is no longer suggested.
 - Empty: "No budget lines yet", with **Start from the usual five categories** (adds the five
   categories at $0 with their usual accounts and no class) and **Add line**.
 
@@ -855,7 +861,7 @@ where it and the mockups or `SAAS-BRIEF.md` disagree:
   "Unspent funds" and "Budget changes"; the budget does not read them.
 
 **Known problems, tracked elsewhere.** The 75/25 Signal Hill split is written in
-(#12). A budget line with expenses cannot be removed and they cannot be moved at once (#13).
+(#12).
 
 ---
 

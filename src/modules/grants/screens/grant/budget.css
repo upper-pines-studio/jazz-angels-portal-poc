@@ -153,6 +153,7 @@
 .budget-remove__text strong { color: var(--text-strong); font-weight: var(--weight-semibold); }
 .budget-remove__text a { color: var(--text-link); font-weight: var(--weight-medium); }
 .budget-remove__text a:hover { color: var(--text-link-hover); }
+.budget-remove__pick { flex: 1 1 260px; max-width: 420px; min-width: 0; }
 
 /* The account picker field: chips, then the search. */
 .budget-picker-wrap { position: relative; min-width: 0; }

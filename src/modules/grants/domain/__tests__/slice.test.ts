@@ -4,7 +4,7 @@ import { makeCoreSeed } from '../../../../core/seed';
 import { guardActions } from '../../../../core/store';
 import type { PortalState, Role, SignedInUser } from '../../../../core/types';
 import { activityWho } from '../derive';
-import { backupMoves, transactionSnapshot } from '../money';
+import { backupMoves, moveTargets, transactionSnapshot } from '../money';
 import { makeSeed } from '../seed';
 import { creditActivity, grantsSlice, reducer } from '../slice';
 import type { GrantsActions } from '../slice';
@@ -470,6 +470,111 @@ describe('reassigning keeps the backup', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Moving a line's expenses so the line can be removed (#13)
+// ---------------------------------------------------------------------------
+
+describe("moving a budget line's expenses", () => {
+  const HA = 'g-herb-alpert-2026';
+  const KEISHA: SignedInUser = { id: 's-keisha', name: 'Keisha', role: 'office-manager' };
+
+  function harness() {
+    let grants = base();
+    let n = 0;
+    const portal = () => ({ core: makeCoreSeed(), grants }) as unknown as PortalState;
+    const actions = grantsSlice.createActions(
+      (action: AnyAction) => {
+        grants = grantsSlice.reducer(grants, action);
+      },
+      portal,
+      { today: '2026-09-13', newId: prefix => `${prefix}-t${(n += 1)}`, user: KEISHA },
+    );
+    const on = (lineId: string) => grants.expenses.filter(e => e.budgetLineId === lineId);
+    return { actions, grants: () => grants, portal, on };
+  }
+
+  it('moves every expense on the line in one change, and logs one row', () => {
+    const h = harness();
+    const before = h.on('bl-ha-repair');
+    expect(before.map(e => e.id).sort()).toEqual(['ex-ha-2', 'ex-ha-8']);
+    const music = h.on('bl-ha-music').length;
+    const files = h.grants().files;
+    const rows = h.grants().activity.length;
+
+    expect(h.actions.moveExpenses('bl-ha-repair', 'bl-ha-music')).toBe(true);
+
+    expect(h.on('bl-ha-repair')).toEqual([]);
+    expect(h.on('bl-ha-music')).toHaveLength(music + 2);
+    // Only the line changed: ids, notes, transactions and backup are as they were.
+    for (const e of before) {
+      expect(h.grants().expenses.find(x => x.id === e.id)).toEqual({
+        ...e,
+        budgetLineId: 'bl-ha-music',
+      });
+    }
+    expect(h.grants().files).toBe(files);
+
+    expect(h.grants().activity).toHaveLength(rows + 1);
+    expect(h.grants().activity.at(-1)).toMatchObject({
+      grantId: HA,
+      whoId: 's-keisha',
+      text: 'Moved 2 expenses ($2,020) from Instrument repair to Sheet music and charts',
+    });
+  });
+
+  it('refuses a line on another grant, and changes nothing', () => {
+    const h = harness();
+    const start = h.grants();
+    expect(h.actions.moveExpenses('bl-ha-repair', 'bl-lbcf-repair')).toBe(false);
+    expect(h.actions.moveExpenses('bl-ha-repair', 'bl-ha-repair')).toBe(false);
+    expect(h.actions.moveExpenses('bl-ha-repair', 'bl-nowhere')).toBe(false);
+    expect(h.grants()).toBe(start);
+    // The reducer holds the line too, should a stale screen get past the action.
+    const next = reducer(start, {
+      type: 'move-expenses',
+      fromLineId: 'bl-ha-repair',
+      toLineId: 'bl-lbcf-repair',
+      activityId: 'a',
+      at: '2026-09-13T10:00:00.000Z',
+      whoId: 's-keisha',
+    });
+    expect(next).toBe(start);
+  });
+
+  it('removes the line once its expenses have moved', () => {
+    const h = harness();
+    const spent = (lineId: string) => h.on(lineId).reduce((sum, e) => sum + e.amount, 0);
+    const total = spent('bl-ha-repair') + spent('bl-ha-venue');
+
+    h.actions.moveExpenses('bl-ha-repair', 'bl-ha-venue');
+    h.actions.deleteBudgetLine('bl-ha-repair');
+
+    expect(h.grants().budgetLines.some(l => l.id === 'bl-ha-repair')).toBe(false);
+    expect(h.grants().expenses.some(e => e.budgetLineId === 'bl-ha-repair')).toBe(false);
+    expect(spent('bl-ha-venue')).toBe(total);
+  });
+
+  it('offers every other line on the same grant, mapped or not', () => {
+    const h = harness();
+    h.actions.updateBudgetLine('bl-ha-admin', { accountCodes: [], classId: undefined });
+    expect(moveTargets(h.portal(), 'bl-ha-repair').map(l => l.id)).toEqual([
+      'bl-ha-stipends',
+      'bl-ha-music',
+      'bl-ha-venue',
+      'bl-ha-admin',
+    ]);
+    expect(moveTargets(h.portal(), 'bl-nowhere')).toEqual([]);
+  });
+
+  it('writes nothing for a line with no expenses', () => {
+    const h = harness();
+    h.actions.moveExpenses('bl-ha-repair', 'bl-ha-music');
+    const after = h.grants();
+    expect(h.actions.moveExpenses('bl-ha-repair', 'bl-ha-venue')).toBe(true);
+    expect(h.grants()).toBe(after);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Who may change what (decision 0001)
 // ---------------------------------------------------------------------------
 
@@ -510,6 +615,7 @@ describe('the rules', () => {
     expect(ran(a.updateGrant('g', { notes: 'x' }))).toBe(true);
     expect(ran(a.updateGrant('g', { amountAwarded: 5000 }))).toBe(false);
     expect(ran(a.addBudgetLine({}))).toBe(false);
+    expect(ran(a.moveExpenses('bl-a', 'bl-b'))).toBe(false);
     expect(ran(a.assignTransaction('t', []))).toBe(false);
   });
 
@@ -518,6 +624,7 @@ describe('the rules', () => {
     expect(ran(b.addGrant({}))).toBe(false);
     expect(ran(b.transition('g', 'awarded'))).toBe(false);
     expect(ran(b.addBudgetLine({}))).toBe(true);
+    expect(ran(b.moveExpenses('bl-a', 'bl-b'))).toBe(true);
     expect(ran(b.assignTransaction('t', []))).toBe(true);
     expect(ran(b.syncQuickBooks())).toBe(true);
     expect(ran(b.setQuickBooksConnected(true))).toBe(false);

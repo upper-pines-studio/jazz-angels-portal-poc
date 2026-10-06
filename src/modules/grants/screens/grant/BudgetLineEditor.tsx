@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Input, Select } from '../../../../design-system';
 import { money, plainNumber, useStore } from '../../../../core';
-import { accountLabel, accountUsedBy } from '../../domain';
+import { accountLabel, accountUsedBy, lineMatched, moveTargets } from '../../domain';
 import type { BudgetLine, Grant } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
 import { BudgetAccountPicker } from './BudgetAccountPicker';
@@ -256,8 +256,10 @@ export function BudgetLineEditor({
 }
 
 /**
- * The question before a line goes. A line with expenses on it stays: removing
- * it would leave those expenses on nothing, so it says where they are instead.
+ * The question before a line goes. A line with expenses on it cannot simply
+ * go: removing it would leave those expenses on nothing. So it offers to move
+ * them to another line on the grant first, then removes the empty line. With
+ * no other line to take them, it says so.
  */
 function RemoveConfirm({
   grant,
@@ -273,8 +275,10 @@ function RemoveConfirm({
   const { state, actions } = useStore();
   const toast = useToast();
   const keep = React.useRef<HTMLDivElement | null>(null);
+  const [targetId, setTargetId] = React.useState('');
   const expenses = state.grants.expenses.filter(e => e.budgetLineId === line.id);
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const targets = moveTargets(state, line.id);
 
   React.useEffect(() => {
     keep.current?.querySelector('button')?.focus();
@@ -282,19 +286,72 @@ function RemoveConfirm({
 
   if (expenses.length > 0) {
     const n = expenses.length;
+    const counted = `${n} ${n === 1 ? 'expense' : 'expenses'} (${money(total)})`;
+    const view = (
+      <Link to={budgetTransactionsHref(grant.id, line.id)}>
+        View {n === 1 ? 'that transaction' : `those ${n} transactions`}
+      </Link>
+    );
+
+    if (targets.length === 0) {
+      return (
+        <div className="budget-remove" role="alert">
+          <span className="budget-remove__text">
+            <strong>{line.category}</strong> cannot be removed while {counted}{' '}
+            {n === 1 ? 'is' : 'are'} assigned to it, and this grant has no other line to move{' '}
+            {n === 1 ? 'it' : 'them'} to. Add a line first. {view}
+          </span>
+          <span className="budget-edit__actions" ref={keep}>
+            <Button variant="secondary" size="sm" onClick={onKeep}>
+              Keep line
+            </Button>
+          </span>
+        </div>
+      );
+    }
+
+    const target = targets.find(l => l.id === targetId);
+    const moveAndRemove = () => {
+      if (!target) return;
+      if (!actions.grants.moveExpenses(line.id, target.id)) return;
+      actions.grants.deleteBudgetLine(line.id);
+      toast({
+        tone: 'success',
+        title: 'Expenses moved, line removed',
+        message: `${counted} ${n === 1 ? 'is' : 'are'} now on ${target.category}. ${line.category} is off the ${grant.title} budget.`,
+      });
+      onRemoved();
+    };
+
     return (
       <div className="budget-remove" role="alert">
         <span className="budget-remove__text">
-          <strong>{line.category}</strong> cannot be removed while {n}{' '}
-          {n === 1 ? 'expense' : 'expenses'} ({money(total)}) {n === 1 ? 'is' : 'are'} assigned to
-          it. Move {n === 1 ? 'it' : 'them'} to another line first.{' '}
-          <Link to={budgetTransactionsHref(grant.id, line.id)}>
-            View {n === 1 ? 'that transaction' : `those ${n} transactions`}
-          </Link>
+          <strong>{line.category}</strong> has {counted} assigned to it. Move the expenses to
+          another line, then the line is removed. {view}
         </span>
+        <label className="budget-remove__pick">
+          <span className="budget-sr">Line to move the expenses to</span>
+          <Select
+            value={targetId}
+            onChange={e => setTargetId(e.target.value)}
+            options={[
+              { value: '', label: 'Choose a line' },
+              ...targets.map(l => {
+                const matched = lineMatched(state, l.id).amount;
+                return {
+                  value: l.id,
+                  label: `${l.category}: ${money(l.planned)} approved, ${matched ? `${money(matched)} matched` : 'nothing matched yet'}`,
+                };
+              }),
+            ]}
+          />
+        </label>
         <span className="budget-edit__actions" ref={keep}>
           <Button variant="secondary" size="sm" onClick={onKeep}>
             Keep line
+          </Button>
+          <Button variant="danger" size="sm" disabled={!target} onClick={moveAndRemove}>
+            Move and remove
           </Button>
         </span>
       </div>

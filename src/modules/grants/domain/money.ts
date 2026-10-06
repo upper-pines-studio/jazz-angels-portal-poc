@@ -91,6 +91,17 @@ export function lineMatched(state: PortalState, lineId: string): { amount: numbe
   return { amount, count };
 }
 
+/**
+ * The lines a line's expenses may move to: every other line on the same
+ * grant, mapped or not. Mapping decides what new transactions match; it does
+ * not limit where an expense already assigned can sit.
+ */
+export function moveTargets(state: PortalState, lineId: string): BudgetLine[] {
+  const from = lineById(state, lineId);
+  if (!from) return [];
+  return state.grants.budgetLines.filter(l => l.grantId === from.grantId && l.id !== from.id);
+}
+
 // ---------------------------------------------------------------------------
 // Pacing
 // ---------------------------------------------------------------------------
