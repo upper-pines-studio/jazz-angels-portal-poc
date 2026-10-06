@@ -46,14 +46,6 @@ export function needsAttention(status: PaceStatus): boolean {
   return status === 'spending-fast' || status === 'spending-slow';
 }
 
-/** "Herb Alpert Foundation" → "Herb Alpert"; "Los Angeles County Department of ..." → "LA County". */
-export function shortFunder(name: string): string {
-  let n = name.split(/ (Department|Dept\.) of /)[0];
-  n = n.replace(/^Los Angeles County\b/, 'LA County');
-  n = n.replace(/ (Community )?Foundation$/, (_m, c) => (c ? ' CF' : ''));
-  return n.trim() || name;
-}
-
 /** 50000 → "$50k", 8500 → "$8.5k", 500 → "$500". For axis labels. */
 export function shortMoney(n: number): string {
   if (Math.abs(n) < 1000) return `$${Math.round(n)}`;

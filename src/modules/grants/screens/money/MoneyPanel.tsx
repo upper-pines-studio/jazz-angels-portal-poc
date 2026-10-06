@@ -2,9 +2,15 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, Icon } from '../../../../design-system';
 import { useCan, useStore } from '../../../../core';
-import { expensesMissingBackup, funderById, percent, transactionCounts } from '../../domain';
+import {
+  expensesMissingBackup,
+  funderById,
+  funderShortName,
+  percent,
+  transactionCounts,
+} from '../../domain';
 import { PACE_COLOR, PaceBar, PaceMark } from './shared';
-import { pacedGrants, shortFunder } from './spend';
+import { pacedGrants } from './spend';
 import './spenddown.css';
 
 /** The dashboard's money card: where each grant stands against its pace. */
@@ -40,7 +46,7 @@ export function MoneyPanel() {
               aria-label={`${funder}, ${grant.title}: ${percent(pace.used)} used, ${gone}. Open in Spend-down.`}
             >
               <span className="mp-row__head">
-                {funder && <span className="mp-row__funder">{shortFunder(funder)}</span>}
+                {funder && <span className="mp-row__funder">{funderShortName(funder, true)}</span>}
                 <span className="mp-row__title">{grant.title}</span>
               </span>
               <PaceBar used={pace.used} elapsed={pace.elapsed} color={PACE_COLOR[pace.status]} />

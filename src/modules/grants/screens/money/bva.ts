@@ -5,6 +5,7 @@ import {
   PACE_LABEL,
   aboutMoney,
   funderById,
+  funderShortName,
   grantPace,
   lineNeedsAttention,
   linePaces,
@@ -93,14 +94,6 @@ export function howLongBefore(day: string, end: string): string {
   return `about ${count} ${unit}`;
 }
 
-/** "Los Angeles County Department of Arts and Culture" → "LA County"; "Herb Alpert Foundation" → "Herb Alpert". */
-export function shortFunder(name: string): string {
-  let short = name.split(/ Dep(?:artment|t\.)/)[0].replace(/^Los Angeles\b/, 'LA');
-  if (/ Foundation$/.test(short) && !/ Community Foundation$/.test(short))
-    short = short.replace(/ Foundation$/, '');
-  return short;
-}
-
 /** The previous fiscal year, for the period select. */
 export function previousFy(today: string, startMonth: number) {
   const fy = fiscalYear(today, startMonth);
@@ -148,7 +141,7 @@ export function bvaGrants(state: PortalState, today: string, period: BvaPeriod):
     return {
       grant,
       funder,
-      funderShort: shortFunder(funder),
+      funderShort: funderShortName(funder),
       pace: grantPace(state, grant.id, today),
       lines: linePaces(state, grant.id, today),
       closed: grant.phase === 'closed',

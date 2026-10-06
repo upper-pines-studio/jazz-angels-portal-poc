@@ -53,7 +53,7 @@ Module folder `modules/grants/`. Wiring in `grants/manifest.tsx`.
 | Checklist tab | `?tab=checklist` | Built | `grant/ChecklistTab.tsx` | `slice.ts`: task actions; `derive.ts`: `checklistProgress` |
 | Activity tab | `?tab=activity` | Built | `grant/ActivityTab.tsx` | `derive.ts`: `grantActivity`; `slice.ts`: `addNote` |
 | Key dates, funder and details cards | right column | Built | `grant/SideCards.tsx` | `slice.ts`: `updateGrant` |
-| Deadlines: list and calendar | `/deadlines`, `?view=calendar` | Built | `grants/screens/Deadlines.tsx`, `deadlines/CalendarMonth.tsx` | `derive.ts`: `deadlines` |
+| Deadlines: list and calendar | `/deadlines`, `?view=calendar` | Built | `grants/screens/Deadlines.tsx`, `deadlines/CalendarMonth.tsx` | `derive.ts`: `deadlines`; `names.ts`: `funderShortName` |
 | Funders | `/funders`, `/funders/:id` | Built | `grants/screens/Funders.tsx`, `FunderDetail.tsx` | `derive.ts`: `funderTotals`, `grantsByFunder` |
 | Playbook: checklist templates | `/playbook` | Built | `grants/screens/Playbook.tsx` | `templates.ts`; `slice.ts`: template actions |
 | Dashboard pipeline card | `/` | Built | `grants/screens/PipelinePanel.tsx` | `derive.ts`: `pipelineCounts` |
@@ -80,20 +80,20 @@ seed reproduces are in `design/saas/`.
 
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
-| Transactions: tabs, filters, suggestions, accept, undo | `/transactions`, `?tab=`, `?grant=`, `?line=`, `?q=`, `?account=`, `?period=`, `?page=` | Mocked: QuickBooks feed is seed data | `money/Transactions.tsx`, `money/TransactionRow.tsx`, `money/TransactionMenu.tsx` | `money.ts`: `suggestionFor`, `acceptableSuggestions`, `transactionCounts`, `eligibleLines`, `backupCarry`, `backupMoves`, `transactionSnapshot`; `slice.ts`: `assignTransaction`, `markNotGrantFunded`, `acceptSuggestions`, `restoreTransactions` |
-| Split a transaction across grants, save as a rule | `/transactions?tx=<id>` | Built | `money/SplitPanel.tsx` | `money.ts`: `splitByPercent`; `slice.ts`: `assignTransaction`, `saveSplitRule` |
+| Transactions: tabs, filters, suggestions, accept, undo | `/transactions`, `?tab=`, `?grant=`, `?line=`, `?q=`, `?account=`, `?period=`, `?page=` | Mocked: QuickBooks feed is seed data | `money/Transactions.tsx`, `money/TransactionRow.tsx`, `money/TransactionMenu.tsx` | `money.ts`: `suggestionFor`, `acceptableSuggestions`, `transactionCounts`, `eligibleLines`, `backupCarry`, `backupMoves`, `transactionSnapshot`; `slice.ts`: `assignTransaction`, `markNotGrantFunded`, `acceptSuggestions`, `restoreTransactions`; `names.ts`: `funderShortName` |
+| Split a transaction across grants, save as a rule | `/transactions?tx=<id>` | Built | `money/SplitPanel.tsx` | `money.ts`: `splitByPercent`; `slice.ts`: `assignTransaction`, `saveSplitRule`; `names.ts`: `funderShortName` |
 | Sync with QuickBooks | button on Transactions and Settings | Mocked: moves `incoming` into `transactions`, once | | `slice.ts`: `syncQuickBooks` |
-| Budget vs. actual: table, warnings, export, print | `/budget`, `?period=fy\|all\|fy-prev`, `?grant=<id>` | Built | `money/BudgetVsActual.tsx`, `money/bva.ts`, `money/bva.css` (print rules) | `money.ts`: `linePaces`, `grantPace`, `lineNeedsAttention`, `trackedGrantsInFy` |
+| Budget vs. actual: table, warnings, export, print | `/budget`, `?period=fy\|all\|fy-prev`, `?grant=<id>` | Built | `money/BudgetVsActual.tsx`, `money/bva.ts`, `money/bva.css` (print rules) | `money.ts`: `linePaces`, `grantPace`, `lineNeedsAttention`, `trackedGrantsInFy`; `names.ts`: `funderShortName` |
 | Spend-down: charts, figures, advice | `/spend-down`, `?show=`, `#<grantId>` | Built | `money/SpendDown.tsx`, `money/SpendChart.tsx`, `money/spend.ts` (`whatToDo`) | `money.ts`: `grantPace`, `spendSeries`, `paceDriver` |
-| Dashboard money card | `/` | Built | `money/MoneyPanel.tsx` | `money.ts`: `grantPace`, `transactionCounts`, `expensesMissingBackup` |
+| Dashboard money card | `/` | Built | `money/MoneyPanel.tsx` | `money.ts`: `grantPace`, `transactionCounts`, `expensesMissingBackup`; `names.ts`: `funderShortName` |
 | Dashboard attention rows for money | `/` | Built | `grants/manifest.tsx` (`moneyAttention`) | `money.ts`: `offPaceGrants` |
 
 ### Reports and reminders
 
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
-| Reports owed card | `/deadlines?kind=report` | Built | `deadlines/ReportsOwedCard.tsx` | `money.ts`: `reportsOwed`, `nextReminder`, `reminderSchedule` |
-| Reminders panel: schedule, recipients, email preview | `/deadlines?kind=report&report=<id>` | Mocked: emails are previewed, never sent | `deadlines/ReminderPanel.tsx`, `deadlines/ReminderParts.tsx` | `money.ts`: `reminderPlanFor`, `planSchedule` (the draft), `reminderSchedule`; `slice.ts`: `saveReminderPlan`, `resetReminderPlan` |
+| Reports owed card | `/deadlines?kind=report` | Built | `deadlines/ReportsOwedCard.tsx` | `money.ts`: `reportsOwed`, `nextReminder`, `reminderSchedule`; `names.ts`: `funderShortName` |
+| Reminders panel: schedule, recipients, email preview | `/deadlines?kind=report&report=<id>` | Mocked: emails are previewed, never sent | `deadlines/ReminderPanel.tsx`, `deadlines/ReminderParts.tsx` | `money.ts`: `reminderPlanFor`, `planSchedule` (the draft), `reminderSchedule`; `slice.ts`: `saveReminderPlan`, `resetReminderPlan`; `names.ts`: `funderShortName` |
 | Default reminders | Deadlines and Settings | Built | `deadlines/ReminderDefaults.tsx`, `settings/RemindersCard.tsx` | `slice.ts`: `updateReminderDefaults` |
 | QuickBooks connection card | `/settings` | Mocked: connect is a stand-in dialog | `settings/QuickBooksCard.tsx` | `slice.ts`: `setQuickBooksConnected`, `syncQuickBooks` |
 
@@ -143,7 +143,6 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 | Reminder emails are never sent. | `grants/screens/deadlines/ReminderPanel.tsx` |
 | Choosing another report while the reminders panel has unsaved edits discards them without asking. | `grants/screens/Deadlines.tsx` |
 | The 75/25 starting split for Signal Hill Properties is written in, not worked out. | `money/SplitPanel.tsx` (`USUAL_SHARES`) |
-| Five separate helpers shorten a funder's name, each by its own rule. They should be one domain function. | `money/transactionHelpers.ts`, `money/bva.ts`, `money/spend.ts`, `deadlines/helpers.ts`, `deadlines/ReminderParts.tsx` |
 | "Start from the usual five categories" reads its categories and accounts from the demo data. | `grant/BudgetTab.tsx`, `grants/domain/seed-money.ts` (`CATEGORY_ACCOUNTS`) |
 | The award letter card says the terms feed the budget and the spend-down warnings; only Spend-down's "What to do" reads them, and only the terms labelled "Unspent funds" and "Budget changes". | `grant/AwardTab.tsx`, `money/spend.ts` (`whatToDo`) |
 | The dashboard's "expenses missing a receipt" link counts every grant but opens only the first one's Expenses tab. | `money/MoneyPanel.tsx`, `grants/manifest.tsx` |

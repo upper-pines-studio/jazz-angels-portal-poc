@@ -1,9 +1,9 @@
 import React from 'react';
 import { Badge, Card } from '../../../../design-system';
 import { DeadlineKindBadge, deadlineKindColor } from '../badges';
-import { DEADLINE_KINDS, deadlineChipTint, funderShort, monthMatrix, WEEKDAYS } from './helpers';
+import { DEADLINE_KINDS, deadlineChipTint, monthMatrix, WEEKDAYS } from './helpers';
 import { toISO, useStore } from '../../../../core';
-import { funderById, grantById } from '../../domain';
+import { funderById, funderShortName, grantById } from '../../domain';
 import type { Deadline } from '../../domain';
 import './calendar.css';
 
@@ -35,7 +35,7 @@ export function CalendarMonth({
   const chipText = (d: Deadline) => {
     const grant = grantById(state, d.grantId);
     const funder = grant && funderById(state, grant.funderId);
-    return `${d.label} · ${funderShort(funder?.name, 18)}`;
+    return `${d.label} · ${funderShortName(funder?.name, true)}`;
   };
 
   return (

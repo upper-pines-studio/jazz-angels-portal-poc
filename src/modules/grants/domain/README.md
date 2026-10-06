@@ -117,6 +117,13 @@ Lookup helpers, because every screen needs them: `grantById`, `funderById`,
 `grantsByFunder`, `grantsForProgram`, `funderTotals`, `grantActivity` (newest
 first), `activityWho` (the name an activity row credits). `staffById`, `programName` and `fiscalYear` are core's.
 
+`funderShortName(name, tight?)` (`names.ts`) is the one way to shorten a
+funder's name, so a funder reads the same on every screen: "Herb Alpert
+Foundation" → "Herb Alpert", "LA County Dept. of Arts and Culture" → "LA
+County". "Long Beach Community Foundation" stays whole, since "Long Beach"
+alone is the city; `tight` gives "Long Beach CF" for a table cell, a chip or a
+dashboard row. Other names are kept as they are; no name gives "Unknown funder".
+
 The module's public API — what other modules may import from
 `src/modules/grants` — is `manifest`, `deadlines`, `fyTotals` and
 `grantsForProgram`.
