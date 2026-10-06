@@ -28,7 +28,9 @@ function Frame() {
         <Route path="/partners/organizations/:id" element={<OrganizationDetail />} />
         <Route path="/partners/venues/:id" element={<VenueDetail />} />
         <Route path="/settings" element={<Settings />} />
-        {routes.map(r => <Route key={r.path} path={r.path} element={r.element} />)}
+        {routes.map(r => (
+          <Route key={r.path} path={r.path} element={r.element} />
+        ))}
         {/* A route from a module that has just been switched off. */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -29,7 +29,11 @@ export const PACE_COLOR: Record<PaceStatus, string> = {
 
 /** "Spending fast", "On track": the four status words, always in the same colours. */
 export function PaceBadge({ status, dot = true }: { status: PaceStatus; dot?: boolean }) {
-  return <Badge tone={PACE_TONE[status]} dot={dot}>{PACE_LABEL[status]}</Badge>;
+  return (
+    <Badge tone={PACE_TONE[status]} dot={dot}>
+      {PACE_LABEL[status]}
+    </Badge>
+  );
 }
 
 /** The quiet version for a table row: a dot and the words, no box. */
@@ -51,8 +55,20 @@ export function PaceMark({ status }: { status: PaceStatus }) {
     'not-started': 'var(--text-muted)',
   }[status];
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, font: 'var(--type-body-sm)', fontSize: 'var(--text-xs)', color: text, whiteSpace: 'nowrap' }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flex: '0 0 auto' }} />
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        font: 'var(--type-body-sm)',
+        fontSize: 'var(--text-xs)',
+        color: text,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span
+        style={{ width: 6, height: 6, borderRadius: '50%', background: color, flex: '0 0 auto' }}
+      />
       {PACE_LABEL[status]}
     </span>
   );
@@ -62,7 +78,12 @@ export function PaceMark({ status }: { status: PaceStatus }) {
  * Spent against budget, with a tick where an even pace would be today.
  * `used` and `elapsed` are shares, 0 to 1.
  */
-export function PaceBar({ used, elapsed, color = 'var(--blue-500)', showTick = true }: {
+export function PaceBar({
+  used,
+  elapsed,
+  color = 'var(--blue-500)',
+  showTick = true,
+}: {
   used: number;
   elapsed: number;
   color?: string;
@@ -70,9 +91,21 @@ export function PaceBar({ used, elapsed, color = 'var(--blue-500)', showTick = t
 }) {
   const clamp = (n: number) => Math.max(0, Math.min(1, n));
   return (
-    <div className="ja-pace-bar" role="img" aria-label={`${wholePercent(used)}% used, ${wholePercent(elapsed)}% of the period gone`}>
-      <div className="ja-pace-bar__fill" style={{ width: `${clamp(used) * 100}%`, background: used > 1 ? 'var(--danger-500)' : color }} />
-      {showTick && <div className="ja-pace-bar__tick" style={{ left: `${clamp(elapsed) * 100}%` }} />}
+    <div
+      className="ja-pace-bar"
+      role="img"
+      aria-label={`${wholePercent(used)}% used, ${wholePercent(elapsed)}% of the period gone`}
+    >
+      <div
+        className="ja-pace-bar__fill"
+        style={{
+          width: `${clamp(used) * 100}%`,
+          background: used > 1 ? 'var(--danger-500)' : color,
+        }}
+      />
+      {showTick && (
+        <div className="ja-pace-bar__tick" style={{ left: `${clamp(elapsed) * 100}%` }} />
+      )}
     </div>
   );
 }
@@ -95,12 +128,37 @@ export function Figures({ items, trailing }: { items: Figure[]; trailing?: React
         <div key={f.label}>
           <Eyebrow>{f.label}</Eyebrow>
           <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
-            <span style={{ font: 'var(--weight-semibold) var(--text-2xl)/1 var(--font-display)', letterSpacing: 'var(--tracking-display)', color: 'var(--text-strong)' }}>
+            <span
+              style={{
+                font: 'var(--weight-semibold) var(--text-2xl)/1 var(--font-display)',
+                letterSpacing: 'var(--tracking-display)',
+                color: 'var(--text-strong)',
+              }}
+            >
               {f.value}
             </span>
-            {f.unit && <span style={{ font: 'var(--weight-medium) var(--text-xs)/1 var(--font-mono)', color: 'var(--text-muted)' }}>{f.unit}</span>}
+            {f.unit && (
+              <span
+                style={{
+                  font: 'var(--weight-medium) var(--text-xs)/1 var(--font-mono)',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                {f.unit}
+              </span>
+            )}
           </span>
-          {f.note && <span style={{ font: 'var(--type-body-sm)', fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{f.note}</span>}
+          {f.note && (
+            <span
+              style={{
+                font: 'var(--type-body-sm)',
+                fontSize: 'var(--text-2xs)',
+                color: 'var(--text-muted)',
+              }}
+            >
+              {f.note}
+            </span>
+          )}
         </div>
       ))}
       {trailing && <div style={{ justifyContent: 'center' }}>{trailing}</div>}
@@ -113,13 +171,20 @@ export function QuickBooksStatus({ compact = false }: { compact?: boolean }) {
   const { state, today } = useStore();
   const qb = state.grants.quickbooks;
   const style: React.CSSProperties = {
-    display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-    font: 'var(--type-body-sm)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+    font: 'var(--type-body-sm)',
+    fontSize: 'var(--text-xs)',
+    color: 'var(--text-muted)',
   };
   if (!qb.connected) {
     return (
       <span style={style}>
-        <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--neutral-300)' }} />
+        <span
+          style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--neutral-300)' }}
+        />
         QuickBooks is not connected
       </span>
     );
@@ -128,16 +193,33 @@ export function QuickBooksStatus({ compact = false }: { compact?: boolean }) {
     <span style={style}>
       <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--teal-500)' }} />
       <span style={{ color: 'var(--text-strong)' }}>QuickBooks Online</span>
-      {!compact && <><span aria-hidden="true">·</span><span>Read-only</span></>}
+      {!compact && (
+        <>
+          <span aria-hidden="true">·</span>
+          <span>Read-only</span>
+        </>
+      )}
       <span aria-hidden="true">·</span>
-      <span>Synced <span style={{ fontFamily: 'var(--font-mono)' }}>{syncedLabel(state, today)}</span></span>
+      <span>
+        Synced <span style={{ fontFamily: 'var(--font-mono)' }}>{syncedLabel(state, today)}</span>
+      </span>
     </span>
   );
 }
 
 /** A button that reads as a link: "View transactions", "Split". */
-export function LinkButton({ children, onClick }: { children: React.ReactNode; onClick: (e: React.MouseEvent) => void }) {
-  return <button type="button" className="ja-link-button" onClick={onClick}>{children}</button>;
+export function LinkButton({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <button type="button" className="ja-link-button" onClick={onClick}>
+      {children}
+    </button>
+  );
 }
 
 // ---------------------------------------------------------------------------

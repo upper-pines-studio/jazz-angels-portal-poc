@@ -42,7 +42,7 @@ let counter = 0;
  */
 function approvedOn(iso: string): string {
   const dayOfWeek = toDate(iso).getDay();
-  const monday = toISO(addDays(toDate(iso), ((8 - dayOfWeek) % 7) || 7));
+  const monday = toISO(addDays(toDate(iso), (8 - dayOfWeek) % 7 || 7));
   return monday > SEED_TODAY ? SEED_TODAY : monday;
 }
 
@@ -145,7 +145,17 @@ const THIS_WEEK: Array<[Shift, TimeEntryStatus]> = [
   [[5, 's-barry', 'advanced-workshop', 'Advanced Workshop syllabus', 1.5], 'draft'],
   [[6, 's-albert', 'studio-sessions', 'Combo A rehearsal, Studio 1', 2, 'e-combo-a'], 'draft'],
   [[6, 's-barry', 'studio-sessions', 'Combo B rehearsal, Studio 1', 2, 'e-combo-b'], 'draft'],
-  [[6, 's-devon', 'studio-sessions', 'Big Band rehearsal and setup, Main room', 3.25, 'e-big-band'], 'submitted'],
+  [
+    [
+      6,
+      's-devon',
+      'studio-sessions',
+      'Big Band rehearsal and setup, Main room',
+      3.25,
+      'e-big-band',
+    ],
+    'submitted',
+  ],
 ];
 
 /** The Monday of the week the story opens in. */
@@ -155,8 +165,8 @@ export const SEED_WEEK_START = '2026-09-07';
 export function makeSeed(): TimesheetsState {
   counter = 0;
   const entries: TimeEntry[] = [
-    ...SPRING_SUNDAYS.flatMap((sunday) => makeWeek(sunday, SPRING_WEEK, 'approved')),
-    ...SUMMER_MONDAYS.flatMap((monday) =>
+    ...SPRING_SUNDAYS.flatMap(sunday => makeWeek(sunday, SPRING_WEEK, 'approved')),
+    ...SUMMER_MONDAYS.flatMap(monday =>
       makeWeek(monday, SUMMER_WEEK, 'approved', SUMMER_DRAFTS[monday]),
     ),
     ...THIS_WEEK.map(([shift, status]) => makeEntry(SEED_WEEK_START, shift, status)),

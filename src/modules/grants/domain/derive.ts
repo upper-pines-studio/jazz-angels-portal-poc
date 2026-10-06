@@ -1,13 +1,7 @@
 import { fiscalYear } from '../../../core/derive';
 import { daysUntil } from '../../../core/format';
 import type { PortalState, ProgramId } from '../../../core/types';
-import {
-  PHASE_ORDER,
-  POST_AWARD_PHASES,
-  PRE_AWARD_PHASES,
-  isTerminal,
-  phaseIndex,
-} from './phases';
+import { PHASE_ORDER, POST_AWARD_PHASES, PRE_AWARD_PHASES, isTerminal, phaseIndex } from './phases';
 import type {
   Deadline,
   DeadlineKind,
@@ -156,7 +150,7 @@ export function deadlines(state: PortalState, today: string): Deadline[] {
 }
 
 export function grantDeadlines(state: PortalState, grantId: string, today: string): Deadline[] {
-  return deadlines(state, today).filter((d) => d.grantId === grantId);
+  return deadlines(state, today).filter(d => d.grantId === grantId);
 }
 
 /** The single most urgent open deadline for a grant, or undefined. */
@@ -170,7 +164,7 @@ export function nextDeadline(
 
 /** Money on one grant: what was awarded, what arrived, what has been spent. */
 export function grantMoney(state: PortalState, grantId: string): GrantMoney {
-  const grant = state.grants.grants.find((g) => g.id === grantId);
+  const grant = state.grants.grants.find(g => g.id === grantId);
   const awarded = grant?.amountAwarded ?? 0;
 
   let received = 0;
@@ -181,14 +175,14 @@ export function grantMoney(state: PortalState, grantId: string): GrantMoney {
     else expectedRemaining += p.amount;
   }
 
-  const expenses = state.grants.expenses.filter((e) => e.grantId === grantId);
+  const expenses = state.grants.expenses.filter(e => e.grantId === grantId);
   const spent = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-  const lines = state.grants.budgetLines.filter((l) => l.grantId === grantId);
+  const lines = state.grants.budgetLines.filter(l => l.grantId === grantId);
   const plannedTotal = lines.reduce((sum, l) => sum + l.planned, 0);
-  const byLine = lines.map((line) => ({
+  const byLine = lines.map(line => ({
     line,
-    spent: expenses.filter((e) => e.budgetLineId === line.id).reduce((s, e) => s + e.amount, 0),
+    spent: expenses.filter(e => e.budgetLineId === line.id).reduce((s, e) => s + e.amount, 0),
   }));
 
   return {
@@ -213,8 +207,7 @@ const AWARDED_PHASES: Phase[] = ['awarded', 'active', 'reporting', 'closed'];
  */
 export function fyTotals(state: PortalState, today: string): FyTotals {
   const fy = fiscalYear(today, state.core.settings.fiscalYearStartMonth);
-  const inFy = (date: string | undefined): boolean =>
-    !!date && date >= fy.start && date <= fy.end;
+  const inFy = (date: string | undefined): boolean => !!date && date >= fy.start && date <= fy.end;
 
   let requested = 0;
   let awarded = 0;
@@ -226,9 +219,11 @@ export function fyTotals(state: PortalState, today: string): FyTotals {
   }
 
   const received = state.grants.payments
-    .filter((p) => inFy(p.receivedDate))
+    .filter(p => inFy(p.receivedDate))
     .reduce((sum, p) => sum + p.amount, 0);
-  const spent = state.grants.expenses.filter((e) => inFy(e.date)).reduce((sum, e) => sum + e.amount, 0);
+  const spent = state.grants.expenses
+    .filter(e => inFy(e.date))
+    .reduce((sum, e) => sum + e.amount, 0);
 
   return { ...fy, requested, awarded, received, spent };
 }
@@ -236,8 +231,8 @@ export function fyTotals(state: PortalState, today: string): FyTotals {
 /** Grants per phase, with the money attached — the dashboard pipeline strip. */
 export function pipelineCounts(state: PortalState): PipelineBucket[] {
   const phases: Phase[] = [...PHASE_ORDER, 'declined', 'withdrawn'];
-  return phases.map((phase) => {
-    const grants = state.grants.grants.filter((g) => g.phase === phase);
+  return phases.map(phase => {
+    const grants = state.grants.grants.filter(g => g.phase === phase);
     return {
       phase,
       count: grants.length,
@@ -255,13 +250,13 @@ export function pipelineCounts(state: PortalState): PipelineBucket[] {
 export function grantsByView(state: PortalState, view: GrantView): Grant[] {
   switch (view) {
     case 'active':
-      return state.grants.grants.filter((g) => !isTerminal(g.phase));
+      return state.grants.grants.filter(g => !isTerminal(g.phase));
     case 'pre-award':
-      return state.grants.grants.filter((g) => PRE_AWARD_PHASES.includes(g.phase));
+      return state.grants.grants.filter(g => PRE_AWARD_PHASES.includes(g.phase));
     case 'post-award':
-      return state.grants.grants.filter((g) => POST_AWARD_PHASES.includes(g.phase));
+      return state.grants.grants.filter(g => POST_AWARD_PHASES.includes(g.phase));
     case 'closed':
-      return state.grants.grants.filter((g) => isTerminal(g.phase));
+      return state.grants.grants.filter(g => isTerminal(g.phase));
     case 'all':
     default:
       return state.grants.grants;
@@ -273,8 +268,8 @@ export function checklistProgress(
   state: PortalState,
   grantId: string,
 ): { done: number; total: number } {
-  const tasks = state.grants.tasks.filter((t) => t.grantId === grantId);
-  return { done: tasks.filter((t) => t.done).length, total: tasks.length };
+  const tasks = state.grants.tasks.filter(t => t.grantId === grantId);
+  return { done: tasks.filter(t => t.done).length, total: tasks.length };
 }
 
 // ---------------------------------------------------------------------------
@@ -282,20 +277,20 @@ export function checklistProgress(
 // ---------------------------------------------------------------------------
 
 export function grantById(state: PortalState, id: string): Grant | undefined {
-  return state.grants.grants.find((g) => g.id === id);
+  return state.grants.grants.find(g => g.id === id);
 }
 
 export function funderById(state: PortalState, id: string) {
-  return state.grants.funders.find((f) => f.id === id);
+  return state.grants.funders.find(f => f.id === id);
 }
 
 export function grantsByFunder(state: PortalState, funderId: string): Grant[] {
-  return state.grants.grants.filter((g) => g.funderId === funderId);
+  return state.grants.grants.filter(g => g.funderId === funderId);
 }
 
 /** Every grant whose money is for this program. Part of the module's public API. */
 export function grantsForProgram(state: PortalState, programId: ProgramId): Grant[] {
-  return state.grants.grants.filter((g) => g.program === programId);
+  return state.grants.grants.filter(g => g.program === programId);
 }
 
 /** Total awarded across every grant from this funder. */
@@ -310,7 +305,7 @@ export function funderTotals(state: PortalState, funderId: string) {
 
 export function grantActivity(state: PortalState, grantId: string) {
   return state.grants.activity
-    .filter((a) => a.grantId === grantId)
+    .filter(a => a.grantId === grantId)
     .slice()
     .sort((a, b) => b.at.localeCompare(a.at));
 }

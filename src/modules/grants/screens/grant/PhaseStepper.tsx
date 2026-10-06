@@ -65,15 +65,23 @@ export function PhaseStepper({ grant }: { grant: Grant }) {
     // The last pre-award phase we have a date for is where the grant got to.
     const reached = ladder.filter(p => phaseIndex(p) <= phaseIndex('submitted'));
     let last = 0;
-    reached.forEach((p, i) => { if (phaseDate(grant, p, activity)) last = i; });
+    reached.forEach((p, i) => {
+      if (phaseDate(grant, p, activity)) last = i;
+    });
     steps = reached.slice(0, last + 1).map(phase => ({
-      phase, state: 'done' as const, when: phaseDate(grant, phase, activity),
+      phase,
+      state: 'done' as const,
+      when: phaseDate(grant, phase, activity),
     }));
   } else {
     steps = ladder.map(phase => {
       const idx = phaseIndex(phase);
       const stepState = idx < current ? 'done' : idx === current ? 'current' : 'future';
-      return { phase, state: stepState as Step['state'], when: stepState === 'future' ? undefined : phaseDate(grant, phase, activity) };
+      return {
+        phase,
+        state: stepState as Step['state'],
+        when: stepState === 'future' ? undefined : phaseDate(grant, phase, activity),
+      };
     });
   }
 
@@ -88,12 +96,26 @@ export function PhaseStepper({ grant }: { grant: Grant }) {
             <StepCell key={step.phase} step={step} last={i === cells - 1} />
           ))}
           {stopped && (
-            <Cell last
-              dot={<span style={{
-                width: DOT, height: DOT, borderRadius: 'var(--radius-pill)', position: 'relative', zIndex: 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: terminalTone, border: `var(--border-width-thick) solid ${terminalTone}`,
-              }}><Icon name="x" size={12} color="var(--neutral-0)" /></span>}
+            <Cell
+              last
+              dot={
+                <span
+                  style={{
+                    width: DOT,
+                    height: DOT,
+                    borderRadius: 'var(--radius-pill)',
+                    position: 'relative',
+                    zIndex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: terminalTone,
+                    border: `var(--border-width-thick) solid ${terminalTone}`,
+                  }}
+                >
+                  <Icon name="x" size={12} color="var(--neutral-0)" />
+                </span>
+              }
               connector={undefined}
               name={PHASES[grant.phase].label}
               nameColor={grant.phase === 'declined' ? 'var(--danger-600)' : 'var(--text-strong)'}
@@ -110,39 +132,100 @@ function StepCell({ step, last }: { step: Step; last: boolean }) {
   const done = step.state === 'done';
   const currentStep = step.state === 'current';
   const dotStyle: React.CSSProperties = {
-    width: DOT, height: DOT, borderRadius: 'var(--radius-pill)', position: 'relative', zIndex: 1,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: DOT,
+    height: DOT,
+    borderRadius: 'var(--radius-pill)',
+    position: 'relative',
+    zIndex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     background: done ? 'var(--teal-500)' : currentStep ? 'var(--blue-500)' : 'var(--neutral-0)',
     border: `var(--border-width-thick) solid ${done ? 'var(--teal-500)' : currentStep ? 'var(--blue-500)' : 'var(--border-default)'}`,
     boxShadow: currentStep ? '0 0 0 4px var(--blue-50)' : undefined,
   };
   return (
-    <Cell last={last}
-      dot={<span style={dotStyle}>{done && <Icon name="check" size={12} color="var(--neutral-0)" />}</span>}
+    <Cell
+      last={last}
+      dot={
+        <span style={dotStyle}>
+          {done && <Icon name="check" size={12} color="var(--neutral-0)" />}
+        </span>
+      }
       connector={done ? 'var(--teal-500)' : 'var(--border-default)'}
       name={PHASES[step.phase].label}
       nameColor={done || currentStep ? 'var(--text-strong)' : 'var(--text-faint)'}
-      when={step.when ? (currentStep ? `since ${dateShort(step.when)}` : dateShort(step.when)) : undefined}
+      when={
+        step.when
+          ? currentStep
+            ? `since ${dateShort(step.when)}`
+            : dateShort(step.when)
+          : undefined
+      }
     />
   );
 }
 
-function Cell({ dot, connector, name, nameColor, when, last }: {
-  dot: React.ReactNode; connector?: string; name: string; nameColor: string; when?: string; last: boolean;
+function Cell({
+  dot,
+  connector,
+  name,
+  nameColor,
+  when,
+  last,
+}: {
+  dot: React.ReactNode;
+  connector?: string;
+  name: string;
+  nameColor: string;
+  when?: string;
+  last: boolean;
 }) {
   return (
-    <div style={{
-      flex: '1 0 84px', display: 'flex', flexDirection: 'column', alignItems: 'center',
-      gap: 'var(--space-2)', position: 'relative', textAlign: 'center',
-    }}>
+    <div
+      style={{
+        flex: '1 0 84px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 'var(--space-2)',
+        position: 'relative',
+        textAlign: 'center',
+      }}
+    >
       {!last && (
-        <span style={{ position: 'absolute', top: 11, left: '50%', right: '-50%', height: 2, background: connector ?? 'var(--border-default)' }} />
+        <span
+          style={{
+            position: 'absolute',
+            top: 11,
+            left: '50%',
+            right: '-50%',
+            height: 2,
+            background: connector ?? 'var(--border-default)',
+          }}
+        />
       )}
       {dot}
-      <span style={{
-        font: 'var(--type-eyebrow)', letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase', color: nameColor,
-      }}>{name}</span>
-      {when && <span style={{ font: 'var(--weight-medium) var(--text-3xs)/1.3 var(--font-mono)', color: 'var(--text-muted)' }}>{when}</span>}
+      <span
+        style={{
+          font: 'var(--type-eyebrow)',
+          letterSpacing: 'var(--tracking-caps)',
+          textTransform: 'uppercase',
+          color: nameColor,
+        }}
+      >
+        {name}
+      </span>
+      {when && (
+        <span
+          style={{
+            font: 'var(--weight-medium) var(--text-3xs)/1.3 var(--font-mono)',
+            color: 'var(--text-muted)',
+          }}
+        >
+          {when}
+        </span>
+      )}
     </div>
   );
 }

@@ -39,7 +39,7 @@ export type TeachingAction =
   | { type: 'update-student'; id: string; patch: Partial<Student> };
 
 function withId<T extends { id: string }>(rows: T[], id: string, patch: Partial<T>): T[] {
-  return rows.map((row) => (row.id === id ? { ...row, ...patch } : row));
+  return rows.map(row => (row.id === id ? { ...row, ...patch } : row));
 }
 
 /** The module's own reducer. The store only ever reaches it through the slice. */
@@ -49,16 +49,19 @@ export function reducer(state: TeachingState, action: TeachingAction): TeachingS
       return { ...state, meetings: [...state.meetings, action.meeting] };
 
     case 'set-mark': {
-      const meeting = state.meetings.find((m) => m.id === action.meetingId);
+      const meeting = state.meetings.find(m => m.id === action.meetingId);
       // A submitted roll call is the record. Reopen it before changing a mark.
       if (!meeting || meeting.rollSubmittedAt) return state;
 
       const existing = state.attendance.find(
-        (a) => a.meetingId === action.meetingId && a.studentId === action.studentId,
+        a => a.meetingId === action.meetingId && a.studentId === action.studentId,
       );
       if (existing) {
         if (existing.mark === action.mark) return state;
-        return { ...state, attendance: withId(state.attendance, existing.id, { mark: action.mark }) };
+        return {
+          ...state,
+          attendance: withId(state.attendance, existing.id, { mark: action.mark }),
+        };
       }
       const record: AttendanceRecord = {
         id: action.recordId,
@@ -70,16 +73,23 @@ export function reducer(state: TeachingState, action: TeachingAction): TeachingS
     }
 
     case 'submit-roll-call': {
-      const meeting = state.meetings.find((m) => m.id === action.meetingId);
+      const meeting = state.meetings.find(m => m.id === action.meetingId);
       if (!meeting) return state;
       // Everyone starts present: whoever on the roster was not marked late or
       // absent is written down as present.
       const marked = new Set(
-        state.attendance.filter((a) => a.meetingId === meeting.id).map((a) => a.studentId),
+        state.attendance.filter(a => a.meetingId === meeting.id).map(a => a.studentId),
       );
       const present: AttendanceRecord[] = state.students
-        .filter((s) => s.status === 'enrolled' && s.ensembleId === meeting.ensembleId && !marked.has(s.id))
-        .map((s) => ({ id: `att-${meeting.id}-${s.id}`, meetingId: meeting.id, studentId: s.id, mark: 'present' }));
+        .filter(
+          s => s.status === 'enrolled' && s.ensembleId === meeting.ensembleId && !marked.has(s.id),
+        )
+        .map(s => ({
+          id: `att-${meeting.id}-${s.id}`,
+          meetingId: meeting.id,
+          studentId: s.id,
+          mark: 'present',
+        }));
       return {
         ...state,
         attendance: present.length ? [...state.attendance, ...present] : state.attendance,
@@ -91,10 +101,10 @@ export function reducer(state: TeachingState, action: TeachingAction): TeachingS
     }
 
     case 'reopen-roll-call': {
-      const meeting = state.meetings.find((m) => m.id === action.meetingId);
+      const meeting = state.meetings.find(m => m.id === action.meetingId);
       if (!meeting?.rollSubmittedAt) return state;
       const { rollSubmittedAt: _closed, ...open } = meeting;
-      return { ...state, meetings: state.meetings.map((m) => (m.id === meeting.id ? open : m)) };
+      return { ...state, meetings: state.meetings.map(m => (m.id === meeting.id ? open : m)) };
     }
 
     case 'enroll-student':
@@ -166,7 +176,8 @@ const COLLECTIONS: Array<keyof TeachingState> = [
  */
 function withVenue<T extends { venueId?: string; room: string }>(row: T): T {
   if (row.venueId) return row;
-  if (row.room === 'Off-site') return { ...row, venueId: PARAMOUNT_MS_VENUE_ID, room: 'Band room B-12' };
+  if (row.room === 'Off-site')
+    return { ...row, venueId: PARAMOUNT_MS_VENUE_ID, room: 'Band room B-12' };
   return { ...row, venueId: STUDIO_VENUE_ID };
 }
 
@@ -187,7 +198,7 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     for (const key of COLLECTIONS) {
       if (!Array.isArray(candidate[key])) return undefined;
     }
-    const students = (candidate.students as Student[]).map((s) => ({
+    const students = (candidate.students as Student[]).map(s => ({
       ...s,
       status: s.status ?? 'enrolled',
       yearsIn: s.yearsIn ?? 1,

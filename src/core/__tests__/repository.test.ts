@@ -24,23 +24,25 @@ function installStorage() {
       return data.size;
     },
     clear: () => data.clear(),
-    getItem: (k) => data.get(k) ?? null,
-    key: (i) => Array.from(data.keys())[i] ?? null,
-    removeItem: (k) => void data.delete(k),
+    getItem: k => data.get(k) ?? null,
+    key: i => Array.from(data.keys())[i] ?? null,
+    removeItem: k => void data.delete(k),
     setItem: (k, v) => void data.set(k, v),
   };
   (globalThis as { localStorage?: Storage }).localStorage = ls;
   return { data, ls };
 }
 
-interface NoteState { notes: string[] }
+interface NoteState {
+  notes: string[];
+}
 
 const notes: ModuleSlice<NoteState, Record<string, never>> = {
   id: 'notes',
   seed: () => ({ notes: ['first'] }),
-  reducer: (state) => state,
+  reducer: state => state,
   createActions: () => ({}),
-  normalise: (raw) => (Array.isArray((raw as NoteState)?.notes) ? (raw as NoteState) : undefined),
+  normalise: raw => (Array.isArray((raw as NoteState)?.notes) ? (raw as NoteState) : undefined),
 };
 
 const SLICES = [coreSlice, notes] as unknown as PortalSlice[];
@@ -142,7 +144,9 @@ describe('export and import', () => {
     expect(() => importJson(SLICES, 'not json at all', TODAY)).toThrow(/valid JSON/);
     expect(() => importJson(SLICES, '"a string"', TODAY)).toThrow();
     expect(() => importJson(SLICES, '{"hello":"world"}', TODAY)).toThrow(/Jazz Angels export/);
-    expect(() => importJson(SLICES, '{"version":1,"slices":{"other":{}}}', TODAY)).toThrow(/missing portal data/);
+    expect(() => importJson(SLICES, '{"version":1,"slices":{"other":{}}}', TODAY)).toThrow(
+      /missing portal data/,
+    );
   });
 });
 

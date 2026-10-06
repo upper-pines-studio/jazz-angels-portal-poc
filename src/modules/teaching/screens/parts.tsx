@@ -33,20 +33,36 @@ export const MARK_COLOR: Record<Mark, string> = {
 
 /** How one student was marked. */
 export function MarkBadge({ mark }: { mark: Mark }) {
-  return <Badge tone={MARK_TONE[mark]} dot>{MARK_LABEL[mark]}</Badge>;
+  return (
+    <Badge tone={MARK_TONE[mark]} dot>
+      {MARK_LABEL[mark]}
+    </Badge>
+  );
 }
 
 /** Where a meeting's roll call stands. Gold is the attention state. */
 export function RollBadge({ submitted, due }: { submitted: boolean; due: boolean }) {
-  if (submitted) return <Badge tone="teal" dot>Roll in</Badge>;
-  if (due) return <Badge tone="gold" dot>Roll due</Badge>;
+  if (submitted)
+    return (
+      <Badge tone="teal" dot>
+        Roll in
+      </Badge>
+    );
+  if (due)
+    return (
+      <Badge tone="gold" dot>
+        Roll due
+      </Badge>
+    );
   return <Badge tone="neutral">Scheduled</Badge>;
 }
 
 /** A student's last five marks, oldest first. */
 export function MarkDots({ marks }: { marks: Mark[] }) {
   if (marks.length === 0) {
-    return <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-faint)' }}>No marks yet</span>;
+    return (
+      <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-faint)' }}>No marks yet</span>
+    );
   }
   return (
     <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
@@ -55,8 +71,11 @@ export function MarkDots({ marks }: { marks: Mark[] }) {
           key={i}
           title={MARK_LABEL[mark]}
           style={{
-            width: 10, height: 10, borderRadius: 'var(--radius-pill)',
-            background: MARK_COLOR[mark], display: 'inline-block',
+            width: 10,
+            height: 10,
+            borderRadius: 'var(--radius-pill)',
+            background: MARK_COLOR[mark],
+            display: 'inline-block',
           }}
         />
       ))}

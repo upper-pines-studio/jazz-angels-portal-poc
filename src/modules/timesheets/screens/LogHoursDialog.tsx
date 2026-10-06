@@ -22,9 +22,9 @@ export default function LogHoursDialog({
 }) {
   const { state, today, actions } = useStore();
 
-  const teachers = state.core.staff.filter((s) => s.teaches);
+  const teachers = state.core.staff.filter(s => s.teaches);
   const fallback = teachers[0]?.id ?? CURRENT_USER.id;
-  const defaultTeacher = teachers.some((s) => s.id === CURRENT_USER.id) ? CURRENT_USER.id : fallback;
+  const defaultTeacher = teachers.some(s => s.id === CURRENT_USER.id) ? CURRENT_USER.id : fallback;
 
   const [staffId, setStaffId] = React.useState(defaultTeacher);
   const [date, setDate] = React.useState(today);
@@ -38,7 +38,7 @@ export default function LogHoursDialog({
   const ensembles = state.core.settings.enabledModules.includes('teaching')
     ? ensembleOptions(state, programId ? (programId as ProgramId) : undefined)
     : [];
-  const ensemble = ensembles.some((e) => e.id === ensembleId) ? ensembleId : '';
+  const ensemble = ensembles.some(e => e.id === ensembleId) ? ensembleId : '';
 
   const parsed = Number(hours);
   const valid = activity.trim().length > 0 && Number.isFinite(parsed) && parsed > 0 && !!programId;
@@ -79,28 +79,28 @@ export default function LogHoursDialog({
         <Field label="Teacher" required>
           <Select
             value={staffId}
-            onChange={(e) => setStaffId(e.target.value)}
-            options={teachers.map((s) => ({ value: s.id, label: s.name }))}
+            onChange={e => setStaffId(e.target.value)}
+            options={teachers.map(s => ({ value: s.id, label: s.name }))}
           />
         </Field>
         <Field label="Date">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
         </Field>
         <Field label="Program" required>
           <Select
             value={programId}
-            onChange={(e) => setProgramId(e.target.value)}
-            options={state.core.programs.map((p) => ({ value: p.id, label: p.name }))}
+            onChange={e => setProgramId(e.target.value)}
+            options={state.core.programs.map(p => ({ value: p.id, label: p.name }))}
           />
         </Field>
         {ensembles.length > 0 && (
           <Field label="Ensemble" hint="Leave it blank for prep, planning and office work.">
             <Select
               value={ensemble}
-              onChange={(e) => setEnsembleId(e.target.value)}
+              onChange={e => setEnsembleId(e.target.value)}
               options={[
                 { value: '', label: 'No ensemble' },
-                ...ensembles.map((e) => ({ value: e.id, label: e.name })),
+                ...ensembles.map(e => ({ value: e.id, label: e.name })),
               ]}
             />
           </Field>
@@ -109,7 +109,7 @@ export default function LogHoursDialog({
           <Input
             value={activity}
             placeholder="Combo A rehearsal, Studio 1"
-            onChange={(e) => setActivity(e.target.value)}
+            onChange={e => setActivity(e.target.value)}
           />
         </Field>
         <Field label="Hours" required hint="Quarter hours: 0.25, 0.50, 0.75.">
@@ -120,7 +120,7 @@ export default function LogHoursDialog({
             min="0.25"
             style={{ width: 120 }}
             value={hours}
-            onChange={(e) => setHours(e.target.value)}
+            onChange={e => setHours(e.target.value)}
           />
         </Field>
       </div>

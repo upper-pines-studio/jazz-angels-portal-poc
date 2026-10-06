@@ -5,9 +5,26 @@ import { PhaseBadge, DeadlineStatusBadge } from './badges';
 import { OwnerAvatar } from '../../../app/components/badges';
 import AddGrantDialog from './grants/AddGrantDialog';
 import { TableScroll } from '../../../app/components/TableScroll';
-import { Card, DataTable, Tabs, Input, Select, Button, Icon, EmptyState } from '../../../design-system';
+import {
+  Card,
+  DataTable,
+  Tabs,
+  Input,
+  Select,
+  Button,
+  Icon,
+  EmptyState,
+} from '../../../design-system';
 import { useStore, programName, money, dateShort } from '../../../core';
-import { grantsByView, nextDeadline, funderById, fyTotals, ALL_PHASES, PHASES, PRE_AWARD_PHASES } from '../domain';
+import {
+  grantsByView,
+  nextDeadline,
+  funderById,
+  fyTotals,
+  ALL_PHASES,
+  PHASES,
+  PRE_AWARD_PHASES,
+} from '../domain';
 import type { Grant, GrantView, Phase } from '../domain';
 
 const VIEWS: Array<{ id: GrantView; label: string }> = [
@@ -46,7 +63,10 @@ export default function Grants() {
     const wantPhase = params.get('phase');
     const wantAdd = params.get('add') === '1';
     if (!wantPhase && !wantAdd) return;
-    if (wantPhase) { setPhase(wantPhase); setView('all'); }
+    if (wantPhase) {
+      setPhase(wantPhase);
+      setView('all');
+    }
     if (wantAdd) setAdding(true);
     const next = new URLSearchParams(params);
     next.delete('phase');
@@ -64,13 +84,22 @@ export default function Grants() {
     title: 'Grants',
     subtitle: `${activeCount} active · ${money(pipeline)} in pipeline · ${money(fy.awarded)} awarded this FY`,
     actions: (
-      <Button variant="primary" size="sm" iconLeft={<Icon name="plus" size={15} />} onClick={() => setAdding(true)}>
+      <Button
+        variant="primary"
+        size="sm"
+        iconLeft={<Icon name="plus" size={15} />}
+        onClick={() => setAdding(true)}
+      >
         Add grant
       </Button>
     ),
   });
 
-  const tabs = VIEWS.map(v => ({ id: v.id, label: v.label, count: grantsByView(state, v.id).length }));
+  const tabs = VIEWS.map(v => ({
+    id: v.id,
+    label: v.label,
+    count: grantsByView(state, v.id).length,
+  }));
 
   const needle = q.trim().toLowerCase();
   const rows = grantsByView(state, view)
@@ -97,25 +126,37 @@ export default function Grants() {
     ...c,
     render: (r: Row) => {
       switch (c.key) {
-        case 'funder': return funderById(state, r.grant.funderId)?.name ?? '—';
-        case 'title': return r.grant.title;
+        case 'funder':
+          return funderById(state, r.grant.funderId)?.name ?? '—';
+        case 'title':
+          return r.grant.title;
         case 'program': {
           const name = programName(state, r.grant.program);
-          return <span title={name} style={{ color: 'var(--text-muted)' }}>{name}</span>;
+          return (
+            <span title={name} style={{ color: 'var(--text-muted)' }}>
+              {name}
+            </span>
+          );
         }
-        case 'requested': return r.grant.amountRequested ? money(r.grant.amountRequested) : <Dash />;
-        case 'awarded': return r.grant.amountAwarded ? money(r.grant.amountAwarded) : <Dash />;
-        case 'deadline': return r.deadline
-          ? (
+        case 'requested':
+          return r.grant.amountRequested ? money(r.grant.amountRequested) : <Dash />;
+        case 'awarded':
+          return r.grant.amountAwarded ? money(r.grant.amountAwarded) : <Dash />;
+        case 'deadline':
+          return r.deadline ? (
             <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <span style={{ font: 'var(--type-numeric)' }}>{dateShort(r.deadline.date)}</span>
               <DeadlineStatusBadge status={r.deadline.status} />
             </span>
-          )
-          : <Dash />;
-        case 'owner': return <OwnerAvatar staffId={r.grant.ownerId} />;
-        case 'phase': return <PhaseBadge phase={r.grant.phase} />;
-        default: return null;
+          ) : (
+            <Dash />
+          );
+        case 'owner':
+          return <OwnerAvatar staffId={r.grant.ownerId} />;
+        case 'phase':
+          return <PhaseBadge phase={r.grant.phase} />;
+        default:
+          return null;
       }
     },
   }));
@@ -123,13 +164,21 @@ export default function Grants() {
   return (
     <>
       <div className="ja-tabs-scroll">
-        <Tabs tabs={tabs} active={view} onChange={id => setView(id as GrantView)} style={{ borderBottom: 0 }} />
+        <Tabs
+          tabs={tabs}
+          active={view}
+          onChange={id => setView(id as GrantView)}
+          style={{ borderBottom: 0 }}
+        />
       </div>
       <Card padding="0">
-        <div className="ja-filter-bar" style={{
-          padding: 'var(--space-4) var(--space-5)',
-          borderBottom: 'var(--border-width) solid var(--border-subtle)',
-        }}>
+        <div
+          className="ja-filter-bar"
+          style={{
+            padding: 'var(--space-4) var(--space-5)',
+            borderBottom: 'var(--border-width) solid var(--border-subtle)',
+          }}
+        >
           <div className="ja-filter-bar__search">
             <Input
               value={q}
@@ -143,7 +192,10 @@ export default function Grants() {
             <Select
               value={owner}
               onChange={e => setOwner(e.target.value)}
-              options={[{ value: 'all', label: 'All owners' }, ...state.core.staff.map(s => ({ value: s.id, label: s.name }))]}
+              options={[
+                { value: 'all', label: 'All owners' },
+                ...state.core.staff.map(s => ({ value: s.id, label: s.name })),
+              ]}
               style={{ width: '100%' }}
             />
           </div>
@@ -151,7 +203,10 @@ export default function Grants() {
             <Select
               value={program}
               onChange={e => setProgram(e.target.value)}
-              options={[{ value: 'all', label: 'All programs' }, ...state.core.programs.map(p => ({ value: p.id, label: p.name }))]}
+              options={[
+                { value: 'all', label: 'All programs' },
+                ...state.core.programs.map(p => ({ value: p.id, label: p.name })),
+              ]}
               style={{ width: '100%' }}
             />
           </div>
@@ -159,25 +214,39 @@ export default function Grants() {
             <Select
               value={phase}
               onChange={e => setPhase(e.target.value)}
-              options={[{ value: 'all', label: 'All phases' }, ...ALL_PHASES.map((p: Phase) => ({ value: p, label: PHASES[p].label }))]}
+              options={[
+                { value: 'all', label: 'All phases' },
+                ...ALL_PHASES.map((p: Phase) => ({ value: p, label: PHASES[p].label })),
+              ]}
               style={{ width: '100%' }}
             />
           </div>
         </div>
-        {rows.length === 0
-          ? (
-            <EmptyState
-              icon={<Icon name="landmark" size={22} />}
-              title="Nothing here yet"
-              message="No grants in this view yet. Add a grant to start tracking it."
-              action={<Button variant="primary" size="sm" iconLeft={<Icon name="plus" size={15} />} onClick={() => setAdding(true)}>Add grant</Button>}
+        {rows.length === 0 ? (
+          <EmptyState
+            icon={<Icon name="landmark" size={22} />}
+            title="Nothing here yet"
+            message="No grants in this view yet. Add a grant to start tracking it."
+            action={
+              <Button
+                variant="primary"
+                size="sm"
+                iconLeft={<Icon name="plus" size={15} />}
+                onClick={() => setAdding(true)}
+              >
+                Add grant
+              </Button>
+            }
+          />
+        ) : (
+          <TableScroll minWidth={900}>
+            <DataTable
+              columns={columns}
+              rows={rows}
+              onRowClick={(r: Row) => nav(`/grants/${r.id}`)}
             />
-          )
-          : (
-            <TableScroll minWidth={900}>
-              <DataTable columns={columns} rows={rows} onRowClick={(r: Row) => nav(`/grants/${r.id}`)} />
-            </TableScroll>
-          )}
+          </TableScroll>
+        )}
       </Card>
       {adding && <AddGrantDialog open onClose={() => setAdding(false)} />}
     </>

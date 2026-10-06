@@ -33,7 +33,15 @@ function accountHint(codes: string[], classId: string, clash: string | undefined
  * QuickBooks accounts and class, then Remove, Cancel and Save underneath.
  * With no `line` it adds a new one at the foot of the table.
  */
-export function BudgetLineEditor({ grant, line, lines, onClose, onSaved, onDirty, startRemoving = false }: {
+export function BudgetLineEditor({
+  grant,
+  line,
+  lines,
+  onClose,
+  onSaved,
+  onDirty,
+  startRemoving = false,
+}: {
   grant: Grant;
   line?: BudgetLine;
   /** Every line on the grant, for the duplicate check and the default class. */
@@ -55,12 +63,15 @@ export function BudgetLineEditor({ grant, line, lines, onClose, onSaved, onDirty
     return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
   }, [lines]);
 
-  const initial = React.useMemo(() => ({
-    category: line?.category ?? '',
-    amount: line ? plainNumber(line.planned) : '',
-    codes: line?.accountCodes ?? [],
-    classId: line ? line.classId ?? '' : usualClass,
-  }), [line, usualClass]);
+  const initial = React.useMemo(
+    () => ({
+      category: line?.category ?? '',
+      amount: line ? plainNumber(line.planned) : '',
+      codes: line?.accountCodes ?? [],
+      classId: line ? (line.classId ?? '') : usualClass,
+    }),
+    [line, usualClass],
+  );
 
   const [category, setCategory] = React.useState(initial.category);
   const [amount, setAmount] = React.useState(initial.amount);
@@ -70,9 +81,14 @@ export function BudgetLineEditor({ grant, line, lines, onClose, onSaved, onDirty
   const [removing, setRemoving] = React.useState(startRemoving);
   const categoryRef = React.useRef<HTMLDivElement | null>(null);
 
-  const dirty = category !== initial.category || amount !== initial.amount
-    || codes.join() !== initial.codes.join() || classId !== initial.classId;
-  React.useEffect(() => { onDirty(dirty); }, [dirty, onDirty]);
+  const dirty =
+    category !== initial.category ||
+    amount !== initial.amount ||
+    codes.join() !== initial.codes.join() ||
+    classId !== initial.classId;
+  React.useEffect(() => {
+    onDirty(dirty);
+  }, [dirty, onDirty]);
   React.useEffect(() => () => onDirty(false), [onDirty]);
 
   React.useEffect(() => {
@@ -81,15 +97,28 @@ export function BudgetLineEditor({ grant, line, lines, onClose, onSaved, onDirty
 
   const name = category.trim();
   const dollars = parseDollars(amount);
-  const duplicate = lines.find(l => l.id !== line?.id && l.category.trim().toLowerCase() === name.toLowerCase());
-  const categoryError = !name ? 'Give the line a category, like Instrument repair.'
-    : duplicate ? `This grant already has a line called ${duplicate.category}.` : undefined;
-  const amountError = dollars === undefined ? 'Enter the approved amount in whole dollars, like 8000. Zero is fine.' : undefined;
-  const error = tried ? categoryError ?? amountError : undefined;
+  const duplicate = lines.find(
+    l => l.id !== line?.id && l.category.trim().toLowerCase() === name.toLowerCase(),
+  );
+  const categoryError = !name
+    ? 'Give the line a category, like Instrument repair.'
+    : duplicate
+      ? `This grant already has a line called ${duplicate.category}.`
+      : undefined;
+  const amountError =
+    dollars === undefined
+      ? 'Enter the approved amount in whole dollars, like 8000. Zero is fine.'
+      : undefined;
+  const error = tried ? (categoryError ?? amountError) : undefined;
 
   // Two lines with the same account and class would make every such transaction ask which line.
   const clashes = codes
-    .map(code => ({ code, other: accountUsedBy(state, grant.id, code, line?.id).find(l => l.classId === classId && !!classId) }))
+    .map(code => ({
+      code,
+      other: accountUsedBy(state, grant.id, code, line?.id).find(
+        l => l.classId === classId && !!classId,
+      ),
+    }))
     .filter((c): c is { code: string; other: BudgetLine } => !!c.other);
   const clash = clashes.length
     ? `${accountLabel(state, clashes[0].code)} also counts on ${clashes[0].other.category}, so its transactions will ask which line.`
@@ -98,7 +127,12 @@ export function BudgetLineEditor({ grant, line, lines, onClose, onSaved, onDirty
   const save = () => {
     setTried(true);
     if (categoryError || amountError || dollars === undefined) return;
-    const patch = { category: name, planned: dollars, accountCodes: codes, classId: classId || undefined };
+    const patch = {
+      category: name,
+      planned: dollars,
+      accountCodes: codes,
+      classId: classId || undefined,
+    };
     if (line) {
       actions.grants.updateBudgetLine(line.id, patch);
       toast({ tone: 'success', title: 'Line saved', message: `${name}, ${money(dollars)}` });
@@ -113,53 +147,106 @@ export function BudgetLineEditor({ grant, line, lines, onClose, onSaved, onDirty
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.defaultPrevented) return;
     const tag = (e.target as HTMLElement).tagName;
-    if (e.key === 'Escape') { e.preventDefault(); onClose(); }
-    else if (e.key === 'Enter' && tag === 'INPUT') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+    } else if (e.key === 'Enter' && tag === 'INPUT') {
+      e.preventDefault();
+      save();
+    }
   };
 
   return (
-    <div className="budget-edit" onKeyDown={onKeyDown} role="group" aria-label={line ? `Edit ${line.category}` : 'New budget line'}>
+    <div
+      className="budget-edit"
+      onKeyDown={onKeyDown}
+      role="group"
+      aria-label={line ? `Edit ${line.category}` : 'New budget line'}
+    >
       <div className="budget-row budget-row--edit">
         <label className="budget-cell budget-cell--cat">
           <span className="budget-sr">Category</span>
           <div ref={categoryRef}>
-            <Input value={category} placeholder="Category" invalid={tried && !!categoryError}
-              onChange={e => setCategory(e.target.value)} {...inputExtras({ 'aria-invalid': tried && !!categoryError })} />
+            <Input
+              value={category}
+              placeholder="Category"
+              invalid={tried && !!categoryError}
+              onChange={e => setCategory(e.target.value)}
+              {...inputExtras({ 'aria-invalid': tried && !!categoryError })}
+            />
           </div>
         </label>
         <label className="budget-cell budget-cell--amt budget-amount">
           <span className="budget-sr">Approved amount in dollars</span>
-          <Input value={amount} mono prefix={<span className="budget-dollar">$</span>} placeholder="0"
-            invalid={tried && !!amountError} onChange={e => setAmount(e.target.value)}
-            {...inputExtras({ inputMode: 'numeric', 'aria-invalid': tried && !!amountError })} />
+          <Input
+            value={amount}
+            mono
+            prefix={<span className="budget-dollar">$</span>}
+            placeholder="0"
+            invalid={tried && !!amountError}
+            onChange={e => setAmount(e.target.value)}
+            {...inputExtras({ inputMode: 'numeric', 'aria-invalid': tried && !!amountError })}
+          />
         </label>
         <div className="budget-cell budget-cell--acc">
-          <BudgetAccountPicker grantId={grant.id} lineId={line?.id} value={codes} onChange={setCodes} />
+          <BudgetAccountPicker
+            grantId={grant.id}
+            lineId={line?.id}
+            value={codes}
+            onChange={setCodes}
+          />
         </div>
         <label className="budget-cell budget-cell--cls">
           <span className="budget-sr">QuickBooks class</span>
-          <Select value={classId} onChange={e => setClassId(e.target.value)}
-            options={[{ value: '', label: 'No class yet' }, ...classes.map(c => ({ value: c.id, label: c.name }))]} />
+          <Select
+            value={classId}
+            onChange={e => setClassId(e.target.value)}
+            options={[
+              { value: '', label: 'No class yet' },
+              ...classes.map(c => ({ value: c.id, label: c.name })),
+            ]}
+          />
         </label>
-        <div className="budget-cell budget-cell--match">{line && <BudgetMatched grantId={grant.id} lineId={line.id} />}</div>
+        <div className="budget-cell budget-cell--match">
+          {line && <BudgetMatched grantId={grant.id} lineId={line.id} />}
+        </div>
         <span className="budget-cell budget-cell--menu" />
       </div>
 
       <div className="budget-edit__foot">
         {removing && line ? (
-          <RemoveConfirm grant={grant} line={line} onKeep={() => setRemoving(false)} onRemoved={onClose} />
+          <RemoveConfirm
+            grant={grant}
+            line={line}
+            onKeep={() => setRemoving(false)}
+            onRemoved={onClose}
+          />
         ) : (
           <>
             <span className="budget-edit__eyebrow">{line ? 'Editing' : 'New line'}</span>
-            <span className={`budget-edit__hint${error ? ' is-error' : ''}`} role={error ? 'alert' : undefined}>
+            <span
+              className={`budget-edit__hint${error ? ' is-error' : ''}`}
+              role={error ? 'alert' : undefined}
+            >
               {error ?? accountHint(codes, classId, clash)}
             </span>
             <span className="budget-edit__actions">
               {line && (
-                <Button variant="ghost" size="sm" onClick={() => setRemoving(true)} style={{ color: 'var(--danger-500)' }}>Remove line</Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRemoving(true)}
+                  style={{ color: 'var(--danger-500)' }}
+                >
+                  Remove line
+                </Button>
               )}
-              <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-              <Button variant="primary" size="sm" onClick={save}>{line ? 'Save line' : 'Add line'}</Button>
+              <Button variant="secondary" size="sm" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button variant="primary" size="sm" onClick={save}>
+                {line ? 'Save line' : 'Add line'}
+              </Button>
             </span>
           </>
         )}
@@ -172,7 +259,12 @@ export function BudgetLineEditor({ grant, line, lines, onClose, onSaved, onDirty
  * The question before a line goes. A line with expenses on it stays: removing
  * it would leave those expenses on nothing, so it says where they are instead.
  */
-function RemoveConfirm({ grant, line, onKeep, onRemoved }: {
+function RemoveConfirm({
+  grant,
+  line,
+  onKeep,
+  onRemoved,
+}: {
   grant: Grant;
   line: BudgetLine;
   onKeep: () => void;
@@ -184,19 +276,26 @@ function RemoveConfirm({ grant, line, onKeep, onRemoved }: {
   const expenses = state.grants.expenses.filter(e => e.budgetLineId === line.id);
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-  React.useEffect(() => { keep.current?.querySelector('button')?.focus(); }, []);
+  React.useEffect(() => {
+    keep.current?.querySelector('button')?.focus();
+  }, []);
 
   if (expenses.length > 0) {
     const n = expenses.length;
     return (
       <div className="budget-remove" role="alert">
         <span className="budget-remove__text">
-          <strong>{line.category}</strong> cannot be removed while {n} {n === 1 ? 'expense' : 'expenses'} ({money(total)}) {n === 1 ? 'is' : 'are'} assigned to it.
-          Move {n === 1 ? 'it' : 'them'} to another line first.{' '}
-          <Link to={budgetTransactionsHref(grant.id, line.id)}>View {n === 1 ? 'that transaction' : `those ${n} transactions`}</Link>
+          <strong>{line.category}</strong> cannot be removed while {n}{' '}
+          {n === 1 ? 'expense' : 'expenses'} ({money(total)}) {n === 1 ? 'is' : 'are'} assigned to
+          it. Move {n === 1 ? 'it' : 'them'} to another line first.{' '}
+          <Link to={budgetTransactionsHref(grant.id, line.id)}>
+            View {n === 1 ? 'that transaction' : `those ${n} transactions`}
+          </Link>
         </span>
         <span className="budget-edit__actions" ref={keep}>
-          <Button variant="secondary" size="sm" onClick={onKeep}>Keep line</Button>
+          <Button variant="secondary" size="sm" onClick={onKeep}>
+            Keep line
+          </Button>
         </span>
       </div>
     );
@@ -205,15 +304,28 @@ function RemoveConfirm({ grant, line, onKeep, onRemoved }: {
   return (
     <div className="budget-remove" role="alert">
       <span className="budget-remove__text">
-        Remove <strong>{line.category}</strong>? Nothing is matched to it yet, so no expense is affected.
+        Remove <strong>{line.category}</strong>? Nothing is matched to it yet, so no expense is
+        affected.
       </span>
       <span className="budget-edit__actions" ref={keep}>
-        <Button variant="secondary" size="sm" onClick={onKeep}>Keep line</Button>
-        <Button variant="danger" size="sm" onClick={() => {
-          actions.grants.deleteBudgetLine(line.id);
-          toast({ tone: 'info', title: 'Line removed', message: `${line.category} is off the ${grant.title} budget.` });
-          onRemoved();
-        }}>Remove line</Button>
+        <Button variant="secondary" size="sm" onClick={onKeep}>
+          Keep line
+        </Button>
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={() => {
+            actions.grants.deleteBudgetLine(line.id);
+            toast({
+              tone: 'info',
+              title: 'Line removed',
+              message: `${line.category} is off the ${grant.title} budget.`,
+            });
+            onRemoved();
+          }}
+        >
+          Remove line
+        </Button>
       </span>
     </div>
   );

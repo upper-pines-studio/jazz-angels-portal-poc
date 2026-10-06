@@ -1,7 +1,16 @@
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { dateLong, money } from '../../../../core';
 import type { PortalState } from '../../../../core';
-import { aboutMoney, funderById, grantPace, linePaces, paceDriver, percent, reportsOwed, trackedGrants } from '../../domain';
+import {
+  aboutMoney,
+  funderById,
+  grantPace,
+  linePaces,
+  paceDriver,
+  percent,
+  reportsOwed,
+  trackedGrants,
+} from '../../domain';
 import type { Grant, Pace, PaceStatus } from '../../domain';
 
 /**
@@ -29,7 +38,7 @@ export interface PacedGrant {
 /** Every tracked grant with its pace, the ones that need attention first. */
 export function pacedGrants(state: PortalState, today: string): PacedGrant[] {
   return trackedGrants(state)
-    .map((grant) => ({ grant, pace: grantPace(state, grant.id, today) }))
+    .map(grant => ({ grant, pace: grantPace(state, grant.id, today) }))
     .sort((a, b) => STATUS_ORDER[a.pace.status] - STATUS_ORDER[b.pace.status]);
 }
 
@@ -98,7 +107,9 @@ function listJoin(items: string[]): string {
 }
 
 function term(state: PortalState, grantId: string, label: string): string | undefined {
-  return state.grants.terms.find((t) => t.grantId === grantId && t.label.toLowerCase() === label.toLowerCase())?.text;
+  return state.grants.terms.find(
+    t => t.grantId === grantId && t.label.toLowerCase() === label.toLowerCase(),
+  )?.text;
 }
 
 /** "the county", "the foundation": who to ask. */
@@ -122,14 +133,16 @@ function reportLabel(kind: 'interim' | 'final'): string {
  */
 export function whatToDo(state: PortalState, grant: Grant, pace: Pace, today: string): string {
   const monthsLeft = pace.daysLeft / DAYS_PER_MONTH;
-  const nextReport = reportsOwed(state).find((r) => r.grantId === grant.id);
+  const nextReport = reportsOwed(state).find(r => r.grantId === grant.id);
 
   if (pace.status === 'period-ended') {
     if (pace.remaining > 0) {
       let s = `Nothing more can be spent, so report the ${money(pace.remaining)}`;
-      if (nextReport) s += ` in the ${reportLabel(nextReport.kind)} due ${dateLong(nextReport.dueDate)}, ${fromNow(nextReport.dueDate, today)}`;
+      if (nextReport)
+        s += ` in the ${reportLabel(nextReport.kind)} due ${dateLong(nextReport.dueDate)}, ${fromNow(nextReport.dueDate, today)}`;
       else s += ' when you close the grant';
-      if (term(state, grant.id, 'Unspent funds')) s += `, and ask ${funderNoun(state, grant)} whether to return it`;
+      if (term(state, grant.id, 'Unspent funds'))
+        s += `, and ask ${funderNoun(state, grant)} whether to return it`;
       return `${s}.`;
     }
     if (pace.remaining < 0) {
@@ -158,9 +171,10 @@ export function whatToDo(state: PortalState, grant: Grant, pace: Pace, today: st
         /s$/.test(driver.line.category) ? 'they are' : 'it is'
       } ${percent(driver.used)} used${driver.runsOutOn ? ` and on course to run out around ${dateLong(driver.runsOutOn)}` : ''}`;
       const roomy = lines
-        .filter((l) => l.line.id !== driver.line.id && l.remaining > 0)
+        .filter(l => l.line.id !== driver.line.id && l.remaining > 0)
         .sort((a, b) => b.remaining - a.remaining)[0];
-      if (roomy) s += `, or move money in from ${roomy.line.category}, which is ${percent(roomy.used)} used`;
+      if (roomy)
+        s += `, or move money in from ${roomy.line.category}, which is ${percent(roomy.used)} used`;
       s += '.';
     } else {
       s = `Bring spending down to about ${aboutMoney(pace.perMonthNeeded)} a month to last until ${dateLong(pace.periodEnd)}.`;
@@ -171,10 +185,10 @@ export function whatToDo(state: PortalState, grant: Grant, pace: Pace, today: st
   }
 
   if (pace.status === 'spending-slow') {
-    const idle = linePaces(state, grant.id, today).filter((l) => l.spent === 0 && l.budget > 0);
+    const idle = linePaces(state, grant.id, today).filter(l => l.spent === 0 && l.budget > 0);
     let s: string;
     if (idle.length > 0) {
-      const names = listJoin(idle.map((l) => `${l.line.category} (${money(l.budget)})`));
+      const names = listJoin(idle.map(l => `${l.line.category} (${money(l.budget)})`));
       s = `${names} ${idle.length === 1 ? 'has' : 'have'} no spending yet, so plan and book that spending now.`;
     } else {
       s = `Spending needs to rise to about ${aboutMoney(pace.perMonthNeeded)} a month to use the award by ${dateLong(pace.periodEnd)}.`;
@@ -186,7 +200,8 @@ export function whatToDo(state: PortalState, grant: Grant, pace: Pace, today: st
 
   // On track (or ahead).
   let s = `Spending is on course to use the award by ${dateLong(pace.periodEnd)}. Keep to about ${aboutMoney(pace.perMonthNeeded)} a month.`;
-  if (nextReport) s += ` The next report is the ${reportLabel(nextReport.kind)}, due ${dateLong(nextReport.dueDate)}.`;
+  if (nextReport)
+    s += ` The next report is the ${reportLabel(nextReport.kind)}, due ${dateLong(nextReport.dueDate)}.`;
   return s;
 }
 

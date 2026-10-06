@@ -35,33 +35,54 @@ export default function GrantDetail() {
   const owner = grant ? staffById(state, grant.ownerId) : undefined;
   const transitions = grant ? availableTransitions(grant) : [];
 
-  usePageHeader(grant
-    ? {
-      title: grant.title,
-      subtitle: [funder?.name, programName(state, grant.program), owner?.name].filter(Boolean).join(' · '),
-      crumbs: [{ label: 'Grants', href: '/grants' }, { label: funder?.name ?? 'Grant' }],
-      actions: (
-        <div className="ja-actions">
-          {QUICKBOOKS_TABS.includes(params.get('tab') ?? '') && <span className="ja-hide-md"><QuickBooksStatus /></span>}
-          {transitions.slice().reverse().map(t => (
-            <Button key={t.to} size="sm"
-              variant={t.kind === 'primary' ? 'primary' : 'secondary'}
-              style={t.kind === 'danger' ? { color: 'var(--danger-500)' } : undefined}
-              onClick={() => setPending(t)}>
-              {t.label}
-            </Button>
-          ))}
-        </div>
-      ),
-    }
-    : { title: 'Grant', crumbs: [{ label: 'Grants', href: '/grants' }] });
+  usePageHeader(
+    grant
+      ? {
+          title: grant.title,
+          subtitle: [funder?.name, programName(state, grant.program), owner?.name]
+            .filter(Boolean)
+            .join(' · '),
+          crumbs: [{ label: 'Grants', href: '/grants' }, { label: funder?.name ?? 'Grant' }],
+          actions: (
+            <div className="ja-actions">
+              {QUICKBOOKS_TABS.includes(params.get('tab') ?? '') && (
+                <span className="ja-hide-md">
+                  <QuickBooksStatus />
+                </span>
+              )}
+              {transitions
+                .slice()
+                .reverse()
+                .map(t => (
+                  <Button
+                    key={t.to}
+                    size="sm"
+                    variant={t.kind === 'primary' ? 'primary' : 'secondary'}
+                    style={t.kind === 'danger' ? { color: 'var(--danger-500)' } : undefined}
+                    onClick={() => setPending(t)}
+                  >
+                    {t.label}
+                  </Button>
+                ))}
+            </div>
+          ),
+        }
+      : { title: 'Grant', crumbs: [{ label: 'Grants', href: '/grants' }] },
+  );
 
   if (!grant) {
     return (
       <Card>
-        <EmptyState icon={<Icon name="landmark" size={22} />} title="This grant doesn't exist"
+        <EmptyState
+          icon={<Icon name="landmark" size={22} />}
+          title="This grant doesn't exist"
           message="The link may be out of date, or the grant was removed. Every grant we track is on the grants list."
-          action={<Button variant="primary" onClick={() => nav('/grants')}>Go to all grants</Button>} />
+          action={
+            <Button variant="primary" onClick={() => nav('/grants')}>
+              Go to all grants
+            </Button>
+          }
+        />
       </Card>
     );
   }
@@ -71,19 +92,27 @@ export default function GrantDetail() {
   const count = (n: number) => n || undefined;
   const tabs = postAward
     ? [
-      { id: 'award', label: 'Award' },
-      { id: 'budget', label: 'Budget', count: count(state.grants.budgetLines.filter(l => l.grantId === grant.id).length) },
-      { id: 'expenses', label: 'Expenses', count: count(state.grants.expenses.filter(e => e.grantId === grant.id).length) },
-      { id: 'reports', label: 'Reports' },
-      { id: 'documents', label: 'Documents', count: count(grantFiles(state, grant.id).length) },
-      { id: 'checklist', label: 'Checklist' },
-      { id: 'activity', label: 'Activity' },
-    ]
+        { id: 'award', label: 'Award' },
+        {
+          id: 'budget',
+          label: 'Budget',
+          count: count(state.grants.budgetLines.filter(l => l.grantId === grant.id).length),
+        },
+        {
+          id: 'expenses',
+          label: 'Expenses',
+          count: count(state.grants.expenses.filter(e => e.grantId === grant.id).length),
+        },
+        { id: 'reports', label: 'Reports' },
+        { id: 'documents', label: 'Documents', count: count(grantFiles(state, grant.id).length) },
+        { id: 'checklist', label: 'Checklist' },
+        { id: 'activity', label: 'Activity' },
+      ]
     : [
-      { id: 'checklist', label: 'Checklist' },
-      { id: 'documents', label: 'Documents' },
-      { id: 'activity', label: 'Activity' },
-    ];
+        { id: 'checklist', label: 'Checklist' },
+        { id: 'documents', label: 'Documents' },
+        { id: 'activity', label: 'Activity' },
+      ];
   const first = tabs[0].id;
   const asked = params.get('tab');
   const tab = tabs.some(t => t.id === asked) ? (asked as string) : first;
@@ -98,10 +127,14 @@ export default function GrantDetail() {
   };
 
   // The budget is a wide table and takes the whole row; every other tab keeps a column beside it.
-  const aside = tab === 'budget' ? null
-    : tab === 'award' ? <AwardAside grant={grant} />
-    : tab === 'expenses' ? <ExpenseAside grant={grant} />
-    : <SideCards grant={grant} />;
+  const aside =
+    tab === 'budget' ? null : tab === 'award' ? (
+      <AwardAside grant={grant} />
+    ) : tab === 'expenses' ? (
+      <ExpenseAside grant={grant} />
+    ) : (
+      <SideCards grant={grant} />
+    );
 
   return (
     <>
@@ -110,7 +143,9 @@ export default function GrantDetail() {
       <div className={aside ? 'ja-split' : undefined} style={{ gap: 'var(--space-5)' }}>
         {/* The tab panel, and under it any card the tab hangs off itself: one
             card never nests inside another. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', minWidth: 0 }}>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', minWidth: 0 }}
+        >
           <Card padding="0">
             <div style={{ padding: 'var(--space-3) var(--space-6) 0' }}>
               <div className="ja-tabs-scroll">
@@ -132,7 +167,9 @@ export default function GrantDetail() {
         {aside}
       </div>
 
-      {pending && <TransitionDialog grant={grant} transition={pending} onClose={() => setPending(null)} />}
+      {pending && (
+        <TransitionDialog grant={grant} transition={pending} onClose={() => setPending(null)} />
+      )}
     </>
   );
 }

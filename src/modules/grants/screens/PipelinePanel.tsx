@@ -39,25 +39,46 @@ export function PipelinePanel() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <PhaseBadge phase={b.phase} />
-              <span style={{ marginLeft: 'auto', font: MONO_SM, color: b.count ? 'var(--text-body)' : 'var(--text-faint)' }}>
+              <span
+                style={{
+                  marginLeft: 'auto',
+                  font: MONO_SM,
+                  color: b.count ? 'var(--text-body)' : 'var(--text-faint)',
+                }}
+              >
                 {b.count}
               </span>
             </div>
-            <div style={{ height: 4, borderRadius: 999, background: 'var(--neutral-100)', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', borderRadius: 999,
-                width: `${(b.count / peak) * 100}%`,
-                background: TONE_COLOR[PHASES[b.phase].tone],
-              }} />
+            <div
+              style={{
+                height: 4,
+                borderRadius: 999,
+                background: 'var(--neutral-100)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  borderRadius: 999,
+                  width: `${(b.count / peak) * 100}%`,
+                  background: TONE_COLOR[PHASES[b.phase].tone],
+                }}
+              />
             </div>
           </div>
         ))}
       </div>
-      <div style={{
-        marginTop: 'var(--space-3)', paddingTop: 'var(--space-2)',
-        borderTop: 'var(--border-width) solid var(--border-subtle)',
-        font: 'var(--type-body-sm)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)',
-      }}>
+      <div
+        style={{
+          marginTop: 'var(--space-3)',
+          paddingTop: 'var(--space-2)',
+          borderTop: 'var(--border-width) solid var(--border-subtle)',
+          font: 'var(--type-body-sm)',
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-muted)',
+        }}
+      >
         Declined {countFor('declined')} · Withdrawn {countFor('withdrawn')}
       </div>
     </Card>

@@ -37,9 +37,9 @@ describe('weeks', () => {
 
   it('returns the week oldest first, and only that week', () => {
     const entries = entriesForWeek(state, SEED_WEEK_START);
-    const dates = entries.map((e) => e.date);
+    const dates = entries.map(e => e.date);
     expect([...dates].sort()).toEqual(dates);
-    expect(dates.every((d) => d >= '2026-09-07' && d <= '2026-09-13')).toBe(true);
+    expect(dates.every(d => d >= '2026-09-07' && d <= '2026-09-13')).toBe(true);
   });
 });
 
@@ -47,8 +47,8 @@ describe('awaitingApproval', () => {
   it('is Devon and Renee, and nobody else', () => {
     const waiting = awaitingApproval(state);
     expect(waiting).toHaveLength(2);
-    expect(waiting.map((e) => e.staffId)).toEqual(['s-renee', 's-devon']);
-    expect(waiting.every((e) => e.status === 'submitted')).toBe(true);
+    expect(waiting.map(e => e.staffId)).toEqual(['s-renee', 's-devon']);
+    expect(waiting.every(e => e.status === 'submitted')).toBe(true);
   });
 });
 
@@ -56,7 +56,7 @@ describe('hoursByProgram', () => {
   const spring = hoursByProgram(state, SPRING);
 
   it('covers every program worked in the range, biggest first', () => {
-    expect(spring.map((p) => p.programId)).toEqual([
+    expect(spring.map(p => p.programId)).toEqual([
       'studio-sessions',
       'homeschool',
       'in-school',
@@ -64,7 +64,7 @@ describe('hoursByProgram', () => {
       'jazz-legacy',
       'general-operating',
     ]);
-    const hours = spring.map((p) => p.hours);
+    const hours = spring.map(p => p.hours);
     expect([...hours].sort((a, b) => b - a)).toEqual(hours);
   });
 

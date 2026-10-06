@@ -28,10 +28,10 @@ describe('phase metadata', () => {
   });
 
   it('splits pre-award from post-award', () => {
-    expect(['prospect', 'loi', 'applying', 'submitted'].every((p) => isPreAward(p as Phase))).toBe(
+    expect(['prospect', 'loi', 'applying', 'submitted'].every(p => isPreAward(p as Phase))).toBe(
       true,
     );
-    expect(['awarded', 'active', 'reporting', 'closed'].every((p) => isPostAward(p as Phase))).toBe(
+    expect(['awarded', 'active', 'reporting', 'closed'].every(p => isPostAward(p as Phase))).toBe(
       true,
     );
     expect(isPreAward('awarded')).toBe(false);
@@ -70,12 +70,12 @@ describe('availableTransitions', () => {
   it('offers "Start LOI" first when an LOI is required', () => {
     const t = availableTransitions(grant('prospect', true));
     expect(t[0]).toMatchObject({ to: 'loi', label: 'Start LOI', kind: 'primary' });
-    expect(t.map((x) => x.to)).toEqual(['loi', 'applying', 'withdrawn']);
+    expect(t.map(x => x.to)).toEqual(['loi', 'applying', 'withdrawn']);
   });
 
   it('goes straight to applying when no LOI is required', () => {
     const t = availableTransitions(grant('prospect', false));
-    expect(t.map((x) => x.to)).toEqual(['applying', 'withdrawn']);
+    expect(t.map(x => x.to)).toEqual(['applying', 'withdrawn']);
     expect(t[0].label).toBe('Start application');
   });
 
@@ -100,25 +100,25 @@ describe('availableTransitions', () => {
   });
 
   it('moves awarded → active and active → reporting', () => {
-    expect(availableTransitions(grant('awarded')).map((t) => t.to)).toEqual(['active']);
-    expect(availableTransitions(grant('active')).map((t) => t.to)).toEqual(['reporting']);
+    expect(availableTransitions(grant('awarded')).map(t => t.to)).toEqual(['active']);
+    expect(availableTransitions(grant('active')).map(t => t.to)).toEqual(['reporting']);
   });
 
   it('lets reporting go back to active or close out', () => {
     const t = availableTransitions(grant('reporting'));
-    expect(t.map((x) => x.to)).toEqual(['active', 'closed']);
+    expect(t.map(x => x.to)).toEqual(['active', 'closed']);
     expect(t[0].label).toBe('Report submitted');
     expect(t[1].label).toBe('Close grant');
   });
 
   it('offers Withdraw as a danger action from every pre-award phase only', () => {
     for (const phase of ['prospect', 'loi', 'applying', 'submitted'] as Phase[]) {
-      const withdraw = availableTransitions(grant(phase)).find((t) => t.to === 'withdrawn');
+      const withdraw = availableTransitions(grant(phase)).find(t => t.to === 'withdrawn');
       expect(withdraw, phase).toBeDefined();
       expect(withdraw!.kind).toBe('danger');
     }
     for (const phase of ['awarded', 'active', 'reporting'] as Phase[]) {
-      expect(availableTransitions(grant(phase)).some((t) => t.to === 'withdrawn')).toBe(false);
+      expect(availableTransitions(grant(phase)).some(t => t.to === 'withdrawn')).toBe(false);
     }
   });
 

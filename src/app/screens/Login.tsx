@@ -18,7 +18,9 @@ export default function Login() {
   const focusField = (id: string) =>
     formRef.current?.querySelector<HTMLInputElement>('#' + id)?.focus();
 
-  React.useEffect(() => { focusField('login-username'); }, []);
+  React.useEffect(() => {
+    focusField('login-username');
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,14 +48,36 @@ export default function Login() {
           </div>
           <form ref={formRef} className="ja-login__form" onSubmit={onSubmit} noValidate>
             <Field label="Username" htmlFor="login-username">
-              <Input {...inputAttrs({ id: 'login-username', name: 'username', autoComplete: 'username', autoCapitalize: 'none', spellCheck: 'false' })}
-                value={username} onChange={e => setUsername(e.target.value)} />
+              <Input
+                {...inputAttrs({
+                  id: 'login-username',
+                  name: 'username',
+                  autoComplete: 'username',
+                  autoCapitalize: 'none',
+                  spellCheck: 'false',
+                })}
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+              />
             </Field>
-            <Field label="Password" htmlFor="login-password"
-              error={failed ? 'That username and password don’t match.' : undefined}>
-              <Input type="password" invalid={failed}
-                {...inputAttrs({ id: 'login-password', name: 'password', autoComplete: 'current-password' })}
-                value={password} onChange={e => { setPassword(e.target.value); }} />
+            <Field
+              label="Password"
+              htmlFor="login-password"
+              error={failed ? 'That username and password don’t match.' : undefined}
+            >
+              <Input
+                type="password"
+                invalid={failed}
+                {...inputAttrs({
+                  id: 'login-password',
+                  name: 'password',
+                  autoComplete: 'current-password',
+                })}
+                value={password}
+                onChange={e => {
+                  setPassword(e.target.value);
+                }}
+              />
             </Field>
             <Button {...({ type: 'submit' } as object)} fullWidth disabled={busy}>
               {busy ? 'Signing in' : 'Sign in'}

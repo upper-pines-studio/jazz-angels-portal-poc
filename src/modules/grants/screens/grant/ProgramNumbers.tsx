@@ -25,7 +25,12 @@ interface Numbers {
   teachingHours: number;
 }
 
-function numbersFor(state: PortalState, programId: ProgramId | undefined, from: string, to: string): Numbers {
+function numbersFor(
+  state: PortalState,
+  programId: ProgramId | undefined,
+  from: string,
+  to: string,
+): Numbers {
   const roll = attendanceSummary(state, { programId, from, to });
   const hours = programId
     ? hoursForProgram(state, programId, from, to)
@@ -62,16 +67,23 @@ export function ProgramNumbers({ grant }: { grant: Grant }) {
   const wholeStudio = grant.program === 'general-operating';
   const scope = wholeStudio ? 'All programs' : programName(state, grant.program);
 
-  const off = ['teaching', 'timesheets'].filter(id => !state.core.settings.enabledModules.includes(id));
-  const numbers = off.length === 0 ? numbersFor(state, wholeStudio ? undefined : grant.program, from, to) : undefined;
+  const off = ['teaching', 'timesheets'].filter(
+    id => !state.core.settings.enabledModules.includes(id),
+  );
+  const numbers =
+    off.length === 0
+      ? numbersFor(state, wholeStudio ? undefined : grant.program, from, to)
+      : undefined;
   const counted = numbers && numbers.meetings > 0;
 
-  const stats: Array<[label: string, value: string, source: Source]> = numbers ? [
-    ['Meetings held', String(numbers.meetings), 'Teaching'],
-    ['Students served', String(numbers.studentsServed), 'Teaching'],
-    ['Attendance', `${Math.round(numbers.attendanceRate * 100)}%`, 'Teaching'],
-    ['Teaching hours', numbers.teachingHours.toFixed(2), 'Timesheets'],
-  ] : [];
+  const stats: Array<[label: string, value: string, source: Source]> = numbers
+    ? [
+        ['Meetings held', String(numbers.meetings), 'Teaching'],
+        ['Students served', String(numbers.studentsServed), 'Teaching'],
+        ['Attendance', `${Math.round(numbers.attendanceRate * 100)}%`, 'Teaching'],
+        ['Teaching hours', numbers.teachingHours.toFixed(2), 'Timesheets'],
+      ]
+    : [];
 
   return (
     <Card
@@ -82,35 +94,59 @@ export function ProgramNumbers({ grant }: { grant: Grant }) {
       {off.length > 0 && <ModulesOff off={off} onSettings={() => nav('/settings')} />}
 
       {numbers && !counted && (
-        <EmptyState icon={<Icon name="calendar" size={22} />} title="No numbers yet"
-          message={`Numbers appear here once roll call is taken for ${scope}.`} />
+        <EmptyState
+          icon={<Icon name="calendar" size={22} />}
+          title="No numbers yet"
+          message={`Numbers appear here once roll call is taken for ${scope}.`}
+        />
       )}
 
       {counted && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <span style={{
-            font: 'var(--type-eyebrow)', letterSpacing: 'var(--tracking-caps)',
-            textTransform: 'uppercase', color: 'var(--teal-500)',
-          }}>
+          <span
+            style={{
+              font: 'var(--type-eyebrow)',
+              letterSpacing: 'var(--tracking-caps)',
+              textTransform: 'uppercase',
+              color: 'var(--teal-500)',
+            }}
+          >
             {`From roll call and timesheets · ${scope} · ${dateRange(from, to)}`}
           </span>
 
           <div className="ja-program-numbers">
             {stats.map(([label, value, source]) => (
-              <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                <span style={{
-                  font: 'var(--type-eyebrow)', letterSpacing: 'var(--tracking-caps)',
-                  textTransform: 'uppercase', color: 'var(--text-muted)',
-                }}>
+              <div
+                key={label}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                  alignItems: 'flex-start',
+                }}
+              >
+                <span
+                  style={{
+                    font: 'var(--type-eyebrow)',
+                    letterSpacing: 'var(--tracking-caps)',
+                    textTransform: 'uppercase',
+                    color: 'var(--text-muted)',
+                  }}
+                >
                   {label}
                 </span>
-                <span style={{
-                  font: 'var(--weight-semibold) var(--text-2xl)/1 var(--font-display)',
-                  letterSpacing: 'var(--tracking-display)', color: 'var(--text-strong)',
-                }}>
+                <span
+                  style={{
+                    font: 'var(--weight-semibold) var(--text-2xl)/1 var(--font-display)',
+                    letterSpacing: 'var(--tracking-display)',
+                    color: 'var(--text-strong)',
+                  }}
+                >
                   {value}
                 </span>
-                <Button variant="link" size="sm" onClick={() => nav(SOURCE[source])}>{source}</Button>
+                <Button variant="link" size="sm" onClick={() => nav(SOURCE[source])}>
+                  {source}
+                </Button>
               </div>
             ))}
           </div>
@@ -123,7 +159,11 @@ export function ProgramNumbers({ grant }: { grant: Grant }) {
 /** Teaching or Timesheets is switched off in Settings, so the numbers are not there to read. */
 function ModulesOff({ off, onSettings }: { off: string[]; onSettings: () => void }) {
   const both = off.length === 2;
-  const names = both ? 'Teaching and Timesheets' : off[0] === 'teaching' ? 'Teaching' : 'Timesheets';
+  const names = both
+    ? 'Teaching and Timesheets'
+    : off[0] === 'teaching'
+      ? 'Teaching'
+      : 'Timesheets';
   const message = both
     ? 'Turn on Teaching and Timesheets in Settings to see these numbers here.'
     : off[0] === 'teaching'
@@ -131,9 +171,15 @@ function ModulesOff({ off, onSettings }: { off: string[]; onSettings: () => void
       : 'Turn on Timesheets in Settings to see teaching-hour numbers here.';
 
   return (
-    <EmptyState icon={<Icon name="settings" size={22} />}
+    <EmptyState
+      icon={<Icon name="settings" size={22} />}
       title={`${names} ${both ? 'are' : 'is'} turned off`}
       message={message}
-      action={<Button variant="secondary" size="sm" onClick={onSettings}>Open Settings</Button>} />
+      action={
+        <Button variant="secondary" size="sm" onClick={onSettings}>
+          Open Settings
+        </Button>
+      }
+    />
   );
 }

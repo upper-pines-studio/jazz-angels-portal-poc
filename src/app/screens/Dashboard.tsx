@@ -54,7 +54,12 @@ export default function Dashboard() {
     title: 'Dashboard',
     subtitle,
     actions: canAddGrant ? (
-      <Button variant="primary" size="sm" iconLeft={<Icon name="plus" size={15} />} onClick={() => nav('/grants?add=1')}>
+      <Button
+        variant="primary"
+        size="sm"
+        iconLeft={<Icon name="plus" size={15} />}
+        onClick={() => nav('/grants?add=1')}
+      >
         Add grant
       </Button>
     ) : undefined,
@@ -65,11 +70,23 @@ export default function Dashboard() {
       {shown.length > 0 && (
         <div className="ja-grid-stats">
           {shown.map(s => {
-            const card = <StatCard label={s.label} value={s.value} unit={s.unit} accent={s.accent} footnote={s.footnote} />;
+            const card = (
+              <StatCard
+                label={s.label}
+                value={s.value}
+                unit={s.unit}
+                accent={s.accent}
+                footnote={s.footnote}
+              />
+            );
             const href = s.href;
-            return href
-              ? <div key={s.id} onClick={() => nav(href)} style={{ cursor: 'pointer' }}>{card}</div>
-              : <React.Fragment key={s.id}>{card}</React.Fragment>;
+            return href ? (
+              <div key={s.id} onClick={() => nav(href)} style={{ cursor: 'pointer' }}>
+                {card}
+              </div>
+            ) : (
+              <React.Fragment key={s.id}>{card}</React.Fragment>
+            );
           })}
         </div>
       )}
@@ -77,7 +94,9 @@ export default function Dashboard() {
       <div className="ja-split" style={{ gap: 'var(--space-4)' }}>
         <Card
           title="Attention"
-          subtitle={spare ? `${spare.label}: ${spare.value}` : 'Overdue and due in the next 14 days'}
+          subtitle={
+            spare ? `${spare.label}: ${spare.value}` : 'Overdue and due in the next 14 days'
+          }
           padding="0"
         >
           {attention.length === 0 ? (
@@ -92,15 +111,46 @@ export default function Dashboard() {
                 rows={attention}
                 onRowClick={(row: AttentionItem) => nav(row.href)}
                 columns={[
-                  { key: 'date', label: 'Date', width: '90px', mono: true, render: (d: AttentionItem) => dateShort(d.date) },
-                  { key: 'what', label: 'What', width: '1fr', strong: true, render: (d: AttentionItem) => d.label },
                   {
-                    key: 'detail', label: 'Detail', width: '1.4fr',
-                    render: (d: AttentionItem) => <span style={{ color: 'var(--text-muted)' }}>{d.detail}</span>,
+                    key: 'date',
+                    label: 'Date',
+                    width: '90px',
+                    mono: true,
+                    render: (d: AttentionItem) => dateShort(d.date),
                   },
-                  { key: 'source', label: 'Module', width: '100px', render: (d: AttentionItem) => <SourceBadge source={d.source} /> },
-                  { key: 'owner', label: 'Owner', width: '40px', render: (d: AttentionItem) => <OwnerAvatar staffId={d.ownerId} /> },
-                  { key: 'status', label: 'Status', width: '110px', render: (d: AttentionItem) => <AttentionStatusBadge status={d.status} /> },
+                  {
+                    key: 'what',
+                    label: 'What',
+                    width: '1fr',
+                    strong: true,
+                    render: (d: AttentionItem) => d.label,
+                  },
+                  {
+                    key: 'detail',
+                    label: 'Detail',
+                    width: '1.4fr',
+                    render: (d: AttentionItem) => (
+                      <span style={{ color: 'var(--text-muted)' }}>{d.detail}</span>
+                    ),
+                  },
+                  {
+                    key: 'source',
+                    label: 'Module',
+                    width: '100px',
+                    render: (d: AttentionItem) => <SourceBadge source={d.source} />,
+                  },
+                  {
+                    key: 'owner',
+                    label: 'Owner',
+                    width: '40px',
+                    render: (d: AttentionItem) => <OwnerAvatar staffId={d.ownerId} />,
+                  },
+                  {
+                    key: 'status',
+                    label: 'Status',
+                    width: '110px',
+                    render: (d: AttentionItem) => <AttentionStatusBadge status={d.status} />,
+                  },
                 ]}
               />
             </TableScroll>
@@ -108,7 +158,9 @@ export default function Dashboard() {
         </Card>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          {panels.map((Panel, i) => <Panel key={i} />)}
+          {panels.map((Panel, i) => (
+            <Panel key={i} />
+          ))}
         </div>
       </div>
     </>

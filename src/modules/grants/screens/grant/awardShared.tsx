@@ -43,39 +43,51 @@ async function countPdfPages(file: File): Promise<number | undefined> {
  */
 export function useStoreGrantFile() {
   const { actions } = useStore();
-  return React.useCallback((grantId: string, file: File, kind: GrantFileKind): { id: string } | { error: string } => {
-    const described = describeFile(file);
-    if ('error' in described) return described;
-    const id = actions.grants.addFile({
-      grantId,
-      kind,
-      name: described.name,
-      format: described.format,
-      sizeKb: described.sizeKb,
-      pages: described.format === 'pdf' ? undefined : 1,
-    });
-    rememberFile(id, file);
-    if (described.format === 'pdf') {
-      void countPdfPages(file).then(pages => { if (pages) actions.grants.updateFile(id, { pages }); });
-    }
-    return { id };
-  }, [actions]);
+  return React.useCallback(
+    (grantId: string, file: File, kind: GrantFileKind): { id: string } | { error: string } => {
+      const described = describeFile(file);
+      if ('error' in described) return described;
+      const id = actions.grants.addFile({
+        grantId,
+        kind,
+        name: described.name,
+        format: described.format,
+        sizeKb: described.sizeKb,
+        pages: described.format === 'pdf' ? undefined : 1,
+      });
+      rememberFile(id, file);
+      if (described.format === 'pdf') {
+        void countPdfPages(file).then(pages => {
+          if (pages) actions.grants.updateFile(id, { pages });
+        });
+      }
+      return { id };
+    },
+    [actions],
+  );
 }
 
 /** Remove a stored file and let go of its bytes. */
 export function useRemoveGrantFile() {
   const { actions } = useStore();
-  return React.useCallback((file: GrantFile) => {
-    actions.grants.deleteFile(file.id);
-    forgetFile(file.id);
-  }, [actions]);
+  return React.useCallback(
+    (file: GrantFile) => {
+      actions.grants.deleteFile(file.id);
+      forgetFile(file.id);
+    },
+    [actions],
+  );
 }
 
 /**
  * The page of the award letter something came from. A select when the letter
  * says how many pages it has, a number otherwise. Empty means "not from the letter".
  */
-export function LetterPageField({ value, onChange, pages }: {
+export function LetterPageField({
+  value,
+  onChange,
+  pages,
+}: {
   value: string;
   onChange: (next: string) => void;
   pages?: number;
@@ -87,7 +99,15 @@ export function LetterPageField({ value, onChange, pages }: {
     if (value && Number(value) > pages) options.push({ value, label: `Page ${value}` });
     return <Select value={value} options={options} onChange={e => onChange(e.target.value)} />;
   }
-  return <Input type="number" mono value={value} placeholder="1" onChange={e => onChange(e.target.value.replace(/[^0-9]/g, ''))} />;
+  return (
+    <Input
+      type="number"
+      mono
+      value={value}
+      placeholder="1"
+      onChange={e => onChange(e.target.value.replace(/[^0-9]/g, ''))}
+    />
+  );
 }
 
 /** "3" → 3, "" or "0" → undefined. */

@@ -35,9 +35,9 @@ function attention(state: PortalState, today: string): AttentionItem[] {
   if (waiting.length === 0) return [];
 
   // One row for the lot, named so Barry knows whose hours are sitting there.
-  const names = [
-    ...new Set(waiting.map((e) => staffById(state, e.staffId)?.name ?? 'Unknown')),
-  ].sort((a, b) => a.localeCompare(b));
+  const names = [...new Set(waiting.map(e => staffById(state, e.staffId)?.name ?? 'Unknown'))].sort(
+    (a, b) => a.localeCompare(b),
+  );
   return [
     {
       id: 'timesheets-awaiting',
@@ -62,7 +62,7 @@ export const manifest: ModuleManifest = {
         path: '/timesheets',
         label: 'Timesheets',
         icon: 'clock',
-        badge: (state) => awaitingCount(state),
+        badge: state => awaitingCount(state),
       },
     ],
   },

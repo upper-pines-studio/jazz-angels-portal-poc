@@ -11,7 +11,13 @@ import { BudgetPopover } from './BudgetPopover';
  * Keyboard: type to search, arrows to move, Enter or Space to tick, Backspace
  * on an empty search to drop the last chip, Escape to close.
  */
-export function BudgetAccountPicker({ grantId, lineId, value, onChange, invalid = false }: {
+export function BudgetAccountPicker({
+  grantId,
+  lineId,
+  value,
+  onChange,
+  invalid = false,
+}: {
   grantId: string;
   /** The line being edited, so it does not count as "used by" itself. */
   lineId?: string;
@@ -39,7 +45,8 @@ export function BudgetAccountPicker({ grantId, lineId, value, onChange, invalid 
     .filter(a => !q || a.code.includes(q) || a.name.toLowerCase().includes(q))
     .map(a => ({ ...a, used: usedBy(a.code) }))
     .sort((a, b) => {
-      const rank = (o: { code: string; used: string[] }) => (openedWith.includes(o.code) ? 0 : o.used.length ? 2 : 1);
+      const rank = (o: { code: string; used: string[] }) =>
+        openedWith.includes(o.code) ? 0 : o.used.length ? 2 : 1;
       return rank(a) - rank(b) || a.code.localeCompare(b.code);
     });
 
@@ -71,14 +78,20 @@ export function BudgetAccountPicker({ grantId, lineId, value, onChange, invalid 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
-      if (!open) { show(); return; }
+      if (!open) {
+        show();
+        return;
+      }
       const step = e.key === 'ArrowDown' ? 1 : -1;
       setActive(i => (options.length ? (i + step + options.length) % options.length : 0));
     } else if (e.key === 'Enter' || (e.key === ' ' && open && !query)) {
       // Enter here ticks an account; it must not save the line.
       e.preventDefault();
       e.stopPropagation();
-      if (!open) { show(); return; }
+      if (!open) {
+        show();
+        return;
+      }
       const o = options[active];
       if (o) toggle(o.code);
     } else if (e.key === 'Escape') {
@@ -98,51 +111,101 @@ export function BudgetAccountPicker({ grantId, lineId, value, onChange, invalid 
 
   return (
     <div className="budget-picker-wrap">
-      <div ref={box}
+      <div
+        ref={box}
         className={`budget-picker${focused || open ? ' is-focused' : ''}${invalid ? ' is-invalid' : ''}`}
         onMouseDown={e => {
           if ((e.target as HTMLElement).closest('button')) return;
           e.preventDefault();
           input.current?.focus();
-          if (open) close(); else show();
-        }}>
+          if (open) close();
+          else show();
+        }}
+      >
         {value.map(code => (
           <span key={code} className="budget-chip budget-chip--edit">
-            <b>{code}</b>{name(code)}
-            <button type="button" aria-label={`Remove ${code} ${name(code)}`}
-              onClick={() => { onChange(value.filter(c => c !== code)); input.current?.focus(); }}>
+            <b>{code}</b>
+            {name(code)}
+            <button
+              type="button"
+              aria-label={`Remove ${code} ${name(code)}`}
+              onClick={() => {
+                onChange(value.filter(c => c !== code));
+                input.current?.focus();
+              }}
+            >
               <Icon name="x" size={12} />
             </button>
           </span>
         ))}
-        <input ref={input} className="budget-picker__search" value={query}
+        <input
+          ref={input}
+          className="budget-picker__search"
+          value={query}
           placeholder={value.length ? 'Search' : 'Search accounts'}
-          role="combobox" aria-label="QuickBooks accounts" aria-expanded={open} aria-controls={listId}
-          aria-autocomplete="list" aria-activedescendant={open && options[active] ? `${listId}-${active}` : undefined}
+          role="combobox"
+          aria-label="QuickBooks accounts"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          aria-activedescendant={open && options[active] ? `${listId}-${active}` : undefined}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          onChange={e => { setQuery(e.target.value); setActive(0); show(); }}
-          onKeyDown={onKeyDown} />
-        <span className="budget-picker__caret" aria-hidden="true"><Icon name="chevron-down" size={14} /></span>
+          onChange={e => {
+            setQuery(e.target.value);
+            setActive(0);
+            show();
+          }}
+          onKeyDown={onKeyDown}
+        />
+        <span className="budget-picker__caret" aria-hidden="true">
+          <Icon name="chevron-down" size={14} />
+        </span>
       </div>
 
-      <BudgetPopover anchor={box} open={open} onClose={close} width={440} maxHeight={320} className="budget-accounts">
+      <BudgetPopover
+        anchor={box}
+        open={open}
+        onClose={close}
+        width={440}
+        maxHeight={320}
+        className="budget-accounts"
+      >
         <div className="budget-accounts__head" aria-hidden="true">
-          <span>Expense accounts in QuickBooks</span><span>Used by</span>
+          <span>Expense accounts in QuickBooks</span>
+          <span>Used by</span>
         </div>
-        <div id={listId} role="listbox" aria-multiselectable="true" aria-label="Expense accounts in QuickBooks" className="budget-accounts__list">
+        <div
+          id={listId}
+          role="listbox"
+          aria-multiselectable="true"
+          aria-label="Expense accounts in QuickBooks"
+          className="budget-accounts__list"
+        >
           {options.length === 0 && (
-            <div className="budget-accounts__none">No account matches "{query.trim()}". Try a number like 6200 or a word like supplies.</div>
+            <div className="budget-accounts__none">
+              No account matches "{query.trim()}". Try a number like 6200 or a word like supplies.
+            </div>
           )}
           {options.map((o, i) => {
             const on = value.includes(o.code);
             return (
-              <div key={o.code} id={`${listId}-${i}`} role="option" aria-selected={on}
+              <div
+                key={o.code}
+                id={`${listId}-${i}`}
+                role="option"
+                aria-selected={on}
                 className={`budget-option${on ? ' is-on' : ''}${i === active ? ' is-active' : ''}`}
                 onMouseDown={e => e.preventDefault()}
                 onMouseEnter={() => setActive(i)}
-                onClick={() => { toggle(o.code); input.current?.focus(); }}>
-                <span className="budget-check" aria-hidden="true">{on && <Icon name="check" size={12} strokeWidth={3} />}</span>
+                onClick={() => {
+                  toggle(o.code);
+                  input.current?.focus();
+                }}
+              >
+                <span className="budget-check" aria-hidden="true">
+                  {on && <Icon name="check" size={12} strokeWidth={3} />}
+                </span>
                 <span className="budget-option__code">{o.code}</span>
                 <span className="budget-option__name">{o.name}</span>
                 <span className="budget-option__used">{o.used.join(', ')}</span>

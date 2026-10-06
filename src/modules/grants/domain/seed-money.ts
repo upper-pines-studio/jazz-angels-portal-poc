@@ -60,7 +60,11 @@ export const CATEGORY_ACCOUNTS: Record<string, string[]> = {
   'Admin and insurance': ['6700', '6710'],
 };
 
-const CLASS_FOR_GRANT: Record<string, string> = { [HA]: CLASS_HA, [LBCF]: CLASS_LBCF, [LAC]: CLASS_LAC };
+const CLASS_FOR_GRANT: Record<string, string> = {
+  [HA]: CLASS_HA,
+  [LBCF]: CLASS_LBCF,
+  [LAC]: CLASS_LAC,
+};
 
 /** Give a seeded budget line its QuickBooks accounts and class. */
 export function mapLine(line: BudgetLine): BudgetLine {
@@ -83,8 +87,18 @@ export const LAC_BUDGET_LINES: BudgetLine[] = [
 
 /** Jul 2025 to Jun 2026, as `YYYY-MM`. */
 const LAC_MONTHS = [
-  '2025-07', '2025-08', '2025-09', '2025-10', '2025-11', '2025-12',
-  '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06',
+  '2025-07',
+  '2025-08',
+  '2025-09',
+  '2025-10',
+  '2025-11',
+  '2025-12',
+  '2026-01',
+  '2026-02',
+  '2026-03',
+  '2026-04',
+  '2026-05',
+  '2026-06',
 ];
 
 interface LacPlan {
@@ -213,36 +227,210 @@ function assignedTransaction(expense: Expense, line: BudgetLine, n: number): Tra
 
 /** Fourteen transactions are waiting. Eight of them have a proposal. */
 const TO_ASSIGN: Transaction[] = [
-  { id: 'tx-new-1', date: '2026-09-11', payee: 'Albert Alva', memo: 'Studio sessions, Sep 6', accountCode: '6200', classId: CLASS_HA, amount: 725, ref: 'Check 2231', status: 'to-assign' },
-  { id: 'tx-new-2', date: '2026-09-10', payee: 'Signal Hill Properties', memo: 'September studio rent', accountCode: '6500', amount: 2400, ref: 'Bill 1112', status: 'to-assign' },
-  { id: 'tx-new-3', date: '2026-09-10', payee: 'Renee Cole', memo: 'In-school residency, week 2', accountCode: '6200', amount: 540, ref: 'Check 2230', status: 'to-assign' },
-  { id: 'tx-new-4', date: '2026-09-09', payee: 'Sam Ash Music', memo: 'Big band method books', accountCode: '6410', classId: CLASS_HA, amount: 186, ref: 'Expense', status: 'to-assign' },
-  { id: 'tx-new-5', date: '2026-09-08', payee: 'Southern California Edison', memo: 'Studio electric, August', accountCode: '6520', amount: 212, ref: 'Bill 1111', status: 'to-assign' },
-  { id: 'tx-new-6', date: '2026-09-08', payee: 'Long Beach Band Repair', memo: 'Trombone slide repair', accountCode: '6420', classId: CLASS_HA, amount: 145, ref: 'Bill 1110', status: 'to-assign' },
-  { id: 'tx-new-7', date: '2026-09-05', payee: 'Intuit QuickBooks', memo: 'QuickBooks Online, September', accountCode: '6720', amount: 99, ref: 'Expense', status: 'to-assign' },
-  { id: 'tx-new-8', date: '2026-09-04', payee: 'Devon Price', memo: 'Saxophone sectional coaching', accountCode: '6200', classId: CLASS_HA, amount: 300, ref: 'Check 2229', status: 'to-assign' },
-  { id: 'tx-new-9', date: '2026-09-03', payee: 'Signal Hill Community Center', memo: 'Room rental, Aug 30 concert', accountCode: '6510', amount: 600, ref: 'Bill 1109', status: 'to-assign' },
-  { id: 'tx-new-10', date: '2026-09-02', payee: 'Staples', memo: 'Folders and printer paper', accountCode: '6710', classId: CLASS_HA, amount: 64, ref: 'Expense', status: 'to-assign' },
-  { id: 'tx-new-11', date: '2026-08-31', payee: 'JW Pepper', memo: 'Beginner combo charts, set two', accountCode: '6410', classId: CLASS_LBCF, amount: 128, ref: 'Bill 1108', status: 'to-assign' },
-  { id: 'tx-new-12', date: '2026-08-29', payee: 'Renee Cole', memo: 'In-school residency, week 1', accountCode: '6200', classId: CLASS_LBCF, amount: 540, ref: 'Check 2228', status: 'to-assign' },
-  { id: 'tx-new-13', date: '2026-08-28', payee: 'Melissa Hasin', memo: 'Cello and bass clinic', accountCode: '6200', amount: 450, ref: 'Check 2227', status: 'to-assign' },
-  { id: 'tx-new-14', date: '2026-08-27', payee: 'Sam Ash Music', memo: 'Reeds and valve oil', accountCode: '6410', amount: 92, ref: 'Expense', status: 'to-assign' },
+  {
+    id: 'tx-new-1',
+    date: '2026-09-11',
+    payee: 'Albert Alva',
+    memo: 'Studio sessions, Sep 6',
+    accountCode: '6200',
+    classId: CLASS_HA,
+    amount: 725,
+    ref: 'Check 2231',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-2',
+    date: '2026-09-10',
+    payee: 'Signal Hill Properties',
+    memo: 'September studio rent',
+    accountCode: '6500',
+    amount: 2400,
+    ref: 'Bill 1112',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-3',
+    date: '2026-09-10',
+    payee: 'Renee Cole',
+    memo: 'In-school residency, week 2',
+    accountCode: '6200',
+    amount: 540,
+    ref: 'Check 2230',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-4',
+    date: '2026-09-09',
+    payee: 'Sam Ash Music',
+    memo: 'Big band method books',
+    accountCode: '6410',
+    classId: CLASS_HA,
+    amount: 186,
+    ref: 'Expense',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-5',
+    date: '2026-09-08',
+    payee: 'Southern California Edison',
+    memo: 'Studio electric, August',
+    accountCode: '6520',
+    amount: 212,
+    ref: 'Bill 1111',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-6',
+    date: '2026-09-08',
+    payee: 'Long Beach Band Repair',
+    memo: 'Trombone slide repair',
+    accountCode: '6420',
+    classId: CLASS_HA,
+    amount: 145,
+    ref: 'Bill 1110',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-7',
+    date: '2026-09-05',
+    payee: 'Intuit QuickBooks',
+    memo: 'QuickBooks Online, September',
+    accountCode: '6720',
+    amount: 99,
+    ref: 'Expense',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-8',
+    date: '2026-09-04',
+    payee: 'Devon Price',
+    memo: 'Saxophone sectional coaching',
+    accountCode: '6200',
+    classId: CLASS_HA,
+    amount: 300,
+    ref: 'Check 2229',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-9',
+    date: '2026-09-03',
+    payee: 'Signal Hill Community Center',
+    memo: 'Room rental, Aug 30 concert',
+    accountCode: '6510',
+    amount: 600,
+    ref: 'Bill 1109',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-10',
+    date: '2026-09-02',
+    payee: 'Staples',
+    memo: 'Folders and printer paper',
+    accountCode: '6710',
+    classId: CLASS_HA,
+    amount: 64,
+    ref: 'Expense',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-11',
+    date: '2026-08-31',
+    payee: 'JW Pepper',
+    memo: 'Beginner combo charts, set two',
+    accountCode: '6410',
+    classId: CLASS_LBCF,
+    amount: 128,
+    ref: 'Bill 1108',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-12',
+    date: '2026-08-29',
+    payee: 'Renee Cole',
+    memo: 'In-school residency, week 1',
+    accountCode: '6200',
+    classId: CLASS_LBCF,
+    amount: 540,
+    ref: 'Check 2228',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-13',
+    date: '2026-08-28',
+    payee: 'Melissa Hasin',
+    memo: 'Cello and bass clinic',
+    accountCode: '6200',
+    amount: 450,
+    ref: 'Check 2227',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-new-14',
+    date: '2026-08-27',
+    payee: 'Sam Ash Music',
+    memo: 'Reeds and valve oil',
+    accountCode: '6410',
+    amount: 92,
+    ref: 'Expense',
+    status: 'to-assign',
+  },
 ];
 
 /** Still in QuickBooks. These arrive the next time someone syncs. */
 const INCOMING: Transaction[] = [
-  { id: 'tx-in-1', date: '2026-09-13', payee: 'JW Pepper', memo: 'Fall concert charts', accountCode: '6410', classId: CLASS_HA, amount: 142, ref: 'Bill 1114', status: 'to-assign' },
-  { id: 'tx-in-2', date: '2026-09-12', payee: 'Devon Price', memo: 'Saxophone sectional coaching', accountCode: '6200', classId: CLASS_HA, amount: 300, ref: 'Check 2232', status: 'to-assign' },
-  { id: 'tx-in-3', date: '2026-09-12', payee: 'Verizon Business', memo: 'Studio internet, September', accountCode: '6530', amount: 85, ref: 'Bill 1113', status: 'to-assign' },
+  {
+    id: 'tx-in-1',
+    date: '2026-09-13',
+    payee: 'JW Pepper',
+    memo: 'Fall concert charts',
+    accountCode: '6410',
+    classId: CLASS_HA,
+    amount: 142,
+    ref: 'Bill 1114',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-in-2',
+    date: '2026-09-12',
+    payee: 'Devon Price',
+    memo: 'Saxophone sectional coaching',
+    accountCode: '6200',
+    classId: CLASS_HA,
+    amount: 300,
+    ref: 'Check 2232',
+    status: 'to-assign',
+  },
+  {
+    id: 'tx-in-3',
+    date: '2026-09-12',
+    payee: 'Verizon Business',
+    memo: 'Studio internet, September',
+    accountCode: '6530',
+    amount: 85,
+    ref: 'Bill 1113',
+    status: 'to-assign',
+  },
 ];
 
 /** Overhead nobody charges to a grant: 41 transactions over the last twelve months. */
 function notGrantFunded(): Transaction[] {
   const months = [
-    '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02',
-    '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08',
+    '2025-09',
+    '2025-10',
+    '2025-11',
+    '2025-12',
+    '2026-01',
+    '2026-02',
+    '2026-03',
+    '2026-04',
+    '2026-05',
+    '2026-06',
+    '2026-07',
+    '2026-08',
   ];
-  const monthly: Array<[payee: string, memo: string, account: string, amount: number, day: number]> = [
+  const monthly: Array<
+    [payee: string, memo: string, account: string, amount: number, day: number]
+  > = [
     ['Intuit QuickBooks', 'QuickBooks Online', '6720', 99, 5],
     ['Verizon Business', 'Studio internet', '6530', 85, 12],
     ['Gusto', 'Payroll service', '6720', 64, 1],
@@ -299,7 +487,16 @@ type FileSeed = [
 const EXPENSE_FILES: FileSeed[] = [
   ['ex-ha-1', 'invoice', 'NIA renewal invoice 2026.pdf', 'pdf', 188, 2, 's-denise', 2],
 
-  ['ex-ha-2', 'receipt', 'Receipt, Signal Hill Music Service.jpg', 'jpg', 1843, undefined, 's-denise', 1],
+  [
+    'ex-ha-2',
+    'receipt',
+    'Receipt, Signal Hill Music Service.jpg',
+    'jpg',
+    1843,
+    undefined,
+    's-denise',
+    1,
+  ],
   ['ex-ha-2', 'invoice', 'Invoice 3318, tenor sax overhaul.pdf', 'pdf', 214, 1, 's-barry', 3],
 
   ['ex-ha-3', 'invoice', 'Hasin invoice, July sessions.pdf', 'pdf', 96, 1, 's-denise', 2],
@@ -319,7 +516,16 @@ const EXPENSE_FILES: FileSeed[] = [
 
   ['ex-lbcf-1', 'invoice', 'Hasin invoice, Saturday sessions.pdf', 'pdf', 94, 1, 's-denise', 2],
   ['ex-lbcf-2', 'receipt', 'JW Pepper order 88390.pdf', 'pdf', 128, 1, 's-denise', 1],
-  ['ex-lbcf-3', 'receipt', 'Receipt, Long Beach Band Repair.jpg', 'jpg', 1536, undefined, 's-denise', 2],
+  [
+    'ex-lbcf-3',
+    'receipt',
+    'Receipt, Long Beach Band Repair.jpg',
+    'jpg',
+    1536,
+    undefined,
+    's-denise',
+    2,
+  ],
 ];
 
 const EXPENSE_NOTES: Record<string, string> = {
@@ -328,15 +534,65 @@ const EXPENSE_NOTES: Record<string, string> = {
 };
 
 const GRANT_FILES: GrantFile[] = [
-  { id: 'file-ha-award', grantId: HA, kind: 'award-letter', name: 'HAF-award-letter-2026.pdf', format: 'pdf', sizeKb: 412, pages: 3, uploadedById: 's-denise', uploadedAt: '2026-07-08' },
-  { id: 'file-ha-agreement', grantId: HA, kind: 'agreement', name: 'HAF-grant-agreement-signed.pdf', format: 'pdf', sizeKb: 1229, pages: 6, uploadedById: 's-barry', uploadedAt: '2026-07-14' },
-  { id: 'file-lbcf-award', grantId: LBCF, kind: 'award-letter', name: 'LBCF-award-letter-youth-music-access.pdf', format: 'pdf', sizeKb: 286, pages: 2, uploadedById: 's-denise', uploadedAt: '2026-07-10' },
-  { id: 'file-lac-award', grantId: LAC, kind: 'award-letter', name: 'LA-County-OGP-award-notice.pdf', format: 'pdf', sizeKb: 530, pages: 4, uploadedById: 's-denise', uploadedAt: '2025-06-24' },
-  { id: 'file-lac-agreement', grantId: LAC, kind: 'agreement', name: 'LA-County-OGP-contract-signed.pdf', format: 'pdf', sizeKb: 1874, pages: 14, uploadedById: 's-barry', uploadedAt: '2025-07-08' },
+  {
+    id: 'file-ha-award',
+    grantId: HA,
+    kind: 'award-letter',
+    name: 'HAF-award-letter-2026.pdf',
+    format: 'pdf',
+    sizeKb: 412,
+    pages: 3,
+    uploadedById: 's-denise',
+    uploadedAt: '2026-07-08',
+  },
+  {
+    id: 'file-ha-agreement',
+    grantId: HA,
+    kind: 'agreement',
+    name: 'HAF-grant-agreement-signed.pdf',
+    format: 'pdf',
+    sizeKb: 1229,
+    pages: 6,
+    uploadedById: 's-barry',
+    uploadedAt: '2026-07-14',
+  },
+  {
+    id: 'file-lbcf-award',
+    grantId: LBCF,
+    kind: 'award-letter',
+    name: 'LBCF-award-letter-youth-music-access.pdf',
+    format: 'pdf',
+    sizeKb: 286,
+    pages: 2,
+    uploadedById: 's-denise',
+    uploadedAt: '2026-07-10',
+  },
+  {
+    id: 'file-lac-award',
+    grantId: LAC,
+    kind: 'award-letter',
+    name: 'LA-County-OGP-award-notice.pdf',
+    format: 'pdf',
+    sizeKb: 530,
+    pages: 4,
+    uploadedById: 's-denise',
+    uploadedAt: '2025-06-24',
+  },
+  {
+    id: 'file-lac-agreement',
+    grantId: LAC,
+    kind: 'agreement',
+    name: 'LA-County-OGP-contract-signed.pdf',
+    format: 'pdf',
+    sizeKb: 1874,
+    pages: 14,
+    uploadedById: 's-barry',
+    uploadedAt: '2025-07-08',
+  },
 ];
 
 function expenseFiles(expenses: Expense[]): GrantFile[] {
-  const byId = new Map(expenses.map((e) => [e.id, e]));
+  const byId = new Map(expenses.map(e => [e.id, e]));
   const out: GrantFile[] = [];
 
   EXPENSE_FILES.forEach(([expenseId, kind, name, fmt, sizeKb, pages, by, daysAfter], i) => {
@@ -382,23 +638,73 @@ type TermSeed = [grantId: string, label: string, text: string, page: number];
 
 const TERMS: TermSeed[] = [
   [HA, 'Allowed uses', 'Any program or operating cost, including salaries, rent and insurance.', 1],
-  [HA, 'Capital purchases', 'No single equipment purchase over $5,000 without written approval.', 2],
+  [
+    HA,
+    'Capital purchases',
+    'No single equipment purchase over $5,000 without written approval.',
+    2,
+  ],
   [HA, 'Lobbying', 'None of the grant may pay for lobbying or political campaigns.', 2],
-  [HA, 'Budget changes', 'Moving more than 10% of the budget between lines needs written approval.', 2],
-  [HA, 'Unspent funds', 'Money unspent on Jun 30, 2027 is returned unless a carryover is approved in writing.', 2],
-  [HA, 'Acknowledgement', 'Name the Herb Alpert Foundation in concert programs and on the website.', 3],
-  [HA, 'Reports', 'Interim report by Jan 31, 2027 and final by Jul 31, 2027, with student numbers.', 3],
+  [
+    HA,
+    'Budget changes',
+    'Moving more than 10% of the budget between lines needs written approval.',
+    2,
+  ],
+  [
+    HA,
+    'Unspent funds',
+    'Money unspent on Jun 30, 2027 is returned unless a carryover is approved in writing.',
+    2,
+  ],
+  [
+    HA,
+    'Acknowledgement',
+    'Name the Herb Alpert Foundation in concert programs and on the website.',
+    3,
+  ],
+  [
+    HA,
+    'Reports',
+    'Interim report by Jan 31, 2027 and final by Jul 31, 2027, with student numbers.',
+    3,
+  ],
 
-  [LBCF, 'Allowed uses', 'Direct costs of the youth music program only: instruction, music, instruments and venues.', 1],
+  [
+    LBCF,
+    'Allowed uses',
+    'Direct costs of the youth music program only: instruction, music, instruments and venues.',
+    1,
+  ],
   [LBCF, 'Admin costs', 'No more than 10% of the award may go to administration and insurance.', 1],
-  [LBCF, 'Unspent funds', 'Carrying funds past Feb 28, 2027 needs written approval from the foundation.', 2],
+  [
+    LBCF,
+    'Unspent funds',
+    'Carrying funds past Feb 28, 2027 needs written approval from the foundation.',
+    2,
+  ],
   [LBCF, 'Students served', 'Serve at least 40 Long Beach students, counted by enrollment.', 2],
-  [LBCF, 'Reports', 'Final report by Mar 15, 2027, with attendance and a budget against actual.', 2],
+  [
+    LBCF,
+    'Reports',
+    'Final report by Mar 15, 2027, with attendance and a budget against actual.',
+    2,
+  ],
 
   [LAC, 'Allowed uses', 'Operating costs of the organization within Los Angeles County.', 1],
   [LAC, 'Matching funds', 'A one-to-one match from other sources, shown in the final report.', 2],
-  [LAC, 'Unspent funds', 'Report any unspent balance in the final report. The county decides whether it is returned.', 3],
-  [LAC, 'Records', 'Keep receipts and backup for every expense for four years after the grant ends.', 3],
+  [
+    LAC,
+    'Unspent funds',
+    'Report any unspent balance in the final report. The county decides whether it is returned.',
+    3,
+  ],
+  [
+    LAC,
+    'Records',
+    'Keep receipts and backup for every expense for four years after the grant ends.',
+    3,
+  ],
   [LAC, 'Reports', 'Final report through the county portal by Sep 30, 2026.', 4],
 ];
 
@@ -414,7 +720,12 @@ function terms(): AwardTerm[] {
 // --- Reminders --------------------------------------------------------------
 
 const REMINDER_PLANS: ReminderPlan[] = [
-  { reportId: 'rep-lac-final', offsets: [30, 14, 3, 0], recipientIds: ['s-barry', 's-denise'], keepReminding: true },
+  {
+    reportId: 'rep-lac-final',
+    offsets: [30, 14, 3, 0],
+    recipientIds: ['s-barry', 's-denise'],
+    keepReminding: true,
+  },
 ];
 
 const REMINDER_DEFAULTS: ReminderDefaults = {
@@ -457,7 +768,7 @@ type MoneySeed = Pick<
  * on them, and gives every expense the QuickBooks transaction it came from.
  */
 export function makeMoneySeed(lines: BudgetLine[], expenses: Expense[]): MoneySeed {
-  const lineById = new Map(lines.map((l) => [l.id, l]));
+  const lineById = new Map(lines.map(l => [l.id, l]));
 
   const linked: Expense[] = [];
   const assigned: Transaction[] = [];
@@ -475,7 +786,11 @@ export function makeMoneySeed(lines: BudgetLine[], expenses: Expense[]): MoneySe
   const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
   return {
-    quickbooks: { connected: true, company: 'Jazz Angels Inc.', lastSyncedAt: `${SEED_TODAY}T08:40` },
+    quickbooks: {
+      connected: true,
+      company: 'Jazz Angels Inc.',
+      lastSyncedAt: `${SEED_TODAY}T08:40`,
+    },
     accounts: clone(ACCOUNTS),
     classes: clone(CLASSES),
     transactions: [...clone(TO_ASSIGN), ...assigned, ...notGrantFunded()],

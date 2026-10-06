@@ -10,7 +10,10 @@ import { LetterPageField, pageFrom } from './awardShared';
 /** The dialogs behind the Award tab: the award record, one installment, one term. */
 
 const DOLLAR = <span style={{ font: 'var(--type-numeric)' }}>$</span>;
-const RESTRICTION_LABEL: Record<Restriction, string> = { restricted: 'Restricted', unrestricted: 'Unrestricted' };
+const RESTRICTION_LABEL: Record<Restriction, string> = {
+  restricted: 'Restricted',
+  unrestricted: 'Unrestricted',
+};
 
 /** "" → undefined, "50000.4" → 50000. */
 function dollarsFrom(value: string): number | undefined {
@@ -23,7 +26,9 @@ function dollarsFrom(value: string): number | undefined {
 export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: () => void }) {
   const { state, actions } = useStore();
   const toast = useToast();
-  const [amount, setAmount] = React.useState(grant.amountAwarded !== undefined ? String(grant.amountAwarded) : '');
+  const [amount, setAmount] = React.useState(
+    grant.amountAwarded !== undefined ? String(grant.amountAwarded) : '',
+  );
   const [periodStart, setPeriodStart] = React.useState(grant.dates.periodStart ?? '');
   const [periodEnd, setPeriodEnd] = React.useState(grant.dates.periodEnd ?? '');
   const [decided, setDecided] = React.useState(grant.dates.decided ?? '');
@@ -37,14 +42,25 @@ export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: ()
   const save = () => {
     const amountAwarded = dollarsFrom(amount);
     const changes: string[] = [];
-    if (amountAwarded !== grant.amountAwarded) changes.push(`amount ${grant.amountAwarded === undefined ? 'not set' : money(grant.amountAwarded)} to ${amountAwarded === undefined ? 'not set' : money(amountAwarded)}`);
-    if ((periodStart || undefined) !== grant.dates.periodStart || (periodEnd || undefined) !== grant.dates.periodEnd) {
-      changes.push(`period to ${periodStart ? dateLong(periodStart) : 'no start'} through ${periodEnd ? dateLong(periodEnd) : 'no end'}`);
+    if (amountAwarded !== grant.amountAwarded)
+      changes.push(
+        `amount ${grant.amountAwarded === undefined ? 'not set' : money(grant.amountAwarded)} to ${amountAwarded === undefined ? 'not set' : money(amountAwarded)}`,
+      );
+    if (
+      (periodStart || undefined) !== grant.dates.periodStart ||
+      (periodEnd || undefined) !== grant.dates.periodEnd
+    ) {
+      changes.push(
+        `period to ${periodStart ? dateLong(periodStart) : 'no start'} through ${periodEnd ? dateLong(periodEnd) : 'no end'}`,
+      );
     }
-    if ((decided || undefined) !== grant.dates.decided) changes.push(`date awarded to ${decided ? dateLong(decided) : 'not set'}`);
-    if (restriction !== grant.restriction) changes.push(`restriction to ${RESTRICTION_LABEL[restriction].toLowerCase()}`);
+    if ((decided || undefined) !== grant.dates.decided)
+      changes.push(`date awarded to ${decided ? dateLong(decided) : 'not set'}`);
+    if (restriction !== grant.restriction)
+      changes.push(`restriction to ${RESTRICTION_LABEL[restriction].toLowerCase()}`);
     if (program !== grant.program) changes.push(`program to ${programName(state, program)}`);
-    if (ownerId !== grant.ownerId) changes.push(`owner to ${staffById(state, ownerId)?.name ?? 'someone else'}`);
+    if (ownerId !== grant.ownerId)
+      changes.push(`owner to ${staffById(state, ownerId)?.name ?? 'someone else'}`);
 
     if (changes.length === 0) {
       onClose();
@@ -64,21 +80,46 @@ export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: ()
     });
     const sentence = changes.join('; ');
     actions.grants.addNote(grant.id, `Award record edited: ${sentence}.`);
-    toast({ tone: 'success', title: 'Award record saved', message: sentence.charAt(0).toUpperCase() + sentence.slice(1) });
+    toast({
+      tone: 'success',
+      title: 'Award record saved',
+      message: sentence.charAt(0).toUpperCase() + sentence.slice(1),
+    });
     onClose();
   };
 
   return (
-    <Dialog open title="Edit award record" description="What the funder awarded, as the award letter states it. The change is noted in the activity timeline."
-      onClose={onClose} width={540}
-      footer={<>
-        <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" disabled={badAmount || badPeriod} onClick={save}>Save record</Button>
-      </>}>
+    <Dialog
+      open
+      title="Edit award record"
+      description="What the funder awarded, as the award letter states it. The change is noted in the activity timeline."
+      onClose={onClose}
+      width={540}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" disabled={badAmount || badPeriod} onClick={save}>
+            Save record
+          </Button>
+        </>
+      }
+    >
       <DialogFields>
         <FieldRow>
-          <Field label="Amount awarded" error={badAmount ? 'Enter a whole dollar amount.' : undefined}>
-            <Input type="number" mono prefix={DOLLAR} value={amount} invalid={badAmount} onChange={e => setAmount(e.target.value)} />
+          <Field
+            label="Amount awarded"
+            error={badAmount ? 'Enter a whole dollar amount.' : undefined}
+          >
+            <Input
+              type="number"
+              mono
+              prefix={DOLLAR}
+              value={amount}
+              invalid={badAmount}
+              onChange={e => setAmount(e.target.value)}
+            />
           </Field>
           <Field label="Date awarded">
             <Input type="date" value={decided} onChange={e => setDecided(e.target.value)} />
@@ -88,23 +129,43 @@ export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: ()
           <Field label="Grant period starts">
             <Input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} />
           </Field>
-          <Field label="Grant period ends" error={badPeriod ? 'The period has to end after it starts.' : undefined}>
-            <Input type="date" value={periodEnd} invalid={badPeriod} onChange={e => setPeriodEnd(e.target.value)} />
+          <Field
+            label="Grant period ends"
+            error={badPeriod ? 'The period has to end after it starts.' : undefined}
+          >
+            <Input
+              type="date"
+              value={periodEnd}
+              invalid={badPeriod}
+              onChange={e => setPeriodEnd(e.target.value)}
+            />
           </Field>
         </FieldRow>
         <FieldRow>
           <Field label="Restriction">
-            <Select value={restriction} onChange={e => setRestriction(e.target.value as Restriction)}
-              options={[{ value: 'restricted', label: 'Restricted' }, { value: 'unrestricted', label: 'Unrestricted' }]} />
+            <Select
+              value={restriction}
+              onChange={e => setRestriction(e.target.value as Restriction)}
+              options={[
+                { value: 'restricted', label: 'Restricted' },
+                { value: 'unrestricted', label: 'Unrestricted' },
+              ]}
+            />
           </Field>
           <Field label="Program">
-            <Select value={program} onChange={e => setProgram(e.target.value as ProgramId)}
-              options={state.core.programs.map(p => ({ value: p.id, label: p.name }))} />
+            <Select
+              value={program}
+              onChange={e => setProgram(e.target.value as ProgramId)}
+              options={state.core.programs.map(p => ({ value: p.id, label: p.name }))}
+            />
           </Field>
         </FieldRow>
         <Field label="Owner">
-          <Select value={ownerId} onChange={e => setOwnerId(e.target.value)}
-            options={state.core.staff.map(s => ({ value: s.id, label: s.name }))} />
+          <Select
+            value={ownerId}
+            onChange={e => setOwnerId(e.target.value)}
+            options={state.core.staff.map(s => ({ value: s.id, label: s.name }))}
+          />
         </Field>
       </DialogFields>
     </Dialog>
@@ -120,7 +181,13 @@ export interface PaymentValues {
 }
 
 /** One installment: add a new one, or edit what we have. */
-export function PaymentDialog({ payment, letterPages, onClose, onSave, onDelete }: {
+export function PaymentDialog({
+  payment,
+  letterPages,
+  onClose,
+  onSave,
+  onDelete,
+}: {
   payment?: Payment;
   letterPages?: number;
   onClose: () => void;
@@ -137,27 +204,73 @@ export function PaymentDialog({ payment, letterPages, onClose, onSave, onDelete 
   const ok = !!label.trim() && !!expectedDate && dollars !== undefined && dollars > 0;
 
   return (
-    <Dialog open title={payment ? 'Edit payment' : 'Add payment'}
-      description={payment ? 'An installment the funder has promised.' : 'An installment the funder has promised, and the page of the award letter that says so.'}
-      onClose={onClose} width={500}
-      footer={<>
-        {payment && onDelete && <Button variant="secondary" style={{ marginRight: 'auto', color: 'var(--danger-500)' }} onClick={onDelete}>Delete</Button>}
-        <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" disabled={!ok}
-          onClick={() => dollars !== undefined && onSave({
-            label: label.trim(), expectedDate, amount: dollars, sourcePage: pageFrom(page), receivedDate: receivedDate || undefined,
-          })}>{payment ? 'Save payment' : 'Add payment'}</Button>
-      </>}>
+    <Dialog
+      open
+      title={payment ? 'Edit payment' : 'Add payment'}
+      description={
+        payment
+          ? 'An installment the funder has promised.'
+          : 'An installment the funder has promised, and the page of the award letter that says so.'
+      }
+      onClose={onClose}
+      width={500}
+      footer={
+        <>
+          {payment && onDelete && (
+            <Button
+              variant="secondary"
+              style={{ marginRight: 'auto', color: 'var(--danger-500)' }}
+              onClick={onDelete}
+            >
+              Delete
+            </Button>
+          )}
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            disabled={!ok}
+            onClick={() =>
+              dollars !== undefined &&
+              onSave({
+                label: label.trim(),
+                expectedDate,
+                amount: dollars,
+                sourcePage: pageFrom(page),
+                receivedDate: receivedDate || undefined,
+              })
+            }
+          >
+            {payment ? 'Save payment' : 'Add payment'}
+          </Button>
+        </>
+      }
+    >
       <DialogFields>
         <Field label="Installment" required>
-          <Input value={label} placeholder="Second installment" onChange={e => setLabel(e.target.value)} />
+          <Input
+            value={label}
+            placeholder="Second installment"
+            onChange={e => setLabel(e.target.value)}
+          />
         </Field>
         <FieldRow>
           <Field label="Expected" required>
-            <Input type="date" value={expectedDate} onChange={e => setExpectedDate(e.target.value)} />
+            <Input
+              type="date"
+              value={expectedDate}
+              onChange={e => setExpectedDate(e.target.value)}
+            />
           </Field>
           <Field label="Amount" required>
-            <Input type="number" mono prefix={DOLLAR} value={amount} onChange={e => setAmount(e.target.value)} />
+            <Input
+              type="number"
+              mono
+              prefix={DOLLAR}
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+            />
           </Field>
         </FieldRow>
         <FieldRow>
@@ -165,7 +278,11 @@ export function PaymentDialog({ payment, letterPages, onClose, onSave, onDelete 
             <LetterPageField value={page} onChange={setPage} pages={letterPages} />
           </Field>
           <Field label="Received" hint="Leave empty until it arrives.">
-            <Input type="date" value={receivedDate} onChange={e => setReceivedDate(e.target.value)} />
+            <Input
+              type="date"
+              value={receivedDate}
+              onChange={e => setReceivedDate(e.target.value)}
+            />
           </Field>
         </FieldRow>
       </DialogFields>
@@ -174,7 +291,12 @@ export function PaymentDialog({ payment, letterPages, onClose, onSave, onDelete 
 }
 
 /** One term of the award, as the letter words it. */
-export function TermDialog({ term, letterPages, onClose, onSave }: {
+export function TermDialog({
+  term,
+  letterPages,
+  onClose,
+  onSave,
+}: {
   term?: AwardTerm;
   letterPages?: number;
   onClose: () => void;
@@ -185,21 +307,42 @@ export function TermDialog({ term, letterPages, onClose, onSave }: {
   const [page, setPage] = React.useState(term?.page ? String(term.page) : '');
 
   return (
-    <Dialog open title={term ? 'Edit term' : 'Add term'}
+    <Dialog
+      open
+      title={term ? 'Edit term' : 'Add term'}
       description="Copy the wording from the award letter, and note the page it is on."
-      onClose={onClose} width={520}
-      footer={<>
-        <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" disabled={!label.trim() || !text.trim()}
-          onClick={() => onSave({ label: label.trim(), text: text.trim(), page: pageFrom(page) })}>{term ? 'Save term' : 'Add term'}</Button>
-      </>}>
+      onClose={onClose}
+      width={520}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            disabled={!label.trim() || !text.trim()}
+            onClick={() => onSave({ label: label.trim(), text: text.trim(), page: pageFrom(page) })}
+          >
+            {term ? 'Save term' : 'Add term'}
+          </Button>
+        </>
+      }
+    >
       <DialogFields>
         <Field label="Term" required>
-          <Input value={label} placeholder="Capital purchases" onChange={e => setLabel(e.target.value)} />
+          <Input
+            value={label}
+            placeholder="Capital purchases"
+            onChange={e => setLabel(e.target.value)}
+          />
         </Field>
         <Field label="As written" required>
-          <Textarea rows={3} value={text} placeholder="No single equipment purchase over $5,000 without written approval."
-            onChange={e => setText(e.target.value)} />
+          <Textarea
+            rows={3}
+            value={text}
+            placeholder="No single equipment purchase over $5,000 without written approval."
+            onChange={e => setText(e.target.value)}
+          />
         </Field>
         <Field label="Award letter page">
           <LetterPageField value={page} onChange={setPage} pages={letterPages} />

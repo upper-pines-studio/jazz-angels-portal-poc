@@ -46,10 +46,10 @@ export function useExpenseView(grant: Grant) {
   const all = grantExpenses(state, grant.id);
   const counts = fileCounts(state);
   const filter: BackupFilter = params.get('backup') === 'missing' ? 'missing' : 'all';
-  const missing = all.filter((e) => !counts.get(e.id));
+  const missing = all.filter(e => !counts.get(e.id));
   const shown = filter === 'missing' ? missing : all;
   const selectedId = params.get('expense');
-  const selected: Expense | undefined = selectedId ? all.find((e) => e.id === selectedId) : undefined;
+  const selected: Expense | undefined = selectedId ? all.find(e => e.id === selectedId) : undefined;
 
   /** Change some params and keep the rest. `null` removes one. */
   const patch = (changes: Record<string, string | null>) => {

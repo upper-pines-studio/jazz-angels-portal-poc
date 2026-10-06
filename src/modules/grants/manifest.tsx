@@ -42,15 +42,19 @@ function stats(state: PortalState, today: string): StatSpec[] {
   const fy = fyTotals(state, today);
 
   const won = state.grants.grants.filter(
-    g => g.dates.decided && g.dates.decided >= fy.start && g.dates.decided <= fy.end && WON_PHASES.includes(g.phase),
+    g =>
+      g.dates.decided &&
+      g.dates.decided >= fy.start &&
+      g.dates.decided <= fy.end &&
+      WON_PHASES.includes(g.phase),
   );
   const wonFunders = won.map(g => funderShort(funderById(state, g.funderId)?.name, 20)).join(', ');
 
   const preAward = state.grants.grants.filter(g => isPreAward(g.phase));
   const inPipeline = preAward.reduce((sum, g) => sum + (g.amountRequested ?? 0), 0);
   const thisMonth = today.slice(0, 7);
-  const dueThisMonth = preAward.filter(
-    g => [g.dates.loiDue, g.dates.applicationDue].some(d => d?.startsWith(thisMonth)),
+  const dueThisMonth = preAward.filter(g =>
+    [g.dates.loiDue, g.dates.applicationDue].some(d => d?.startsWith(thisMonth)),
   ).length;
 
   return [
@@ -152,38 +156,42 @@ function deadlineAttention(state: PortalState, today: string): AttentionItem[] {
 export const manifest: ModuleManifest = {
   id: 'grants',
   label: 'Grants',
-  description: 'Every grant from prospect to closed: deadlines, reports, the Playbook, and the money once it is awarded.',
-  nav: [{
-    section: 'Grants',
-    items: [
-      { path: '/grants', label: 'All grants', icon: 'landmark' },
-      {
-        path: '/deadlines',
-        label: 'Deadlines',
-        icon: 'calendar-days',
-        badge: (state, today) => needsAttention(state, today).length,
-      },
-      { path: '/funders', label: 'Funders', icon: 'building-2' },
-      { path: '/playbook', label: 'Playbook', icon: 'book-open' },
-    ],
-  }, {
-    section: 'Money',
-    items: [
-      {
-        path: '/transactions',
-        label: 'Transactions',
-        icon: 'receipt',
-        badge: state => transactionCounts(state)['to-assign'],
-      },
-      { path: '/budget', label: 'Budget vs. actual', icon: 'chart-bar-big' },
-      {
-        path: '/spend-down',
-        label: 'Spend-down',
-        icon: 'gauge',
-        badge: (state, today) => offPaceGrants(state, today).length,
-      },
-    ],
-  }],
+  description:
+    'Every grant from prospect to closed: deadlines, reports, the Playbook, and the money once it is awarded.',
+  nav: [
+    {
+      section: 'Grants',
+      items: [
+        { path: '/grants', label: 'All grants', icon: 'landmark' },
+        {
+          path: '/deadlines',
+          label: 'Deadlines',
+          icon: 'calendar-days',
+          badge: (state, today) => needsAttention(state, today).length,
+        },
+        { path: '/funders', label: 'Funders', icon: 'building-2' },
+        { path: '/playbook', label: 'Playbook', icon: 'book-open' },
+      ],
+    },
+    {
+      section: 'Money',
+      items: [
+        {
+          path: '/transactions',
+          label: 'Transactions',
+          icon: 'receipt',
+          badge: state => transactionCounts(state)['to-assign'],
+        },
+        { path: '/budget', label: 'Budget vs. actual', icon: 'chart-bar-big' },
+        {
+          path: '/spend-down',
+          label: 'Spend-down',
+          icon: 'gauge',
+          badge: (state, today) => offPaceGrants(state, today).length,
+        },
+      ],
+    },
+  ],
   routes: [
     { path: '/grants', element: <Grants /> },
     { path: '/grants/:id', element: <GrantDetail /> },

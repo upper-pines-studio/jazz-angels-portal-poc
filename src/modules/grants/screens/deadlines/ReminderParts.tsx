@@ -4,7 +4,14 @@ import { Icon, Switch } from '../../../../design-system';
 import { daysUntil, dateShort, useStore } from '../../../../core';
 import type { PortalState } from '../../../../core';
 import {
-  DUE_SOON_DAYS, REMINDER_OFFSETS, firstNames, funderById, grantById, offsetChip, reminderPlanFor, reminderSchedule,
+  DUE_SOON_DAYS,
+  REMINDER_OFFSETS,
+  firstNames,
+  funderById,
+  grantById,
+  offsetChip,
+  reminderPlanFor,
+  reminderSchedule,
 } from '../../domain';
 import type { Funder, Grant, ReminderPlan, ReminderStep, Report, ReportStatus } from '../../domain';
 import './reminders.css';
@@ -93,8 +100,10 @@ export function draftSchedule(dueDate: string, offsets: number[], today: string)
     let state: ReminderStep['state'] = 'off';
     if (enabled) {
       if (date <= today) state = 'sent';
-      else if (!nextFound) { state = 'next'; nextFound = true; }
-      else state = 'scheduled';
+      else if (!nextFound) {
+        state = 'next';
+        nextFound = true;
+      } else state = 'scheduled';
     }
     return { offset, date, enabled, state };
   });
@@ -135,10 +144,17 @@ export function defaultPlanFor(state: PortalState, report: Report): ReminderPlan
 }
 
 /** Two plans say the same thing, whatever order their lists are in. */
-export function samePlan(a: Pick<ReminderPlan, 'offsets' | 'recipientIds' | 'keepReminding'>, b: Pick<ReminderPlan, 'offsets' | 'recipientIds' | 'keepReminding'>): boolean {
+export function samePlan(
+  a: Pick<ReminderPlan, 'offsets' | 'recipientIds' | 'keepReminding'>,
+  b: Pick<ReminderPlan, 'offsets' | 'recipientIds' | 'keepReminding'>,
+): boolean {
   const same = (x: Array<string | number>, y: Array<string | number>) =>
     x.length === y.length && [...x].sort().join('|') === [...y].sort().join('|');
-  return a.keepReminding === b.keepReminding && same(a.offsets, b.offsets) && same(a.recipientIds, b.recipientIds);
+  return (
+    a.keepReminding === b.keepReminding &&
+    same(a.offsets, b.offsets) &&
+    same(a.recipientIds, b.recipientIds)
+  );
 }
 
 /** "30, 14 and 3 days before the due date", for a sentence. */
@@ -147,15 +163,19 @@ export function offsetsSentence(offsets: number[]): string {
   const parts = sorted.filter(o => o > 0).map(String);
   const onDay = sorted.includes(0);
   let text = '';
-  if (parts.length === 1) text = `${parts[0]} ${parts[0] === '1' ? 'day' : 'days'} before the due date`;
-  else if (parts.length > 1) text = `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]} days before the due date`;
+  if (parts.length === 1)
+    text = `${parts[0]} ${parts[0] === '1' ? 'day' : 'days'} before the due date`;
+  else if (parts.length > 1)
+    text = `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]} days before the due date`;
   if (onDay) text = text ? `${text}, and on the day itself` : 'on the due date';
   return text || 'never';
 }
 
 /** "Barry Cogert and Denise Moreno", from full names. */
 export function fullNames(state: PortalState, ids: string[]): string {
-  const names = ids.map(id => state.core.staff.find(s => s.id === id)?.name).filter((n): n is string => !!n);
+  const names = ids
+    .map(id => state.core.staff.find(s => s.id === id)?.name)
+    .filter((n): n is string => !!n);
   if (names.length === 0) return 'nobody';
   if (names.length === 1) return names[0];
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
@@ -166,13 +186,25 @@ export function fullNames(state: PortalState, ids: string[]): string {
 // ---------------------------------------------------------------------------
 
 /** One chip: sent (teal, with a check), next (outlined in gold), or plain. */
-export function ReminderChip({ state = 'scheduled', children, small = false, title }: {
+export function ReminderChip({
+  state = 'scheduled',
+  children,
+  small = false,
+  title,
+}: {
   state?: ReminderStep['state'] | 'plain';
   children: React.ReactNode;
   small?: boolean;
   title?: string;
 }) {
-  const cls = ['ja-rm-chip', state === 'sent' && 'is-sent', state === 'next' && 'is-next', small && 'is-small'].filter(Boolean).join(' ');
+  const cls = [
+    'ja-rm-chip',
+    state === 'sent' && 'is-sent',
+    state === 'next' && 'is-next',
+    small && 'is-small',
+  ]
+    .filter(Boolean)
+    .join(' ');
   return (
     <span className={cls} title={title}>
       {state === 'sent' && <CheckMark size={10} />}
@@ -184,8 +216,11 @@ export function ReminderChip({ state = 'scheduled', children, small = false, tit
 /** The chip that means "keeps reminding after the due date until submitted". */
 export function RepeatChip({ small = false }: { small?: boolean }) {
   return (
-    <span className={'ja-rm-chip' + (small ? ' is-small' : '')} title="Keeps reminding after the due date until submitted"
-      aria-label="Keeps reminding after the due date">
+    <span
+      className={'ja-rm-chip' + (small ? ' is-small' : '')}
+      title="Keeps reminding after the due date until submitted"
+      aria-label="Keeps reminding after the due date"
+    >
       <Icon name="repeat" size={11} />
     </span>
   );
@@ -195,28 +230,44 @@ export function RepeatChip({ small = false }: { small?: boolean }) {
 export function CheckMark({ size = 12 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 12 12" fill="none" aria-hidden="true">
-      <path d="M2 6.4 4.6 9 10 3.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M2 6.4 4.6 9 10 3.2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 /** The chips row for a schedule: one chip per day that is switched on. */
-export function ReminderChips({ steps, keepReminding, emptyText = 'No reminders', markNext = true }: {
+export function ReminderChips({
+  steps,
+  keepReminding,
+  emptyText = 'No reminders',
+  markNext = true,
+}: {
   steps: ReminderStep[];
   keepReminding: boolean;
   emptyText?: string;
   /** Outline this schedule's next reminder in gold. Off when another report's email goes first. */
   markNext?: boolean;
 }) {
-  const on = steps.filter(s => s.enabled).map(s => (s.state === 'next' && !markNext ? { ...s, state: 'scheduled' as const } : s));
+  const on = steps
+    .filter(s => s.enabled)
+    .map(s => (s.state === 'next' && !markNext ? { ...s, state: 'scheduled' as const } : s));
   if (on.length === 0 && !keepReminding) {
     return <span className="ja-rm-to">{emptyText}</span>;
   }
   return (
     <span className="ja-rm-chips">
       {on.map(s => (
-        <ReminderChip key={s.offset} state={s.state}
-          title={`${s.state === 'sent' ? 'Sent' : s.state === 'next' ? 'Sends next' : 'Sends'} ${dateShort(s.date)}`}>
+        <ReminderChip
+          key={s.offset}
+          state={s.state}
+          title={`${s.state === 'sent' ? 'Sent' : s.state === 'next' ? 'Sends next' : 'Sends'} ${dateShort(s.date)}`}
+        >
           {offsetChip(s.offset)}
         </ReminderChip>
       ))}
@@ -229,13 +280,21 @@ export function ReminderChips({ steps, keepReminding, emptyText = 'No reminders'
  * A saved report's reminders: the chips, and under them who gets the email,
  * with the date of the first one when none has gone yet.
  */
-export function ReportReminders({ report, markNext = true }: { report: Report; markNext?: boolean }) {
+export function ReportReminders({
+  report,
+  markNext = true,
+}: {
+  report: Report;
+  markNext?: boolean;
+}) {
   const { state, today } = useStore();
   const plan = reminderPlanFor(state, report.id);
   const steps = reminderSchedule(state, report.id, today);
   const anySent = steps.some(s => s.state === 'sent');
   const first = steps.find(s => s.enabled && s.state !== 'sent');
-  const to = plan.recipientIds.length ? `To ${firstNames(state, plan.recipientIds)}` : 'Nobody is emailed';
+  const to = plan.recipientIds.length
+    ? `To ${firstNames(state, plan.recipientIds)}`
+    : 'Nobody is emailed';
   return (
     <span className="ja-rm-two" style={{ gap: 5 }}>
       <ReminderChips steps={steps} keepReminding={plan.keepReminding} markNext={markNext} />
@@ -251,10 +310,25 @@ export function ReportReminders({ report, markNext = true }: { report: Report; m
 export function ReminderLegend({ style }: { style?: React.CSSProperties }) {
   return (
     <div className="ja-rm-legend" style={style}>
-      <span><ReminderChip state="sent" small>30d</ReminderChip>Sent</span>
-      <span><ReminderChip state="next" small>14d</ReminderChip>Sends next</span>
-      <span><ReminderChip small>3d</ReminderChip>Days before the due date</span>
-      <span><RepeatChip small />Keeps reminding until submitted</span>
+      <span>
+        <ReminderChip state="sent" small>
+          30d
+        </ReminderChip>
+        Sent
+      </span>
+      <span>
+        <ReminderChip state="next" small>
+          14d
+        </ReminderChip>
+        Sends next
+      </span>
+      <span>
+        <ReminderChip small>3d</ReminderChip>Days before the due date
+      </span>
+      <span>
+        <RepeatChip small />
+        Keeps reminding until submitted
+      </span>
     </div>
   );
 }
@@ -267,7 +341,14 @@ export function ReminderLegend({ style }: { style?: React.CSSProperties }) {
  * A checkbox row: a real input (so it takes focus and the space bar), drawn
  * like the design-system Checkbox, with room after the label for a date or a role.
  */
-export function CheckRow({ checked, disabled = false, onChange, children, after, textOff = false }: {
+export function CheckRow({
+  checked,
+  disabled = false,
+  onChange,
+  children,
+  after,
+  textOff = false,
+}: {
   checked: boolean;
   disabled?: boolean;
   onChange: (next: boolean) => void;
@@ -277,8 +358,13 @@ export function CheckRow({ checked, disabled = false, onChange, children, after,
 }) {
   return (
     <label className={'ja-rm-check' + (disabled ? ' is-disabled' : '')}>
-      <input type="checkbox" className="ja-rm-check__input" checked={checked} disabled={disabled}
-        onChange={e => onChange(e.target.checked)} />
+      <input
+        type="checkbox"
+        className="ja-rm-check__input"
+        checked={checked}
+        disabled={disabled}
+        onChange={e => onChange(e.target.checked)}
+      />
       <span className="ja-rm-check__box">{checked && <CheckMark />}</span>
       <span className={'ja-rm-check__text' + (textOff ? ' is-off' : '')}>{children}</span>
       {after}
@@ -287,10 +373,24 @@ export function CheckRow({ checked, disabled = false, onChange, children, after,
 }
 
 /** The design-system Switch inside a real button, so it can be reached by keyboard. */
-export function ToggleSwitch({ checked, onChange, label }: { checked: boolean; onChange: (next: boolean) => void; label: string }) {
+export function ToggleSwitch({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+}) {
   return (
-    <button type="button" role="switch" aria-checked={checked} aria-label={label} className="ja-rm-switch"
-      onClick={() => onChange(!checked)}>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      className="ja-rm-switch"
+      onClick={() => onChange(!checked)}
+    >
       <Switch checked={checked} />
     </button>
   );
@@ -313,7 +413,10 @@ export function RowMenu({ label, items }: { label: string; items: MenuItem[] }) 
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); }
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setOpen(false);
+      }
     };
     document.addEventListener('mousedown', onDown);
     window.addEventListener('keydown', onKey, true);
@@ -324,17 +427,44 @@ export function RowMenu({ label, items }: { label: string; items: MenuItem[] }) 
   }, [open]);
 
   return (
-    <span className="ja-rm-menu" ref={ref} onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-      <button type="button" aria-label={label} title={label} aria-haspopup="menu" aria-expanded={open}
-        className="ja-rm-switch" style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-xs)', color: 'var(--text-muted)' }}
-        onClick={() => setOpen(o => !o)}>
+    <span
+      className="ja-rm-menu"
+      ref={ref}
+      onClick={e => e.stopPropagation()}
+      onKeyDown={e => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        aria-label={label}
+        title={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="ja-rm-switch"
+        style={{
+          width: 28,
+          height: 28,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 'var(--radius-xs)',
+          color: 'var(--text-muted)',
+        }}
+        onClick={() => setOpen(o => !o)}
+      >
         <Icon name="ellipsis" size={16} />
       </button>
       {open && (
         <span className="ja-rm-menu__list" role="menu" data-ja-menu="">
           {items.map(item => (
-            <button key={item.label} type="button" role="menuitem" className="ja-rm-menu__item"
-              onClick={() => { setOpen(false); item.onSelect(); }}>
+            <button
+              key={item.label}
+              type="button"
+              role="menuitem"
+              className="ja-rm-menu__item"
+              onClick={() => {
+                setOpen(false);
+                item.onSelect();
+              }}
+            >
               <Icon name={item.icon} size={14} />
               {item.label}
             </button>

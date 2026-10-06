@@ -7,7 +7,13 @@ import React from 'react';
  *
  *   <TableScroll minWidth={720}><DataTable … /></TableScroll>
  */
-export function TableScroll({ minWidth = 640, children }: { minWidth?: number; children: React.ReactNode }) {
+export function TableScroll({
+  minWidth = 640,
+  children,
+}: {
+  minWidth?: number;
+  children: React.ReactNode;
+}) {
   return (
     <div className="ja-table-scroll">
       <div style={{ minWidth }}>{children}</div>

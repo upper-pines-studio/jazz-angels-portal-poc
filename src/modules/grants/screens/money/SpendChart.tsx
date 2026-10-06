@@ -1,5 +1,12 @@
 import React from 'react';
-import { addDays, differenceInCalendarDays, format, parseISO, startOfMonth, addMonths } from 'date-fns';
+import {
+  addDays,
+  differenceInCalendarDays,
+  format,
+  parseISO,
+  startOfMonth,
+  addMonths,
+} from 'date-fns';
 import { dateLong, money } from '../../../../core';
 import { aboutMoney } from '../../domain';
 import type { Pace } from '../../domain';
@@ -14,11 +21,31 @@ import { niceStep, shortMoney } from './spend';
 
 type Anchor = 'start' | 'middle' | 'end';
 type Tone = 'fast' | 'slow' | 'track';
-interface Box { x0: number; x1: number; y0: number; y1: number }
-interface Label { text: string; cls: string; x: number; y: number; anchor: Anchor }
-interface Want { text: string; cls: string; cands: Array<[number, number, Anchor]>; optional?: boolean; ignoreToday?: boolean }
-interface Pt { day: number; total: number; date: string }
-
+interface Box {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+}
+interface Label {
+  text: string;
+  cls: string;
+  x: number;
+  y: number;
+  anchor: Anchor;
+}
+interface Want {
+  text: string;
+  cls: string;
+  cands: Array<[number, number, Anchor]>;
+  optional?: boolean;
+  ignoreToday?: boolean;
+}
+interface Pt {
+  day: number;
+  total: number;
+  date: string;
+}
 
 function useWidth(fallback: number): [React.RefObject<HTMLDivElement>, number] {
   const ref = React.useRef<HTMLDivElement>(null);
@@ -81,18 +108,25 @@ function sample(points: Array<[number, number]>, step = 5): Array<[number, numbe
  * plot and clear of labels already placed, points and lines. An optional label
  * with no clean spot is dropped; a required one takes its least bad spot.
  */
-function placeLabels(wants: Want[], bounds: Box, obstacles: Box[], lines: Array<[number, number]>, todayLine: Array<[number, number]>): Label[] {
+function placeLabels(
+  wants: Want[],
+  bounds: Box,
+  obstacles: Box[],
+  lines: Array<[number, number]>,
+  todayLine: Array<[number, number]>,
+): Label[] {
   const placed: Array<Label & { box: Box }> = [];
   for (const want of wants) {
     let best: { label: Label; box: Box; cost: number } | undefined;
     for (const [x, y, anchor] of want.cands) {
       const label = { text: want.text, cls: want.cls, x, y, anchor };
       const box = boxOf(label);
-      if (box.x0 < bounds.x0 || box.x1 > bounds.x1 || box.y0 < bounds.y0 || box.y1 > bounds.y1) continue;
+      if (box.x0 < bounds.x0 || box.x1 > bounds.x1 || box.y0 < bounds.y0 || box.y1 > bounds.y1)
+        continue;
       let cost = 0;
       const roomy = { ...box, y0: box.y0 - 3, y1: box.y1 + 3 };
-      if (placed.some((p) => overlaps(p.box, roomy))) cost += 100;
-      if (obstacles.some((o) => overlaps(o, box))) cost += 20;
+      if (placed.some(p => overlaps(p.box, roomy))) cost += 100;
+      if (obstacles.some(o => overlaps(o, box))) cost += 20;
       const hit = (pts: Array<[number, number]>) =>
         pts.filter(([px, py]) => px > box.x0 && px < box.x1 && py > box.y0 && py < box.y1).length;
       cost += hit(lines);
@@ -105,7 +139,8 @@ function placeLabels(wants: Want[], bounds: Box, obstacles: Box[], lines: Array<
       // Nothing fits inside: clamp the first candidate into the plot.
       const [x, y, anchor] = want.cands[0];
       const box0 = boxOf({ text: want.text, x, y, anchor });
-      const dx = box0.x0 < bounds.x0 ? bounds.x0 - box0.x0 : box0.x1 > bounds.x1 ? bounds.x1 - box0.x1 : 0;
+      const dx =
+        box0.x0 < bounds.x0 ? bounds.x0 - box0.x0 : box0.x1 > bounds.x1 ? bounds.x1 - box0.x1 : 0;
       const label = { text: want.text, cls: want.cls, x: x + dx, y, anchor };
       best = { label, box: boxOf(label), cost: 0 };
     }
@@ -152,8 +187,13 @@ export function SpendChart({ pace, series, summary, compact = false }: SpendChar
   const ended = pace.status === 'period-ended';
 
   // The spending line: $0 at the start, then the running total at the end of each day.
-  const pts: Pt[] = pace.status === 'not-started' ? [] : series.map((p) => ({ day: dayOf(p.date) + 1, total: p.total, date: p.date }));
-  const line: Array<[number, number]> = pts.length ? [[xOf(0), yOf(0)], ...pts.map((p): [number, number] => [xOf(p.day), yOf(p.total)])] : [];
+  const pts: Pt[] =
+    pace.status === 'not-started'
+      ? []
+      : series.map(p => ({ day: dayOf(p.date) + 1, total: p.total, date: p.date }));
+  const line: Array<[number, number]> = pts.length
+    ? [[xOf(0), yOf(0)], ...pts.map((p): [number, number] => [xOf(p.day), yOf(p.total)])]
+    : [];
   const last = line[line.length - 1];
 
   // Gridlines: round steps below the award, the award itself on top.
@@ -175,7 +215,17 @@ export function SpendChart({ pace, series, summary, compact = false }: SpendChar
   const every = compact ? 3 : gap >= 30 ? 1 : gap >= 16 ? 2 : 3;
 
   // Where today's rate leads.
-  let proj: { x0: number; y0: number; x1: number; y1: number; tone: Tone; endLabel: string; unspent?: number } | undefined;
+  let proj:
+    | {
+        x0: number;
+        y0: number;
+        x1: number;
+        y1: number;
+        tone: Tone;
+        endLabel: string;
+        unspent?: number;
+      }
+    | undefined;
   const xT = running ? xOf(pace.daysElapsed) : undefined;
   if (running && last && pace.spent <= pace.budget && pace.daysElapsed > 0) {
     const perDay = pace.spent / pace.daysElapsed;
@@ -185,46 +235,124 @@ export function SpendChart({ pace, series, summary, compact = false }: SpendChar
       endDay = pace.budget / perDay;
       endVal = pace.budget;
     }
-    const tone: Tone = pace.status === 'spending-fast' ? 'fast' : pace.status === 'spending-slow' ? 'slow' : 'track';
+    const tone: Tone =
+      pace.status === 'spending-fast' ? 'fast' : pace.status === 'spending-slow' ? 'slow' : 'track';
     const runsOut = endDay < days - 0.5;
-    const runsOn = pace.runsOutOn ?? format(addDays(parseISO(start), Math.floor(endDay)), 'yyyy-MM-dd');
+    const runsOn =
+      pace.runsOutOn ?? format(addDays(parseISO(start), Math.floor(endDay)), 'yyyy-MM-dd');
     proj = {
-      x0: last[0], y0: last[1], x1: xOf(endDay), y1: yOf(endVal), tone,
-      endLabel: runsOut ? `Runs out ${format(parseISO(runsOn), 'MMM d')}` : `${aboutMoney(endVal)} by ${format(parseISO(end), 'MMM d')}`,
-      unspent: pace.status === 'spending-slow' && !runsOut && pace.budget - endVal > 0 ? pace.budget - endVal : undefined,
+      x0: last[0],
+      y0: last[1],
+      x1: xOf(endDay),
+      y1: yOf(endVal),
+      tone,
+      endLabel: runsOut
+        ? `Runs out ${format(parseISO(runsOn), 'MMM d')}`
+        : `${aboutMoney(endVal)} by ${format(parseISO(end), 'MMM d')}`,
+      unspent:
+        pace.status === 'spending-slow' && !runsOut && pace.budget - endVal > 0
+          ? pace.budget - endVal
+          : undefined,
     };
   }
 
   // Labels, most important first.
   const wants: Want[] = [];
   if (xT !== undefined && !compact) {
-    wants.push({ text: 'Today', cls: 'sd-lab sd-lab-today', ignoreToday: true, cands: [[xT, T - 10, 'middle'], [xT + 4, T - 10, 'start'], [xT - 4, T - 10, 'end']] });
+    wants.push({
+      text: 'Today',
+      cls: 'sd-lab sd-lab-today',
+      ignoreToday: true,
+      cands: [
+        [xT, T - 10, 'middle'],
+        [xT + 4, T - 10, 'start'],
+        [xT - 4, T - 10, 'end'],
+      ],
+    });
   }
   if (last && !compact) {
     const [px, py] = last;
     const t = `Spent ${money(pace.spent)}`;
-    wants.push({ text: t, cls: 'sd-lab sd-lab-actual', cands: [[px - 8, py - 8, 'end'], [px + 8, py + 18, 'start'], [px + 8, py - 8, 'start'], [px - 8, py + 18, 'end'], [px + 8, py + 4, 'start']] });
+    wants.push({
+      text: t,
+      cls: 'sd-lab sd-lab-actual',
+      cands: [
+        [px - 8, py - 8, 'end'],
+        [px + 8, py + 18, 'start'],
+        [px + 8, py - 8, 'start'],
+        [px - 8, py + 18, 'end'],
+        [px + 8, py + 4, 'start'],
+      ],
+    });
   }
   if (last && compact) {
-    wants.push({ text: money(pace.spent), cls: 'sd-lab sd-lab-actual', cands: [[last[0] + 8, last[1] + 4, 'start'], [last[0] + 8, last[1] + 14, 'start']] });
-    wants.push({ text: ended ? 'Ended' : 'Today', cls: 'sd-lab sd-lab-muted', cands: [[R + 8, B + 4, 'start']] });
+    wants.push({
+      text: money(pace.spent),
+      cls: 'sd-lab sd-lab-actual',
+      cands: [
+        [last[0] + 8, last[1] + 4, 'start'],
+        [last[0] + 8, last[1] + 14, 'start'],
+      ],
+    });
+    wants.push({
+      text: ended ? 'Ended' : 'Today',
+      cls: 'sd-lab sd-lab-muted',
+      cands: [[R + 8, B + 4, 'start']],
+    });
   }
   if (proj) {
     const cls = `sd-lab sd-lab-${proj.tone}`;
     const { x1, y1 } = proj;
-    wants.push({ text: proj.endLabel, cls, cands: [[x1 + 10, y1 + 16, 'start'], [x1 - 10, y1 + 16, 'end'], [x1 - 8, y1 + 18, 'end'], [x1 - 8, y1 + 28, 'end'], [x1 - 8, y1 - 10, 'end'], [x1 + 10, y1 - 8, 'start']] });
+    wants.push({
+      text: proj.endLabel,
+      cls,
+      cands: [
+        [x1 + 10, y1 + 16, 'start'],
+        [x1 - 10, y1 + 16, 'end'],
+        [x1 - 8, y1 + 18, 'end'],
+        [x1 - 8, y1 + 28, 'end'],
+        [x1 - 8, y1 - 10, 'end'],
+        [x1 + 10, y1 - 8, 'start'],
+      ],
+    });
   }
   if (!compact) {
-    wants.push({ text: `Award ${money(pace.budget)}`, cls: 'sd-lab sd-lab-muted', cands: [[R, T - 6, 'end'], [L + 4, T - 6, 'start'], [R - 4, T + 14, 'end']] });
+    wants.push({
+      text: `Award ${money(pace.budget)}`,
+      cls: 'sd-lab sd-lab-muted',
+      cands: [
+        [R, T - 6, 'end'],
+        [L + 4, T - 6, 'start'],
+        [R - 4, T + 14, 'end'],
+      ],
+    });
   }
   if (proj?.unspent) {
     const mid = (T + proj.y1) / 2 + 4;
-    wants.push({ text: `About ${aboutMoney(proj.unspent)} unspent`, cls: 'sd-lab sd-lab-slow sd-lab-strong', cands: [[R - 8, mid, 'end'], [R - 8, proj.y1 + 32, 'end'], [R - 8, proj.y1 - 22, 'end']] });
+    wants.push({
+      text: `About ${aboutMoney(proj.unspent)} unspent`,
+      cls: 'sd-lab sd-lab-slow sd-lab-strong',
+      cands: [
+        [R - 8, mid, 'end'],
+        [R - 8, proj.y1 + 32, 'end'],
+        [R - 8, proj.y1 - 22, 'end'],
+      ],
+    });
   }
   if (proj && !narrow) {
     const mx = (proj.x0 + proj.x1) / 2;
     const my = (proj.y0 + proj.y1) / 2;
-    wants.push({ text: 'At this rate', cls: `sd-lab sd-lab-${proj.tone}`, optional: true, cands: [[mx + 8, my + 14, 'start'], [mx - 8, my - 8, 'end'], [mx + 8, my - 8, 'start'], [mx - 8, my + 14, 'end']] });
+    wants.push({
+      text: 'At this rate',
+      cls: `sd-lab sd-lab-${proj.tone}`,
+      optional: true,
+      cands: [
+        [mx + 8, my + 14, 'start'],
+        [mx - 8, my - 8, 'end'],
+        [mx + 8, my - 8, 'start'],
+        [mx - 8, my + 14, 'end'],
+      ],
+    });
   }
   if (!compact && !narrow) {
     const at = (t: number): [number, number] => [L + t * (R - L), B - t * (B - T)];
@@ -241,11 +369,34 @@ export function SpendChart({ pace, series, summary, compact = false }: SpendChar
   if (proj) obstacles.push({ x0: proj.x1 - 6, x1: proj.x1 + 6, y0: proj.y1 - 6, y1: proj.y1 + 6 });
   const lineSamples = [
     ...sample(line),
-    ...(proj ? sample([[proj.x0, proj.y0], [proj.x1, proj.y1]]) : []),
-    ...(compact ? [] : sample([[L, B], [R, T]])),
-    ...(proj?.unspent ? sample([[R + 4, T], [R + 8, T], [R + 8, proj.y1], [R + 4, proj.y1]]) : []),
+    ...(proj
+      ? sample([
+          [proj.x0, proj.y0],
+          [proj.x1, proj.y1],
+        ])
+      : []),
+    ...(compact
+      ? []
+      : sample([
+          [L, B],
+          [R, T],
+        ])),
+    ...(proj?.unspent
+      ? sample([
+          [R + 4, T],
+          [R + 8, T],
+          [R + 8, proj.y1],
+          [R + 4, proj.y1],
+        ])
+      : []),
   ];
-  const todaySamples = xT !== undefined ? sample([[xT, T - 6], [xT, B]]) : [];
+  const todaySamples =
+    xT !== undefined
+      ? sample([
+          [xT, T - 6],
+          [xT, B],
+        ])
+      : [];
   const bounds: Box = { x0: L, x1: W - 1, y0: 1, y1: compact ? H - 1 : B - 2 };
   const labels = placeLabels(wants, bounds, obstacles, lineSamples, todaySamples);
 
@@ -259,7 +410,10 @@ export function SpendChart({ pace, series, summary, compact = false }: SpendChar
     let bestD = Infinity;
     pts.forEach((p, i) => {
       const d = Math.abs(xOf(p.day) - vx);
-      if (d < bestD) { bestD = d; bestI = i; }
+      if (d < bestD) {
+        bestD = d;
+        bestI = i;
+      }
     });
     setHover(bestI);
   };
@@ -271,8 +425,10 @@ export function SpendChart({ pace, series, summary, compact = false }: SpendChar
     else if (e.key === 'ArrowRight') next = Math.min(pts.length - 1, cur + 1);
     else if (e.key === 'Home') next = 0;
     else if (e.key === 'End') next = pts.length - 1;
-    else if (e.key === 'Escape') { setHover(null); return; }
-    else return;
+    else if (e.key === 'Escape') {
+      setHover(null);
+      return;
+    } else return;
     e.preventDefault();
     setHover(next);
   };
@@ -290,42 +446,65 @@ export function SpendChart({ pace, series, summary, compact = false }: SpendChar
         role="img"
         aria-label={summary}
         tabIndex={pts.length ? 0 : undefined}
-        onPointerMove={(e) => pick(e.clientX, e.currentTarget)}
+        onPointerMove={e => pick(e.clientX, e.currentTarget)}
         onPointerLeave={() => setHover(null)}
         onFocus={() => setHover(pts.length ? pts.length - 1 : null)}
         onBlur={() => setHover(null)}
         onKeyDown={onKey}
       >
         <line className="sd-grid" x1={L} x2={R} y1={B} y2={B} />
-        <text className="sd-ax" x={L - 8} y={B + 3.5} textAnchor="end">$0</text>
-        {ticks.map((v) => (
+        <text className="sd-ax" x={L - 8} y={B + 3.5} textAnchor="end">
+          $0
+        </text>
+        {ticks.map(v => (
           <g key={v}>
             <line className="sd-grid" x1={L} x2={R} y1={yOf(v)} y2={yOf(v)} />
-            <text className="sd-ax" x={L - 8} y={yOf(v) + 3.5} textAnchor="end">{shortMoney(v)}</text>
+            <text className="sd-ax" x={L - 8} y={yOf(v) + 3.5} textAnchor="end">
+              {shortMoney(v)}
+            </text>
           </g>
         ))}
         <line className="sd-award" x1={L} x2={R} y1={yOf(pace.budget)} y2={yOf(pace.budget)} />
-        <text className="sd-ax" x={L - 8} y={yOf(pace.budget) + 3.5} textAnchor="end">{shortMoney(pace.budget)}</text>
+        <text className="sd-ax" x={L - 8} y={yOf(pace.budget) + 3.5} textAnchor="end">
+          {shortMoney(pace.budget)}
+        </text>
 
         {months.map((m, i) => (
           <g key={`${m.label}-${i}`}>
             <line className="sd-tick" x1={m.x} x2={m.x} y1={B} y2={B + 4} />
-            {i % every === 0 && m.x + 20 < W && <text className="sd-ax" x={m.x + 3} y={B + 16}>{m.label}</text>}
+            {i % every === 0 && m.x + 20 < W && (
+              <text className="sd-ax" x={m.x + 3} y={B + 16}>
+                {m.label}
+              </text>
+            )}
           </g>
         ))}
         <line className="sd-tick" x1={R} x2={R} y1={B} y2={B + 4} />
         <line className="sd-axis" x1={L} x2={R} y1={B} y2={B} />
 
         <line className="sd-even" x1={L} y1={B} x2={R} y2={yOf(pace.budget)} />
-        {xT !== undefined && !compact && <line className="sd-today" x1={xT} x2={xT} y1={T - 6} y2={B} />}
-        {proj && <polyline className={`sd-proj sd-proj-${proj.tone}`} points={`${proj.x0},${proj.y0} ${proj.x1},${proj.y1}`} />}
-        {proj?.unspent && <path className="sd-gap" d={`M${R + 4},${T} H${R + 8} V${proj.y1} H${R + 4}`} />}
-        {line.length > 0 && <polyline className="sd-actual" points={line.map(([x, y]) => `${x},${y}`).join(' ')} />}
+        {xT !== undefined && !compact && (
+          <line className="sd-today" x1={xT} x2={xT} y1={T - 6} y2={B} />
+        )}
+        {proj && (
+          <polyline
+            className={`sd-proj sd-proj-${proj.tone}`}
+            points={`${proj.x0},${proj.y0} ${proj.x1},${proj.y1}`}
+          />
+        )}
+        {proj?.unspent && (
+          <path className="sd-gap" d={`M${R + 4},${T} H${R + 8} V${proj.y1} H${R + 4}`} />
+        )}
+        {line.length > 0 && (
+          <polyline className="sd-actual" points={line.map(([x, y]) => `${x},${y}`).join(' ')} />
+        )}
         {last && <circle className="sd-pt" cx={last[0]} cy={last[1]} r={3.5} />}
         {proj && <circle className={`sd-pt-${proj.tone}`} cx={proj.x1} cy={proj.y1} r={4} />}
 
-        {labels.map((l) => (
-          <text key={l.text} className={l.cls} x={l.x} y={l.y} textAnchor={l.anchor}>{l.text}</text>
+        {labels.map(l => (
+          <text key={l.text} className={l.cls} x={l.x} y={l.y} textAnchor={l.anchor}>
+            {l.text}
+          </text>
         ))}
 
         {hoverPt && (
@@ -335,7 +514,15 @@ export function SpendChart({ pace, series, summary, compact = false }: SpendChar
           </g>
         )}
       </svg>
-      <div className="sd-readout" aria-live="polite" style={hoverPt ? { left: Math.max(70, Math.min(W - 70, hx)), top: Math.max(0, hy - 12) } : { display: 'none' }}>
+      <div
+        className="sd-readout"
+        aria-live="polite"
+        style={
+          hoverPt
+            ? { left: Math.max(70, Math.min(W - 70, hx)), top: Math.max(0, hy - 12) }
+            : { display: 'none' }
+        }
+      >
         {hoverPt && (
           <>
             <span className="sd-readout__date">{dateLong(hoverPt.date)}</span>

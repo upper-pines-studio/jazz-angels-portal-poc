@@ -69,7 +69,7 @@ export function isTerminal(phase: Phase): boolean {
 
 /** The steps to draw for this grant: LOI is hidden when the funder does not require one. */
 export function stepperPhases(grant: Pick<Grant, 'loiRequired'>): Phase[] {
-  return grant.loiRequired ? PHASE_ORDER : PHASE_ORDER.filter((p) => p !== 'loi');
+  return grant.loiRequired ? PHASE_ORDER : PHASE_ORDER.filter(p => p !== 'loi');
 }
 
 const WITHDRAW: Transition = {

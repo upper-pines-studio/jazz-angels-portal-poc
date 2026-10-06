@@ -21,12 +21,12 @@ describe('deadlines', () => {
   const all = deadlines(state, today);
 
   it('is sorted by date, ascending', () => {
-    const dates = all.map((d) => d.date);
+    const dates = all.map(d => d.date);
     expect([...dates].sort()).toEqual(dates);
   });
 
   it('has exactly one overdue item — the Arts Council application', () => {
-    const overdue = all.filter((d) => d.status === 'overdue');
+    const overdue = all.filter(d => d.status === 'overdue');
     expect(overdue).toHaveLength(1);
     expect(overdue[0]).toMatchObject({
       grantId: 'g-arts-council-lb-2026',
@@ -35,7 +35,7 @@ describe('deadlines', () => {
   });
 
   it('treats the Parsons LOI on Sep 26 as due soon', () => {
-    const loi = all.find((d) => d.grantId === 'g-parsons-2026' && d.date === '2026-09-26');
+    const loi = all.find(d => d.grantId === 'g-parsons-2026' && d.date === '2026-09-26');
     expect(loi).toBeDefined();
     expect(loi!.kind).toBe('loi');
     expect(loi!.status).toBe('due-soon');
@@ -54,30 +54,30 @@ describe('deadlines', () => {
   });
 
   it('puts the LA County final report 17 days out, so upcoming rather than due soon', () => {
-    const report = all.find((d) => d.id === 'report:rep-lac-final');
+    const report = all.find(d => d.id === 'report:rep-lac-final');
     expect(report).toMatchObject({ date: '2026-09-30', kind: 'report', status: 'upcoming' });
   });
 
   it('ignores grants in a terminal phase', () => {
-    expect(all.some((d) => d.grantId === 'g-boeing-2026')).toBe(false);
-    expect(all.some((d) => d.grantId === 'g-wells-fargo-2025')).toBe(false);
+    expect(all.some(d => d.grantId === 'g-boeing-2026')).toBe(false);
+    expect(all.some(d => d.grantId === 'g-wells-fargo-2025')).toBe(false);
   });
 
   it('ignores payments already received and reports already submitted', () => {
-    expect(all.some((d) => d.id === 'payment:pay-ha-1')).toBe(false);
-    expect(all.find((d) => d.id === 'payment:pay-ha-2')).toMatchObject({ date: '2027-01-15' });
-    expect(all.some((d) => d.id === 'report:rep-wf-final')).toBe(false);
+    expect(all.some(d => d.id === 'payment:pay-ha-1')).toBe(false);
+    expect(all.find(d => d.id === 'payment:pay-ha-2')).toMatchObject({ date: '2027-01-15' });
+    expect(all.some(d => d.id === 'report:rep-wf-final')).toBe(false);
   });
 
   it('gives every deadline a grant and an owner', () => {
     expect(all.length).toBeGreaterThan(5);
-    expect(all.every((d) => !!d.grantId && !!d.ownerId)).toBe(true);
-    expect(new Set(all.map((d) => d.id)).size).toBe(all.length);
+    expect(all.every(d => !!d.grantId && !!d.ownerId)).toBe(true);
+    expect(new Set(all.map(d => d.id)).size).toBe(all.length);
   });
 
   it('scopes and picks the next one per grant', () => {
     const parsons = grantDeadlines(state, 'g-parsons-2026', today);
-    expect(parsons.every((d) => d.grantId === 'g-parsons-2026')).toBe(true);
+    expect(parsons.every(d => d.grantId === 'g-parsons-2026')).toBe(true);
     expect(nextDeadline(state, 'g-parsons-2026', today)).toEqual(parsons[0]);
     expect(nextDeadline(state, 'g-boeing-2026', today)).toBeUndefined();
   });
@@ -96,7 +96,7 @@ describe('grantMoney', () => {
 
   it('breaks spend down by budget line', () => {
     const { byLine } = grantMoney(state, 'g-herb-alpert-2026');
-    expect(byLine.map((b) => [b.line.category, b.line.planned, b.spent])).toEqual([
+    expect(byLine.map(b => [b.line.category, b.line.planned, b.spent])).toEqual([
       ['Teaching artist stipends', 22_000, 12_650],
       ['Sheet music and charts', 3_000, 680],
       ['Instrument repair', 5_000, 2_020],
@@ -166,7 +166,7 @@ describe('pipelineCounts', () => {
   const buckets = pipelineCounts(state);
 
   it('covers the eight phases plus declined and withdrawn', () => {
-    expect(buckets.map((b) => b.phase)).toEqual([
+    expect(buckets.map(b => b.phase)).toEqual([
       'prospect',
       'loi',
       'applying',
@@ -181,7 +181,7 @@ describe('pipelineCounts', () => {
   });
 
   it('counts the seeded grants', () => {
-    const by = Object.fromEntries(buckets.map((b) => [b.phase, b]));
+    const by = Object.fromEntries(buckets.map(b => [b.phase, b]));
     expect(by.prospect.count).toBe(1);
     expect(by.loi.count).toBe(1);
     expect(by.applying.count).toBe(2);
@@ -195,27 +195,26 @@ describe('pipelineCounts', () => {
   });
 
   it('sums the money per phase', () => {
-    const applying = buckets.find((b) => b.phase === 'applying')!;
+    const applying = buckets.find(b => b.phase === 'applying')!;
     expect(applying.requested).toBe(15_000 + 7_500);
-    expect(buckets.find((b) => b.phase === 'active')!.awarded).toBe(58_500);
+    expect(buckets.find(b => b.phase === 'active')!.awarded).toBe(58_500);
   });
 });
 
 describe('grantsByView', () => {
   it('splits the tabs', () => {
     expect(grantsByView(state, 'all')).toHaveLength(10);
-    expect(grantsByView(state, 'pre-award').map((g) => g.phase).sort()).toEqual([
-      'applying',
-      'applying',
-      'loi',
-      'prospect',
-      'submitted',
-    ]);
+    expect(
+      grantsByView(state, 'pre-award')
+        .map(g => g.phase)
+        .sort(),
+    ).toEqual(['applying', 'applying', 'loi', 'prospect', 'submitted']);
     expect(grantsByView(state, 'post-award')).toHaveLength(4);
-    expect(grantsByView(state, 'closed').map((g) => g.id).sort()).toEqual([
-      'g-boeing-2026',
-      'g-wells-fargo-2025',
-    ]);
+    expect(
+      grantsByView(state, 'closed')
+        .map(g => g.id)
+        .sort(),
+    ).toEqual(['g-boeing-2026', 'g-wells-fargo-2025']);
     expect(grantsByView(state, 'active')).toHaveLength(8);
   });
 });
@@ -226,13 +225,13 @@ describe('checklistProgress', () => {
     expect(progress.total).toBeGreaterThan(0);
     expect(progress.done).toBeLessThan(progress.total);
     expect(progress.done).toBe(
-      state.grants.tasks.filter((t) => t.grantId === 'g-arts-council-lb-2026' && t.done).length,
+      state.grants.tasks.filter(t => t.grantId === 'g-arts-council-lb-2026' && t.done).length,
     );
   });
 
   it('leaves "Submit application" open and overdue on the Arts Council grant', () => {
     const task = state.grants.tasks.find(
-      (t) => t.grantId === 'g-arts-council-lb-2026' && t.title === 'Submit application',
+      t => t.grantId === 'g-arts-council-lb-2026' && t.title === 'Submit application',
     );
     expect(task).toMatchObject({ done: false, dueDate: '2026-09-05' });
   });

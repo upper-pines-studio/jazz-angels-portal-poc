@@ -4,7 +4,14 @@ import { useStore } from '../../../../core';
 import { REMINDER_OFFSETS, hourLabel, offsetChip, offsetLabel } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
 import { OwnerAvatar } from '../../../../app/components/badges';
-import { CheckRow, ReminderChip, RepeatChip, ToggleSwitch, fullNames, offsetsSentence } from './ReminderParts';
+import {
+  CheckRow,
+  ReminderChip,
+  RepeatChip,
+  ToggleSwitch,
+  fullNames,
+  offsetsSentence,
+} from './ReminderParts';
 
 /** The office's reminder defaults: the summary card on Deadlines, and the dialog that edits them. */
 
@@ -31,7 +38,8 @@ export function ReminderDefaultsDialog({ onClose }: { onClose: () => void }) {
   const everyOk = !keep || (Number.isInteger(everyN) && everyN >= 1 && everyN <= 30);
   const own = state.grants.reminderPlans.length;
 
-  const toggle = <T,>(list: T[], item: T, on: boolean) => (on ? [...list.filter(x => x !== item), item] : list.filter(x => x !== item));
+  const toggle = <T,>(list: T[], item: T, on: boolean) =>
+    on ? [...list.filter(x => x !== item), item] : list.filter(x => x !== item);
 
   const save = () => {
     const sorted = [...offsets].sort((a, b) => b - a);
@@ -53,18 +61,40 @@ export function ReminderDefaultsDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Dialog open title="Default reminders" width={520} onClose={onClose}
+    <Dialog
+      open
+      title="Default reminders"
+      width={520}
+      onClose={onClose}
       description={`Every report follows these unless it has its own plan${own ? ` (${own} ${own === 1 ? 'report does' : 'reports do'})` : ''}.`}
-      footer={<>
-        <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" disabled={!everyOk} onClick={save}>Save defaults</Button>
-      </>}>
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" disabled={!everyOk} onClick={save}>
+            Save defaults
+          </Button>
+        </>
+      }
+    >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-        <Field label="When to send" hint={offsets.length ? undefined : 'With no days ticked, only reports with their own plan get reminders.'}>
+        <Field
+          label="When to send"
+          hint={
+            offsets.length
+              ? undefined
+              : 'With no days ticked, only reports with their own plan get reminders.'
+          }
+        >
           <div>
             {REMINDER_OFFSETS.map(o => (
-              <CheckRow key={o} checked={offsets.includes(o)} onChange={on => setOffsets(list => toggle(list, o, on))}
-                after={<span className="ja-rm-check__date">{offsetChip(o)}</span>}>
+              <CheckRow
+                key={o}
+                checked={offsets.includes(o)}
+                onChange={on => setOffsets(list => toggle(list, o, on))}
+                after={<span className="ja-rm-check__date">{offsetChip(o)}</span>}
+              >
                 {offsetLabel(o)}
               </CheckRow>
             ))}
@@ -74,10 +104,15 @@ export function ReminderDefaultsDialog({ onClose }: { onClose: () => void }) {
         <Field label="Who else gets the email" hint="The grant owner always gets it.">
           <div>
             {state.core.staff.map(s => (
-              <CheckRow key={s.id} checked={also.includes(s.id)} onChange={on => setAlso(list => toggle(list, s.id, on))}
-                after={<span className="ja-rm-check__role">{s.role}</span>}>
+              <CheckRow
+                key={s.id}
+                checked={also.includes(s.id)}
+                onChange={on => setAlso(list => toggle(list, s.id, on))}
+                after={<span className="ja-rm-check__role">{s.role}</span>}
+              >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                  <OwnerAvatar staffId={s.id} size={24} />{s.name}
+                  <OwnerAvatar staffId={s.id} size={24} />
+                  {s.name}
                 </span>
               </CheckRow>
             ))}
@@ -86,22 +121,43 @@ export function ReminderDefaultsDialog({ onClose }: { onClose: () => void }) {
 
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ font: 'var(--type-label)', color: 'var(--text-strong)' }}>Keep reminding after the due date</div>
-            <div style={{ font: 'var(--type-body-sm)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+            <div style={{ font: 'var(--type-label)', color: 'var(--text-strong)' }}>
+              Keep reminding after the due date
+            </div>
+            <div
+              style={{
+                font: 'var(--type-body-sm)',
+                fontSize: 'var(--text-xs)',
+                color: 'var(--text-muted)',
+              }}
+            >
               Until someone marks the report submitted.
             </div>
           </div>
-          <ToggleSwitch checked={keep} onChange={setKeep} label="Keep reminding after the due date" />
+          <ToggleSwitch
+            checked={keep}
+            onChange={setKeep}
+            label="Keep reminding after the due date"
+          />
         </div>
 
         <div className="ja-grid-2">
           <Field label="Repeat every" error={everyOk ? undefined : 'Between 1 and 30 days.'}>
-            <Input type="number" value={every} disabled={!keep} suffix="days" invalid={!everyOk}
-              onChange={e => setEvery(e.target.value)} />
+            <Input
+              type="number"
+              value={every}
+              disabled={!keep}
+              suffix="days"
+              invalid={!everyOk}
+              onChange={e => setEvery(e.target.value)}
+            />
           </Field>
           <Field label="Emails go out at">
-            <Select value={hour} onChange={e => setHour(e.target.value)}
-              options={HOURS.map(h => ({ value: String(h), label: hourLabel(h) }))} />
+            <Select
+              value={hour}
+              onChange={e => setHour(e.target.value)}
+              options={HOURS.map(h => ({ value: String(h), label: hourLabel(h) }))}
+            />
           </Field>
         </div>
         {also.length > 0 && (
@@ -119,10 +175,13 @@ export function DefaultChips() {
   const { state } = useStore();
   const d = state.grants.reminderDefaults;
   const sorted = [...d.offsets].sort((a, b) => b - a);
-  if (!sorted.length && !d.keepReminding) return <span className="ja-rm-to">No reminders by default</span>;
+  if (!sorted.length && !d.keepReminding)
+    return <span className="ja-rm-to">No reminders by default</span>;
   return (
     <span className="ja-rm-chips">
-      {sorted.map(o => <ReminderChip key={o}>{offsetChip(o)}</ReminderChip>)}
+      {sorted.map(o => (
+        <ReminderChip key={o}>{offsetChip(o)}</ReminderChip>
+      ))}
       {d.keepReminding && <RepeatChip />}
     </span>
   );
@@ -135,24 +194,40 @@ export function ReminderDefaultsCard() {
   const d = state.grants.reminderDefaults;
   return (
     <>
-    <Card padding="0">
-      <div className="ja-rm-default">
-        <div className="ja-rm-default__main">
-          <span style={{ font: 'var(--weight-semibold) var(--text-base)/1.3 var(--font-sans)', color: 'var(--text-strong)' }}>Default reminders</span>
-          <span style={{ font: 'var(--type-body-sm)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-            Every new report starts with these. Change them for one report here, or for everyone in Settings.
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <DefaultChips />
-            <span className="ja-rm-to" style={{ whiteSpace: 'normal' }}>
-              {defaultsRecipientsText(fullNames(state, d.alsoNotifyIds), d.alsoNotifyIds.length)}
+      <Card padding="0">
+        <div className="ja-rm-default">
+          <div className="ja-rm-default__main">
+            <span
+              style={{
+                font: 'var(--weight-semibold) var(--text-base)/1.3 var(--font-sans)',
+                color: 'var(--text-strong)',
+              }}
+            >
+              Default reminders
             </span>
-          </span>
+            <span
+              style={{
+                font: 'var(--type-body-sm)',
+                fontSize: 'var(--text-xs)',
+                color: 'var(--text-muted)',
+              }}
+            >
+              Every new report starts with these. Change them for one report here, or for everyone
+              in Settings.
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <DefaultChips />
+              <span className="ja-rm-to" style={{ whiteSpace: 'normal' }}>
+                {defaultsRecipientsText(fullNames(state, d.alsoNotifyIds), d.alsoNotifyIds.length)}
+              </span>
+            </span>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+            Edit defaults
+          </Button>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>Edit defaults</Button>
-      </div>
-    </Card>
-    {editing && <ReminderDefaultsDialog onClose={() => setEditing(false)} />}
+      </Card>
+      {editing && <ReminderDefaultsDialog onClose={() => setEditing(false)} />}
     </>
   );
 }

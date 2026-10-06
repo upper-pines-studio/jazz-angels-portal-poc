@@ -26,11 +26,13 @@ const CAP_ROWS = 12;
 
 /** "Herb Alpert Foundation" → "herb-alpert", for the download's file name. */
 function slug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/\b(foundation|the|inc|of)\b/g, ' ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'grant';
+  return (
+    name
+      .toLowerCase()
+      .replace(/\b(foundation|the|inc|of)\b/g, ' ')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'grant'
+  );
 }
 
 /**
@@ -57,20 +59,38 @@ export function ExpensesTab({ grant }: { grant: Grant }) {
     if (!row || body.scrollHeight <= body.clientHeight) return;
     const top = row.offsetTop;
     if (top < body.scrollTop) body.scrollTop = top;
-    else if (top + row.offsetHeight > body.scrollTop + body.clientHeight) body.scrollTop = top + row.offsetHeight - body.clientHeight;
+    else if (top + row.offsetHeight > body.scrollTop + body.clientHeight)
+      body.scrollTop = top + row.offsetHeight - body.clientHeight;
   }, [view.selectedId, view.filter]);
 
   const choose = (id: string) => {
     view.select(id);
     // On a narrow screen the detail sits below the list; take the reader to it.
     if (window.matchMedia('(max-width: 900px)').matches) {
-      window.setTimeout(() => document.getElementById('expense-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+      window.setTimeout(
+        () =>
+          document
+            .getElementById('expense-detail')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+        60,
+      );
     }
   };
 
   const downloadIndex = () => {
     const funder = funderById(state, grant.funderId);
-    const header = ['Date', 'Payee', 'Budget line', 'Amount', 'QuickBooks account', 'QuickBooks class', 'QuickBooks reference', 'Description', 'Backup files', 'Backup note'];
+    const header = [
+      'Date',
+      'Payee',
+      'Budget line',
+      'Amount',
+      'QuickBooks account',
+      'QuickBooks class',
+      'QuickBooks reference',
+      'Description',
+      'Backup files',
+      'Backup note',
+    ];
     const rows = view.all.map((e: Expense) => {
       const tx = transactionById(state, e.transactionId);
       const files = expenseFiles(state, e.id);
@@ -80,14 +100,25 @@ export function ExpensesTab({ grant }: { grant: Grant }) {
         lineById(state, e.budgetLineId)?.category ?? '',
         e.amount,
         tx ? accountLabel(state, tx.accountCode) : 'Entered by hand',
-        tx ? className(state, tx.classId) ?? '' : '',
+        tx ? (className(state, tx.classId) ?? '') : '',
         tx ? tx.ref : '',
         e.note ?? '',
         files.length ? files.map(f => f.name).join('; ') : 'MISSING',
         e.backupNote ?? '',
       ];
     });
-    rows.push(['', `${expensesLabel(summary.expenses)}`, '', summary.total, '', '', '', '', filesLabel(summary.files), '']);
+    rows.push([
+      '',
+      `${expensesLabel(summary.expenses)}`,
+      '',
+      summary.total,
+      '',
+      '',
+      '',
+      '',
+      filesLabel(summary.files),
+      '',
+    ]);
     const name = `${slug(funder?.name ?? grant.title)}-backup-index.csv`;
     downloadText(name, toCsv([header, ...rows]));
     toast({
@@ -98,24 +129,46 @@ export function ExpensesTab({ grant }: { grant: Grant }) {
   };
 
   const logDialog = logging && (
-    <LogExpenseDialog grant={grant} onClose={() => setLogging(false)} onSaved={(id, input) => {
-      setLogging(false);
-      view.patch({ expense: id, backup: null });
-      toast({ tone: 'success', title: 'Expense logged', message: `${input.payee}, ${money(input.amount)}, entered by hand. Add its receipt in the column on the right.` });
-    }} />
+    <LogExpenseDialog
+      grant={grant}
+      onClose={() => setLogging(false)}
+      onSaved={(id, input) => {
+        setLogging(false);
+        view.patch({ expense: id, backup: null });
+        toast({
+          tone: 'success',
+          title: 'Expense logged',
+          message: `${input.payee}, ${money(input.amount)}, entered by hand. Add its receipt in the column on the right.`,
+        });
+      }}
+    />
   );
 
   if (view.all.length === 0) {
     return (
       <div className="ja-exp">
-        <EmptyState icon={<Icon name="receipt" size={22} />} title="Nothing spent against this grant yet"
+        <EmptyState
+          icon={<Icon name="receipt" size={22} />}
+          title="Nothing spent against this grant yet"
           message="Expenses arrive from QuickBooks. Assign a transaction to one of this grant's budget lines on the Transactions screen and it shows up here, ready for its receipt."
           action={
-            <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <Button variant="primary" onClick={() => nav('/transactions?tab=to-assign')}>Go to Transactions</Button>
-              <Button variant="ghost" onClick={() => setLogging(true)}>Log an expense by hand</Button>
+            <div
+              style={{
+                display: 'flex',
+                gap: 'var(--space-3)',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+              }}
+            >
+              <Button variant="primary" onClick={() => nav('/transactions?tab=to-assign')}>
+                Go to Transactions
+              </Button>
+              <Button variant="ghost" onClick={() => setLogging(true)}>
+                Log an expense by hand
+              </Button>
             </div>
-          } />
+          }
+        />
         {logDialog}
       </div>
     );
@@ -134,12 +187,21 @@ export function ExpensesTab({ grant }: { grant: Grant }) {
           {
             label: 'Missing backup',
             value: summary.missing,
-            unit: summary.missing ? <span style={{ color: 'var(--gold-700)' }}>{money(summary.missingTotal)}</span> : 'none',
+            unit: summary.missing ? (
+              <span style={{ color: 'var(--gold-700)' }}>{money(summary.missingTotal)}</span>
+            ) : (
+              'none'
+            ),
           },
         ]}
         trailing={
           <div className="ja-exp__download">
-            <Button variant="secondary" size="sm" iconLeft={<Icon name="download" size={15} />} onClick={downloadIndex}>
+            <Button
+              variant="secondary"
+              size="sm"
+              iconLeft={<Icon name="download" size={15} />}
+              onClick={downloadIndex}
+            >
               Download all backup
             </Button>
             <span>A spreadsheet index of every expense, for audits</span>
@@ -150,26 +212,46 @@ export function ExpensesTab({ grant }: { grant: Grant }) {
       <div className="ja-exp__band">
         <span className="ja-exp__sync">
           <Icon name="refresh-cw" size={13} />
-          {qb.connected
-            ? <>From QuickBooks, synced {syncedLabel(state, today)}. Newest first.{capped && ` All ${view.shown.length} shown; the list scrolls.`}</>
-            : <>QuickBooks is not connected, so nothing new is arriving. Newest first.</>}
+          {qb.connected ? (
+            <>
+              From QuickBooks, synced {syncedLabel(state, today)}. Newest first.
+              {capped && ` All ${view.shown.length} shown; the list scrolls.`}
+            </>
+          ) : (
+            <>QuickBooks is not connected, so nothing new is arriving. Newest first.</>
+          )}
         </span>
         <div className="ja-exp__seg" role="group" aria-label="Which expenses to show">
-          <button type="button" aria-pressed={view.filter === 'all'} className={view.filter === 'all' ? 'is-on' : undefined}
-            onClick={() => view.setFilter('all')}>
+          <button
+            type="button"
+            aria-pressed={view.filter === 'all'}
+            className={view.filter === 'all' ? 'is-on' : undefined}
+            onClick={() => view.setFilter('all')}
+          >
             All <span className="ja-exp__count">{view.all.length}</span>
           </button>
-          <button type="button" aria-pressed={view.filter === 'missing'} className={view.filter === 'missing' ? 'is-on' : undefined}
-            onClick={() => view.setFilter('missing')}>
+          <button
+            type="button"
+            aria-pressed={view.filter === 'missing'}
+            className={view.filter === 'missing' ? 'is-on' : undefined}
+            onClick={() => view.setFilter('missing')}
+          >
             Missing a receipt <span className="ja-exp__count">{view.missing.length}</span>
           </button>
         </div>
       </div>
 
       {view.shown.length === 0 ? (
-        <EmptyState icon={<Icon name="circle-check" size={22} />} title="Every expense has its backup"
+        <EmptyState
+          icon={<Icon name="circle-check" size={22} />}
+          title="Every expense has its backup"
           message={`Nothing on this grant is missing a receipt. All ${expensesLabel(view.all.length)} have their files.`}
-          action={<Button variant="secondary" onClick={() => view.setFilter('all')}>Show all expenses</Button>} />
+          action={
+            <Button variant="secondary" onClick={() => view.setFilter('all')}>
+              Show all expenses
+            </Button>
+          }
+        />
       ) : (
         <div className="ja-exp__table">
           <div className="ja-exp__row ja-exp__head">
@@ -186,10 +268,14 @@ export function ExpensesTab({ grant }: { grant: Grant }) {
               const split = !!e.transactionId && (parts.get(e.transactionId) ?? 0) > 1;
               const on = e.id === view.selectedId;
               return (
-                <button key={e.id} type="button" data-expense={e.id}
+                <button
+                  key={e.id}
+                  type="button"
+                  data-expense={e.id}
                   className={'ja-exp__row ja-exp__item' + (on ? ' is-selected' : '')}
                   aria-current={on ? 'true' : undefined}
-                  onClick={() => (on ? view.select(null) : choose(e.id))}>
+                  onClick={() => (on ? view.select(null) : choose(e.id))}
+                >
                   <span className="ja-exp__mono">{dateShort(e.date)}</span>
                   <span className="ja-exp__payee">
                     <span className="ja-exp__payee-name">
@@ -202,9 +288,16 @@ export function ExpensesTab({ grant }: { grant: Grant }) {
                   <span className="ja-exp__line">{line}</span>
                   <span className="ja-exp__mono ja-exp__num">{money(e.amount)}</span>
                   <span>
-                    {n > 0
-                      ? <span className="ja-exp__files"><Icon name="paperclip" size={14} />{filesLabel(n)}</span>
-                      : <Badge tone="gold" dot>Missing</Badge>}
+                    {n > 0 ? (
+                      <span className="ja-exp__files">
+                        <Icon name="paperclip" size={14} />
+                        {filesLabel(n)}
+                      </span>
+                    ) : (
+                      <Badge tone="gold" dot>
+                        Missing
+                      </Badge>
+                    )}
                   </span>
                 </button>
               );
@@ -212,16 +305,26 @@ export function ExpensesTab({ grant }: { grant: Grant }) {
           </div>
           <div className="ja-exp__row ja-exp__total">
             <span />
-            <span>{expensesLabel(view.shown.length)}{view.filter === 'missing' && ' missing a receipt'}</span>
+            <span>
+              {expensesLabel(view.shown.length)}
+              {view.filter === 'missing' && ' missing a receipt'}
+            </span>
             <span className="ja-exp__line" />
             <span className="ja-exp__mono ja-exp__num">{money(shownTotal)}</span>
-            <span className="ja-exp__small">{view.filter === 'missing' ? 'No files' : filesLabel(shownFiles)}</span>
+            <span className="ja-exp__small">
+              {view.filter === 'missing' ? 'No files' : filesLabel(shownFiles)}
+            </span>
           </div>
         </div>
       )}
 
       <div className="ja-exp__foot">
-        <Button variant="ghost" size="sm" iconLeft={<Icon name="pencil-line" size={14} />} onClick={() => setLogging(true)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          iconLeft={<Icon name="pencil-line" size={14} />}
+          onClick={() => setLogging(true)}
+        >
           Log an expense by hand
         </Button>
         <span>For something that never went through QuickBooks.</span>

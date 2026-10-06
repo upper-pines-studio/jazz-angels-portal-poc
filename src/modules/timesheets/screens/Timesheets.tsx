@@ -16,7 +16,16 @@ import { usePageHeader } from '../../../app/Shell';
 import { useToast } from '../../../app/ToastHost';
 import { OwnerAvatar } from '../../../app/components/badges';
 import { TableScroll } from '../../../app/components/TableScroll';
-import { dateRange, dateShort, programById, programName, staffById, toDate, toISO, useStore } from '../../../core';
+import {
+  dateRange,
+  dateShort,
+  programById,
+  programName,
+  staffById,
+  toDate,
+  toISO,
+  useStore,
+} from '../../../core';
 import type { ProgramId } from '../../../core';
 import {
   entriesForWeek,
@@ -69,7 +78,7 @@ export default function Timesheets() {
   const monthHours = hoursThisMonth(state, today);
   const teachers = teachersThisMonth(state, today);
   const inSchool = hoursForProgram(state, 'in-school', month.from, month.to);
-  const teachingStaff = state.core.staff.filter((s) => s.teaches);
+  const teachingStaff = state.core.staff.filter(s => s.teaches);
 
   usePageHeader({
     title: 'Timesheets',
@@ -77,7 +86,9 @@ export default function Timesheets() {
   });
 
   const week = weekRange(monday);
-  const shown = entriesForWeek(state, monday).filter((e) => teacher === 'all' || e.staffId === teacher);
+  const shown = entriesForWeek(state, monday).filter(
+    e => teacher === 'all' || e.staffId === teacher,
+  );
   const shownHours = shown.reduce((sum, e) => sum + e.hours, 0);
 
   const approve = (entry: TimeEntry) => {
@@ -141,7 +152,12 @@ export default function Timesheets() {
         action={
           <div className="ja-ts-controls">
             <div className="ja-ts-weeknav">
-              <IconButton label="Previous week" size="sm" variant="outline" onClick={() => shiftWeeks(-1)}>
+              <IconButton
+                label="Previous week"
+                size="sm"
+                variant="outline"
+                onClick={() => shiftWeeks(-1)}
+              >
                 <Icon name="chevron-left" size={16} />
               </IconButton>
               <Button
@@ -152,17 +168,22 @@ export default function Timesheets() {
               >
                 Today
               </Button>
-              <IconButton label="Next week" size="sm" variant="outline" onClick={() => shiftWeeks(1)}>
+              <IconButton
+                label="Next week"
+                size="sm"
+                variant="outline"
+                onClick={() => shiftWeeks(1)}
+              >
                 <Icon name="chevron-right" size={16} />
               </IconButton>
             </div>
             <div className="ja-ts-teacher">
               <Select
                 value={teacher}
-                onChange={(e) => setTeacher(e.target.value)}
+                onChange={e => setTeacher(e.target.value)}
                 options={[
                   { value: 'all', label: 'All teachers' },
-                  ...teachingStaff.map((s) => ({ value: s.id, label: s.name })),
+                  ...teachingStaff.map(s => ({ value: s.id, label: s.name })),
                 ]}
                 style={{ width: '100%' }}
               />
@@ -200,9 +221,23 @@ export default function Timesheets() {
                   width: '1.3fr',
                   strong: true,
                   render: (r: TimeEntry) => (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 0 }}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-2)',
+                        minWidth: 0,
+                      }}
+                    >
                       <OwnerAvatar staffId={r.staffId} size={24} />
-                      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span
+                        style={{
+                          minWidth: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         {staffById(state, r.staffId)?.name ?? 'Unknown'}
                       </span>
                     </span>

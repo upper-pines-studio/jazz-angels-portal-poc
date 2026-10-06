@@ -2,15 +2,31 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import {
-  Avatar, Badge, Button, Card, EmptyState, Field, Icon, Textarea,
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Icon,
+  Textarea,
 } from '../../../design-system';
 import { usePageHeader } from '../../../app/Shell';
 import { Eyebrow, KV, OwnerAvatar } from '../../../app/components/badges';
 import { useToast } from '../../../app/ToastHost';
 import { dateShort, placeLabel, staffById, toDate, useStore, venueById } from '../../../core';
 import {
-  attendanceForMeeting, ensembleById, ensembleTrend, markCounts, meetingById,
-  percent, rollCounts, rollMarks, rosterForEnsemble, timeLabel, timeRange,
+  attendanceForMeeting,
+  ensembleById,
+  ensembleTrend,
+  markCounts,
+  meetingById,
+  percent,
+  rollCounts,
+  rollMarks,
+  rosterForEnsemble,
+  timeLabel,
+  timeRange,
 } from '../domain';
 import type { Mark } from '../domain';
 import { MarkBadge } from './parts';
@@ -72,14 +88,18 @@ export default function RollCall() {
           icon={<Icon name="calendar" size={22} />}
           title="That class is not on the schedule"
           message="Pick a class from the week grid to take its roll."
-          action={<Button variant="secondary" size="sm" onClick={() => nav('/schedule')}>Open the schedule</Button>}
+          action={
+            <Button variant="secondary" size="sm" onClick={() => nav('/schedule')}>
+              Open the schedule
+            </Button>
+          }
         />
       </Card>
     );
   }
 
   const markFor = (studentId: string): Mark | undefined =>
-    submitted ? records.find((r) => r.studentId === studentId)?.mark : marks.get(studentId);
+    submitted ? records.find(r => r.studentId === studentId)?.mark : marks.get(studentId);
 
   // Tapping Late or Absent a second time puts the student back to present.
   const toggle = (studentId: string, next: Mark) =>
@@ -103,49 +123,67 @@ export default function RollCall() {
         padding="0"
         title="Roster"
         subtitle={`${roster.length} ${roster.length === 1 ? 'student' : 'students'} · ${timeRange(meeting)}`}
-        action={submitted ? <Badge tone="teal" dot>Submitted</Badge> : undefined}
+        action={
+          submitted ? (
+            <Badge tone="teal" dot>
+              Submitted
+            </Badge>
+          ) : undefined
+        }
       >
         {roster.length === 0 ? (
           <EmptyState
             icon={<Icon name="users" size={22} />}
             title="Nobody on this roster yet"
             message="No students in this view yet. Enroll a student to add them to the roster."
-            action={<Button variant="secondary" size="sm" onClick={() => nav('/students')}>Open the roster</Button>}
+            action={
+              <Button variant="secondary" size="sm" onClick={() => nav('/students')}>
+                Open the roster
+              </Button>
+            }
           />
         ) : (
-          roster.map((student) => {
+          roster.map(student => {
             const mark = markFor(student.id);
             return (
               <div key={student.id} className="ja-roll-row">
                 <Avatar name={student.name} size={32} />
                 <span className="ja-roll-who">
-                  <span className="ja-roll-name" style={{ display: 'block' }}>{student.name}</span>
+                  <span className="ja-roll-name" style={{ display: 'block' }}>
+                    {student.name}
+                  </span>
                   <span className="ja-roll-meta">
                     {`${student.instrument} · year ${student.yearsIn}`}
                   </span>
                 </span>
                 <span className="ja-roll-marks">
-                  {submitted
-                    ? (mark
-                      ? <MarkBadge mark={mark} />
-                      : <Badge tone="neutral">Not marked</Badge>)
-                    : (
-                      <span className="ja-roll-toggle" role="group" aria-label={`${student.name}: mark`}>
-                        {MARK_OPTIONS.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            className={`ja-roll-mark ja-roll-mark--${option.value}`}
-                            aria-pressed={mark === option.value}
-                            aria-label={option.label}
-                            title={option.label}
-                            onClick={() => toggle(student.id, option.value)}
-                          >
-                            <Icon name={option.icon} size={16} strokeWidth={2.5} />
-                          </button>
-                        ))}
-                      </span>
-                    )}
+                  {submitted ? (
+                    mark ? (
+                      <MarkBadge mark={mark} />
+                    ) : (
+                      <Badge tone="neutral">Not marked</Badge>
+                    )
+                  ) : (
+                    <span
+                      className="ja-roll-toggle"
+                      role="group"
+                      aria-label={`${student.name}: mark`}
+                    >
+                      {MARK_OPTIONS.map(option => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={`ja-roll-mark ja-roll-mark--${option.value}`}
+                          aria-pressed={mark === option.value}
+                          aria-label={option.label}
+                          title={option.label}
+                          onClick={() => toggle(student.id, option.value)}
+                        >
+                          <Icon name={option.icon} size={16} strokeWidth={2.5} />
+                        </button>
+                      ))}
+                    </span>
+                  )}
                 </span>
               </div>
             );
@@ -156,7 +194,13 @@ export default function RollCall() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <Card title="This roll call" padding="var(--space-5)">
           {!submitted && (
-            <p style={{ margin: '0 0 var(--space-4)', font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
+            <p
+              style={{
+                margin: '0 0 var(--space-4)',
+                font: 'var(--type-body-sm)',
+                color: 'var(--text-muted)',
+              }}
+            >
               Everyone starts present. Tap the clock for late or the cross for absent.
             </p>
           )}
@@ -171,17 +215,39 @@ export default function RollCall() {
             <KV k="Lead" v={lead?.name ?? '—'} />
             <KV k="Where" v={placeLabel(state, meeting.venueId, meeting.room)} />
             {venue && venue.kind !== 'studio' && venue.contactName && (
-              <KV k="On site" v={[venue.contactName, venue.contactPhone].filter(Boolean).join(' · ')} />
+              <KV
+                k="On site"
+                v={[venue.contactName, venue.contactPhone].filter(Boolean).join(' · ')}
+              />
             )}
-            <KV k="Attendance" v={percent(counts.marked ? (counts.present + counts.late) / counts.marked : undefined)} strong />
+            <KV
+              k="Attendance"
+              v={percent(
+                counts.marked ? (counts.present + counts.late) / counts.marked : undefined,
+              )}
+              strong
+            />
           </div>
 
-          <div style={{ marginTop: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          <div
+            style={{
+              marginTop: 'var(--space-5)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--space-4)',
+            }}
+          >
             {submitted ? (
               <>
                 <div>
                   <Eyebrow>Rehearsal notes</Eyebrow>
-                  <p style={{ margin: 'var(--space-2) 0 0', font: 'var(--type-body-sm)', color: meeting.notes ? 'var(--text-body)' : 'var(--text-faint)' }}>
+                  <p
+                    style={{
+                      margin: 'var(--space-2) 0 0',
+                      font: 'var(--type-body-sm)',
+                      color: meeting.notes ? 'var(--text-body)' : 'var(--text-faint)',
+                    }}
+                  >
                     {meeting.notes ?? 'No notes were written for this class.'}
                   </p>
                 </div>
@@ -196,11 +262,14 @@ export default function RollCall() {
               </>
             ) : (
               <>
-                <Field label="Rehearsal notes" hint="What the band worked on. It goes on the class record.">
+                <Field
+                  label="Rehearsal notes"
+                  hint="What the band worked on. It goes on the class record."
+                >
                   <Textarea
                     rows={4}
                     value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    onChange={e => setNotes(e.target.value)}
                     placeholder="Ran the Autumn Leaves head, set the solo order."
                     style={{ width: '100%' }}
                   />
@@ -250,10 +319,21 @@ export default function RollCall() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <OwnerAvatar staffId={ensemble.leadStaffId} size={36} />
             <div>
-              <div style={{ font: 'var(--weight-semibold) var(--text-sm)/1.3 var(--font-sans)', color: 'var(--text-strong)' }}>
+              <div
+                style={{
+                  font: 'var(--weight-semibold) var(--text-sm)/1.3 var(--font-sans)',
+                  color: 'var(--text-strong)',
+                }}
+              >
                 {lead?.name ?? 'Unassigned'}
               </div>
-              <div style={{ font: 'var(--type-body-sm)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+              <div
+                style={{
+                  font: 'var(--type-body-sm)',
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--text-muted)',
+                }}
+              >
                 {lead?.role ?? 'No lead on this ensemble yet'}
               </div>
             </div>

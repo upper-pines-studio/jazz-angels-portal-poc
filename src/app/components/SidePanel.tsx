@@ -11,7 +11,13 @@ import './side-panel.css';
  *     …the page…
  *   </WithPanel>
  */
-export function WithPanel({ panel, children }: { panel?: React.ReactNode; children: React.ReactNode }) {
+export function WithPanel({
+  panel,
+  children,
+}: {
+  panel?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className={'ja-with-panel' + (panel ? ' has-panel' : '')}>
       <div className="ja-with-panel__page">{children}</div>
@@ -34,7 +40,15 @@ export interface SidePanelProps {
 }
 
 /** The docked panel: a header, a body that scrolls, and a footer that does not. */
-export function SidePanel({ eyebrow, title, titleAside, subtitle, footer, onClose, children }: SidePanelProps) {
+export function SidePanel({
+  eyebrow,
+  title,
+  titleAside,
+  subtitle,
+  footer,
+  onClose,
+  children,
+}: SidePanelProps) {
   const ref = React.useRef<HTMLElement | null>(null);
 
   // The panel is as tall as the scrolling area it sits in, whatever the top bar's height.
@@ -62,28 +76,60 @@ export function SidePanel({ eyebrow, title, titleAside, subtitle, footer, onClos
   }, [onClose]);
 
   return (
-    <aside className="ja-side-panel" ref={ref} aria-label={typeof title === 'string' ? title : undefined}>
+    <aside
+      className="ja-side-panel"
+      ref={ref}
+      aria-label={typeof title === 'string' ? title : undefined}
+    >
       <div className="ja-side-panel__head">
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
           <div style={{ minWidth: 0, flex: 1 }}>
-            {eyebrow && <Eyebrow style={{ color: 'var(--teal-600)', marginBottom: 6 }}>{eyebrow}</Eyebrow>}
+            {eyebrow && (
+              <Eyebrow style={{ color: 'var(--teal-600)', marginBottom: 6 }}>{eyebrow}</Eyebrow>
+            )}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-3)' }}>
-              <h2 style={{ margin: 0, minWidth: 0, flex: 1, font: 'var(--weight-semibold) var(--text-xl)/1.2 var(--font-display)', letterSpacing: 'var(--tracking-display)', color: 'var(--text-strong)' }}>
+              <h2
+                style={{
+                  margin: 0,
+                  minWidth: 0,
+                  flex: 1,
+                  font: 'var(--weight-semibold) var(--text-xl)/1.2 var(--font-display)',
+                  letterSpacing: 'var(--tracking-display)',
+                  color: 'var(--text-strong)',
+                }}
+              >
                 {title}
               </h2>
               {titleAside && (
-                <span style={{ flex: '0 0 auto', font: 'var(--weight-medium) var(--text-xl)/1.2 var(--font-mono)', color: 'var(--text-strong)' }}>
+                <span
+                  style={{
+                    flex: '0 0 auto',
+                    font: 'var(--weight-medium) var(--text-xl)/1.2 var(--font-mono)',
+                    color: 'var(--text-strong)',
+                  }}
+                >
                   {titleAside}
                 </span>
               )}
             </div>
           </div>
           <span style={{ flex: '0 0 auto', margin: '-6px -8px 0 0' }}>
-            <IconButton label="Close" variant="ghost" size="sm" onClick={onClose}><Icon name="x" size={16} /></IconButton>
+            <IconButton label="Close" variant="ghost" size="sm" onClick={onClose}>
+              <Icon name="x" size={16} />
+            </IconButton>
           </span>
         </div>
         {subtitle && (
-          <div style={{ marginTop: 6, font: 'var(--type-body-sm)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{subtitle}</div>
+          <div
+            style={{
+              marginTop: 6,
+              font: 'var(--type-body-sm)',
+              fontSize: 'var(--text-xs)',
+              color: 'var(--text-muted)',
+            }}
+          >
+            {subtitle}
+          </div>
         )}
       </div>
       <div className="ja-side-panel__body">{children}</div>
@@ -93,12 +139,37 @@ export function SidePanel({ eyebrow, title, titleAside, subtitle, footer, onClos
 }
 
 /** A titled block inside a SidePanel body. */
-export function PanelSection({ title, action, children }: { title?: React.ReactNode; action?: React.ReactNode; children: React.ReactNode }) {
+export function PanelSection({
+  title,
+  action,
+  children,
+}: {
+  title?: React.ReactNode;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section className="ja-side-panel__section">
       {title && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-          <h3 style={{ margin: 0, flex: 1, font: 'var(--weight-semibold) var(--text-sm)/1.3 var(--font-sans)', letterSpacing: 0, color: 'var(--text-strong)' }}>{title}</h3>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+            marginBottom: 'var(--space-3)',
+          }}
+        >
+          <h3
+            style={{
+              margin: 0,
+              flex: 1,
+              font: 'var(--weight-semibold) var(--text-sm)/1.3 var(--font-sans)',
+              letterSpacing: 0,
+              color: 'var(--text-strong)',
+            }}
+          >
+            {title}
+          </h3>
           {action}
         </div>
       )}

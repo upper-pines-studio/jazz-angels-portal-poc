@@ -2,10 +2,21 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Card } from '../../../../design-system';
 import { dateShort, useStore } from '../../../../core';
-import { firstNames, hourLabel, isReportOpen, reminderPlanFor, reminderSchedule } from '../../domain';
+import {
+  firstNames,
+  hourLabel,
+  isReportOpen,
+  reminderPlanFor,
+  reminderSchedule,
+} from '../../domain';
 import { Eyebrow } from '../../../../app/components/badges';
 import { DefaultChips, ReminderDefaultsDialog } from '../deadlines/ReminderDefaults';
-import { ReminderChips, fullNames, offsetsSentence, reportContext } from '../deadlines/ReminderParts';
+import {
+  ReminderChips,
+  fullNames,
+  offsetsSentence,
+  reportContext,
+} from '../deadlines/ReminderParts';
 import './settings-cards.css';
 
 /** Settings: when report reminders go out by default, and to whom. */
@@ -14,7 +25,9 @@ export function RemindersCard() {
   const [editing, setEditing] = React.useState(false);
   const d = state.grants.reminderDefaults;
 
-  const who = d.alsoNotifyIds.length ? `the grant owner and ${fullNames(state, d.alsoNotifyIds)}` : 'the grant owner';
+  const who = d.alsoNotifyIds.length
+    ? `the grant owner and ${fullNames(state, d.alsoNotifyIds)}`
+    : 'the grant owner';
   const after = d.keepReminding
     ? ` After the due date they keep coming every ${d.repeatEveryDays} ${d.repeatEveryDays === 1 ? 'day' : 'days'} until the report is marked submitted.`
     : ' They stop once the due date has passed.';
@@ -22,20 +35,38 @@ export function RemindersCard() {
   // Open reports that do not follow the defaults.
   const own = state.grants.reminderPlans
     .map(p => state.grants.reports.find(r => r.id === p.reportId))
-    .filter((r): r is NonNullable<typeof r> => !!r && isReportOpen(r) && !!state.grants.grants.find(g => g.id === r.grantId))
+    .filter(
+      (r): r is NonNullable<typeof r> =>
+        !!r && isReportOpen(r) && !!state.grants.grants.find(g => g.id === r.grantId),
+    )
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 
   return (
     <>
-      <Card title="Report reminders" subtitle="When reminder emails go out for a report, unless that report says otherwise."
-        action={<Button variant="secondary" size="sm" onClick={() => setEditing(true)}>Edit defaults</Button>}>
+      <Card
+        title="Report reminders"
+        subtitle="When reminder emails go out for a report, unless that report says otherwise."
+        action={
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+            Edit defaults
+          </Button>
+        }
+      >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
             <DefaultChips />
             <p style={{ margin: 0, font: 'var(--type-body-sm)', color: 'var(--text-body)' }}>
-              {d.offsets.length
-                ? <>Emails go out at <strong>{hourLabel(d.sendHour)}</strong>, {offsetsSentence(d.offsets)}, to {who}.</>
-                : <>No reminders go out by default. Emails would go to {who} at {hourLabel(d.sendHour)}.</>}
+              {d.offsets.length ? (
+                <>
+                  Emails go out at <strong>{hourLabel(d.sendHour)}</strong>,{' '}
+                  {offsetsSentence(d.offsets)}, to {who}.
+                </>
+              ) : (
+                <>
+                  No reminders go out by default. Emails would go to {who} at{' '}
+                  {hourLabel(d.sendHour)}.
+                </>
+              )}
               {after}
             </p>
           </div>
@@ -43,8 +74,15 @@ export function RemindersCard() {
           <div>
             <Eyebrow>Reports with their own plan</Eyebrow>
             {own.length === 0 ? (
-              <p style={{ margin: 'var(--space-2) 0 0', font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
-                Every open report follows these defaults. To change one, open its reminders from Deadlines.
+              <p
+                style={{
+                  margin: 'var(--space-2) 0 0',
+                  font: 'var(--type-body-sm)',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                Every open report follows these defaults. To change one, open its reminders from
+                Deadlines.
               </p>
             ) : (
               <div style={{ marginTop: 'var(--space-1)' }}>
@@ -52,12 +90,36 @@ export function RemindersCard() {
                   const plan = reminderPlanFor(state, r.id);
                   return (
                     <div key={r.id} className="ja-rm-own">
-                      <Link to={`/deadlines?kind=report&report=${r.id}`} style={{ fontWeight: 'var(--weight-medium)' as React.CSSProperties['fontWeight'] }}>
+                      <Link
+                        to={`/deadlines?kind=report&report=${r.id}`}
+                        style={{
+                          fontWeight: 'var(--weight-medium)' as React.CSSProperties['fontWeight'],
+                        }}
+                      >
                         {reportContext(state, r).title}
                       </Link>
-                      <span style={{ font: 'var(--type-numeric)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>due {dateShort(r.dueDate)}</span>
-                      <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-                        <ReminderChips steps={reminderSchedule(state, r.id, today)} keepReminding={plan.keepReminding} />
+                      <span
+                        style={{
+                          font: 'var(--type-numeric)',
+                          fontSize: 'var(--text-xs)',
+                          color: 'var(--text-muted)',
+                        }}
+                      >
+                        due {dateShort(r.dueDate)}
+                      </span>
+                      <span
+                        style={{
+                          marginLeft: 'auto',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 'var(--space-3)',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <ReminderChips
+                          steps={reminderSchedule(state, r.id, today)}
+                          keepReminding={plan.keepReminding}
+                        />
                         <span className="ja-rm-to">to {firstNames(state, plan.recipientIds)}</span>
                       </span>
                     </div>

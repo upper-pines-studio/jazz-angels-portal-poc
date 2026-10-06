@@ -7,9 +7,25 @@ import { useToast } from '../../../../app/ToastHost';
 import { TableScroll } from '../../../../app/components/TableScroll';
 import { aboutMoney, percent, syncedLabel } from '../../domain';
 import type { LinePace } from '../../domain';
-import { LinkButton, PaceBadge, PaceBar, PaceMark, PACE_COLOR, downloadText, toCsv } from './shared';
 import {
-  bvaCsvRows, bvaGrants, bvaTotals, hasPreviousFy, howLongBefore, isIdle, periodNote, previousFy, reportName,
+  LinkButton,
+  PaceBadge,
+  PaceBar,
+  PaceMark,
+  PACE_COLOR,
+  downloadText,
+  toCsv,
+} from './shared';
+import {
+  bvaCsvRows,
+  bvaGrants,
+  bvaTotals,
+  hasPreviousFy,
+  howLongBefore,
+  isIdle,
+  periodNote,
+  previousFy,
+  reportName,
 } from './bva';
 import type { BvaGrant, BvaPeriod } from './bva';
 import './bva.css';
@@ -40,14 +56,17 @@ export default function BudgetVsActual() {
 
   // Which grants are open. Unset means the default: open unless its period has ended.
   const [open, setOpen] = React.useState<Record<string, boolean>>({});
-  const isOpen = (r: BvaGrant) => open[r.grant.id] ?? (r.grant.id === target || r.pace.status !== 'period-ended');
+  const isOpen = (r: BvaGrant) =>
+    open[r.grant.id] ?? (r.grant.id === target || r.pace.status !== 'period-ended');
 
   // ?grant= opens that grant and brings it into view.
   const rowRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   React.useEffect(() => {
     if (!target) return;
     setOpen(o => ({ ...o, [target]: true }));
-    const frame = window.requestAnimationFrame(() => rowRefs.current[target]?.scrollIntoView({ block: 'start' }));
+    const frame = window.requestAnimationFrame(() =>
+      rowRefs.current[target]?.scrollIntoView({ block: 'start' }),
+    );
     return () => window.cancelAnimationFrame(frame);
   }, [target, period]);
 
@@ -86,7 +105,9 @@ export default function BudgetVsActual() {
             onChange={e => setPeriod(asPeriod(e.target.value))}
             options={[
               { value: 'fy', label: `This fiscal year · ${fy.label}` },
-              ...(showPrev ? [{ value: 'fy-prev', label: `Last fiscal year · ${prev.label}` }] : []),
+              ...(showPrev
+                ? [{ value: 'fy-prev', label: `Last fiscal year · ${prev.label}` }]
+                : []),
               { value: 'all', label: 'All grants with money' },
             ]}
           />
@@ -95,8 +116,17 @@ export default function BudgetVsActual() {
           <div className="bva-export">
             <span className="bva-export__label">Export</span>
             <div className="bva-seg">
-              <Button variant="secondary" size="sm" iconLeft={<Icon name="download" size={14} />} onClick={exportCsv}>Excel</Button>
-              <Button variant="secondary" size="sm" onClick={() => window.print()}>PDF</Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                iconLeft={<Icon name="download" size={14} />}
+                onClick={exportCsv}
+              >
+                Excel
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => window.print()}>
+                PDF
+              </Button>
             </div>
           </div>
         )}
@@ -112,9 +142,17 @@ export default function BudgetVsActual() {
           icon={<Icon name="chart-bar-big" size={22} />}
           title={`No grants with money ${where}`}
           message="A grant shows up here once it is awarded and the award amount is recorded. Record the award on the grant, add its budget lines, and spending from QuickBooks is measured against them."
-          action={period === 'all'
-            ? <Button variant="primary" size="sm" onClick={() => nav('/grants')}>Go to grants</Button>
-            : <Button variant="secondary" size="sm" onClick={() => setPeriod('all')}>Show all grants with money</Button>}
+          action={
+            period === 'all' ? (
+              <Button variant="primary" size="sm" onClick={() => nav('/grants')}>
+                Go to grants
+              </Button>
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => setPeriod('all')}>
+                Show all grants with money
+              </Button>
+            )
+          }
         />
       </Card>
     );
@@ -129,27 +167,57 @@ export default function BudgetVsActual() {
   ].filter(Boolean);
 
   const ended = totals.leftOnEnded;
-  const remainingNote = ended.length === 0
-    ? 'Nothing left on grants that have ended'
-    : `Includes ${ended.map(e => `${money(e.amount)} left on ${e.name}`).join(' and ')}, ended`;
+  const remainingNote =
+    ended.length === 0
+      ? 'Nothing left on grants that have ended'
+      : `Includes ${ended.map(e => `${money(e.amount)} left on ${e.name}`).join(' and ')}, ended`;
 
   return (
     <div className="bva-page">
       <div className="ja-grid-stats">
         <StatCard
-          label="Awarded" accent="var(--blue-900)" value={money(totals.awarded)}
-          footnote={rows.length === 1 ? '1 grant, shown below' : `${rows.length} grants, each shown below`}
+          label="Awarded"
+          accent="var(--blue-900)"
+          value={money(totals.awarded)}
+          footnote={
+            rows.length === 1 ? '1 grant, shown below' : `${rows.length} grants, each shown below`
+          }
         />
         <StatCard
-          label="Spent" accent="var(--blue-500)" value={money(totals.spent)}
-          unit={<><span className="bva-mono">{percent(used)}</span> used</>}
-          footnote={qb.connected ? 'Assigned from QuickBooks, read-only' : 'Assigned expenses. QuickBooks is not connected'}
+          label="Spent"
+          accent="var(--blue-500)"
+          value={money(totals.spent)}
+          unit={
+            <>
+              <span className="bva-mono">{percent(used)}</span> used
+            </>
+          }
+          footnote={
+            qb.connected
+              ? 'Assigned from QuickBooks, read-only'
+              : 'Assigned expenses. QuickBooks is not connected'
+          }
         />
-        <StatCard label="Remaining" accent="var(--teal-500)" value={money(totals.remaining)} footnote={remainingNote} />
         <StatCard
-          label="Lines needing attention" accent="var(--gold-400)" value={att.total}
-          unit={<>of <span className="bva-mono">{totals.lineCount}</span> lines</>}
-          footnote={attentionParts.length ? attentionParts.join(' · ') : 'Every running line is on a sensible pace'}
+          label="Remaining"
+          accent="var(--teal-500)"
+          value={money(totals.remaining)}
+          footnote={remainingNote}
+        />
+        <StatCard
+          label="Lines needing attention"
+          accent="var(--gold-400)"
+          value={att.total}
+          unit={
+            <>
+              of <span className="bva-mono">{totals.lineCount}</span> lines
+            </>
+          }
+          footnote={
+            attentionParts.length
+              ? attentionParts.join(' · ')
+              : 'Every running line is on a sensible pace'
+          }
         />
       </div>
 
@@ -160,12 +228,29 @@ export default function BudgetVsActual() {
             <p className="bva-head__sub">Spending against an even pace through each grant period</p>
           </div>
           <div className="bva-legend">
-            <span className="bva-legend__k"><span className="bva-legend__sw" />Spent</span>
-            <span className="bva-legend__k"><span className="bva-legend__tk" />Expected by now, share of the period gone</span>
-            <span className="bva-legend__k"><span className="bva-legend__sw is-gold" />On course to run out early</span>
-            {totals.overLines === 0
-              ? <span className="bva-legend__ok"><Icon name="check" size={13} />No lines over budget</span>
-              : <span className="bva-legend__over"><Icon name="circle-alert" size={13} />{totals.overLines} {totals.overLines === 1 ? 'line' : 'lines'} over budget</span>}
+            <span className="bva-legend__k">
+              <span className="bva-legend__sw" />
+              Spent
+            </span>
+            <span className="bva-legend__k">
+              <span className="bva-legend__tk" />
+              Expected by now, share of the period gone
+            </span>
+            <span className="bva-legend__k">
+              <span className="bva-legend__sw is-gold" />
+              On course to run out early
+            </span>
+            {totals.overLines === 0 ? (
+              <span className="bva-legend__ok">
+                <Icon name="check" size={13} />
+                No lines over budget
+              </span>
+            ) : (
+              <span className="bva-legend__over">
+                <Icon name="circle-alert" size={13} />
+                {totals.overLines} {totals.overLines === 1 ? 'line' : 'lines'} over budget
+              </span>
+            )}
           </div>
         </div>
 
@@ -195,19 +280,29 @@ export default function BudgetVsActual() {
                 open={isOpen(r)}
                 target={r.grant.id === target}
                 onToggle={() => setOpen(o => ({ ...o, [r.grant.id]: !isOpen(r) }))}
-                rowRef={el => { rowRefs.current[r.grant.id] = el; }}
+                rowRef={el => {
+                  rowRefs.current[r.grant.id] = el;
+                }}
               />
             ))}
 
             <div className="bva-row bva-total">
-              <span className="bva-total__label">Total, {rows.length} {rows.length === 1 ? 'grant' : 'grants'}</span>
+              <span className="bva-total__label">
+                Total, {rows.length} {rows.length === 1 ? 'grant' : 'grants'}
+              </span>
               <span className="bva-num bva-mono">{money(totals.awarded)}</span>
               <span className="bva-num bva-mono">{money(totals.spent)}</span>
-              <span className={'bva-num bva-mono' + (totals.remaining < 0 ? ' is-over' : '')}>{money(totals.remaining)}</span>
-              <span><PaceBar used={used} elapsed={0} showTick={false} /></span>
+              <span className={'bva-num bva-mono' + (totals.remaining < 0 ? ' is-over' : '')}>
+                {money(totals.remaining)}
+              </span>
+              <span>
+                <PaceBar used={used} elapsed={0} showTick={false} />
+              </span>
               <span className="bva-pct">{percent(used)}</span>
               <span className="bva-muted">
-                {att.total === 0 ? 'Nothing needs a look' : `${att.total} ${att.total === 1 ? 'line needs' : 'lines need'} a look`}
+                {att.total === 0
+                  ? 'Nothing needs a look'
+                  : `${att.total} ${att.total === 1 ? 'line needs' : 'lines need'} a look`}
               </span>
             </div>
           </div>
@@ -218,7 +313,13 @@ export default function BudgetVsActual() {
 }
 
 /** A grant's row and, when open, a row per budget line. */
-function GrantBlock({ row, open, target, onToggle, rowRef }: {
+function GrantBlock({
+  row,
+  open,
+  target,
+  onToggle,
+  rowRef,
+}: {
   row: BvaGrant;
   open: boolean;
   target: boolean;
@@ -227,14 +328,17 @@ function GrantBlock({ row, open, target, onToggle, rowRef }: {
 }) {
   const { grant, pace } = row;
   const linesId = `bva-lines-${grant.id}`;
-  const fromControl = (e: React.MouseEvent) => !!(e.target as HTMLElement).closest('a, button, select, input');
+  const fromControl = (e: React.MouseEvent) =>
+    !!(e.target as HTMLElement).closest('a, button, select, input');
 
   return (
     <div className="bva-block">
       <div
         ref={rowRef}
         className={'bva-row bva-grant' + (target ? ' is-target' : '')}
-        onClick={e => { if (!fromControl(e)) onToggle(); }}
+        onClick={e => {
+          if (!fromControl(e)) onToggle();
+        }}
       >
         <div className="bva-gname">
           <button
@@ -248,7 +352,9 @@ function GrantBlock({ row, open, target, onToggle, rowRef }: {
             <Icon name="chevron-right" size={16} />
           </button>
           <div className="bva-gname__text">
-            <Link className="bva-gname__title" to={`/grants/${grant.id}?tab=budget`}>{grant.title}</Link>
+            <Link className="bva-gname__title" to={`/grants/${grant.id}?tab=budget`}>
+              {grant.title}
+            </Link>
             <span className="bva-gname__funder">
               {row.funder} · {grant.restriction === 'restricted' ? 'Restricted' : 'Unrestricted'}
             </span>
@@ -257,8 +363,16 @@ function GrantBlock({ row, open, target, onToggle, rowRef }: {
         </div>
         <span className="bva-num bva-mono is-strong">{money(pace.budget)}</span>
         <span className="bva-num bva-mono is-strong">{money(pace.spent)}</span>
-        <span className={'bva-num bva-mono is-strong' + (pace.remaining < 0 ? ' is-over' : '')}>{money(pace.remaining)}</span>
-        <span><PaceBar used={pace.used} elapsed={pace.elapsed} showTick={pace.status !== 'not-started'} /></span>
+        <span className={'bva-num bva-mono is-strong' + (pace.remaining < 0 ? ' is-over' : '')}>
+          {money(pace.remaining)}
+        </span>
+        <span>
+          <PaceBar
+            used={pace.used}
+            elapsed={pace.elapsed}
+            showTick={pace.status !== 'not-started'}
+          />
+        </span>
         <span className="bva-pct">{percent(pace.used)}</span>
         <div className="bva-gpace">
           <PaceBadge status={pace.status} dot={false} />
@@ -274,7 +388,9 @@ function GrantBlock({ row, open, target, onToggle, rowRef }: {
                 ? 'No budget lines were kept for this grant, so only its totals show.'
                 : 'No budget lines yet. Add them to see which parts of the award are spending fast or slow.'}
             </span>
-            <Link className="bva-link" to={`/grants/${grant.id}?tab=budget`}>Add budget lines</Link>
+            <Link className="bva-link" to={`/grants/${grant.id}?tab=budget`}>
+              Add budget lines
+            </Link>
           </div>
         ) : (
           row.lines.map(l => <LineRow key={l.line.id} row={row} line={l} />)
@@ -292,9 +408,15 @@ function GrantHeadline({ row }: { row: BvaGrant }) {
   if (pace.spent > pace.budget) first = <>{b(money(pace.spent - pace.budget))} over budget</>;
   else if (pace.status === 'period-ended') {
     first = pace.remaining > 0 ? <>{b(money(pace.remaining))} left unspent</> : 'Fully spent';
-  } else if (pace.status === 'spending-fast' && pace.runsOutOn) first = <>Runs out around {b(dateLong(pace.runsOutOn))}</>;
+  } else if (pace.status === 'spending-fast' && pace.runsOutOn)
+    first = <>Runs out around {b(dateLong(pace.runsOutOn))}</>;
   else if (pace.status === 'spending-slow') {
-    first = pace.spent === 0 ? 'No spending yet' : <>About {b(aboutMoney(pace.projectedUnspent))} left unspent</>;
+    first =
+      pace.spent === 0 ? (
+        'No spending yet'
+      ) : (
+        <>About {b(aboutMoney(pace.projectedUnspent))} left unspent</>
+      );
   } else if (pace.status === 'not-started') first = pace.headline;
   else first = 'On course to finish on time';
 
@@ -302,7 +424,10 @@ function GrantHeadline({ row }: { row: BvaGrant }) {
     <>
       <span className="bva-gpace__c">{first}</span>
       {pace.status === 'period-ended' && report && (
-        <Link className="bva-gpace__c bva-gpace__report" to={`/deadlines?kind=report&report=${report.id}`}>
+        <Link
+          className="bva-gpace__c bva-gpace__report"
+          to={`/deadlines?kind=report&report=${report.id}`}
+        >
           {reportName(report)} due {b(dateShort(report.dueDate))}
         </Link>
       )}
@@ -327,16 +452,19 @@ function LineRow({ row, line }: { row: BvaGrant; line: LinePace }) {
     const running = line.status !== 'period-ended' && line.status !== 'not-started';
     why = (
       <>
-        <b>{money(line.spent - line.budget)} over budget.</b>{' '}
-        {percent(line.used)} used{running ? ` with ${percent(line.elapsed)} of the period gone` : ''}. Move some spending
-        to another line or ask the funder about a budget change.
+        <b>{money(line.spent - line.budget)} over budget.</b> {percent(line.used)} used
+        {running ? ` with ${percent(line.elapsed)} of the period gone` : ''}. Move some spending to
+        another line or ask the funder about a budget change.
       </>
     );
   } else if (fast && line.runsOutOn && line.periodEnd) {
     why = (
       <>
-        <b>{percent(line.used)} used with {percent(line.elapsed)} of the period gone.</b> At this rate the line runs out
-        around {dateLong(line.runsOutOn)}, {howLongBefore(line.runsOutOn, line.periodEnd)} before the grant ends.
+        <b>
+          {percent(line.used)} used with {percent(line.elapsed)} of the period gone.
+        </b>{' '}
+        At this rate the line runs out around {dateLong(line.runsOutOn)},{' '}
+        {howLongBefore(line.runsOutOn, line.periodEnd)} before the grant ends.
       </>
     );
   }
@@ -344,11 +472,19 @@ function LineRow({ row, line }: { row: BvaGrant; line: LinePace }) {
   return (
     <div
       className={'bva-row bva-line' + band}
-      onClick={e => { if (!(e.target as HTMLElement).closest('a, button')) nav(to); }}
+      onClick={e => {
+        if (!(e.target as HTMLElement).closest('a, button')) nav(to);
+      }}
     >
       <span className="bva-cat">
-        <Link to={to} className="bva-cat__name">{line.line.category}</Link>
-        {idle && <span className="bva-cat__idle">No spending yet with {percent(line.elapsed)} of the period gone</span>}
+        <Link to={to} className="bva-cat__name">
+          {line.line.category}
+        </Link>
+        {idle && (
+          <span className="bva-cat__idle">
+            No spending yet with {percent(line.elapsed)} of the period gone
+          </span>
+        )}
       </span>
       <span className="bva-num bva-mono">{money(line.budget)}</span>
       <span className="bva-num bva-mono">{money(line.spent)}</span>
@@ -362,12 +498,16 @@ function LineRow({ row, line }: { row: BvaGrant; line: LinePace }) {
         />
       </span>
       <span className="bva-pct">{percent(line.used)}</span>
-      <span><PaceMark status={line.status} /></span>
+      <span>
+        <PaceMark status={line.status} />
+      </span>
       {why && (
         <div className="bva-why">
           <Icon name={over ? 'circle-alert' : 'triangle-alert'} size={14} />
           <span className="bva-why__text">{why}</span>
-          <Link className="bva-link bva-noprint" to={txTo}>View transactions</Link>
+          <Link className="bva-link bva-noprint" to={txTo}>
+            View transactions
+          </Link>
         </div>
       )}
     </div>
