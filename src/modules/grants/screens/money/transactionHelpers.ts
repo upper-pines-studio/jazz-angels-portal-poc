@@ -1,11 +1,11 @@
 import { subDays, parseISO, format } from 'date-fns';
 import { fiscalYear } from '../../../../core';
 import type { PortalState } from '../../../../core';
-import { funderById, grantById, transactionsByStatus } from '../../domain';
+import { funderById, funderShortName, grantById, transactionsByStatus } from '../../domain';
 
 /**
- * Small pure helpers for the Transactions screen: funder names that fit a
- * table cell and the period filter.
+ * Small pure helpers for the Transactions screen: the funder behind a grant
+ * and the period filter.
  */
 
 /** The colours a split's parts take, in order. */
@@ -18,30 +18,16 @@ export const PART_COLORS = [
 
 export const MAX_PARTS = 4;
 
-/**
- * "Herb Alpert Foundation" → "Herb Alpert". With `tight`, "Long Beach
- * Community Foundation" → "Long Beach CF", for a table cell.
- */
-export function funderShort(name: string, tight = false): string {
-  if (/ Community Foundation$/.test(name))
-    return tight ? name.replace(/ Community Foundation$/, ' CF') : name;
-  if (/ Foundation$/.test(name)) return name.replace(/ Foundation$/, '');
-  const dept = name.match(/^(.*?) (Dept\.|Department) of /);
-  if (dept) return dept[1];
-  return name;
-}
-
-/** The short funder name for a grant. */
-export function grantFunder(state: PortalState, grantId: string, tight = false): string {
+/** The full name of a grant's funder, to shorten with the domain's `funderShortName`. */
+export function funderOfGrant(state: PortalState, grantId: string): string | undefined {
   const grant = grantById(state, grantId);
-  const funder = grant && funderById(state, grant.funderId);
-  return funder ? funderShort(funder.name, tight) : (grant?.title ?? 'Unknown grant');
+  return grant && funderById(state, grant.funderId)?.name;
 }
 
 /** "General operating support 2026 · Herb Alpert", for a grant select. */
 export function grantOptionLabel(state: PortalState, grantId: string): string {
   const grant = grantById(state, grantId);
-  return `${grant?.title ?? 'Unknown grant'} · ${grantFunder(state, grantId)}`;
+  return `${grant?.title ?? 'Unknown grant'} · ${funderShortName(funderOfGrant(state, grantId))}`;
 }
 
 /** "A", "A and B", "A, B and C". */

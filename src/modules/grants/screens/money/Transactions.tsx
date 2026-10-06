@@ -19,6 +19,7 @@ import { WithPanel } from '../../../../app/components/SidePanel';
 import {
   acceptableSuggestions,
   accountLabel,
+  funderShortName,
   grantById,
   lineById,
   splitByPercent,
@@ -42,7 +43,7 @@ import type { DraftSummary, RowHandlers } from './TransactionRow';
 import {
   PERIODS,
   defaultPeriod,
-  grantFunder,
+  funderOfGrant,
   isPeriod,
   joinWords,
   periodRange,
@@ -276,8 +277,8 @@ export default function Transactions() {
 
   const describe = (tx: Transaction, parts: Allocation[]) =>
     parts.length === 1
-      ? `${tx.payee}, ${money(tx.amount)}, to ${lineById(state, parts[0].budgetLineId)?.category ?? 'a line'} on ${grantFunder(state, parts[0].grantId, true)}.`
-      : `${tx.payee}, ${money(tx.amount)}: ${joinWords(parts.map(p => `${money(p.amount)} to ${grantFunder(state, p.grantId, true)}`))}.`;
+      ? `${tx.payee}, ${money(tx.amount)}, to ${lineById(state, parts[0].budgetLineId)?.category ?? 'a line'} on ${funderShortName(funderOfGrant(state, parts[0].grantId), true)}.`
+      : `${tx.payee}, ${money(tx.amount)}: ${joinWords(parts.map(p => `${money(p.amount)} to ${funderShortName(funderOfGrant(state, p.grantId), true)}`))}.`;
 
   const assign = (tx: Transaction, parts: Allocation[], note?: string) => {
     withUndo(
@@ -501,7 +502,7 @@ export default function Transactions() {
                 <Tag color="var(--teal-500)" onRemove={() => patch({ line: undefined })}>
                   Line: {lineChip?.category ?? 'A removed line'}
                   {!grantFilter && lineChip
-                    ? `, ${grantFunder(state, lineChip.grantId, true)}`
+                    ? `, ${funderShortName(funderOfGrant(state, lineChip.grantId), true)}`
                     : ''}
                 </Tag>
               )}

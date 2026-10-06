@@ -8,6 +8,7 @@ export * from './types';
 export * from './phases';
 export * from './templates';
 export * from './derive';
+export * from './names';
 export * from './money';
 export * from './seed';
 export * from './slice';

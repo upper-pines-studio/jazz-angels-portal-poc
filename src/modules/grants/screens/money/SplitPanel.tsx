@@ -7,6 +7,7 @@ import {
   accountName,
   backupMoves,
   eligibleGrants,
+  funderShortName,
   grantById,
   grantLines,
   lineById,
@@ -21,7 +22,7 @@ import type { DraftSummary } from './TransactionRow';
 import {
   MAX_PARTS,
   PART_COLORS,
-  grantFunder,
+  funderOfGrant,
   grantOptionLabel,
   joinWords,
 } from './transactionHelpers';
@@ -271,7 +272,7 @@ export function SplitPanel({
 
   // A part that leaves its line hands its backup on; say where before saving.
   const lineName = (grantId: string, lineId: string) =>
-    `${lineById(state, lineId)?.category ?? 'a removed line'} on ${grantFunder(state, grantId, true)}`;
+    `${lineById(state, lineId)?.category ?? 'a removed line'} on ${funderShortName(funderOfGrant(state, grantId), true)}`;
   const moves = parts.every(p => p.grantId && p.lineId)
     ? backupMoves(
         state,
@@ -293,7 +294,7 @@ export function SplitPanel({
 
   const legendName = (p: Part, i: number) => {
     if (!p.grantId) return `Part ${i + 1}`;
-    const name = grantFunder(state, p.grantId);
+    const name = funderShortName(funderOfGrant(state, p.grantId));
     const twice = parts.filter(q => q.grantId === p.grantId).length > 1;
     const line = lineById(state, p.lineId);
     return twice && line ? `${name}, ${line.category}` : name;

@@ -6,6 +6,7 @@ import {
   DUE_SOON_DAYS,
   firstNames,
   funderById,
+  funderShortName,
   grantById,
   offsetChip,
   reminderPlanFor,
@@ -36,17 +37,10 @@ export const REPORT_STATUS_WORD: Record<ReportStatus, string> = {
   accepted: 'Accepted',
 };
 
-/** "LA County Dept. of Arts and Culture" → "LA County". Foundations keep their full name. */
-export function funderShortName(name: string | undefined): string {
-  if (!name) return 'the funder';
-  const cut = name.search(/\s+(Dept\.?|Department)\b/i);
-  return cut > 0 ? name.slice(0, cut) : name;
-}
-
 export interface ReportContext {
   grant?: Grant;
   funder?: Funder;
-  /** "LA County", "Herb Alpert Foundation". */
+  /** "LA County", "Herb Alpert". */
   funderShort: string;
   /** "Final report, LA County". */
   title: string;

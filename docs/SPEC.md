@@ -854,8 +854,7 @@ where it and the mockups or `SAAS-BRIEF.md` disagree:
   spend-down warnings". In the code only Spend-down's What to do reads terms, and only the two named
   "Unspent funds" and "Budget changes"; the budget does not read them.
 
-**Known problems, tracked elsewhere.** Five
-helpers shorten a funder's name, each its own way (#11). The 75/25 Signal Hill split is written in
+**Known problems, tracked elsewhere.** The 75/25 Signal Hill split is written in
 (#12). A budget line with expenses cannot be removed and they cannot be moved at once (#13).
 
 ---
