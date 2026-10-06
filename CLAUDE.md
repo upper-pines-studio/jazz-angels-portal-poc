@@ -9,6 +9,7 @@ per module.
 - `npm run dev` — http://localhost:5181; set `PORT` to use another (`PORT=5190 npm run dev`, or `PORT=` in `.env.local`) so worktrees run side by side
 - `npm run build` — typecheck + vite build (Netlify runs this)
 - `npm test` — vitest (core and module domain layers only)
+- `npm run test:e2e` — Playwright smoke tests in `e2e/`, headless; starts the dev server on `PORT` (`PORT=5207 npm run test:e2e`). Needs `npx playwright install chromium` once. The sign-in spec reads `DEMO_<ROLE>_USERNAME`/`DEMO_<ROLE>_PASSWORD` (from `.env.local`) and skips a role whose password is unset
 - `npm run lint` — ESLint over `src/` (the module boundaries, localStorage only in core, no bare `new Date()` in screens), then `prettier --check`
 - `npm run format` — Prettier over the TypeScript in `src/` and the root config files; run it before `npm run lint`
 - Stop hook (`.claude/settings.json` → `.claude/hooks/check.sh`) — runs `npm run typecheck` and `npm run lint` when an agent stops; a failure is shown to the agent to fix before it finishes

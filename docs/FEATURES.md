@@ -150,4 +150,4 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 | The award letter card says the terms feed the budget and the spend-down warnings; only Spend-down's "What to do" reads them, and only the terms labelled "Unspent funds" and "Budget changes". | `grant/AwardTab.tsx`, `money/spend.ts` (`whatToDo`) |
 | The dashboard's "expenses missing a receipt" link counts every grant but opens only the first one's Expenses tab. | `money/MoneyPanel.tsx`, `grants/manifest.tsx` |
 | The money side is inside the grants module. If it becomes its own product it needs its own module and slice. | `grants/manifest.tsx`, `grants/domain/` |
-| Screens have no automated tests. | `modules/*/screens/` |
+| Screens have only smoke tests (`npm run test:e2e`): sign in, add a grant, assign a transaction, take roll, log hours and approve hours. Submitting hours has no control on the Timesheets screen, so it is not tested; every other screen and flow has no automated test. | `e2e/`, `modules/*/screens/` |
