@@ -141,7 +141,9 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 | The 75/25 starting split for Signal Hill Properties is written in, not worked out. | `money/SplitPanel.tsx` (`USUAL_SHARES`) |
 | Five separate helpers shorten a funder's name, each by its own rule. They should be one domain function. | `money/transactionHelpers.ts`, `money/bva.ts`, `money/spend.ts`, `deadlines/helpers.ts`, `deadlines/ReminderParts.tsx` |
 | Removing a budget line is blocked while it has expenses, with no way to move them all at once. | `grant/BudgetLineEditor.tsx` |
-| `docs/SPEC.md` section 4.4 still describes the old Money tab, which the Award, Budget and Expenses tabs replaced. | `docs/SPEC.md` |
-| No spec describes the money screens' behaviour. It exists only in the code and the mockup brief. | `docs/SPEC.md`, `design/saas/SAAS-BRIEF.md` |
+| Changing an assigned transaction, or undoing a change, replaces its expenses and leaves their receipts and backup note behind. Send back from Transactions deletes backup without a warning. (#24) | `grants/domain/slice.ts` (`assign-transaction`), `money/Transactions.tsx`, `money/transactionHelpers.ts` |
+| "Start from the usual five categories" reads its categories and accounts from the demo data. | `grant/BudgetTab.tsx`, `grants/domain/seed-money.ts` (`CATEGORY_ACCOUNTS`) |
+| The award letter card says the terms feed the budget and the spend-down warnings; only Spend-down's "What to do" reads them, and only the terms labelled "Unspent funds" and "Budget changes". | `grant/AwardTab.tsx`, `money/spend.ts` (`whatToDo`) |
+| The dashboard's "expenses missing a receipt" link counts every grant but opens only the first one's Expenses tab. | `money/MoneyPanel.tsx`, `grants/manifest.tsx` |
 | The money side is inside the grants module. If it becomes its own product it needs its own module and slice. | `grants/manifest.tsx`, `grants/domain/` |
 | Screens have no automated tests. | `modules/*/screens/` |
