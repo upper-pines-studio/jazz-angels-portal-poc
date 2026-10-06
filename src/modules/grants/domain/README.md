@@ -114,7 +114,7 @@ All pure, all take `state` first, none of them are stored.
 
 Lookup helpers, because every screen needs them: `grantById`, `funderById`,
 `grantsByFunder`, `grantsForProgram`, `funderTotals`, `grantActivity` (newest
-first). `staffById`, `programName` and `fiscalYear` are core's.
+first), `activityWho` (the name an activity row credits). `staffById`, `programName` and `fiscalYear` are core's.
 
 The module's public API — what other modules may import from
 `src/modules/grants` — is `manifest`, `deadlines`, `fyTotals` and
@@ -225,8 +225,10 @@ Undefined dates render as `—`. Use `toDate` rather than `new Date(iso)`: bare
 ## Demo data
 
 `makeSeed()` builds the SPEC §3 data set for this module. `SEED_TODAY` is
-`2026-09-13`, the day the demo is written around; `CURRENT_USER` (core) is
-Barry Cogert. The staff and the programs are seeded by `src/core/seed.ts`.
+`2026-09-13`, the day the demo is written around. The staff and the programs
+are seeded by `src/core/seed.ts`. Seeded activity rows name their person by
+staff id (`whoId`); a new row is credited to whoever is signed in
+(`SliceContext.user`), and `activityWho` gives the name to show.
 
 Funder contact names, emails and phone numbers are invented for the demo —
 plausible-looking, but none of them is a real person or address.

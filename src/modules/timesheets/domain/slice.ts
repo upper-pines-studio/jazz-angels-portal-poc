@@ -1,5 +1,4 @@
-import type { AnyAction, ModuleSlice } from '../../../core/module';
-import { CURRENT_USER } from '../../../core/seed';
+import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import type { PortalState } from '../../../core/types';
 import { makeSeed } from './seed';
 import type { TimeEntry, TimeEntryStatus, TimesheetsActions, TimesheetsState } from './types';
@@ -80,9 +79,9 @@ export function toQuarterHours(hours: number): number {
 function createActions(
   dispatch: (action: AnyAction) => void,
   _getState: () => PortalState,
-  ctx: { today: string; newId(prefix: string): string },
+  ctx: SliceContext,
 ): TimesheetsActions {
-  const { today, newId } = ctx;
+  const { today, newId, user } = ctx;
   /** Every action leaves this module namespaced, so the store can route it. */
   const send = (action: TimesheetsAction) =>
     dispatch({ ...action, type: `timesheets/${action.type}` });
@@ -109,7 +108,7 @@ function createActions(
       send({ type: 'submit', id });
     },
     approveEntry(id) {
-      send({ type: 'approve', id, by: CURRENT_USER.id, at: today });
+      send({ type: 'approve', id, by: user.id, at: today });
     },
     deleteEntry(id) {
       send({ type: 'delete', id });

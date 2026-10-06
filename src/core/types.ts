@@ -15,13 +15,30 @@ export type ProgramId =
   | 'advanced-workshop'
   | 'general-operating';
 
+/**
+ * What a person may do in the portal, one per person (decision 0001). Whether
+ * they teach is the separate `teaches` switch.
+ */
+export type Role =
+  'admin' | 'director' | 'office-manager' | 'bookkeeper' | 'teacher' | 'assistant' | 'read-only';
+
 export interface StaffMember {
   id: string;
   name: string;
   /** "Program Director", "Teaching Artist" — how they read on a grant or a class. */
-  role: string;
+  title: string;
+  /** What they may do in the portal. A sign-in takes its role from here. */
+  role: Role;
   /** Leads ensembles and logs teaching hours. */
   teaches: boolean;
+}
+
+/** The person signed in, as every slice action sees them. */
+export interface SignedInUser {
+  /** Their staff record's id. */
+  id: string;
+  name: string;
+  role: Role;
 }
 
 export interface Program {

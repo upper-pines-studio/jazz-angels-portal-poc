@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { Button } from '../../../../design-system';
-import { CURRENT_USER, dateShort, daysUntil, useStore } from '../../../../core';
+import { dateShort, daysUntil, useStore } from '../../../../core';
 import {
   REMINDER_OFFSETS,
   firstNames,
@@ -37,7 +37,7 @@ const longDay = (iso: string) => format(parseISO(iso), 'EEEE, MMM d');
  * until "Save reminders". Give it `key={report.id}` so a new report starts fresh.
  */
 export function ReminderPanel({ report, onClose }: { report: Report; onClose: () => void }) {
-  const { state, today, actions } = useStore();
+  const { state, today, user, actions } = useStore();
   const toast = useToast();
   const saved = reminderPlanFor(state, report.id);
   const defaults = state.grants.reminderDefaults;
@@ -134,7 +134,7 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
     toast({
       tone: 'info',
       title: 'Test not sent',
-      message: `The demo does not send email. It would have sent "${subject}" to ${CURRENT_USER.name} only.`,
+      message: `The demo does not send email. It would have sent "${subject}" to ${user.name} only.`,
     });
   };
 
@@ -242,7 +242,7 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
               onChange={on => toggleWho(s.id, on)}
               after={
                 <span className="ja-rm-check__role">
-                  {s.id === grant?.ownerId ? 'Grant owner' : s.role}
+                  {s.id === grant?.ownerId ? 'Grant owner' : s.title}
                 </span>
               }
             >

@@ -334,7 +334,7 @@ export default function RollCall() {
                   color: 'var(--text-muted)',
                 }}
               >
-                {lead?.role ?? 'No lead on this ensemble yet'}
+                {lead?.title ?? 'No lead on this ensemble yet'}
               </div>
             </div>
           </div>

@@ -151,7 +151,7 @@ describe('transactions', () => {
       by: 's-barry',
       date: today,
       at: `${today}T10:00:00.000Z`,
-      who: 'Barry Cogert',
+      whoId: 's-barry',
     });
     const after = { ...state, grants: next } as PortalState;
     expect(transactionAllocations(after, 'tx-new-2')).toHaveLength(2);

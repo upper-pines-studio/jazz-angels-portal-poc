@@ -15,8 +15,17 @@ import {
 } from '../../design-system';
 import { usePageHeader } from '../Shell';
 import { useToast } from '../ToastHost';
-import { SEED_TODAY, dateLong, dateRange, fiscalYear, useStore } from '../../core';
-import type { ModuleManifest, StaffMember } from '../../core';
+import {
+  ROLES,
+  ROLE_LABELS,
+  SEED_TODAY,
+  dateLong,
+  dateRange,
+  fiscalYear,
+  isRole,
+  useStore,
+} from '../../core';
+import type { ModuleManifest, Role, StaffMember } from '../../core';
 import { MODULES } from '../../modules';
 
 const MONTHS = [
@@ -42,7 +51,8 @@ const MUTED_SM: React.CSSProperties = {
 interface PersonDraft {
   id?: string;
   name: string;
-  role: string;
+  title: string;
+  role: Role;
   teaches: boolean;
 }
 
@@ -75,13 +85,15 @@ export default function Settings() {
   function savePerson() {
     if (!person || !person.name.trim()) return;
     const name = person.name.trim();
-    const role = person.role.trim() || 'Staff';
+    const title = person.title.trim() || 'Staff';
+    const { role, teaches } = person;
+    const message = `${name} · ${ROLE_LABELS[role]}`;
     if (person.id) {
-      actions.core.updateStaff(person.id, { name, role, teaches: person.teaches });
-      toast({ tone: 'success', title: 'Person updated', message: `${name} · ${role}` });
+      actions.core.updateStaff(person.id, { name, title, role, teaches });
+      toast({ tone: 'success', title: 'Person updated', message });
     } else {
-      actions.core.addStaff({ name, role, teaches: person.teaches });
-      toast({ tone: 'success', title: 'Person added', message: `${name} · ${role}` });
+      actions.core.addStaff({ name, title, role, teaches });
+      toast({ tone: 'success', title: 'Person added', message });
     }
     setPerson(null);
   }
@@ -133,12 +145,17 @@ export default function Settings() {
   return (
     <>
       <Card title="Staff" subtitle="Who can own a grant, lead a class or log hours." padding="0">
-        <TableScroll minWidth={520}>
+        <TableScroll minWidth={640}>
           <DataTable
             rows={state.core.staff}
             columns={[
               { key: 'name', label: 'Name', strong: true },
-              { key: 'role', label: 'Role' },
+              { key: 'title', label: 'Title' },
+              {
+                key: 'role',
+                label: 'Role',
+                render: (row: StaffMember) => ROLE_LABELS[row.role],
+              },
               {
                 key: 'teaches',
                 label: 'Teaches',
@@ -173,6 +190,7 @@ export default function Settings() {
                       setPerson({
                         id: row.id,
                         name: row.name,
+                        title: row.title,
                         role: row.role,
                         teaches: row.teaches,
                       });
@@ -199,7 +217,7 @@ export default function Settings() {
             variant="ghost"
             size="sm"
             iconLeft={<Icon name="plus" size={15} />}
-            onClick={() => setPerson({ name: '', role: '', teaches: false })}
+            onClick={() => setPerson({ name: '', title: '', role: 'read-only', teaches: false })}
           >
             Add person
           </Button>
@@ -429,7 +447,7 @@ export default function Settings() {
           title={person.id ? 'Edit person' : 'Add person'}
           description={
             person.id
-              ? 'Change the name, the role or whether they teach.'
+              ? 'Change the name, the title, the role or whether they teach.'
               : 'Someone who works here.'
           }
           onClose={() => setPerson(null)}
@@ -453,13 +471,22 @@ export default function Settings() {
               />
             </Field>
             <Field
-              label="Role"
+              label="Title"
               hint="How they show up on a grant or a class: Program Director, Bookkeeper, Teaching Artist."
             >
               <Input
-                value={person.role}
+                value={person.title}
                 placeholder="Program Director"
-                onChange={e => setPerson({ ...person, role: e.target.value })}
+                onChange={e => setPerson({ ...person, title: e.target.value })}
+              />
+            </Field>
+            <Field label="Role" hint="What they can do in the portal when they sign in.">
+              <Select
+                value={person.role}
+                options={ROLES.map(r => ({ value: r, label: ROLE_LABELS[r] }))}
+                onChange={e => {
+                  if (isRole(e.target.value)) setPerson({ ...person, role: e.target.value });
+                }}
               />
             </Field>
             <Field label="Teaches" hint="Teaching artists lead ensembles and log hours.">

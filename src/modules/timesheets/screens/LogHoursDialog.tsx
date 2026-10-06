@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Dialog, Field, Input, Select } from '../../../design-system';
 import type { InputProps } from '../../../design-system';
-import { CURRENT_USER, useStore } from '../../../core';
+import { useStore } from '../../../core';
 import type { ProgramId } from '../../../core';
 import { ensembleOptions } from '../../teaching';
 import type { NewTimeEntryInput } from '../domain';
@@ -20,11 +20,11 @@ export default function LogHoursDialog({
   onClose: () => void;
   onSaved: (entry: { staffId: string; hours: number }) => void;
 }) {
-  const { state, today, actions } = useStore();
+  const { state, today, user, actions } = useStore();
 
   const teachers = state.core.staff.filter(s => s.teaches);
-  const fallback = teachers[0]?.id ?? CURRENT_USER.id;
-  const defaultTeacher = teachers.some(s => s.id === CURRENT_USER.id) ? CURRENT_USER.id : fallback;
+  // Whoever is signed in logs their own hours; someone who does not teach picks a teacher.
+  const defaultTeacher = teachers.some(s => s.id === user.id) ? user.id : (teachers[0]?.id ?? '');
 
   const [staffId, setStaffId] = React.useState(defaultTeacher);
   const [date, setDate] = React.useState(today);

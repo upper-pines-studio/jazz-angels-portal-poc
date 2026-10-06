@@ -1,8 +1,9 @@
-import { fiscalYear } from '../../../core/derive';
+import { fiscalYear, staffById } from '../../../core/derive';
 import { daysUntil } from '../../../core/format';
 import type { PortalState, ProgramId } from '../../../core/types';
 import { PHASE_ORDER, POST_AWARD_PHASES, PRE_AWARD_PHASES, isTerminal, phaseIndex } from './phases';
 import type {
+  Activity,
   Deadline,
   DeadlineKind,
   DeadlineStatus,
@@ -301,6 +302,14 @@ export function funderTotals(state: PortalState, funderId: string) {
     requested: grants.reduce((sum, g) => sum + (g.amountRequested ?? 0), 0),
     awarded: grants.reduce((sum, g) => sum + (g.amountAwarded ?? 0), 0),
   };
+}
+
+/**
+ * Who an activity row credits: the staff member's name as it is now, else
+ * the name the row was saved with, else "Someone".
+ */
+export function activityWho(state: PortalState, row: Activity): string {
+  return staffById(state, row.whoId)?.name ?? row.who ?? 'Someone';
 }
 
 export function grantActivity(state: PortalState, grantId: string) {

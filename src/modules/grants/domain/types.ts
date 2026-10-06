@@ -305,7 +305,13 @@ export interface Activity {
   grantId: string;
   /** ISO date-time. */
   at: string;
-  who: string;
+  /** The staff member who did it. The name is looked up when shown, so a rename follows. */
+  whoId?: string;
+  /**
+   * A name saved before rows carried a staff id, kept only when it matched
+   * nobody on the staff list. Shown as written.
+   */
+  who?: string;
   text: string;
 }
 

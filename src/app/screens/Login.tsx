@@ -2,16 +2,23 @@ import React from 'react';
 import { Button, Card, Field, Input } from '../../design-system';
 import type { InputProps } from '../../design-system';
 import { useAuth } from '../AuthGate';
+import type { SignInRefusal } from '../AuthGate';
 
 /** Input forwards unknown props to the <input>; its typings just do not list them. */
 const inputAttrs = (attrs: Record<string, string>) => attrs as unknown as InputProps;
 
+/** What the password field says when a sign-in is turned away. */
+const REFUSALS: Record<SignInRefusal, string> = {
+  mismatch: 'That username and password don’t match.',
+  'no-staff': 'This sign-in isn’t linked to anyone on the staff list. Ask the office to add you.',
+};
+
 export default function Login() {
-  const { signIn } = useAuth();
+  const { signIn, refusal } = useAuth();
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [busy, setBusy] = React.useState(false);
-  const [failed, setFailed] = React.useState(false);
+  const [failed, setFailed] = React.useState<SignInRefusal | null>(refusal);
   const formRef = React.useRef<HTMLFormElement>(null);
 
   // Input does not forward refs, so reach the field through the form.
@@ -26,12 +33,12 @@ export default function Login() {
     e.preventDefault();
     if (busy) return;
     setBusy(true);
-    setFailed(false);
-    const ok = await signIn(username, password);
+    setFailed(null);
+    const refused = await signIn(username, password);
     // On success this screen unmounts, so only touch state on a miss.
-    if (!ok) {
+    if (refused) {
       setBusy(false);
-      setFailed(true);
+      setFailed(refused);
       setPassword('');
       focusField('login-password');
     }
@@ -63,11 +70,11 @@ export default function Login() {
             <Field
               label="Password"
               htmlFor="login-password"
-              error={failed ? 'That username and password don’t match.' : undefined}
+              error={failed ? REFUSALS[failed] : undefined}
             >
               <Input
                 type="password"
-                invalid={failed}
+                invalid={!!failed}
                 {...inputAttrs({
                   id: 'login-password',
                   name: 'password',

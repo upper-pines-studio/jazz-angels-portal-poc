@@ -9,8 +9,8 @@ export * from './module';
 export * from './format';
 export * from './derive';
 export * from './store';
+export * from './roles';
 export {
-  CURRENT_USER,
   DEFAULT_ENABLED_MODULES,
   PARAMOUNT_MS_VENUE_ID,
   SEED_TODAY,

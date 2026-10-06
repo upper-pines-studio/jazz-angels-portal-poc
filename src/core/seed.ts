@@ -3,16 +3,70 @@ import type { CoreState, Organization, Program, StaffMember, Venue } from './typ
 /** The day the demo story is written around. Tests pin to this. */
 export const SEED_TODAY = '2026-09-13';
 
+/**
+ * The staff. The first five run the demo story; the last five exist so every
+ * role in decision 0001 has a person to sign in as (see `USERS` in auth.ts).
+ */
 const STAFF: StaffMember[] = [
-  { id: 's-barry', name: 'Barry Cogert', role: 'Program Director', teaches: true },
-  { id: 's-denise', name: 'Denise Moreno', role: 'Office Administrator', teaches: false },
-  { id: 's-albert', name: 'Albert Alva', role: 'Co-founder / Artistic Director', teaches: true },
-  { id: 's-devon', name: 'Devon Price', role: 'Teaching Artist', teaches: true },
-  { id: 's-renee', name: 'Renee Cole', role: 'Teaching Artist', teaches: true },
+  {
+    id: 's-barry',
+    name: 'Barry Cogert',
+    title: 'Program Director',
+    role: 'director',
+    teaches: true,
+  },
+  {
+    id: 's-denise',
+    name: 'Denise Moreno',
+    title: 'Office Administrator',
+    role: 'director',
+    teaches: false,
+  },
+  {
+    id: 's-albert',
+    name: 'Albert Alva',
+    title: 'Co-founder / Artistic Director',
+    role: 'teacher',
+    teaches: true,
+  },
+  { id: 's-devon', name: 'Devon Price', title: 'Teaching Artist', role: 'teacher', teaches: true },
+  { id: 's-renee', name: 'Renee Cole', title: 'Teaching Artist', role: 'teacher', teaches: true },
+  {
+    id: 's-tess',
+    name: 'Tess Holloway',
+    title: 'Office Intern',
+    role: 'assistant',
+    teaches: false,
+  },
+  {
+    id: 's-gwen',
+    name: 'Gwen Kimura',
+    title: 'Systems Administrator',
+    role: 'admin',
+    teaches: false,
+  },
+  {
+    id: 's-keisha',
+    name: 'Keisha Monroe',
+    title: 'Office Manager',
+    role: 'office-manager',
+    teaches: false,
+  },
+  {
+    id: 's-walt',
+    name: 'Walt Brennan',
+    title: 'Bookkeeper (contract)',
+    role: 'bookkeeper',
+    teaches: false,
+  },
+  {
+    id: 's-margaret',
+    name: 'Margaret Lowe',
+    title: 'Board Treasurer',
+    role: 'read-only',
+    teaches: false,
+  },
 ];
-
-/** The person the POC treats as signed in. */
-export const CURRENT_USER = STAFF[0];
 
 const PROGRAMS: Program[] = [
   { id: 'studio-sessions', name: 'Studio Semester Sessions', short: 'Studio' },
