@@ -80,11 +80,21 @@ export default function Timesheets() {
 
   // The stat row summarises today's week and this month; the card below follows
   // whichever week is on screen.
-  const thisWeek = weekTotals(state, thisMonday);
+  // Someone who sees only their own hours gets totals of their own hours too.
+  const scoped = seesEveryone
+    ? state
+    : {
+        ...state,
+        timesheets: {
+          ...state.timesheets,
+          entries: visibleEntries(user, state.timesheets.entries),
+        },
+      };
+  const thisWeek = weekTotals(scoped, thisMonday);
   const month = monthRange(today);
-  const monthHours = hoursThisMonth(state, today);
-  const teachers = teachersThisMonth(state, today);
-  const inSchool = hoursForProgram(state, 'in-school', month.from, month.to);
+  const monthHours = hoursThisMonth(scoped, today);
+  const teachers = teachersThisMonth(scoped, today);
+  const inSchool = hoursForProgram(scoped, 'in-school', month.from, month.to);
   const teachingStaff = state.core.staff.filter(s => s.teaches);
 
   usePageHeader({
@@ -107,7 +117,7 @@ export default function Timesheets() {
     });
   };
 
-  const programHours = hoursByProgram(state, month);
+  const programHours = hoursByProgram(scoped, month);
   const biggest = programHours[0]?.hours ?? 0;
 
   const logButton = mayLog ? (

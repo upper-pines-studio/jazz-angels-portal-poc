@@ -75,7 +75,7 @@ export default function LogHoursDialog({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <Field label="Teacher" required hint="You log your own hours.">
-          <Select value={staffId} options={[{ value: user.id, label: user.name }]} />
+          <Select value={staffId} disabled options={[{ value: user.id, label: user.name }]} />
         </Field>
         <Field label="Date">
           <Input type="date" value={date} onChange={e => setDate(e.target.value)} />

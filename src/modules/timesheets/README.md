@@ -40,11 +40,11 @@ day of the week of Sep 7.
 
 ## The seed
 
-| Stretch | What | Status |
-| --- | --- | --- |
-| Mar 1 – Apr 26 2026 | last spring's term, 8 weeks × 8 entries | all approved |
-| Aug 10 – Sep 6 2026 | four weeks of summer groups and prep, 9 entries a week | approved, two stray drafts |
-| Sep 7 – Sep 13 2026 | Fall session prep, then the first Sunday | 5 approved, 4 draft, 2 submitted |
+| Stretch             | What                                                   | Status                           |
+| ------------------- | ------------------------------------------------------ | -------------------------------- |
+| Mar 1 – Apr 26 2026 | last spring's term, 8 weeks × 8 entries                | all approved                     |
+| Aug 10 – Sep 6 2026 | four weeks of summer groups and prep, 9 entries a week | approved, two stray drafts       |
+| Sep 7 – Sep 13 2026 | Fall session prep, then the first Sunday               | 5 approved, 4 draft, 2 submitted |
 
 The two submitted entries are Renee Cole (3.00) and Devon Price (3.25): 6.25
 hours awaiting approval, which is the rail badge, the gold stat and the one
@@ -52,12 +52,12 @@ dashboard attention row.
 
 ## Actions
 
-| Action | What it does |
-| --- | --- |
-| `logHours(input)` | Adds a draft entry, rounded to the nearest quarter hour. Returns the id. |
-| `submitEntry(id)` | Draft → submitted. A submitted or approved entry is left alone. |
-| `approveEntry(id)` | Marks it approved and stamps the signed-in person and today. |
-| `deleteEntry(id)` | Removes it. |
+| Action             | What it does                                                             |
+| ------------------ | ------------------------------------------------------------------------ |
+| `logHours(input)`  | Adds a draft entry, rounded to the nearest quarter hour. Returns the id. |
+| `submitEntry(id)`  | Draft → submitted. A submitted or approved entry is left alone.          |
+| `approveEntry(id)` | Marks it approved and stamps the signed-in person and today.             |
+| `deleteEntry(id)`  | Removes it.                                                              |
 
 ## Public API
 
