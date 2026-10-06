@@ -1,0 +1,51 @@
+# 0004 Switching over, and getting real data in
+
+**Status:** Decided. How much history to bring in is still open.
+
+## What the office has today
+
+A blend: spreadsheets, QuickBooks, paper, and what people remember. There is no single file to
+import.
+
+## Decision
+
+**Start fresh.** The portal begins with what is current. Older records come later: the office
+will want to enter past grants and past years, but when and how much is not decided, and does
+not need to be before the backend.
+
+**Each module switches over on its own date.**
+
+| Module | Switches over | Before that date |
+| --- | --- | --- |
+| Teaching: schedule, students, roll call | The start of a school term | Stays in the old system |
+| Timesheets | With teaching, at the start of the term | Stays in the old system |
+| Grants | One grant at a time: the next new grant, or a grant already in flight | Each grant stays where it is until it is brought over |
+
+So for a while the portal and the old system run side by side, and the portal is the record only
+for what has been brought into it.
+
+## How each kind of data gets in
+
+| Data | How |
+| --- | --- |
+| Staff, programs, partners, venues | Typed in by an admin; a handful of each |
+| Students and guardians | Imported from the current roster as a CSV, or typed in |
+| The term's schedule | Typed in; a few dozen classes |
+| A new grant | Add grant, as today |
+| A grant in flight | Brought over mid-life: its phase, award, budget, payment schedule, payments already received, reports already sent, and the QuickBooks transactions since its start date assigned to it |
+| Past grants and past years | Later; not decided |
+| Past attendance and past timesheets | Not brought over |
+
+## What it means for the build
+
+- **Bringing over a grant in flight is a feature that does not exist yet.** Add grant starts a
+  grant at Prospect or Applying only (`grants/screens/grants/AddGrantDialog.tsx`). An in-flight
+  grant needs to start at Awarded, Active or Reporting, with payments and reports already
+  recorded and none of the checklist steps it has already passed.
+- The QuickBooks sync reaches back to the start of the earliest grant in the portal, not just
+  to the switch-over date, so an in-flight grant's earlier spending can be assigned.
+- The portal starts empty, not with the demo data, and must look right empty
+  (see the empty-state pass).
+- A grant record must tolerate missing history, so past grants can be entered later with only
+  funder, amount, dates and outcome.
+- A student CSV import is worth building; a grants import is not, until history is decided.
