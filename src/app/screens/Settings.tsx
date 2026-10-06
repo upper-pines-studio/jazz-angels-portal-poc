@@ -23,6 +23,7 @@ import {
   dateRange,
   fiscalYear,
   isRole,
+  mayChangeStaff,
   meetsAny,
   useCan,
   useStore,
@@ -167,45 +168,53 @@ export default function Settings() {
                   key: 'teaches',
                   label: 'Teaches',
                   width: '110px',
-                  render: (row: StaffMember) => (
-                    <Switch
-                      checked={row.teaches}
-                      label={row.teaches ? 'Yes' : 'No'}
-                      onChange={next => {
-                        actions.core.updateStaff(row.id, { teaches: next });
-                        toast({
-                          tone: 'success',
-                          title: next ? `${row.name} teaches` : `${row.name} does not teach`,
-                          message: next
-                            ? 'They can lead an ensemble and log hours.'
-                            : 'They stay off the class and hours lists.',
-                        });
-                      }}
-                    />
-                  ),
+                  render: (row: StaffMember) =>
+                    !mayChangeStaff(user.role, row.role, row.role) ? (
+                      row.teaches ? (
+                        'Yes'
+                      ) : (
+                        'No'
+                      )
+                    ) : (
+                      <Switch
+                        checked={row.teaches}
+                        label={row.teaches ? 'Yes' : 'No'}
+                        onChange={next => {
+                          actions.core.updateStaff(row.id, { teaches: next });
+                          toast({
+                            tone: 'success',
+                            title: next ? `${row.name} teaches` : `${row.name} does not teach`,
+                            message: next
+                              ? 'They can lead an ensemble and log hours.'
+                              : 'They stay off the class and hours lists.',
+                          });
+                        }}
+                      />
+                    ),
                 },
                 {
                   key: 'edit',
                   label: '',
                   width: '80px',
                   align: 'right',
-                  render: (row: StaffMember) => (
-                    <a
-                      href="#"
-                      onClick={e => {
-                        e.preventDefault();
-                        setPerson({
-                          id: row.id,
-                          name: row.name,
-                          title: row.title,
-                          role: row.role,
-                          teaches: row.teaches,
-                        });
-                      }}
-                    >
-                      Edit
-                    </a>
-                  ),
+                  render: (row: StaffMember) =>
+                    mayChangeStaff(user.role, row.role, row.role) ? (
+                      <a
+                        href="#"
+                        onClick={e => {
+                          e.preventDefault();
+                          setPerson({
+                            id: row.id,
+                            name: row.name,
+                            title: row.title,
+                            role: row.role,
+                            teaches: row.teaches,
+                          });
+                        }}
+                      >
+                        Edit
+                      </a>
+                    ) : null,
                 },
               ]}
               emptyLabel="No one yet. Add the people who work here."
@@ -461,7 +470,7 @@ export default function Settings() {
         </div>
       </Card>
 
-      {person && (
+      {person && mayStaff && (
         <Dialog
           open
           title={person.id ? 'Edit person' : 'Add person'}
@@ -503,7 +512,10 @@ export default function Settings() {
             <Field label="Role" hint="What they can do in the portal when they sign in.">
               <Select
                 value={person.role}
-                options={ROLES.map(r => ({ value: r, label: ROLE_LABELS[r] }))}
+                options={ROLES.filter(r => mayChangeStaff(user.role, person.role, r)).map(r => ({
+                  value: r,
+                  label: ROLE_LABELS[r],
+                }))}
                 onChange={e => {
                   if (isRole(e.target.value)) setPerson({ ...person, role: e.target.value });
                 }}

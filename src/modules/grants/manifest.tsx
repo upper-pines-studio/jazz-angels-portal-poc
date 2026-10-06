@@ -220,7 +220,7 @@ export const manifest: ModuleManifest = {
   settings: [
     // Shown to whoever may sync; the Connect button inside asks for "QuickBooks: connect".
     { component: QuickBooksCard, requires: { subject: 'quickbooks-sync' } },
-    { component: RemindersCard, requires: { subject: 'grants', need: 'edit' } },
+    { component: RemindersCard, requires: GRANTS },
   ],
   slice: grantsSlice,
 };

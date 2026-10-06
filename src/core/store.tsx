@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import { toISO } from './format';
 import type { ActionRules, AnyAction, ModuleSlice } from './module';
-import { can } from './permissions';
+import { can, mayChangeStaff } from './permissions';
 import type { Need, Subject } from './permissions';
 import * as repository from './repository';
 import type { PortalSlice } from './repository';
@@ -150,8 +150,13 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     };
   },
   rules: {
-    addStaff: 'staff',
-    updateStaff: 'staff',
+    addStaff: (user, _state, input) => mayChangeStaff(user.role, undefined, input.role),
+    updateStaff: (user, state, id, patch) =>
+      mayChangeStaff(
+        user.role,
+        state.core.staff.find(s => s.id === id)?.role,
+        patch.role ?? state.core.staff.find(s => s.id === id)?.role,
+      ),
     addOrganization: 'partners',
     updateOrganization: 'partners',
     addVenue: 'partners',

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge, Button, Card, Dialog, Icon } from '../../../../design-system';
-import { useStore } from '../../../../core';
+import { useCan, useStore } from '../../../../core';
 import { className, grantById, syncedLabel } from '../../domain';
 import { KV } from '../../../../app/components/badges';
 import { useToast } from '../../../../app/ToastHost';
@@ -10,6 +10,8 @@ import './settings-cards.css';
 /** Settings: the read-only link to QuickBooks Online. */
 export function QuickBooksCard() {
   const { state, today, actions } = useStore();
+  // The card shows to whoever may sync; connecting and disconnecting is the Admin's (decision 0001).
+  const mayConnect = useCan()('quickbooks-connect', 'edit');
   const toast = useToast();
   const qb = state.grants.quickbooks;
   const [showAccounts, setShowAccounts] = React.useState(false);
@@ -149,7 +151,7 @@ export function QuickBooksCard() {
               </div>
             )}
 
-            {confirming ? (
+            {confirming && mayConnect ? (
               <div className="ja-qb-confirm" role="alert">
                 <p style={{ margin: 0 }}>
                   <strong>Disconnect QuickBooks?</strong> Expenses already assigned stay on their
@@ -174,9 +176,11 @@ export function QuickBooksCard() {
                 >
                   Sync now
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setConfirming(true)}>
-                  Disconnect
-                </Button>
+                {mayConnect && (
+                  <Button variant="ghost" size="sm" onClick={() => setConfirming(true)}>
+                    Disconnect
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -201,14 +205,16 @@ export function QuickBooksCard() {
               to a budget line, so nobody types them twice.
               {received > 0 && ` The ${received} transactions already here stay.`}
             </p>
-            <Button variant="primary" size="sm" onClick={() => setConnecting(true)}>
-              Connect QuickBooks
-            </Button>
+            {mayConnect && (
+              <Button variant="primary" size="sm" onClick={() => setConnecting(true)}>
+                Connect QuickBooks
+              </Button>
+            )}
           </div>
         )}
       </Card>
 
-      {connecting && (
+      {connecting && mayConnect && (
         <Dialog
           open
           title="Connect QuickBooks Online"

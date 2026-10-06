@@ -69,7 +69,9 @@
   min-width: 0;
   flex: 1;
 }
-.ja-rail-toggle { display: none; }
+.ja-rail-toggle {
+  display: none;
+}
 /* Sign out and the collapse toggle stay reachable in every rail state. */
 .ja-rail-actions {
   display: flex;
@@ -84,21 +86,41 @@
  * labels, section eyebrows and logo are then hidden and the icons centred.
  */
 @media (min-width: 901px) {
-  .ja-rail-toggle { display: inline-flex; }
-  .ja-sidebar.is-collapsed { --sidebar-w: var(--sidebar-w-collapsed); }
-  .ja-sidebar.is-collapsed nav > div:first-child { justify-content: center; }
-  .ja-sidebar.is-collapsed nav > div:first-child > span { display: none !important; }
-  .ja-sidebar.is-collapsed nav > div:nth-child(2) > span { display: none; }
+  .ja-rail-toggle {
+    display: inline-flex;
+  }
+  .ja-sidebar.is-collapsed {
+    --sidebar-w: var(--sidebar-w-collapsed);
+  }
+  .ja-sidebar.is-collapsed nav > div:first-child {
+    justify-content: center;
+  }
+  .ja-sidebar.is-collapsed nav > div:first-child > span {
+    display: none !important;
+  }
+  .ja-sidebar.is-collapsed nav > div:nth-child(2) > span {
+    display: none;
+  }
   .ja-sidebar.is-collapsed nav > div:nth-child(2) > button {
     justify-content: center;
     padding: 0 !important;
   }
-  .ja-sidebar.is-collapsed nav > div:nth-child(2) > button > span:not([data-icon-size]) { display: none; }
-  .ja-sidebar.is-collapsed nav > div:last-child { padding: var(--space-4) var(--space-2) !important; }
-  .ja-sidebar.is-collapsed .ja-rail-user { display: none; }
-  .ja-sidebar.is-collapsed .ja-rail-foot { justify-content: center; }
+  .ja-sidebar.is-collapsed nav > div:nth-child(2) > button > span:not([data-icon-size]) {
+    display: none;
+  }
+  .ja-sidebar.is-collapsed nav > div:last-child {
+    padding: var(--space-4) var(--space-2) !important;
+  }
+  .ja-sidebar.is-collapsed .ja-rail-user {
+    display: none;
+  }
+  .ja-sidebar.is-collapsed .ja-rail-foot {
+    justify-content: center;
+  }
   /* 64px rail: stack the two buttons so both fit. */
-  .ja-sidebar.is-collapsed .ja-rail-actions { flex-direction: column; }
+  .ja-sidebar.is-collapsed .ja-rail-actions {
+    flex-direction: column;
+  }
 }
 
 .ja-topbar {
@@ -155,9 +177,15 @@
 }
 /* A grid child is min-width:auto by default, which lets a wide table push the
    page past the viewport instead of scrolling inside its own wrapper. */
-.ja-split > * { min-width: 0; }
-.ja-split--aside-left { grid-template-columns: 1fr 2fr; }
-.ja-split--nav { grid-template-columns: 280px 1fr; }
+.ja-split > * {
+  min-width: 0;
+}
+.ja-split--aside-left {
+  grid-template-columns: 1fr 2fr;
+}
+.ja-split--nav {
+  grid-template-columns: 280px 1fr;
+}
 
 /* Two equal columns (form fields, budget lines). Single column at 640px. */
 .ja-grid-2 {
@@ -180,8 +208,15 @@
   align-items: center;
   gap: var(--space-3);
 }
-.ja-filter-bar__search { flex: 1 1 220px; min-width: 180px; max-width: 320px; }
-.ja-filter-bar__select { flex: 0 1 160px; min-width: 130px; }
+.ja-filter-bar__search {
+  flex: 1 1 220px;
+  min-width: 180px;
+  max-width: 320px;
+}
+.ja-filter-bar__select {
+  flex: 0 1 160px;
+  min-width: 130px;
+}
 
 /* A group of buttons that may wrap onto a second line. */
 .ja-actions {
@@ -198,8 +233,12 @@
   border-bottom: var(--border-width) solid var(--border-default);
   scrollbar-width: none;
 }
-.ja-tabs-scroll::-webkit-scrollbar { display: none; }
-.ja-tabs-scroll > div { min-width: max-content; }
+.ja-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+.ja-tabs-scroll > div {
+  min-width: max-content;
+}
 
 /* DataTable wrapper: the table keeps a sensible minimum width and the wrapper scrolls. */
 .ja-table-scroll {
@@ -215,7 +254,9 @@
   -webkit-overflow-scrolling: touch;
   padding-bottom: 2px;
 }
-.ja-stepper > div { min-width: max-content; }
+.ja-stepper > div {
+  min-width: max-content;
+}
 
 /*
  * Dialog overlay. The design-system Dialog is position:absolute inside the
@@ -223,22 +264,34 @@
  * inline property unique to it. A panel taller than the viewport scrolls
  * inside the overlay instead of being clipped at both ends.
  */
-.ja-main div[style*="z-index: 50"] {
+.ja-main div[style*='z-index: 50'] {
   overflow-y: auto;
   align-items: flex-start !important;
 }
 /* auto margins centre the panel when it fits and let it scroll when it does not */
-.ja-main div[style*="z-index: 50"] > div { margin: auto 0; }
+.ja-main div[style*='z-index: 50'] > div {
+  margin: auto 0;
+}
 
 /* Hide on narrow screens. */
-@media (max-width: 900px) { .ja-hide-md { display: none !important; } }
-@media (max-width: 640px) { .ja-hide-sm { display: none !important; } }
+@media (max-width: 900px) {
+  .ja-hide-md {
+    display: none !important;
+  }
+}
+@media (max-width: 640px) {
+  .ja-hide-sm {
+    display: none !important;
+  }
+}
 
 /* ---------------------------------------------------------------------------
  * ≤ 1100px
  * ------------------------------------------------------------------------ */
 @media (max-width: 1100px) {
-  .ja-grid-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ja-grid-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -255,7 +308,9 @@
     transition: transform var(--duration-base, 200ms) var(--ease-standard, ease);
     box-shadow: var(--shadow-lg);
   }
-  .ja-sidebar.is-open { transform: none; }
+  .ja-sidebar.is-open {
+    transform: none;
+  }
 
   .ja-scrim {
     display: block;
@@ -265,28 +320,40 @@
     background: var(--scrim);
   }
 
-  .ja-menu-btn { display: inline-flex; }
-  .ja-topbar > header { padding-left: 60px !important; }
+  .ja-menu-btn {
+    display: inline-flex;
+  }
+  .ja-topbar > header {
+    padding-left: 60px !important;
+  }
 
-  .ja-main { padding: var(--space-5); }
+  .ja-main {
+    padding: var(--space-5);
+  }
 
   /* With the sidebar out of the way the dialog may own the whole viewport. */
-  .ja-main div[style*="z-index: 50"] {
+  .ja-main div[style*='z-index: 50'] {
     position: fixed !important;
     padding: var(--space-4) !important;
   }
 
   .ja-split,
   .ja-split--aside-left,
-  .ja-split--nav { grid-template-columns: minmax(0, 1fr); }
+  .ja-split--nav {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ---------------------------------------------------------------------------
  * ≤ 640px — phone
  * ------------------------------------------------------------------------ */
 @media (max-width: 640px) {
-  .ja-main { padding: var(--space-4); }
-  .ja-page { gap: var(--space-4); }
+  .ja-main {
+    padding: var(--space-4);
+  }
+  .ja-page {
+    gap: var(--space-4);
+  }
 
   /* TopBar: title on the first line, actions on their own line. */
   .ja-topbar > header {
@@ -295,8 +362,12 @@
     padding-left: 56px !important;
     gap: var(--space-3) !important;
   }
-  .ja-topbar > header h1 { font-size: var(--text-lg) !important; }
-  .ja-topbar.has-actions > header > div:first-child { flex: 1 1 100% !important; }
+  .ja-topbar > header h1 {
+    font-size: var(--text-lg) !important;
+  }
+  .ja-topbar.has-actions > header > div:first-child {
+    flex: 1 1 100% !important;
+  }
   .ja-topbar.has-actions > header > div:last-child {
     flex: 1 1 100% !important;
     flex-wrap: wrap;
@@ -304,17 +375,36 @@
   }
 
   /* Card headers: action drops beneath the title when it does not fit. */
-  .ja-main section > header { flex-wrap: wrap; }
+  .ja-main section > header {
+    flex-wrap: wrap;
+  }
 
-  .ja-grid-stats { grid-template-columns: minmax(0, 1fr); }
-  .ja-grid-2 { grid-template-columns: minmax(0, 1fr); }
-  .ja-grid-3 { grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+  .ja-grid-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ja-grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ja-grid-3 {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+  }
 
   /* Toasts span the screen instead of hanging off the right edge. */
-  .ja-toasts { left: var(--space-4); right: var(--space-4) !important; bottom: var(--space-4) !important; }
+  .ja-toasts {
+    left: var(--space-4);
+    right: var(--space-4) !important;
+    bottom: var(--space-4) !important;
+  }
 
-  .ja-filter-bar__search { flex: 1 1 100%; max-width: none; }
-  .ja-filter-bar__select { flex: 1 1 calc(50% - var(--space-3)); min-width: 0; }
+  .ja-filter-bar__search {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .ja-filter-bar__select {
+    flex: 1 1 calc(50% - var(--space-3));
+    min-width: 0;
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -363,8 +453,14 @@
   gap: var(--space-4);
   padding: var(--space-6);
 }
-.ja-login__form > button { margin-top: var(--space-2); }
+.ja-login__form > button {
+  margin-top: var(--space-2);
+}
 @media (max-width: 640px) {
-  .ja-login__head { padding: var(--space-4) var(--space-5); }
-  .ja-login__form { padding: var(--space-5); }
+  .ja-login__head {
+    padding: var(--space-4) var(--space-5);
+  }
+  .ja-login__form {
+    padding: var(--space-5);
+  }
 }

@@ -124,6 +124,17 @@ export function can(role: Role, subject: Subject, need: Need = 'open', own = fal
   return EDIT_CELLS.includes(c);
 }
 
+/**
+ * May this role change a person's record from one role to another? "Staff and
+ * roles" says who edits staff at all. Beyond the table, only an Admin makes
+ * someone an Admin or changes an Admin's record: otherwise a Director could
+ * hand themself "Modules, import, export" and the QuickBooks connection.
+ */
+export function mayChangeStaff(role: Role, from: Role | undefined, to: Role | undefined): boolean {
+  if (!can(role, 'staff', 'edit')) return false;
+  return role === 'admin' || (from !== 'admin' && to !== 'admin');
+}
+
 /** `can` for a `Requirement`. */
 export function meets(role: Role, requirement: Requirement): boolean {
   return can(role, requirement.subject, requirement.need ?? 'open');

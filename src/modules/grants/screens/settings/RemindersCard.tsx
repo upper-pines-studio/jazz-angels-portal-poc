@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Card } from '../../../../design-system';
-import { dateShort, useStore } from '../../../../core';
+import { dateShort, useCan, useStore } from '../../../../core';
 import {
   firstNames,
   hourLabel,
@@ -22,6 +22,8 @@ import './settings-cards.css';
 /** Settings: when report reminders go out by default, and to whom. */
 export function RemindersCard() {
   const { state, today } = useStore();
+  // Reminders are deadlines: "Grants: pipeline, checklist, deadlines" (decision 0001).
+  const mayEdit = useCan()('grants', 'edit');
   const [editing, setEditing] = React.useState(false);
   const d = state.grants.reminderDefaults;
 
@@ -47,9 +49,11 @@ export function RemindersCard() {
         title="Report reminders"
         subtitle="When reminder emails go out for a report, unless that report says otherwise."
         action={
-          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-            Edit defaults
-          </Button>
+          mayEdit ? (
+            <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+              Edit defaults
+            </Button>
+          ) : undefined
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
