@@ -405,3 +405,26 @@ export function maySeeGuardian(state: PortalState, user: SignedInUser, student: 
     leadsEnsemble(state, user, student.ensembleId),
   );
 }
+
+/** A student as the roster shows them: the guardian fields only for those who may see them. */
+export type RosterStudent = Omit<Student, 'guardianName' | 'guardianPhone'> & {
+  guardianName?: string;
+  guardianPhone?: string;
+};
+
+/**
+ * The students this person may see, by name: everyone for the office, a
+ * teacher's own classes for a teacher, nobody for a role that sees counts or
+ * nothing. Guardian name and phone are left off the record, not just hidden,
+ * for anyone who may not see them, so they never reach the screen.
+ */
+export function rosterFor(state: PortalState, user: SignedInUser): RosterStudent[] {
+  return state.teaching.students
+    .filter(s => maySeeStudent(state, user, s))
+    .map(s => {
+      if (maySeeGuardian(state, user, s)) return s;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { guardianName, guardianPhone, ...rest } = s;
+      return rest;
+    });
+}

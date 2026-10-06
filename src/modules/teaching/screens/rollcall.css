@@ -53,7 +53,10 @@
   color: var(--text-faint);
   cursor: pointer;
 }
-.ja-roll-mark:hover { border-color: var(--border-strong); color: var(--text-body); }
+.ja-roll-mark:hover {
+  border-color: var(--border-strong);
+  color: var(--text-body);
+}
 
 .ja-roll-mark--present[aria-pressed='true'] {
   border-color: var(--teal-500);
@@ -93,7 +96,9 @@
   border-radius: var(--radius-xs) var(--radius-xs) 0 0;
   background: var(--teal-200);
 }
-.ja-roll-trend__bar.is-latest { background: var(--teal-500); }
+.ja-roll-trend__bar.is-latest {
+  background: var(--teal-500);
+}
 .ja-roll-trend__value {
   font: var(--type-numeric);
   font-size: var(--text-3xs);
@@ -109,7 +114,13 @@
  * ≤ 640px — phone: the circles grow to full thumb size
  * ------------------------------------------------------------------------ */
 @media (max-width: 640px) {
-  .ja-roll-row { padding: var(--space-3); gap: var(--space-3); }
+  .ja-roll-row {
+    padding: var(--space-3);
+    gap: var(--space-3);
+  }
   /* A thumb needs the full 44px. */
-  .ja-roll-mark { width: 44px; height: 44px; }
+  .ja-roll-mark {
+    width: 44px;
+    height: 44px;
+  }
 }

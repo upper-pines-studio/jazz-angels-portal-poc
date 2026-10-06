@@ -19,13 +19,13 @@ state.teaching = { terms, ensembles, meetings, students, attendance };
 actions.teaching.setMark(meetingId, studentId, 'present');
 ```
 
-| Noun | What it is |
-| --- | --- |
-| `Term` | A session: eight weeks the office plans and reports on. |
-| `Ensemble` | A standing group: same students, same place, same hour each week. `venueId` is a core `Venue`; `room` is the space inside it. |
-| `ClassMeeting` | One class on one date. `rollSubmittedAt` set means roll is closed. |
-| `Student` | On a roster, on the waitlist, or an alum. `ensembleId` is unset while waiting. |
-| `AttendanceRecord` | One mark, `present` / `late` / `absent`, for one student at one meeting. |
+| Noun               | What it is                                                                                                                    |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `Term`             | A session: eight weeks the office plans and reports on.                                                                       |
+| `Ensemble`         | A standing group: same students, same place, same hour each week. `venueId` is a core `Venue`; `room` is the space inside it. |
+| `ClassMeeting`     | One class on one date. `rollSubmittedAt` set means roll is closed.                                                            |
+| `Student`          | On a roster, on the waitlist, or an alum. `ensembleId` is unset while waiting.                                                |
+| `AttendanceRecord` | One mark, `present` / `late` / `absent`, for one student at one meeting.                                                      |
 
 Dates are ISO `YYYY-MM-DD`; times are 24-hour `HH:MM` and are read back through
 `timeLabel('16:00') === '4:00pm'`. **Present and late both count as turning
@@ -33,14 +33,14 @@ up** — that is the one rule every rate in here follows.
 
 ## Actions
 
-| Action | What it does |
-| --- | --- |
-| `addMeeting(input)` | Puts one class on the schedule. Returns the new id. |
-| `setMark(meetingId, studentId, mark)` | Records a mark. Ignored while the roll is submitted. |
-| `submitRollCall(meetingId, notes?)` | Marks everyone on the roster not yet marked as present, stamps `rollSubmittedAt` and keeps the rehearsal notes. |
-| `reopenRollCall(meetingId)` | Clears the stamp so the marks can be edited again. |
-| `enrollStudent(input)` | Adds a student to a roster or the waitlist. Returns the new id. |
-| `updateStudent(id, patch)` | Patches a student, their placement included. |
+| Action                                | What it does                                                                                                    |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `addMeeting(input)`                   | Puts one class on the schedule. Returns the new id.                                                             |
+| `setMark(meetingId, studentId, mark)` | Records a mark. Ignored while the roll is submitted.                                                            |
+| `submitRollCall(meetingId, notes?)`   | Marks everyone on the roster not yet marked as present, stamps `rollSubmittedAt` and keeps the rehearsal notes. |
+| `reopenRollCall(meetingId)`           | Clears the stamp so the marks can be edited again.                                                              |
+| `enrollStudent(input)`                | Adds a student to a roster or the waitlist. Returns the new id.                                                 |
+| `updateStudent(id, patch)`            | Patches a student, their placement included.                                                                    |
 
 ## Derived data
 
@@ -67,11 +67,11 @@ evidence a grant report can quote.
 
 ## Screens
 
-| Route | Screen |
-| --- | --- |
-| `/schedule` | Week grid (Sun–Thu) and the term view. `?view=term` opens the second tab. |
-| `/roll/:meetingId` | Roll call: roster, marks, notes, trend. Read-only once submitted. |
-| `/students` | Roster by program plus the waitlist, with the selected student beside it. |
+| Route              | Screen                                                                    |
+| ------------------ | ------------------------------------------------------------------------- |
+| `/schedule`        | Week grid (Sun–Thu) and the term view. `?view=term` opens the second tab. |
+| `/roll/:meetingId` | Roll call: roster, marks, notes, trend. Read-only once submitted.         |
+| `/students`        | Roster by program plus the waitlist, with the selected student beside it. |
 
 The dashboard gets two stats (Enrolled, Attendance), one attention row per
 unsubmitted roll call, and the **Today's classes** panel.
