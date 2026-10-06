@@ -244,8 +244,12 @@ the next `syncQuickBooks()`, and nothing is ever written back.
 - **A transaction is assigned, never retyped.** `assignTransaction(id, parts)`
   turns it into one `Expense` per part, each carrying its `transactionId`, so a
   split is two expenses with one transaction behind them and `grantMoney` needs
-  no special case. `unassignTransaction(id)` takes them off again, backup
-  included. `markNotGrantFunded(id)` sets overhead aside.
+  no special case. Assigning again keeps the backup: a part that stays on its
+  grant and line keeps its expense, and a part that goes hands its files and
+  note to the first new part on the same grant, else the first (`backupCarry`).
+  `unassignTransaction(id)` takes them off again, backup included.
+  `markNotGrantFunded(id)` sets overhead aside. `restoreTransactions(snapshots)`
+  is Undo: it puts back what `transactionSnapshot` saw, files and notes included.
 - **A budget line matches a transaction** when the transaction's account is one
   of the line's `accountCodes` and, if QuickBooks gave it a class, the class is
   the line's `classId`. `suggestionFor(state, tx)` returns the one line that

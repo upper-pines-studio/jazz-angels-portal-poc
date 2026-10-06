@@ -481,14 +481,19 @@ taking the rounding (`splitByPercent`).
 writes an Expense with the transaction's date, payee and memo (as the note) and its
 `transactionId`, and an Activity row on that part's grant: "Assigned $1,800 from Signal Hill
 Properties to Venue and performances (split of $2,400)". It replaces any parts the transaction had
-before, marks it Assigned, and records who and when.
+before, keeping their backup (see Backup), marks it Assigned, and records who and when.
 
 **Set aside** (`markNotGrantFunded`): overhead no grant pays for. Removes any parts and their backup.
 **Send back** (`unassignTransaction`): back to To assign; removes its parts and their backup files.
-Neither writes an Activity row.
+Neither writes an Activity row. On Transactions, when the parts have backup files or a backup note,
+Send back to assign first opens a confirm, as the Expenses tab does: it names the parts, the files
+and the note it deletes, says the transaction goes back to the To assign tab and that QuickBooks is
+not changed. With no backup it sends back at once.
 
 **Undo**: every assign, accept, set aside and send back on Transactions shows a toast with **Undo**,
-which works once and puts the transactions back to their status and parts before the change.
+which works once and puts the transactions back exactly as they were before the change
+(`transactionSnapshot`, `restoreTransactions`): status, who assigned them, the same expense ids,
+their backup notes and their backup files, including files a send back or set aside deleted.
 
 **Split rule** (`saveSplitRule`): "Always split Signal Hill Properties this way". Ticked when saving
 in the split panel, it stores the parts as percentages (to two decimals) for that payee, replacing
@@ -501,6 +506,11 @@ suggestion: the next transaction from that payee arrives with the rule proposed 
   `screens/money/files.tsx`). A new file's kind is guessed: a PDF is an invoice, an image a receipt.
 - Backup goes with its expense: deleting an expense, sending its transaction back or setting it
   aside deletes its files.
+- Changing where a transaction counts keeps its backup (`backupCarry`). A new part on the same grant
+  and line as an old part keeps that expense, with its files and note, and only its amount changes.
+  An old part left with no match hands its files and note to the first new part on the same grant,
+  else to the first new part; the split panel says so before saving ("On save, the 2 backup files
+  and the backup note from Instrument repair on Herb Alpert move to ...").
 - In the POC a file's details are stored, not its contents. A file added this session opens and
   downloads as itself until reload; a seeded one is drawn from what the portal knows and downloads
   as a short text note.
@@ -847,9 +857,6 @@ where it and the mockups or `SAAS-BRIEF.md` disagree:
 **Known problems, tracked elsewhere.** Five
 helpers shorten a funder's name, each its own way (#11). The 75/25 Signal Hill split is written in
 (#12). A budget line with expenses cannot be removed and they cannot be moved at once (#13).
-Changing an assigned transaction on Transactions, or undoing a change, replaces its expenses and
-leaves their receipts and backup note behind; Send back from Transactions deletes backup without
-the warning the Expenses tab gives (#24).
 
 ---
 

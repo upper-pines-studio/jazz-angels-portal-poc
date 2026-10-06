@@ -4,6 +4,7 @@ import { makeCoreSeed } from '../../../../core/seed';
 import { guardActions } from '../../../../core/store';
 import type { PortalState, Role, SignedInUser } from '../../../../core/types';
 import { activityWho } from '../derive';
+import { backupMoves, transactionSnapshot } from '../money';
 import { makeSeed } from '../seed';
 import { creditActivity, grantsSlice, reducer } from '../slice';
 import type { GrantsActions } from '../slice';
@@ -313,6 +314,158 @@ describe('credit for a change', () => {
     const saved = base();
     saved.activity = [{ id: 'c', grantId: 'g', at, who: 'Barry Cogert', text: 'z' }];
     expect(grantsSlice.normalise!(saved)!.activity[0].whoId).toBe('s-barry');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reassigning a transaction keeps its backup (#24)
+// ---------------------------------------------------------------------------
+
+describe('reassigning keeps the backup', () => {
+  const HA = 'g-herb-alpert-2026';
+  const LBCF = 'g-lb-community-foundation-2026';
+  const TX = 'tx-ex-ha-2';
+  const NOTE = 'Quote approved by Barry on Jul 12. Horn is loaner #14 from the instrument library.';
+  const KEISHA: SignedInUser = { id: 's-keisha', name: 'Keisha', role: 'office-manager' };
+
+  function harness() {
+    let grants = base();
+    let n = 0;
+    const portal = () => ({ core: makeCoreSeed(), grants }) as unknown as PortalState;
+    const actions = grantsSlice.createActions(
+      (action: AnyAction) => {
+        grants = grantsSlice.reducer(grants, action);
+      },
+      portal,
+      { today: '2026-09-13', newId: prefix => `${prefix}-t${(n += 1)}`, user: KEISHA },
+    );
+    const parts = () => grants.expenses.filter(e => e.transactionId === TX);
+    const filesOn = (expenseId: string) =>
+      grants.files.filter(f => f.expenseId === expenseId).map(f => f.name);
+    const orphaned = () =>
+      grants.files.filter(f => f.expenseId && !grants.expenses.some(e => e.id === f.expenseId));
+    return { actions, grants: () => grants, portal, parts, filesOn, orphaned };
+  }
+
+  it('starts from the seeded Signal Hill Music Service expense with two files and a note', () => {
+    const h = harness();
+    expect(h.parts().map(e => e.id)).toEqual(['ex-ha-2']);
+    expect(h.filesOn('ex-ha-2')).toHaveLength(2);
+    expect(h.parts()[0].backupNote).toBe(NOTE);
+    expect(h.orphaned()).toEqual([]);
+  });
+
+  it('keeps the expense, its files and its note when the part stays on its line', () => {
+    const h = harness();
+    h.actions.assignTransaction(TX, [{ grantId: HA, budgetLineId: 'bl-ha-repair', amount: 1240 }]);
+    expect(h.parts().map(e => e.id)).toEqual(['ex-ha-2']);
+    expect(h.filesOn('ex-ha-2')).toHaveLength(2);
+    expect(h.parts()[0].backupNote).toBe(NOTE);
+    expect(h.orphaned()).toEqual([]);
+  });
+
+  it('keeps the backup on the part that stays when the transaction is split', () => {
+    const h = harness();
+    h.actions.assignTransaction(TX, [
+      { grantId: HA, budgetLineId: 'bl-ha-repair', amount: 740 },
+      { grantId: LBCF, budgetLineId: 'bl-lbcf-repair', amount: 500 },
+    ]);
+    const [kept, added] = h.parts();
+    expect(kept).toMatchObject({ id: 'ex-ha-2', amount: 740, backupNote: NOTE });
+    expect(h.filesOn('ex-ha-2')).toHaveLength(2);
+    expect(added).toMatchObject({ grantId: LBCF, amount: 500 });
+    expect(added.backupNote).toBeUndefined();
+    expect(h.orphaned()).toEqual([]);
+  });
+
+  it('moves the backup to the new part when no part stays on the old line', () => {
+    const h = harness();
+    expect(
+      backupMoves(h.portal(), TX, [
+        { grantId: LBCF, budgetLineId: 'bl-lbcf-repair' },
+        { grantId: HA, budgetLineId: 'bl-ha-music' },
+      ]),
+    ).toMatchObject([{ from: { id: 'ex-ha-2' }, to: 1, files: 2, note: true }]);
+
+    h.actions.assignTransaction(TX, [
+      { grantId: LBCF, budgetLineId: 'bl-lbcf-repair', amount: 600 },
+      { grantId: HA, budgetLineId: 'bl-ha-music', amount: 640 },
+    ]);
+    const onHa = h.parts().find(e => e.grantId === HA)!;
+    const onLb = h.parts().find(e => e.grantId === LBCF)!;
+    expect(h.parts().some(e => e.id === 'ex-ha-2')).toBe(false);
+    // The part on the same grant takes it.
+    expect(onHa.backupNote).toBe(NOTE);
+    expect(h.filesOn(onHa.id)).toHaveLength(2);
+    expect(h.filesOn(onLb.id)).toEqual([]);
+    expect(h.orphaned()).toEqual([]);
+
+    // With no part on the old grant, the first part takes it, and the files follow it there.
+    h.actions.assignTransaction(TX, [
+      { grantId: LBCF, budgetLineId: 'bl-lbcf-music', amount: 1240 },
+    ]);
+    const [only] = h.parts();
+    const files = h.grants().files.filter(f => f.expenseId === only.id);
+    expect(only.backupNote).toBe(NOTE);
+    expect(files).toHaveLength(2);
+    expect(files.every(f => f.grantId === LBCF)).toBe(true);
+    expect(h.orphaned()).toEqual([]);
+  });
+
+  it('puts the backup back as it was on Undo after a change', () => {
+    const h = harness();
+    const byId = (a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id);
+    const before = transactionSnapshot(h.portal(), TX)!;
+    const start = { expenses: h.parts(), files: [...h.grants().files].sort(byId) };
+
+    h.actions.assignTransaction(TX, [
+      { grantId: LBCF, budgetLineId: 'bl-lbcf-repair', amount: 1240 },
+    ]);
+    expect(h.parts().some(e => e.id === 'ex-ha-2')).toBe(false);
+
+    h.actions.restoreTransactions([before]);
+    expect(h.parts()).toEqual(start.expenses);
+    expect(h.filesOn('ex-ha-2')).toHaveLength(2);
+    expect([...h.grants().files].sort(byId)).toEqual(start.files);
+    expect(h.grants().transactions.find(t => t.id === TX)?.status).toBe('assigned');
+  });
+
+  it('deletes the backup on Send back, and Undo brings it back', () => {
+    const h = harness();
+    const before = transactionSnapshot(h.portal(), TX)!;
+    expect(before.files).toHaveLength(2);
+
+    h.actions.unassignTransaction(TX);
+    expect(h.parts()).toEqual([]);
+    expect(h.filesOn('ex-ha-2')).toEqual([]);
+    expect(h.grants().transactions.find(t => t.id === TX)?.status).toBe('to-assign');
+
+    h.actions.restoreTransactions([before]);
+    expect(h.parts()[0]).toMatchObject({ id: 'ex-ha-2', backupNote: NOTE });
+    expect(h.filesOn('ex-ha-2')).toHaveLength(2);
+    expect(h.grants().transactions.find(t => t.id === TX)).toMatchObject({
+      status: 'assigned',
+      assignedById: before.assignedById,
+    });
+  });
+
+  it('keeps a file added after the change when the change is undone', () => {
+    const h = harness();
+    const before = transactionSnapshot(h.portal(), TX)!;
+    h.actions.assignTransaction(TX, [{ grantId: HA, budgetLineId: 'bl-ha-music', amount: 1240 }]);
+    const [now] = h.parts();
+    h.actions.addFile({
+      grantId: HA,
+      expenseId: now.id,
+      kind: 'receipt',
+      name: 'Late receipt.pdf',
+      format: 'pdf',
+      sizeKb: 10,
+    });
+    h.actions.restoreTransactions([before]);
+    expect(h.filesOn('ex-ha-2')).toHaveLength(3);
+    expect(h.filesOn('ex-ha-2')).toContain('Late receipt.pdf');
+    expect(h.orphaned()).toEqual([]);
   });
 });
 

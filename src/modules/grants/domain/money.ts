@@ -4,6 +4,7 @@ import { dateLong, money } from '../../../core/format';
 import type { PortalState } from '../../../core/types';
 import type {
   Allocation,
+  BackupCarry,
   BackupSummary,
   BudgetLine,
   Expense,
@@ -18,6 +19,7 @@ import type {
   Report,
   Suggestion,
   Transaction,
+  TransactionSnapshot,
   TransactionStatus,
 } from './types';
 
@@ -421,6 +423,69 @@ export function transactionAllocations(state: PortalState, transactionId: string
   return state.grants.expenses
     .filter(e => e.transactionId === transactionId)
     .map(e => ({ grantId: e.grantId, budgetLineId: e.budgetLineId, amount: e.amount }));
+}
+
+/**
+ * Assigning a transaction again keeps its backup. A new part on the same grant
+ * and line as an old part keeps that expense: its id, files and note. An old
+ * part with no match goes; its files and note move to the first new part on
+ * the same grant, else to the first new part. Nothing moves when there are no
+ * new parts.
+ */
+export function backupCarry(
+  old: Expense[],
+  parts: ReadonlyArray<Pick<Allocation, 'grantId' | 'budgetLineId'>>,
+): BackupCarry {
+  const kept = parts.map(p =>
+    old.find(e => e.grantId === p.grantId && e.budgetLineId === p.budgetLineId),
+  );
+  const moved: BackupCarry['moved'] = [];
+  if (parts.length) {
+    for (const from of old) {
+      if (kept.includes(from)) continue;
+      const sameGrant = parts.findIndex(p => p.grantId === from.grantId);
+      moved.push({ from, to: sameGrant >= 0 ? sameGrant : 0 });
+    }
+  }
+  return { kept, moved };
+}
+
+/**
+ * The old parts whose backup would move if the transaction were assigned to
+ * `parts`, with what they carry. Parts with no files and no note are left out.
+ */
+export function backupMoves(
+  state: PortalState,
+  transactionId: string,
+  parts: ReadonlyArray<Pick<Allocation, 'grantId' | 'budgetLineId'>>,
+): Array<{ from: Expense; to: number; files: number; note: boolean }> {
+  const old = state.grants.expenses.filter(e => e.transactionId === transactionId);
+  return backupCarry(old, parts)
+    .moved.map(m => ({
+      ...m,
+      files: state.grants.files.filter(f => f.expenseId === m.from.id).length,
+      note: !!m.from.backupNote?.trim(),
+    }))
+    .filter(m => m.files > 0 || m.note);
+}
+
+/** Where a transaction stands now, exactly, so an Undo can put it back. */
+export function transactionSnapshot(
+  state: PortalState,
+  id: string,
+): TransactionSnapshot | undefined {
+  const tx = transactionById(state, id);
+  if (!tx) return undefined;
+  const expenses = state.grants.expenses.filter(e => e.transactionId === id);
+  const ids = new Set(expenses.map(e => e.id));
+  return {
+    id,
+    status: tx.status,
+    assignedById: tx.assignedById,
+    assignedAt: tx.assignedAt,
+    expenses,
+    files: state.grants.files.filter(f => !!f.expenseId && ids.has(f.expenseId)),
+  };
 }
 
 /** Lines a transaction dated `date` could be charged to: open grants whose period covers the day. */

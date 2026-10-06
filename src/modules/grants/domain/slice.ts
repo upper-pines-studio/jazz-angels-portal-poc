@@ -1,7 +1,7 @@
 import type { ActionRule, AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import { can } from '../../../core/permissions';
 import { makeCoreSeed } from '../../../core/seed';
-import { acceptableSuggestions, splitByPercent } from './money';
+import { acceptableSuggestions, backupCarry, splitByPercent } from './money';
 import { availableTransitions, isPostAward } from './phases';
 import { makeSeed } from './seed';
 import { instantiateDocumentRegister, instantiateTemplate } from './templates';
@@ -27,6 +27,7 @@ import type {
   SplitRule,
   Task,
   Transaction,
+  TransactionSnapshot,
   TransitionPayload,
 } from './types';
 
@@ -120,6 +121,11 @@ export type GrantsAction =
       by?: string;
       date?: string;
     }
+  | {
+      /** Put transactions back exactly as they stood: status, parts, notes and backup. */
+      type: 'restore-transactions';
+      snapshots: TransactionSnapshot[];
+    }
   | { type: 'sync'; at: string }
   | { type: 'set-quickbooks'; patch: Partial<GrantsState['quickbooks']> }
   | { type: 'save-reminder-plan'; plan: ReminderPlan }
@@ -130,6 +136,38 @@ const DOLLARS = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
 function withId<T extends { id: string }>(rows: T[], id: string, patch: Partial<T>): T[] {
   return rows.map(row => (row.id === id ? { ...row, ...patch } : row));
+}
+
+/**
+ * Put one transaction back as the snapshot has it. Backup added to its parts
+ * since then follows the same rule as a reassign, so it is not lost; with no
+ * parts to go to, it goes, as it does on Send back.
+ */
+function restoreTransaction(state: GrantsState, snap: TransactionSnapshot): GrantsState {
+  if (!state.transactions.some(t => t.id === snap.id)) return state;
+  const now = state.expenses.filter(e => e.transactionId === snap.id);
+  const nowIds = new Set(now.map(e => e.id));
+  const back = new Set(snap.files.map(f => f.id));
+  const carry = backupCarry(now, snap.expenses);
+  const target = new Map<string, Expense>();
+  carry.kept.forEach((e, i) => e && target.set(e.id, snap.expenses[i]));
+  carry.moved.forEach(m => target.set(m.from.id, snap.expenses[m.to]));
+  const files = state.files.flatMap(f => {
+    if (back.has(f.id)) return [];
+    if (!f.expenseId || !nowIds.has(f.expenseId)) return [f];
+    const to = target.get(f.expenseId);
+    return to ? [{ ...f, grantId: to.grantId, expenseId: to.id }] : [];
+  });
+  return {
+    ...state,
+    expenses: [...state.expenses.filter(e => !nowIds.has(e.id)), ...snap.expenses],
+    files: [...files, ...snap.files],
+    transactions: withId(state.transactions, snap.id, {
+      status: snap.status,
+      assignedById: snap.assignedById,
+      assignedAt: snap.assignedAt,
+    }),
+  };
 }
 
 /** The module's own reducer. The store only ever reaches it through the slice. */
@@ -259,18 +297,33 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
 
     case 'assign-transaction': {
       const tx = state.transactions.find(t => t.id === action.id);
-      if (!tx) return state;
+      if (!tx || !action.parts.length) return state;
 
-      const expenses: Expense[] = action.parts.map(part => ({
-        id: part.expenseId,
-        grantId: part.grantId,
-        budgetLineId: part.budgetLineId,
-        date: tx.date,
-        payee: tx.payee,
-        amount: part.amount,
-        note: tx.memo || undefined,
-        transactionId: tx.id,
-      }));
+      // Reassigning keeps the backup: a part that stays on its line keeps its
+      // expense, and a part that goes hands its files and note on (`backupCarry`).
+      const old = state.expenses.filter(e => e.transactionId === tx.id);
+      const carry = backupCarry(old, action.parts);
+      const expenses: Expense[] = action.parts.map((part, i) => {
+        const kept = carry.kept[i];
+        const notes = [kept, ...carry.moved.filter(m => m.to === i).map(m => m.from)]
+          .map(e => e?.backupNote?.trim())
+          .filter((n): n is string => !!n);
+        const expense: Expense = {
+          ...(kept ?? { note: tx.memo || undefined }),
+          id: kept?.id ?? part.expenseId,
+          grantId: part.grantId,
+          budgetLineId: part.budgetLineId,
+          date: tx.date,
+          payee: tx.payee,
+          amount: part.amount,
+          transactionId: tx.id,
+        };
+        if (notes.length) expense.backupNote = notes.join('\n');
+        else delete expense.backupNote;
+        return expense;
+      });
+      const movedTo = new Map(carry.moved.map(m => [m.from.id, expenses[m.to]]));
+
       const split = action.parts.length > 1;
       const activity: Activity[] = action.parts.map(part => {
         const line = state.budgetLines.find(l => l.id === part.budgetLineId);
@@ -289,6 +342,10 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
         ...state,
         // Reassigning replaces whatever the transaction was on before.
         expenses: [...state.expenses.filter(e => e.transactionId !== tx.id), ...expenses],
+        files: state.files.map(f => {
+          const to = f.expenseId ? movedTo.get(f.expenseId) : undefined;
+          return to ? { ...f, grantId: to.grantId, expenseId: to.id } : f;
+        }),
         transactions: withId(state.transactions, tx.id, {
           status: 'assigned',
           assignedById: action.by,
@@ -297,6 +354,9 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
         activity: [...state.activity, ...activity],
       };
     }
+
+    case 'restore-transactions':
+      return action.snapshots.reduce(restoreTransaction, state);
 
     case 'set-transaction-status': {
       const tx = state.transactions.find(t => t.id === action.id);
@@ -400,6 +460,8 @@ export interface GrantsActions {
   markNotGrantFunded(id: string): void;
   /** Send a transaction back to "to assign" and take its expenses off the budget. */
   unassignTransaction(id: string): void;
+  /** Undo: put transactions back exactly as `transactionSnapshot` found them, backup included. */
+  restoreTransactions(snapshots: TransactionSnapshot[]): void;
   /** Accept every proposal that is waiting. Returns how many were accepted. */
   acceptSuggestions(): number;
   /** "Always split this payee this way." Replaces any rule the payee already has. */
@@ -658,6 +720,9 @@ function createActions(
     unassignTransaction(id) {
       send({ type: 'set-transaction-status', id, status: 'to-assign' });
     },
+    restoreTransactions(snapshots) {
+      if (snapshots.length) send({ type: 'restore-transactions', snapshots });
+    },
     acceptSuggestions() {
       const waiting = acceptableSuggestions(getState() as PortalState);
       const actions: GrantsAction[] = waiting.map(({ tx, suggestion }) => {
@@ -888,6 +953,7 @@ const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
   assignTransaction: 'transactions',
   markNotGrantFunded: 'transactions',
   unassignTransaction: 'transactions',
+  restoreTransactions: 'transactions',
   acceptSuggestions: 'transactions',
   saveSplitRule: 'transactions',
   deleteSplitRule: 'transactions',

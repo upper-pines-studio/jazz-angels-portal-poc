@@ -80,7 +80,7 @@ seed reproduces are in `design/saas/`.
 
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
-| Transactions: tabs, filters, suggestions, accept, undo | `/transactions`, `?tab=`, `?grant=`, `?line=`, `?q=`, `?account=`, `?period=`, `?page=` | Mocked: QuickBooks feed is seed data | `money/Transactions.tsx`, `money/TransactionRow.tsx`, `money/TransactionMenu.tsx` | `money.ts`: `suggestionFor`, `acceptableSuggestions`, `transactionCounts`, `eligibleLines`; `slice.ts`: `assignTransaction`, `markNotGrantFunded`, `acceptSuggestions` |
+| Transactions: tabs, filters, suggestions, accept, undo | `/transactions`, `?tab=`, `?grant=`, `?line=`, `?q=`, `?account=`, `?period=`, `?page=` | Mocked: QuickBooks feed is seed data | `money/Transactions.tsx`, `money/TransactionRow.tsx`, `money/TransactionMenu.tsx` | `money.ts`: `suggestionFor`, `acceptableSuggestions`, `transactionCounts`, `eligibleLines`, `backupCarry`, `backupMoves`, `transactionSnapshot`; `slice.ts`: `assignTransaction`, `markNotGrantFunded`, `acceptSuggestions`, `restoreTransactions` |
 | Split a transaction across grants, save as a rule | `/transactions?tx=<id>` | Built | `money/SplitPanel.tsx` | `money.ts`: `splitByPercent`; `slice.ts`: `assignTransaction`, `saveSplitRule` |
 | Sync with QuickBooks | button on Transactions and Settings | Mocked: moves `incoming` into `transactions`, once | | `slice.ts`: `syncQuickBooks` |
 | Budget vs. actual: table, warnings, export, print | `/budget`, `?period=fy\|all\|fy-prev`, `?grant=<id>` | Built | `money/BudgetVsActual.tsx`, `money/bva.ts`, `money/bva.css` (print rules) | `money.ts`: `linePaces`, `grantPace`, `lineNeedsAttention`, `trackedGrantsInFy` |
@@ -145,7 +145,6 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 | The 75/25 starting split for Signal Hill Properties is written in, not worked out. | `money/SplitPanel.tsx` (`USUAL_SHARES`) |
 | Five separate helpers shorten a funder's name, each by its own rule. They should be one domain function. | `money/transactionHelpers.ts`, `money/bva.ts`, `money/spend.ts`, `deadlines/helpers.ts`, `deadlines/ReminderParts.tsx` |
 | Removing a budget line is blocked while it has expenses, with no way to move them all at once. | `grant/BudgetLineEditor.tsx` |
-| Changing an assigned transaction, or undoing a change, replaces its expenses and leaves their receipts and backup note behind. Send back from Transactions deletes backup without a warning. (#24) | `grants/domain/slice.ts` (`assign-transaction`), `money/Transactions.tsx`, `money/transactionHelpers.ts` |
 | "Start from the usual five categories" reads its categories and accounts from the demo data. | `grant/BudgetTab.tsx`, `grants/domain/seed-money.ts` (`CATEGORY_ACCOUNTS`) |
 | The award letter card says the terms feed the budget and the spend-down warnings; only Spend-down's "What to do" reads them, and only the terms labelled "Unspent funds" and "Budget changes". | `grant/AwardTab.tsx`, `money/spend.ts` (`whatToDo`) |
 | The dashboard's "expenses missing a receipt" link counts every grant but opens only the first one's Expenses tab. | `money/MoneyPanel.tsx`, `grants/manifest.tsx` |
