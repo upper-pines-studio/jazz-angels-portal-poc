@@ -5,14 +5,19 @@
  * visitors out of a published demo — it is not real security, and a Supabase
  * auth client replaces it when the portal gets a backend.
  *
+ * A login is only a username and the staff record it belongs to (decision
+ * 0001). The name and the role come from that record, so Settings is the one
+ * place they change. A login whose staff record is missing is refused.
+ *
  * The session is one localStorage key holding who signed in and when.
  */
 
+import type { StaffMember } from './types';
+
 export interface AuthUser {
   username: string;
-  name: string;
-  role: string;
-  staffId?: string;
+  /** The staff record this login belongs to. */
+  staffId: string;
 }
 
 /** A user plus the hex SHA-256 of `${username}:${password}`. */
@@ -22,19 +27,46 @@ export interface Credential extends AuthUser {
 
 export const SESSION_KEY = 'ja-portal:session:v1';
 
+/**
+ * One login per role in decision 0001. The role is on the staff record:
+ * barry is a Director, intern an Office assistant, gwen the Admin, keisha the
+ * Office manager, walt the Bookkeeper, devon a Teacher, margaret Read-only.
+ */
 export const USERS: readonly Credential[] = [
   {
     username: 'barry',
-    name: 'Barry Cogert',
-    role: 'Program Director',
     staffId: 's-barry',
     hash: '49513554876aeb382676cc91f8215b057c0883aa952c04d09e0433ed70bfe29e',
   },
   {
     username: 'intern',
-    name: 'Office Intern',
-    role: 'Intern',
+    staffId: 's-tess',
     hash: 'a6b514295aea232f50f533e3a42e5159878e6b2076d11be321afd6ed82f03ddb',
+  },
+  {
+    username: 'gwen',
+    staffId: 's-gwen',
+    hash: 'a00c24f21e019c27a25fda763c0a201c9e33206cde772bd3051bb2ff4095a16f',
+  },
+  {
+    username: 'keisha',
+    staffId: 's-keisha',
+    hash: 'f81c46cd920e4ac2c51458cadd0265b30af72aafe5ec13e7e5d51287f485690b',
+  },
+  {
+    username: 'walt',
+    staffId: 's-walt',
+    hash: 'fb98b3745d813bc2d69f9726ebfa0336479880d1bf4f11fe12505a00817c73a9',
+  },
+  {
+    username: 'devon',
+    staffId: 's-devon',
+    hash: '4e332da0ad61403f0359cb945f1a003efdf5bd34ffe85570059c89632ee484db',
+  },
+  {
+    username: 'margaret',
+    staffId: 's-margaret',
+    hash: 'dc9b0c3990574ccc99cf664216d579a1a4e8d683a23b25b3a65cae8233d427d4',
   },
 ];
 
@@ -60,9 +92,7 @@ function normalise(username: string): string {
 
 /** Strip the hash so it never travels further than this file. */
 function publicUser(c: Credential): AuthUser {
-  const user: AuthUser = { username: c.username, name: c.name, role: c.role };
-  if (c.staffId !== undefined) user.staffId = c.staffId;
-  return user;
+  return { username: c.username, staffId: c.staffId };
 }
 
 /** Lowercase hex SHA-256 of `${username}:${password}`. */
@@ -88,6 +118,33 @@ export async function verify(
   } catch {
     return null;
   }
+}
+
+/** The staff record a login belongs to, or undefined when it is not there. */
+export function staffFor(user: AuthUser, staff: readonly StaffMember[]): StaffMember | undefined {
+  return staff.find(s => s.id === user.staffId);
+}
+
+export type SignInResult =
+  | { ok: true; user: AuthUser; member: StaffMember }
+  /** `mismatch`: wrong username or password. `no-staff`: right, but nobody to be. */
+  | { ok: false; reason: 'mismatch' | 'no-staff' };
+
+/**
+ * The whole sign-in check: the password, then the staff record. Writes no
+ * session; the caller starts one only on `ok`.
+ */
+export async function checkSignIn(
+  username: string,
+  password: string,
+  staff: readonly StaffMember[],
+  users: readonly Credential[] = USERS,
+): Promise<SignInResult> {
+  const user = await verify(username, password, users);
+  if (!user) return { ok: false, reason: 'mismatch' };
+  const member = staffFor(user, staff);
+  if (!member) return { ok: false, reason: 'no-staff' };
+  return { ok: true, user, member };
 }
 
 /** Whoever the stored session names, or null when there is none worth trusting. */

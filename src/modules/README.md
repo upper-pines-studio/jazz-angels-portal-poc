@@ -30,7 +30,7 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
   id: 'teaching',
   seed: () => makeSeed(),
   reducer(state, action) { /* only `teaching/*` reaches here */ },
-  createActions(dispatch, getState, { today, newId }) { /* … */ },
+  createActions(dispatch, getState, { today, newId, user }) { /* credit `user.id` */ },
   normalise(raw) { /* validate a loaded payload, or return undefined */ },
 };
 ```

@@ -44,13 +44,15 @@ director's role and gets a teacher's view of their own classes on top.
   guardian names and phone numbers reach only the people who need them.
 - An archived person cannot sign in, and everything they did stays attributed to them
   (see [0002](0002-archive-not-delete.md)).
-- Every change records who made it. Today every action is credited to `CURRENT_USER`
-  (`core/seed.ts`), the first staff member, whoever is signed in; that is fixed before the
-  backend.
+- Every change records who made it. Done (#16): every action is credited to the signed-in person,
+  passed to each module's actions as `SliceContext.user`; the activity log stores their staff id
+  and shows their name as it is now.
 
 ## What it means for the build
 
-- A sign-in belongs to a staff record. The intern login in `core/auth.ts` has none today.
+- A sign-in belongs to a staff record, and the role lives on that record (`StaffMember.role`,
+  set in Settings). Every login in `core/auth.ts` has one; a login whose record is missing is
+  refused at sign-in.
 - The signed-in person is passed to every action, and the activity log uses them.
 - The rail, the routes and the buttons read one permission check, so a hidden screen and a
   refused write agree. The database enforces the same table with row-level security; the

@@ -44,10 +44,11 @@ function Frame() {
  * asked for survives the detour through the login screen.
  */
 function Gate() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const refuse = React.useCallback(() => signOut('no-staff'), [signOut]);
   if (!user) return <Login />;
   return (
-    <StoreProvider slices={SLICES}>
+    <StoreProvider slices={SLICES} userId={user.staffId} onUnknownUser={refuse}>
       <ToastHost>
         <Frame />
       </ToastHost>

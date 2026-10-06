@@ -26,11 +26,12 @@ Shared by every module. Owned by `core/` and `app/`.
 
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
-| Sign in | (gate) | Mocked: hashes checked in the browser, no server | `app/screens/Login.tsx`, `app/AuthGate.tsx` | `core/auth.ts` |
+| Sign in: one demo login per role; each belongs to a staff record, whose role it carries; a login with no staff record is refused | (gate) | Mocked: hashes checked in the browser, no server | `app/screens/Login.tsx`, `app/AuthGate.tsx` | `core/auth.ts`: `USERS`, `checkSignIn`; `core/roles.ts` |
+| Credit for a change: activity, approvals, uploads and transaction status name the signed-in person | (all) | Built | `grant/ActivityTab.tsx`, rail footer in `app/Shell.tsx` | `core/module.ts`: `SliceContext.user`; `core/store.tsx` |
 | Shell: rail, top bar, page header | (all) | Built | `app/Shell.tsx`, `app/responsive.css` | rail is read from each manifest's `nav` |
 | Dashboard | `/` | Built | `app/screens/Dashboard.tsx` | composed from each manifest's `dashboard` |
 | Partners: organizations and venues | `/partners`, `/partners/organizations/:id`, `/partners/venues/:id` | Built | `app/screens/partners/` | `core/store.tsx`, `core/derive.ts` |
-| Settings: staff, modules, programs, fiscal year, demo date, export, import, reset | `/settings` | Built | `app/screens/Settings.tsx` | `core/store.tsx`, `core/repository.ts` |
+| Settings: staff (title, role, teaches), modules, programs, fiscal year, demo date, export, import, reset | `/settings` | Built | `app/screens/Settings.tsx` | `core/store.tsx`, `core/repository.ts` |
 | Storage | | Mocked: localStorage, one key per module | | `core/repository.ts` |
 | Docked side panel | | Built | `app/components/SidePanel.tsx` | |
 | Toasts | | Built | `app/ToastHost.tsx` | |
@@ -133,6 +134,8 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 | Gap | Where |
 | --- | --- |
 | No backend. Everything is localStorage; sign-in is a hash check in the browser. | `core/repository.ts`, `core/auth.ts` |
+| Roles are recorded but not enforced: every login sees every screen and can make every change (#17). | `core/roles.ts`, `core/auth.ts` |
+| Nobody approves their own hours is not enforced yet: the signed-in person can approve their own entry. | `timesheets/domain/slice.ts` (`approveEntry`) |
 | QuickBooks is simulated. No real connection, and a sync brings new transactions only once. | `grants/domain/seed-money.ts` (`INCOMING`), `slice.ts` (`sync`) |
 | File contents are not stored. A file added in a session is lost on reload; a seeded file is a drawn page. | `grants/screens/money/files.tsx` |
 | "Download all backup" produces a spreadsheet index, not a zip of the files. | `grants/screens/grant/ExpensesTab.tsx` |

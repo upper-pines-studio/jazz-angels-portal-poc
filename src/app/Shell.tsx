@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, TopBar, Icon, IconButton, Avatar, Breadcrumb } from '../design-system';
-import { repository, useStore } from '../core';
+import { ROLE_LABELS, repository, useStore } from '../core';
 import type { PortalState } from '../core';
 import { MODULES } from '../modules';
 import { useAuth } from './AuthGate';
@@ -100,8 +100,8 @@ function activeFor(items: RailItem[], pathname: string): string {
 export function Shell({ children }: { children: React.ReactNode }) {
   const nav = useNavigate();
   const loc = useLocation();
-  const { state, today } = useStore();
-  const { user, signOut } = useAuth();
+  const { state, today, user } = useStore();
+  const { signOut } = useAuth();
   const [header, setHeader] = React.useState<PageHeader>({ title: '' });
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [collapsed, setCollapsed] = React.useState(() => readCollapsed());
@@ -147,7 +147,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             footer={
               <div className="ja-rail-foot">
                 <div className="ja-rail-user">
-                  <Avatar name={user?.name ?? ''} size={30} tone="var(--gold-400)" />
+                  <Avatar name={user.name} size={30} tone="var(--gold-400)" />
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div
                       style={{
@@ -155,7 +155,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                         color: 'var(--neutral-0)',
                       }}
                     >
-                      {user?.name}
+                      {user.name}
                     </div>
                     <div
                       style={{
@@ -163,7 +163,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                         color: 'var(--text-on-dark-muted)',
                       }}
                     >
-                      {user?.role}
+                      {ROLE_LABELS[user.role]}
                     </div>
                   </div>
                 </div>
@@ -173,7 +173,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     size="sm"
                     variant="ghost"
                     style={{ color: 'var(--text-on-dark-muted)' }}
-                    onClick={signOut}
+                    onClick={() => signOut()}
                   >
                     <Icon name="log-out" size={16} />
                   </IconButton>

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import type { AnyAction } from '../../../../core/module';
+import { makeCoreSeed } from '../../../../core/seed';
+import type { PortalState, SignedInUser } from '../../../../core/types';
+import { activityWho } from '../derive';
 import { makeSeed } from '../seed';
-import { grantsSlice, reducer } from '../slice';
-import type { Grant, GrantsState } from '../types';
+import { creditActivity, grantsSlice, reducer } from '../slice';
+import type { Activity, Grant, GrantsState } from '../types';
 
 const base = (): GrantsState => makeSeed();
 
@@ -29,7 +33,7 @@ describe('reducer: add-grant', () => {
     includeDocumentRegister: true,
     activityId: 'act-new',
     at: '2026-09-13T10:00:00.000Z',
-    who: 'Barry Cogert',
+    whoId: 's-barry',
   });
 
   it('adds the funder and the grant', () => {
@@ -55,7 +59,7 @@ describe('reducer: add-grant', () => {
     expect(state.activity.find(a => a.id === 'act-new')).toMatchObject({
       grantId: 'g-new',
       text: 'Grant added',
-      who: 'Barry Cogert',
+      whoId: 's-barry',
     });
   });
 });
@@ -71,7 +75,7 @@ describe('reducer: transition', () => {
       payload: { date: '2026-09-13' },
       activityId: 'a1',
       at,
-      who: 'Barry Cogert',
+      whoId: 's-barry',
     });
     const grant = grantOf(next, 'g-arts-council-lb-2026');
     expect(grant.phase).toBe('submitted');
@@ -92,7 +96,7 @@ describe('reducer: transition', () => {
       },
       activityId: 'a2',
       at,
-      who: 'Denise Moreno',
+      whoId: 's-denise',
     });
     const grant = grantOf(next, 'g-signal-hill-2026');
     expect(grant).toMatchObject({ phase: 'awarded', amountAwarded: 5500 });
@@ -112,7 +116,7 @@ describe('reducer: transition', () => {
       payload: { date: '2026-10-16', reason: 'Funds went to park programming' },
       activityId: 'a3',
       at,
-      who: 'Denise Moreno',
+      whoId: 's-denise',
     });
     expect(grantOf(next, 'g-signal-hill-2026').dates.decided).toBe('2026-10-16');
     expect(next.activity.find(a => a.id === 'a3')?.text).toBe(
@@ -128,7 +132,7 @@ describe('reducer: transition', () => {
       payload: {},
       activityId: 'a4',
       at,
-      who: 'Barry Cogert',
+      whoId: 's-barry',
     });
     expect(grantOf(next, 'g-port-of-long-beach-2026').dates.submitted).toBe('2026-09-13');
   });
@@ -143,7 +147,7 @@ describe('reducer: transition', () => {
         payload: {},
         activityId: 'a5',
         at,
-        who: 'Barry Cogert',
+        whoId: 's-barry',
       }),
     ).toBe(start);
   });
@@ -231,5 +235,81 @@ describe('the slice', () => {
   it('rejects a payload that is missing a collection', () => {
     expect(grantsSlice.normalise?.({ grants: [] })).toBeUndefined();
     expect(grantsSlice.normalise?.(makeSeed())).toBeTruthy();
+  });
+});
+
+describe('credit for a change', () => {
+  const TESS: SignedInUser = { id: 's-tess', name: 'Tess Holloway', role: 'assistant' };
+
+  /** The real reducer and actions, signed in as the intern. */
+  function harness(user: SignedInUser = TESS) {
+    let grants = base();
+    let n = 0;
+    const portal = () => ({ core: makeCoreSeed(), grants }) as unknown as PortalState;
+    const actions = grantsSlice.createActions(
+      (action: AnyAction) => {
+        grants = grantsSlice.reducer(grants, action);
+      },
+      portal,
+      { today: '2026-09-13', newId: prefix => `${prefix}-t${(n += 1)}`, user },
+    );
+    return { actions, grants: () => grants, portal };
+  }
+
+  it('credits a note to the signed-in person, by name on the Activity tab', () => {
+    const h = harness();
+    const id = h.actions.addNote('g-parsons-2026', 'Called the program officer');
+    const row = h.grants().activity.find(a => a.id === id)!;
+    expect(row.whoId).toBe('s-tess');
+    expect(activityWho(h.portal(), row)).toBe('Tess Holloway');
+  });
+
+  it('credits a phase change, an upload and a transaction to them too', () => {
+    const h = harness();
+    h.actions.transition('g-port-of-long-beach-2026', 'submitted', { date: '2026-09-13' });
+    expect(h.grants().activity.at(-1)?.whoId).toBe('s-tess');
+
+    const fileId = h.actions.addFile({
+      grantId: 'g-herb-alpert-2026',
+      kind: 'receipt',
+      name: 'Receipt.pdf',
+      format: 'pdf',
+      sizeKb: 10,
+    });
+    expect(h.grants().files.find(f => f.id === fileId)?.uploadedById).toBe('s-tess');
+
+    const tx = h.grants().transactions.find(t => t.status === 'to-assign')!;
+    h.actions.markNotGrantFunded(tx.id);
+    expect(h.grants().transactions.find(t => t.id === tx.id)?.assignedById).toBe('s-tess');
+  });
+
+  it('names whoever the row credits, as they are named now', () => {
+    const portal = { core: makeCoreSeed(), grants: base() } as unknown as PortalState;
+    portal.core.staff.find(s => s.id === 's-denise')!.name = 'Denise Moreno-Ruiz';
+    const row: Activity = {
+      id: 'a',
+      grantId: 'g',
+      at: '2026-09-13T09:00:00Z',
+      whoId: 's-denise',
+      text: 'x',
+    };
+    expect(activityWho(portal, row)).toBe('Denise Moreno-Ruiz');
+    expect(activityWho(portal, { ...row, whoId: undefined, who: 'A volunteer' })).toBe(
+      'A volunteer',
+    );
+  });
+
+  it('turns a saved name into a staff id, and keeps a name it cannot match', () => {
+    const staff = makeCoreSeed().staff;
+    const at = '2026-01-01T09:00:00.000Z';
+    expect(
+      creditActivity({ id: 'a', grantId: 'g', at, who: 'Denise Moreno', text: 'x' }, staff),
+    ).toEqual({ id: 'a', grantId: 'g', at, whoId: 's-denise', text: 'x' });
+    const stranger = { id: 'b', grantId: 'g', at, who: 'A volunteer', text: 'y' };
+    expect(creditActivity(stranger, staff)).toEqual(stranger);
+
+    const saved = base();
+    saved.activity = [{ id: 'c', grantId: 'g', at, who: 'Barry Cogert', text: 'z' }];
+    expect(grantsSlice.normalise!(saved)!.activity[0].whoId).toBe('s-barry');
   });
 });

@@ -5,7 +5,9 @@ import type { PortalSlice } from '../repository';
 import { venuesForOrganization } from '../derive';
 import { SEED_TODAY } from '../seed';
 import { coreSlice, makeReducer, newId, resolveToday } from '../store';
-import type { PortalState } from '../types';
+import type { PortalState, SignedInUser } from '../types';
+
+const BARRY: SignedInUser = { id: 's-barry', name: 'Barry Cogert', role: 'director' };
 
 /**
  * Composition is tested with two invented slices, so the test says nothing
@@ -80,7 +82,7 @@ describe('composing slices', () => {
 
   it('gives each slice actions that dispatch in its own namespace', () => {
     const dispatch = vi.fn();
-    const ctx = { today: '2026-09-13', newId };
+    const ctx = { today: '2026-09-13', newId, user: BARRY };
     counter.createActions(dispatch, () => seeded(), ctx).bump();
     notes.createActions(dispatch, () => seeded(), ctx).add('chart');
 
@@ -91,9 +93,9 @@ describe('composing slices', () => {
 describe('the core slice', () => {
   const seed = () => coreSlice.seed('2026-09-13');
 
-  it('seeds the five staff, the six programs and all three modules', () => {
+  it('seeds the ten staff, the six programs and all three modules', () => {
     const state = seed();
-    expect(state.staff).toHaveLength(5);
+    expect(state.staff).toHaveLength(10);
     expect(state.staff.filter(s => s.teaches).map(s => s.name)).toEqual([
       'Barry Cogert',
       'Albert Alva',
@@ -119,9 +121,14 @@ describe('the core slice', () => {
     const actions = coreSlice.createActions(
       a => dispatched.push(a),
       () => ({ core: seed() }) as PortalState,
-      { today: '2026-09-13', newId },
+      { today: '2026-09-13', newId, user: BARRY },
     );
-    const id = actions.addStaff({ name: 'Dana Whitfield', role: 'Teaching Artist', teaches: true });
+    const id = actions.addStaff({
+      name: 'Dana Whitfield',
+      title: 'Teaching Artist',
+      role: 'teacher',
+      teaches: true,
+    });
     expect(id.startsWith('s-')).toBe(true);
 
     let state = seed();
@@ -143,7 +150,7 @@ describe('the core slice', () => {
         state = coreSlice.reducer(state, a);
       },
       () => ({ core: state }) as PortalState,
-      { today: '2026-09-13', newId },
+      { today: '2026-09-13', newId, user: BARRY },
     );
 
     const orgId = actions.addOrganization({
@@ -176,7 +183,7 @@ describe('the core slice', () => {
         state = coreSlice.reducer(state, a);
       },
       () => ({ core: state }) as PortalState,
-      { today: '2026-09-13', newId },
+      { today: '2026-09-13', newId, user: BARRY },
     );
 
     actions.setModuleEnabled('teaching', false);
@@ -217,5 +224,50 @@ describe('the core slice', () => {
     // Saved before places existed: the seeded venues come along, so venue ids resolve.
     expect(filled?.venues.map(v => v.id)).toContain('v-studio');
     expect(filled?.organizations).toHaveLength(1);
+  });
+
+  it('moves a saved job title to title and gives everyone a role', () => {
+    const filled = coreSlice.normalise?.({
+      staff: [
+        { id: 's-barry', name: 'Barry Cogert', role: 'Program Director', teaches: true },
+        { id: 's-x', name: 'Pat Doe', role: 'Teaching Artist', teaches: true },
+        { id: 's-y', name: 'Sam Roe', role: 'Volunteer' },
+      ],
+      programs: [],
+      settings: {},
+    });
+    const staff = filled!.staff;
+    expect(staff.find(s => s.id === 's-barry')).toMatchObject({
+      title: 'Program Director',
+      role: 'director',
+    });
+    expect(staff.find(s => s.id === 's-x')).toMatchObject({
+      title: 'Teaching Artist',
+      role: 'teacher',
+    });
+    expect(staff.find(s => s.id === 's-y')).toMatchObject({
+      title: 'Volunteer',
+      role: 'read-only',
+    });
+    // The seeded people every login belongs to come along, so sign-in still resolves.
+    expect(staff.map(s => s.id)).toEqual(
+      expect.arrayContaining(['s-tess', 's-gwen', 's-keisha', 's-walt', 's-devon', 's-margaret']),
+    );
+  });
+
+  it('keeps a saved role and title as they are', () => {
+    const filled = coreSlice.normalise?.({
+      staff: [
+        {
+          id: 's-denise',
+          name: 'Denise Moreno',
+          title: 'Office Administrator',
+          role: 'bookkeeper',
+        },
+      ],
+      programs: [],
+      settings: {},
+    });
+    expect(filled!.staff[0]).toMatchObject({ title: 'Office Administrator', role: 'bookkeeper' });
   });
 });

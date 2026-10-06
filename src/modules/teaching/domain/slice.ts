@@ -1,4 +1,4 @@
-import type { AnyAction, ModuleSlice } from '../../../core/module';
+import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import { PARAMOUNT_MS_VENUE_ID, STUDIO_VENUE_ID } from '../../../core';
 import { makeSeed } from './seed';
 import type {
@@ -125,7 +125,7 @@ export function reducer(state: TeachingState, action: TeachingAction): TeachingS
 function createActions(
   dispatch: (action: AnyAction) => void,
   _getState: () => { teaching: TeachingState },
-  ctx: { today: string; newId(prefix: string): string },
+  ctx: SliceContext,
 ): TeachingActions {
   const { newId } = ctx;
   /** Every action leaves this module namespaced, so the store can route it. */

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Textarea } from '../../../../design-system';
 import { dateLong, toISO, useStore } from '../../../../core';
-import { grantActivity } from '../../domain';
+import { activityWho, grantActivity } from '../../domain';
 import type { Grant } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
 
@@ -130,7 +130,7 @@ export function ActivityTab({ grant }: { grant: Grant }) {
                       color: 'var(--text-muted)',
                     }}
                   >
-                    {row.who}
+                    {activityWho(state, row)}
                   </span>
                 </div>
                 <div style={{ font: 'var(--type-body-sm)', color: 'var(--text-body)' }}>

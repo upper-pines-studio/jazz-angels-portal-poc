@@ -64,9 +64,28 @@ not sent.
 
 ## Signing in
 
-The portal asks for a username and password before it shows anything else. There are two
-accounts, `barry` and `intern`; the passwords are not in this repo — the project owner holds
-them. This is POC-grade protection: the check runs client-side and keeps casual visitors out of a
+The portal asks for a username and password before it shows anything else. There is one demo
+login for each of the seven roles in [decision 0001](docs/decisions/0001-roles-and-permissions.md),
+and each belongs to a seeded staff member, whose role it carries:
+
+| Role | Username | Staff member |
+| --- | --- | --- |
+| Admin | `gwen` | Gwen Kimura, Systems Administrator |
+| Director | `barry` | Barry Cogert, Program Director |
+| Office manager | `keisha` | Keisha Monroe, Office Manager |
+| Bookkeeper | `walt` | Walt Brennan, Bookkeeper (contract) |
+| Teacher | `devon` | Devon Price, Teaching Artist |
+| Office assistant | `intern` | Tess Holloway, Office Intern |
+| Read-only | `margaret` | Margaret Lowe, Board Treasurer |
+
+The passwords are not in this repo. They live in `.env.local` at the repo root, which is ignored
+(`*.local` in `.gitignore`); ask the project owner for a copy. It holds one pair per role,
+`DEMO_<ROLE>_USERNAME` and `DEMO_<ROLE>_PASSWORD` (`ADMIN`, `DIRECTOR`, `OFFICE_MANAGER`,
+`BOOKKEEPER`, `TEACHER`, `ASSISTANT`, `READONLY`), and the end-to-end tests (#7) read those same
+variables from the environment. Roles are recorded but not yet enforced, so every login can do
+everything for now.
+
+This is POC-grade protection: the check runs client-side and keeps casual visitors out of a
 published demo, not real security. A real login needs a backend.
 
 **Changing a password.** Compute the new hash and paste it into the matching entry of `USERS` in

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CURRENT_USER, makeCoreSeed } from '../../../../core/seed';
+import { makeCoreSeed } from '../../../../core/seed';
 import type { PortalState } from '../../../../core/types';
 import { awaitingApproval } from '../derive';
 import { SEED_TODAY, makeSeed } from '../seed';
@@ -44,18 +44,18 @@ describe('seed', () => {
 });
 
 describe('approveEntry', () => {
-  it('stamps the current user and today, and clears it from the queue', () => {
+  it('stamps the approver and today, and clears it from the queue', () => {
     const entry = submitted();
     const next = reducer(makeSeed(), {
       type: 'approve',
       id: entry.id,
-      by: CURRENT_USER.id,
+      by: 's-denise',
       at: today,
     });
     const approved = next.entries.find(e => e.id === entry.id)!;
 
     expect(approved.status).toBe('approved');
-    expect(approved.approvedBy).toBe(CURRENT_USER.id);
+    expect(approved.approvedBy).toBe('s-denise');
     expect(approved.approvedAt).toBe(today);
     expect(awaitingApproval(portal(next))).toHaveLength(1);
   });
@@ -70,6 +70,30 @@ describe('approveEntry', () => {
   it('ignores an id that is not there', () => {
     const state = makeSeed();
     expect(reducer(state, { type: 'approve', id: 'nope', by: 's-barry', at: today })).toBe(state);
+  });
+});
+
+describe('approveEntry from the actions', () => {
+  it('credits the approval to the signed-in person', () => {
+    let state = makeSeed();
+    const actions = timesheetsSlice.createActions(
+      a => {
+        state = timesheetsSlice.reducer(state, a);
+      },
+      () => portal(state),
+      {
+        today,
+        newId: prefix => `${prefix}-1`,
+        user: { id: 's-walt', name: 'Walt Brennan', role: 'bookkeeper' },
+      },
+    );
+    const entry = submitted();
+    actions.approveEntry(entry.id);
+    expect(state.entries.find(e => e.id === entry.id)).toMatchObject({
+      status: 'approved',
+      approvedBy: 's-walt',
+      approvedAt: today,
+    });
   });
 });
 
@@ -122,7 +146,7 @@ describe('the slice', () => {
     const next = timesheetsSlice.reducer(state, {
       type: 'timesheets/approve',
       id: entry.id,
-      by: CURRENT_USER.id,
+      by: 's-denise',
       at: today,
     });
     expect(next.entries.find(e => e.id === entry.id)!.status).toBe('approved');

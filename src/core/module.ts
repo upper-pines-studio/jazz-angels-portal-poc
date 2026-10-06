@@ -1,5 +1,5 @@
 import type React from 'react';
-import type { PortalState } from './types';
+import type { PortalState, SignedInUser } from './types';
 
 /**
  * What a module hands the platform: one slice of state and one manifest.
@@ -19,6 +19,11 @@ export interface SliceContext {
   /** Today as ISO `YYYY-MM-DD`. */
   today: string;
   newId(prefix: string): string;
+  /**
+   * Who is signed in. Every action that records who did something (an
+   * activity row, an approval, an upload, a transaction's status) credits them.
+   */
+  user: SignedInUser;
 }
 
 export interface ModuleSlice<S, A> {

@@ -62,7 +62,7 @@ describe('one key per slice', () => {
 
   it('seeds every slice when nothing is stored', () => {
     const state = loadState(SLICES, TODAY);
-    expect(state.core.staff).toHaveLength(5);
+    expect(state.core.staff).toHaveLength(10);
     expect(bag(state).notes).toEqual({ notes: ['first'] });
   });
 
@@ -72,7 +72,7 @@ describe('one key per slice', () => {
     expect([...data.keys()]).toEqual(['ja-portal:notes:v1']);
     expect(bag(loadState(SLICES, TODAY)).notes).toEqual({ notes: ['chart'] });
     // Core was never written, so it comes back seeded.
-    expect(loadState(SLICES, TODAY).core.staff).toHaveLength(5);
+    expect(loadState(SLICES, TODAY).core.staff).toHaveLength(10);
   });
 
   it('falls back to the seed on unreadable or malformed data', () => {
@@ -86,7 +86,7 @@ describe('one key per slice', () => {
   it('works with no localStorage at all', () => {
     delete (globalThis as { localStorage?: Storage }).localStorage;
     expect(() => saveState(SLICES, loadState(SLICES, TODAY))).not.toThrow();
-    expect(loadState(SLICES, TODAY).core.staff).toHaveLength(5);
+    expect(loadState(SLICES, TODAY).core.staff).toHaveLength(10);
   });
 });
 
@@ -130,7 +130,7 @@ describe('export and import', () => {
     });
     const state = importJson(SLICES, older, TODAY);
     expect(bag(state).notes).toEqual({ notes: ['first'] });
-    expect(state.core.staff).toHaveLength(5);
+    expect(state.core.staff).toHaveLength(10);
   });
 
   it('saves what it imported', () => {

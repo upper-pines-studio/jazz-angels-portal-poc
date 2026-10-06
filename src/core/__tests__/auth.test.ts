@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  checkSignIn,
   currentUser,
   endSession,
   hashCredential,
@@ -9,6 +10,8 @@ import {
   verify,
 } from '../auth';
 import type { Credential } from '../auth';
+import { ROLES } from '../roles';
+import { makeCoreSeed } from '../seed';
 
 /** Minimal in-memory localStorage so the module can be exercised in node. */
 function installStorage() {
@@ -56,8 +59,7 @@ describe('verify', () => {
     return [
       {
         username: 'tester',
-        name: 'Test Person',
-        role: 'Tester',
+        staffId: 's-tester',
         hash: await hashCredential('tester', 'some-test-password'),
       },
     ];
@@ -67,8 +69,7 @@ describe('verify', () => {
     const users = await buildTestUsers();
     const user = await verify('tester', 'some-test-password', users);
     expect(user).not.toBeNull();
-    expect(user?.name).toBe('Test Person');
-    expect(user?.role).toBe('Tester');
+    expect(user?.staffId).toBe('s-tester');
     expect(user).not.toHaveProperty('hash');
   });
 
@@ -101,10 +102,58 @@ describe('verify', () => {
   });
 });
 
+describe('checkSignIn', () => {
+  const staff = [
+    {
+      id: 's-tester',
+      name: 'Test Person',
+      title: 'Tester',
+      role: 'teacher' as const,
+      teaches: true,
+    },
+  ];
+
+  async function users(staffId: string): Promise<readonly Credential[]> {
+    return [{ username: 'tester', staffId, hash: await hashCredential('tester', 'pw-1') }];
+  }
+
+  it('lets in a login whose staff record is there, with that record', async () => {
+    const result = await checkSignIn('tester', 'pw-1', staff, await users('s-tester'));
+    expect(result).toMatchObject({ ok: true, member: { name: 'Test Person', role: 'teacher' } });
+  });
+
+  it('refuses a login whose staff record is missing, and writes no session', async () => {
+    const result = await checkSignIn('tester', 'pw-1', staff, await users('s-gone'));
+    expect(result).toEqual({ ok: false, reason: 'no-staff' });
+    expect(globalThis.localStorage!.getItem(SESSION_KEY)).toBeNull();
+  });
+
+  it('says mismatch for a wrong password, before looking for staff', async () => {
+    const result = await checkSignIn('tester', 'nope', staff, await users('s-gone'));
+    expect(result).toEqual({ ok: false, reason: 'mismatch' });
+  });
+});
+
 describe('the real USERS table', () => {
-  it('has exactly two entries for barry and intern', () => {
-    expect(USERS).toHaveLength(2);
-    expect(USERS.map(u => u.username).sort()).toEqual(['barry', 'intern']);
+  it('keeps barry and intern, and has one login per role', () => {
+    expect(USERS.map(u => u.username)).toEqual(expect.arrayContaining(['barry', 'intern']));
+    const staff = makeCoreSeed().staff;
+    const roles = USERS.map(u => staff.find(s => s.id === u.staffId)?.role);
+    expect([...roles].sort()).toEqual([...ROLES].sort());
+  });
+
+  it('gives every login a seeded staff record', () => {
+    const ids = new Set(makeCoreSeed().staff.map(s => s.id));
+    for (const user of USERS) expect(ids.has(user.staffId)).toBe(true);
+  });
+
+  it('makes barry a Director, the intern an Office assistant and devon a Teacher who teaches', () => {
+    const staff = makeCoreSeed().staff;
+    const of = (username: string) =>
+      staff.find(s => s.id === USERS.find(u => u.username === username)?.staffId);
+    expect(of('barry')?.role).toBe('director');
+    expect(of('intern')?.role).toBe('assistant');
+    expect(of('devon')).toMatchObject({ role: 'teacher', teaches: true });
   });
 
   it('stores only a 64-char lowercase hex hash, never a plaintext password', () => {
@@ -123,17 +172,17 @@ describe('the real USERS table', () => {
 
 describe('session', () => {
   const testUsers: readonly Credential[] = [
-    { username: 'tester', name: 'Test Person', role: 'Tester', hash: 'unused' },
+    { username: 'tester', staffId: 's-tester', hash: 'unused' },
   ];
 
   it('round-trips startSession through currentUser', () => {
-    startSession({ username: 'tester', name: 'Test Person', role: 'Tester' });
+    startSession({ username: 'tester', staffId: 's-tester' });
     const user = currentUser(testUsers);
-    expect(user).toEqual({ username: 'tester', name: 'Test Person', role: 'Tester' });
+    expect(user).toEqual({ username: 'tester', staffId: 's-tester' });
   });
 
   it('stores username and an ISO signedInAt in the session key', () => {
-    startSession({ username: 'tester', name: 'Test Person', role: 'Tester' });
+    startSession({ username: 'tester', staffId: 's-tester' });
     const raw = globalThis.localStorage!.getItem(SESSION_KEY);
     expect(raw).not.toBeNull();
     const parsed = JSON.parse(raw!);
@@ -160,7 +209,7 @@ describe('session', () => {
   });
 
   it('endSession removes the key', () => {
-    startSession({ username: 'tester', name: 'Test Person', role: 'Tester' });
+    startSession({ username: 'tester', staffId: 's-tester' });
     endSession();
     expect(globalThis.localStorage!.getItem(SESSION_KEY)).toBeNull();
     expect(currentUser(testUsers)).toBeNull();
@@ -168,9 +217,7 @@ describe('session', () => {
 
   it('does not throw and returns null when localStorage is unavailable', () => {
     delete (globalThis as { localStorage?: Storage }).localStorage;
-    expect(() =>
-      startSession({ username: 'tester', name: 'Test Person', role: 'Tester' }),
-    ).not.toThrow();
+    expect(() => startSession({ username: 'tester', staffId: 's-tester' })).not.toThrow();
     expect(() => endSession()).not.toThrow();
     expect(currentUser(testUsers)).toBeNull();
   });

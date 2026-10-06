@@ -108,7 +108,7 @@ export function ReminderDefaultsDialog({ onClose }: { onClose: () => void }) {
                 key={s.id}
                 checked={also.includes(s.id)}
                 onChange={on => setAlso(list => toggle(list, s.id, on))}
-                after={<span className="ja-rm-check__role">{s.role}</span>}
+                after={<span className="ja-rm-check__role">{s.title}</span>}
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
                   <OwnerAvatar staffId={s.id} size={24} />

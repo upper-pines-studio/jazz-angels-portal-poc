@@ -10,6 +10,7 @@ import { toISO } from './format';
 import type { AnyAction, ModuleSlice } from './module';
 import * as repository from './repository';
 import type { PortalSlice } from './repository';
+import { isRole } from './roles';
 import { DEFAULT_ENABLED_MODULES, makeCoreSeed } from './seed';
 import type {
   AppSettings,
@@ -18,6 +19,7 @@ import type {
   Organization,
   PortalActions,
   PortalState,
+  SignedInUser,
   StaffMember,
   Venue,
 } from './types';
@@ -75,6 +77,32 @@ function coreReducer(state: CoreState, raw: AnyAction): CoreState {
   }
 }
 
+/**
+ * A person as saved, brought up to date. Before roles existed `role` held the
+ * job title; it moves to `title`, and the role comes from the seeded person
+ * with the same id, else Teacher for someone who teaches, else Read-only.
+ */
+function normaliseStaff(raw: Partial<StaffMember>, seeded: StaffMember[]): StaffMember {
+  const seed = seeded.find(s => s.id === raw.id);
+  const role = isRole(raw.role)
+    ? raw.role
+    : (seed?.role ?? (raw.teaches ? 'teacher' : 'read-only'));
+  const title =
+    typeof raw.title === 'string'
+      ? raw.title
+      : typeof raw.role === 'string' && !isRole(raw.role)
+        ? raw.role
+        : (seed?.title ?? '');
+  return {
+    ...raw,
+    id: String(raw.id ?? ''),
+    name: String(raw.name ?? ''),
+    title,
+    role,
+    teaches: raw.teaches ?? false,
+  };
+}
+
 /** The staff and settings half of `actions.core`; the store adds the data half. */
 type CoreDataActions = Omit<CoreActions, 'resetDemo' | 'importJson' | 'exportJson'>;
 
@@ -126,8 +154,12 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     // A payload saved before places existed gets the seeded ones, so the
     // teaching module's venue ids still resolve.
     const seeded = makeCoreSeed();
+    const staff = c.staff.map(s => normaliseStaff(s, seeded.staff));
+    // Every login belongs to a seeded person; a payload saved before that
+    // person existed gets them, so the login still resolves.
+    for (const s of seeded.staff) if (!staff.some(x => x.id === s.id)) staff.push(s);
     return {
-      staff: c.staff.map(s => ({ ...s, teaches: s.teaches ?? false })),
+      staff,
       programs: c.programs.map(p => ({ ...p, short: p.short ?? p.name })),
       organizations: Array.isArray(c.organizations) ? c.organizations : seeded.organizations,
       venues: Array.isArray(c.venues) ? c.venues : seeded.venues,
@@ -174,10 +206,20 @@ export function resolveToday(settings: AppSettings | undefined, clock: string): 
   return settings?.demoToday ?? clock;
 }
 
+/**
+ * The staff as saved in this browser, or as seeded when nothing is saved. The
+ * sign-in check reads it before the store mounts.
+ */
+export function savedStaff(): StaffMember[] {
+  return (repository.loadSlice(coreSlice as PortalSlice, '') as CoreState).staff;
+}
+
 export interface StoreValue {
   state: PortalState;
   /** Today as an ISO `YYYY-MM-DD` string; pass it to every derive function. */
   today: string;
+  /** Who is signed in, read from their staff record so a rename shows at once. */
+  user: SignedInUser;
   actions: PortalActions;
 }
 
@@ -191,10 +233,23 @@ export interface StoreProviderProps {
   slices?: PortalSlice[];
   /** Overrides today and the demo date, for tests and screenshots. */
   today?: string;
+  /** The signed-in person's staff id. Every action is credited to them. */
+  userId: string;
+  /**
+   * Called when `userId` names nobody in the staff list (an import without
+   * them, say). Nothing below the provider renders until it is fixed.
+   */
+  onUnknownUser?: () => void;
   children: ReactNode;
 }
 
-export function StoreProvider({ slices, today: fixedToday, children }: StoreProviderProps) {
+export function StoreProvider({
+  slices,
+  today: fixedToday,
+  userId,
+  onUnknownUser,
+  children,
+}: StoreProviderProps) {
   const clock = useMemo(() => fixedToday ?? toISO(new Date()), [fixedToday]);
   const all = useMemo<PortalSlice[]>(() => [coreSlice as PortalSlice, ...(slices ?? [])], [slices]);
 
@@ -203,6 +258,14 @@ export function StoreProvider({ slices, today: fixedToday, children }: StoreProv
 
   // Recomputed whenever the setting changes, so Settings can move the demo day.
   const today = fixedToday ?? resolveToday(state.core.settings, clock);
+
+  const member = state.core.staff.find(s => s.id === userId);
+  const name = member?.name ?? '';
+  const role = member?.role ?? 'read-only';
+  const user = useMemo<SignedInUser>(() => ({ id: userId, name, role }), [userId, name, role]);
+  useEffect(() => {
+    if (!member) onUnknownUser?.();
+  }, [member, onUnknownUser]);
 
   // `state` is read by exportJson and by actions that need the latest value.
   const stateRef = React.useRef(state);
@@ -221,7 +284,7 @@ export function StoreProvider({ slices, today: fixedToday, children }: StoreProv
   }, [state, all]);
 
   const actions = useMemo<PortalActions>(() => {
-    const ctx = { today, newId };
+    const ctx = { today, newId, user };
     const getState = () => stateRef.current;
     const bag: Record<string, unknown> = {};
     for (const slice of all) bag[slice.id] = slice.createActions(dispatch, getState, ctx);
@@ -245,11 +308,14 @@ export function StoreProvider({ slices, today: fixedToday, children }: StoreProv
     } satisfies CoreActions;
 
     return bag as unknown as PortalActions;
-  }, [all, today]);
+  }, [all, today, user]);
 
-  const value = useMemo<StoreValue>(() => ({ state, today, actions }), [state, today, actions]);
+  const value = useMemo<StoreValue>(
+    () => ({ state, today, user, actions }),
+    [state, today, user, actions],
+  );
 
-  return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
+  return <StoreContext.Provider value={value}>{member ? children : null}</StoreContext.Provider>;
 }
 
 /** The one hook every screen uses. Must be inside a `<StoreProvider>`. */

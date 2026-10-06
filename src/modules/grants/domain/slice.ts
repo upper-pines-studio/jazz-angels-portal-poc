@@ -1,5 +1,5 @@
-import type { AnyAction, ModuleSlice } from '../../../core/module';
-import { CURRENT_USER } from '../../../core/seed';
+import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
+import { makeCoreSeed } from '../../../core/seed';
 import { acceptableSuggestions, splitByPercent } from './money';
 import { availableTransitions } from './phases';
 import { makeSeed } from './seed';
@@ -89,7 +89,7 @@ export type GrantsAction =
       includeDocumentRegister: boolean;
       activityId: string;
       at: string;
-      who: string;
+      whoId: string;
     }
   | {
       type: 'transition';
@@ -98,7 +98,7 @@ export type GrantsAction =
       payload: TransitionPayload;
       activityId: string;
       at: string;
-      who: string;
+      whoId: string;
     }
   | { type: 'toggle-task'; id: string; date: string }
   | { type: 'duplicate-template'; id: string; newTemplateId: string }
@@ -110,7 +110,7 @@ export type GrantsAction =
       by: string;
       date: string;
       at: string;
-      who: string;
+      whoId: string;
     }
   | {
       type: 'set-transaction-status';
@@ -187,7 +187,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
             id: action.activityId,
             grantId: action.grant.id,
             at: action.at,
-            who: action.who,
+            whoId: action.whoId,
             text: 'Grant added',
           },
         ],
@@ -224,7 +224,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
             id: action.activityId,
             grantId: grant.id,
             at: action.at,
-            who: action.who,
+            whoId: action.whoId,
             text: `${label}${reason}`,
           },
         ],
@@ -277,7 +277,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
           id: part.activityId,
           grantId: part.grantId,
           at: action.at,
-          who: action.who,
+          whoId: action.whoId,
           text: `Assigned $${DOLLARS.format(part.amount)} from ${tx.payee} to ${line?.category ?? 'a budget line'}${
             split ? ` (split of $${DOLLARS.format(tx.amount)})` : ''
           }`,
@@ -444,13 +444,14 @@ export interface GrantsActions {
 function createActions(
   dispatch: (action: AnyAction) => void,
   getState: () => { grants: GrantsState },
-  ctx: { today: string; newId(prefix: string): string },
+  ctx: SliceContext,
 ): GrantsActions {
-  const { today, newId } = ctx;
+  const { today, newId, user } = ctx;
   /** Every action leaves this module namespaced, so the store can route it. */
   const send = (action: GrantsAction) => dispatch({ ...action, type: `grants/${action.type}` });
 
-  const who = CURRENT_USER.name;
+  /** Every row this module writes about a person names the one signed in. */
+  const whoId = user.id;
   const now = () => new Date().toISOString();
 
   const logActivity = (grantId: string, text: string): string => {
@@ -458,7 +459,7 @@ function createActions(
     send({
       type: 'insert',
       key: 'activity',
-      item: { id, grantId, at: now(), who, text },
+      item: { id, grantId, at: now(), whoId, text },
     });
     return id;
   };
@@ -475,10 +476,10 @@ function createActions(
     type: 'assign-transaction',
     id,
     parts: parts.map(part => ({ ...part, expenseId: newId('ex'), activityId: newId('act') })),
-    by: CURRENT_USER.id,
+    by: user.id,
     date: today,
     at: now(),
-    who,
+    whoId,
   });
 
   return {
@@ -526,7 +527,7 @@ function createActions(
         includeDocumentRegister: input.includeDocumentRegister ?? true,
         activityId: newId('act'),
         at: now(),
-        who,
+        whoId,
       });
       return grantId;
     },
@@ -541,7 +542,7 @@ function createActions(
         payload,
         activityId: newId('act'),
         at: now(),
-        who,
+        whoId,
       });
     },
 
@@ -649,7 +650,7 @@ function createActions(
         type: 'set-transaction-status',
         id,
         status: 'not-grant-funded',
-        by: CURRENT_USER.id,
+        by: user.id,
         date: today,
       });
     },
@@ -686,7 +687,7 @@ function createActions(
           type: 'set-transaction-status',
           id: tx.id,
           status: 'not-grant-funded',
-          by: CURRENT_USER.id,
+          by: user.id,
           date: today,
         };
       });
@@ -709,7 +710,7 @@ function createActions(
 
     addFile(input) {
       const id = newId('file');
-      insert('files', { ...input, id, uploadedById: CURRENT_USER.id, uploadedAt: today });
+      insert('files', { ...input, id, uploadedById: user.id, uploadedAt: today });
       return id;
     },
     updateFile(id, patch) {
@@ -837,6 +838,24 @@ export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
       if (!Array.isArray(candidate[key])) return undefined;
     }
     if (!candidate.quickbooks || !candidate.reminderDefaults) return undefined;
-    return candidate as unknown as GrantsState;
+    const state = candidate as unknown as GrantsState;
+    const staff = makeCoreSeed().staff;
+    return { ...state, activity: state.activity.map(row => creditActivity(row, staff)) };
   },
 };
+
+/**
+ * Rows saved before activity carried a staff id named the person instead.
+ * A name that matches a seeded person becomes their id; any other name is
+ * kept as written, so nothing anyone did loses its credit.
+ */
+export function creditActivity(
+  row: Activity,
+  staff: ReadonlyArray<{ id: string; name: string }>,
+): Activity {
+  if (row.whoId || typeof row.who !== 'string') return row;
+  const match = staff.find(s => s.name === row.who);
+  if (!match) return row;
+  const { who: _who, ...rest } = row;
+  return { ...rest, whoId: match.id };
+}

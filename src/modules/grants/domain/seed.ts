@@ -723,100 +723,90 @@ const REPORTS: Report[] = [
 
 // --- Activity ---------------------------------------------------------------
 
-type ActivitySeed = [grantId: string, date: string, who: string, text: string];
+type ActivitySeed = [grantId: string, date: string, whoId: string, text: string];
 
 const ACTIVITY_SEED: ActivitySeed[] = [
-  ['g-herb-alpert-2026', '2026-02-10', 'Barry Cogert', 'Grant added'],
-  ['g-herb-alpert-2026', '2026-03-02', 'Barry Cogert', 'Phase changed to Applying'],
-  ['g-herb-alpert-2026', '2026-04-28', 'Barry Cogert', 'Marked submitted'],
+  ['g-herb-alpert-2026', '2026-02-10', 's-barry', 'Grant added'],
+  ['g-herb-alpert-2026', '2026-03-02', 's-barry', 'Phase changed to Applying'],
+  ['g-herb-alpert-2026', '2026-04-28', 's-barry', 'Marked submitted'],
   [
     'g-herb-alpert-2026',
     '2026-07-06',
-    'Barry Cogert',
+    's-barry',
     'Award recorded: $50,000 for Jul 1, 2026 – Jun 30, 2027',
   ],
-  ['g-herb-alpert-2026', '2026-07-14', 'Denise Moreno', 'Agreement signed'],
-  [
-    'g-herb-alpert-2026',
-    '2026-07-15',
-    'Denise Moreno',
-    'Payment received: $25,000 (First installment)',
-  ],
-  [
-    'g-herb-alpert-2026',
-    '2026-08-15',
-    'Denise Moreno',
-    'Logged $8,000 to Teaching artist stipends',
-  ],
+  ['g-herb-alpert-2026', '2026-07-14', 's-denise', 'Agreement signed'],
+  ['g-herb-alpert-2026', '2026-07-15', 's-denise', 'Payment received: $25,000 (First installment)'],
+  ['g-herb-alpert-2026', '2026-08-15', 's-denise', 'Logged $8,000 to Teaching artist stipends'],
 
-  ['g-la-county-2026', '2025-01-15', 'Barry Cogert', 'Grant added'],
-  ['g-la-county-2026', '2025-03-10', 'Barry Cogert', 'Marked submitted'],
+  ['g-la-county-2026', '2025-01-15', 's-barry', 'Grant added'],
+  ['g-la-county-2026', '2025-03-10', 's-barry', 'Marked submitted'],
   [
     'g-la-county-2026',
     '2025-06-20',
-    'Barry Cogert',
+    's-barry',
     'Award recorded: $22,000 for Jul 1, 2025 – Jun 30, 2026',
   ],
-  ['g-la-county-2026', '2025-07-08', 'Denise Moreno', 'Agreement signed'],
-  ['g-la-county-2026', '2026-08-24', 'Barry Cogert', 'Started the final report'],
+  ['g-la-county-2026', '2025-07-08', 's-denise', 'Agreement signed'],
+  ['g-la-county-2026', '2026-08-24', 's-barry', 'Started the final report'],
 
-  ['g-lb-community-foundation-2026', '2025-11-20', 'Denise Moreno', 'Grant added'],
-  ['g-lb-community-foundation-2026', '2026-01-14', 'Denise Moreno', 'Marked submitted'],
+  ['g-lb-community-foundation-2026', '2025-11-20', 's-denise', 'Grant added'],
+  ['g-lb-community-foundation-2026', '2026-01-14', 's-denise', 'Marked submitted'],
   [
     'g-lb-community-foundation-2026',
     '2026-07-09',
-    'Denise Moreno',
+    's-denise',
     'Award recorded: $8,500 for Mar 1, 2026 – Feb 28, 2027',
   ],
   [
     'g-lb-community-foundation-2026',
     '2026-07-20',
-    'Denise Moreno',
+    's-denise',
     'Payment received: $8,500 (Full award)',
   ],
 
-  ['g-signal-hill-2026', '2026-06-01', 'Denise Moreno', 'Grant added'],
-  ['g-signal-hill-2026', '2026-07-06', 'Denise Moreno', 'Phase changed to Applying'],
-  ['g-signal-hill-2026', '2026-08-20', 'Denise Moreno', 'Marked submitted'],
+  ['g-signal-hill-2026', '2026-06-01', 's-denise', 'Grant added'],
+  ['g-signal-hill-2026', '2026-07-06', 's-denise', 'Phase changed to Applying'],
+  ['g-signal-hill-2026', '2026-08-20', 's-denise', 'Marked submitted'],
 
-  ['g-port-of-long-beach-2026', '2026-08-12', 'Barry Cogert', 'Grant added'],
-  ['g-port-of-long-beach-2026', '2026-09-01', 'Barry Cogert', 'Phase changed to Applying'],
+  ['g-port-of-long-beach-2026', '2026-08-12', 's-barry', 'Grant added'],
+  ['g-port-of-long-beach-2026', '2026-09-01', 's-barry', 'Phase changed to Applying'],
 
-  ['g-parsons-2026', '2026-08-05', 'Barry Cogert', 'Grant added'],
-  ['g-parsons-2026', '2026-08-17', 'Barry Cogert', 'Phase changed to LOI'],
-  ['g-parsons-2026', '2026-09-12', 'Barry Cogert', 'Note: draft LOI is with Albert for a read'],
+  ['g-parsons-2026', '2026-08-05', 's-barry', 'Grant added'],
+  ['g-parsons-2026', '2026-08-17', 's-barry', 'Phase changed to LOI'],
+  ['g-parsons-2026', '2026-09-12', 's-barry', 'Note: draft LOI is with Albert for a read'],
 
-  ['g-california-arts-council-2026', '2026-09-02', 'Denise Moreno', 'Grant added'],
+  ['g-california-arts-council-2026', '2026-09-02', 's-denise', 'Grant added'],
 
-  ['g-arts-council-lb-2026', '2026-06-25', 'Denise Moreno', 'Grant added'],
-  ['g-arts-council-lb-2026', '2026-07-10', 'Denise Moreno', 'Phase changed to Applying'],
+  ['g-arts-council-lb-2026', '2026-06-25', 's-denise', 'Grant added'],
+  ['g-arts-council-lb-2026', '2026-07-10', 's-denise', 'Phase changed to Applying'],
   [
     'g-arts-council-lb-2026',
     '2026-09-04',
-    'Barry Cogert',
+    's-barry',
     'Note: narrative approved, waiting on the portal login',
   ],
 
-  ['g-boeing-2026', '2026-03-01', 'Barry Cogert', 'Grant added'],
-  ['g-boeing-2026', '2026-04-10', 'Barry Cogert', 'Marked submitted'],
+  ['g-boeing-2026', '2026-03-01', 's-barry', 'Grant added'],
+  ['g-boeing-2026', '2026-04-10', 's-barry', 'Marked submitted'],
   [
     'g-boeing-2026',
     '2026-06-02',
-    'Barry Cogert',
+    's-barry',
     'Decline recorded: fund directed to health and human services this cycle',
   ],
 
-  ['g-wells-fargo-2025', '2024-10-01', 'Denise Moreno', 'Grant added'],
-  ['g-wells-fargo-2025', '2024-11-12', 'Denise Moreno', 'Marked submitted'],
+  ['g-wells-fargo-2025', '2024-10-01', 's-denise', 'Grant added'],
+  ['g-wells-fargo-2025', '2024-11-12', 's-denise', 'Marked submitted'],
   [
     'g-wells-fargo-2025',
     '2025-01-20',
-    'Denise Moreno',
+    's-denise',
     'Award recorded: $12,000 for Feb 1, 2025 – Jan 31, 2026',
   ],
-  ['g-wells-fargo-2025', '2025-02-12', 'Denise Moreno', 'Payment received: $12,000 (Full award)'],
-  ['g-wells-fargo-2025', '2026-04-22', 'Denise Moreno', 'Final report submitted'],
-  ['g-wells-fargo-2025', '2026-05-14', 'Barry Cogert', 'Grant closed'],
+  ['g-wells-fargo-2025', '2025-02-12', 's-denise', 'Payment received: $12,000 (Full award)'],
+  ['g-wells-fargo-2025', '2026-04-22', 's-denise', 'Final report submitted'],
+  ['g-wells-fargo-2025', '2026-05-14', 's-barry', 'Grant closed'],
 ];
 
 function seedActivity(): Activity[] {
@@ -824,7 +814,7 @@ function seedActivity(): Activity[] {
     id: `act-${index + 1}`,
     grantId: row[0],
     at: `${row[1]}T09:00:00.000Z`,
-    who: row[2],
+    whoId: row[2],
     text: row[3],
   }));
 }

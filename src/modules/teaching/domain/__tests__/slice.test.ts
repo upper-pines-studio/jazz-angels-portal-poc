@@ -25,7 +25,11 @@ function harness() {
   const actions = teachingSlice.createActions(
     dispatch,
     () => ({ teaching }) as unknown as PortalState,
-    { today: SEED_TODAY, newId: (prefix: string) => `${prefix}-${(n += 1)}` },
+    {
+      today: SEED_TODAY,
+      newId: (prefix: string) => `${prefix}-${(n += 1)}`,
+      user: { id: 's-devon', name: 'Devon Price', role: 'teacher' },
+    },
   );
   return {
     actions,
