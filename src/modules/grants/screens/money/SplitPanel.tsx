@@ -5,6 +5,7 @@ import type { PortalState } from '../../../../core';
 import { SidePanel } from '../../../../app/components/SidePanel';
 import {
   accountName,
+  backupMoves,
   eligibleGrants,
   grantById,
   grantLines,
@@ -17,7 +18,13 @@ import {
 import type { Allocation, Transaction } from '../../domain';
 import { LinkButton } from './shared';
 import type { DraftSummary } from './TransactionRow';
-import { MAX_PARTS, PART_COLORS, grantFunder, grantOptionLabel } from './transactionHelpers';
+import {
+  MAX_PARTS,
+  PART_COLORS,
+  grantFunder,
+  grantOptionLabel,
+  joinWords,
+} from './transactionHelpers';
 
 /** One part of the split while it is being edited. The text fields keep what was typed. */
 interface Part {
@@ -262,6 +269,28 @@ export function SplitPanel({
     onSave(tx, allocations, note);
   };
 
+  // A part that leaves its line hands its backup on; say where before saving.
+  const lineName = (grantId: string, lineId: string) =>
+    `${lineById(state, lineId)?.category ?? 'a removed line'} on ${grantFunder(state, grantId, true)}`;
+  const moves = parts.every(p => p.grantId && p.lineId)
+    ? backupMoves(
+        state,
+        tx.id,
+        parts.map(p => ({ grantId: p.grantId, budgetLineId: p.lineId })),
+      ).map(m => {
+        const what = joinWords(
+          [
+            m.files ? (m.files === 1 ? 'the backup file' : `the ${m.files} backup files`) : '',
+            m.note ? 'the backup note' : '',
+          ].filter(Boolean),
+        );
+        const to = parts[m.to];
+        return `On save, ${what} from ${lineName(m.from.grantId, m.from.budgetLineId)} move${
+          m.files + (m.note ? 1 : 0) === 1 ? 's' : ''
+        } to ${lineName(to.grantId, to.lineId)}.`;
+      })
+    : [];
+
   const legendName = (p: Part, i: number) => {
     if (!p.grantId) return `Part ${i + 1}`;
     const name = grantFunder(state, p.grantId);
@@ -480,6 +509,11 @@ export function SplitPanel({
               : `On save, the rule for ${tx.payee} is removed.`}
           </p>
         )}
+        {moves.map(text => (
+          <p key={text} className="tx-rule__note">
+            {text}
+          </p>
+        ))}
       </div>
     </SidePanel>
   );

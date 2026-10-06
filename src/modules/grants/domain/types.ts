@@ -219,6 +219,31 @@ export interface Allocation {
   amount: number;
 }
 
+/**
+ * Where a transaction stood, exactly: its status, its parts with their notes,
+ * and the backup files on them. An Undo puts it back (`restoreTransactions`).
+ */
+export interface TransactionSnapshot {
+  id: string;
+  status: TransactionStatus;
+  assignedById?: string;
+  assignedAt?: string;
+  expenses: Expense[];
+  files: GrantFile[];
+}
+
+/**
+ * What happens to a transaction's backup when it is assigned again. A new part
+ * on the same grant and line as an old one keeps that expense, with its files
+ * and note. An old part left with no match goes, and its files and note move to
+ * the new part at `to`.
+ */
+export interface BackupCarry {
+  /** For each new part, the old expense it keeps, if any. */
+  kept: Array<Expense | undefined>;
+  moved: Array<{ from: Expense; to: number }>;
+}
+
 /** "Always split Signal Hill Properties this way." */
 export interface SplitRule {
   id: string;

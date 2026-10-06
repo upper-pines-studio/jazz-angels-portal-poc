@@ -1,12 +1,11 @@
 import { subDays, parseISO, format } from 'date-fns';
 import { fiscalYear } from '../../../../core';
 import type { PortalState } from '../../../../core';
-import { funderById, grantById, transactionAllocations, transactionsByStatus } from '../../domain';
-import type { Allocation, GrantsActions, TransactionStatus } from '../../domain';
+import { funderById, grantById, transactionsByStatus } from '../../domain';
 
 /**
  * Small pure helpers for the Transactions screen: funder names that fit a
- * table cell, the period filter, and the snapshot an Undo puts back.
+ * table cell and the period filter.
  */
 
 /** The colours a split's parts take, in order. */
@@ -92,25 +91,4 @@ export function defaultPeriod(state: PortalState, today: string): Period {
     if (waiting.every(t => (!from || t.date >= from) && (!to || t.date <= to))) return p;
   }
   return 'all';
-}
-
-// ---------------------------------------------------------------------------
-// Undo
-// ---------------------------------------------------------------------------
-
-/** Where a transaction stood before a change, so Undo can put it back. */
-export interface Snapshot {
-  status: TransactionStatus;
-  parts: Allocation[];
-}
-
-export function snapshot(state: PortalState, id: string): Snapshot {
-  const tx = state.grants.transactions.find(t => t.id === id);
-  return { status: tx?.status ?? 'to-assign', parts: transactionAllocations(state, id) };
-}
-
-export function restore(actions: GrantsActions, id: string, snap: Snapshot) {
-  if (snap.status === 'assigned' && snap.parts.length) actions.assignTransaction(id, snap.parts);
-  else if (snap.status === 'not-grant-funded') actions.markNotGrantFunded(id);
-  else actions.unassignTransaction(id);
 }
