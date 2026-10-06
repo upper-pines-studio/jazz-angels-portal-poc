@@ -258,8 +258,11 @@ the next `syncQuickBooks()`, and nothing is ever written back.
 - **Files** are described in `files`; an expense's backup carries its
   `expenseId`. `backupSummary` counts what is attached and what is missing.
 - **Reminders.** A report follows `reminderDefaults` until it is given its own
-  `ReminderPlan`. `reminderSchedule` dates each reminder and says which have
-  gone; emails go out in the morning, so one dated today counts as sent.
+  `ReminderPlan`. `planSchedule` (any plan, a draft included) and
+  `reminderSchedule` (the saved one) date each reminder and say which have
+  gone; emails go out in the morning, so one dated today counts as sent. A plan
+  that keeps reminding adds repeats every `repeatEveryDays` after the due date,
+  up to the next one; `nextReminder` sees them.
 
 The seed reproduces `design/saas/SAAS-BRIEF.md` to the dollar and the day;
 `__tests__/money.test.ts` holds it to that.

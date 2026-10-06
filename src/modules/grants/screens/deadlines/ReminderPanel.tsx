@@ -5,9 +5,11 @@ import { Button } from '../../../../design-system';
 import { dateShort, daysUntil, useCan, useStore } from '../../../../core';
 import {
   REMINDER_OFFSETS,
+  dayBefore,
   firstNames,
   hourLabel,
   offsetLabel,
+  planSchedule,
   reminderPlanFor,
 } from '../../domain';
 import type { ReminderPlan, Report } from '../../domain';
@@ -18,11 +20,8 @@ import { LinkButton } from '../money/shared';
 import {
   CheckRow,
   ToggleSwitch,
-  dayBefore,
   defaultPlanFor,
-  draftSchedule,
   kindWord,
-  nextSend,
   reportContext,
   samePlan,
 } from './ReminderParts';
@@ -58,8 +57,9 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
   const requestClose = () => (dirty ? setConfirmClose(true) : onClose());
 
   const due = report.dueDate;
-  const steps = draftSchedule(due, draft.offsets, today);
-  const next = nextSend(due, draft, defaults.repeatEveryDays, today);
+  // The draft's schedule, by the same rule as the saved one.
+  const steps = planSchedule(report, draft, defaults, today);
+  const next = steps.find(s => s.state === 'next');
   const daysLeft = daysUntil(due, today);
   const status =
     report.status === 'drafting'
@@ -315,7 +315,7 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
               >
                 Every {defaults.repeatEveryDays} {defaults.repeatEveryDays === 1 ? 'day' : 'days'}{' '}
                 until someone marks it submitted.
-                {draft.keepReminding && next && next.offset === undefined && (
+                {draft.keepReminding && next?.repeat && (
                   <> Next one goes out {dateShort(next.date)}.</>
                 )}
               </div>

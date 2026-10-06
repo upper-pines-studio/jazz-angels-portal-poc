@@ -92,8 +92,8 @@ seed reproduces are in `design/saas/`.
 
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
-| Reports owed card | `/deadlines?kind=report` | Built | `deadlines/ReportsOwedCard.tsx` | `money.ts`: `reportsOwed`, `nextReminder` |
-| Reminders panel: schedule, recipients, email preview | `/deadlines?kind=report&report=<id>` | Mocked: emails are previewed, never sent | `deadlines/ReminderPanel.tsx`, `deadlines/ReminderParts.tsx` | `money.ts`: `reminderPlanFor`, `reminderSchedule`; `slice.ts`: `saveReminderPlan`, `resetReminderPlan` |
+| Reports owed card | `/deadlines?kind=report` | Built | `deadlines/ReportsOwedCard.tsx` | `money.ts`: `reportsOwed`, `nextReminder`, `reminderSchedule` |
+| Reminders panel: schedule, recipients, email preview | `/deadlines?kind=report&report=<id>` | Mocked: emails are previewed, never sent | `deadlines/ReminderPanel.tsx`, `deadlines/ReminderParts.tsx` | `money.ts`: `reminderPlanFor`, `planSchedule` (the draft), `reminderSchedule`; `slice.ts`: `saveReminderPlan`, `resetReminderPlan` |
 | Default reminders | Deadlines and Settings | Built | `deadlines/ReminderDefaults.tsx`, `settings/RemindersCard.tsx` | `slice.ts`: `updateReminderDefaults` |
 | QuickBooks connection card | `/settings` | Mocked: connect is a stand-in dialog | `settings/QuickBooksCard.tsx` | `slice.ts`: `setQuickBooksConnected`, `syncQuickBooks` |
 
@@ -141,7 +141,6 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 | File contents are not stored. A file added in a session is lost on reload; a seeded file is a drawn page. | `grants/screens/money/files.tsx` |
 | "Download all backup" produces a spreadsheet index, not a zip of the files. | `grants/screens/grant/ExpensesTab.tsx` |
 | Reminder emails are never sent. | `grants/screens/deadlines/ReminderPanel.tsx` |
-| Repeat reminders after the due date are worked out in the screen, so the banner, the chips and `nextReminder` ignore them. | `deadlines/ReminderParts.tsx`, `grants/domain/money.ts` |
 | Choosing another report while the reminders panel has unsaved edits discards them without asking. | `grants/screens/Deadlines.tsx` |
 | The 75/25 starting split for Signal Hill Properties is written in, not worked out. | `money/SplitPanel.tsx` (`USUAL_SHARES`) |
 | Five separate helpers shorten a funder's name, each by its own rule. They should be one domain function. | `money/transactionHelpers.ts`, `money/bva.ts`, `money/spend.ts`, `deadlines/helpers.ts`, `deadlines/ReminderParts.tsx` |

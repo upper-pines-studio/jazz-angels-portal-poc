@@ -1,11 +1,9 @@
 import React from 'react';
-import { addDays, format, parseISO } from 'date-fns';
 import { Icon, Switch } from '../../../../design-system';
 import { daysUntil, dateShort, useStore } from '../../../../core';
 import type { PortalState } from '../../../../core';
 import {
   DUE_SOON_DAYS,
-  REMINDER_OFFSETS,
   firstNames,
   funderById,
   grantById,
@@ -18,8 +16,8 @@ import './reminders.css';
 
 /**
  * Pieces the report reminders share between Deadlines, a grant's Reports tab
- * and Settings: the chips, the recipients line, the wording of a report, and
- * the schedule of a plan that has not been saved yet.
+ * and Settings: the chips, the recipients line and the wording of a report.
+ * Schedules, saved or draft, come from the domain (`planSchedule`).
  */
 
 // ---------------------------------------------------------------------------
@@ -84,51 +82,16 @@ export function dueDaysText(dueDate: string, today: string, long = false): strin
 }
 
 // ---------------------------------------------------------------------------
-// Schedules for a plan that may not be saved yet
+// Plans
 // ---------------------------------------------------------------------------
 
-export function dayBefore(dueDate: string, offset: number): string {
-  return format(addDays(parseISO(dueDate), -offset), 'yyyy-MM-dd');
-}
-
-/** The same rule as `reminderSchedule`, for a draft: a reminder dated today has gone out. */
-export function draftSchedule(dueDate: string, offsets: number[], today: string): ReminderStep[] {
-  let nextFound = false;
-  return REMINDER_OFFSETS.map(offset => {
-    const date = dayBefore(dueDate, offset);
-    const enabled = offsets.includes(offset);
-    let state: ReminderStep['state'] = 'off';
-    if (enabled) {
-      if (date <= today) state = 'sent';
-      else if (!nextFound) {
-        state = 'next';
-        nextFound = true;
-      } else state = 'scheduled';
-    }
-    return { offset, date, enabled, state };
-  });
-}
-
-export interface NextSend {
-  date: string;
-  /** The reminder day it belongs to; undefined for a repeat after the due date. */
-  offset?: number;
-}
-
-/** The next email a plan will send, repeats after the due date included. */
-export function nextSend(
-  dueDate: string,
-  plan: Pick<ReminderPlan, 'offsets' | 'keepReminding'>,
-  repeatEveryDays: number,
-  today: string,
-): NextSend | undefined {
-  const step = draftSchedule(dueDate, plan.offsets, today).find(s => s.state === 'next');
-  if (step) return { date: step.date, offset: step.offset };
-  if (!plan.keepReminding) return undefined;
-  const every = Math.max(1, repeatEveryDays);
-  let date = format(addDays(parseISO(dueDate), every), 'yyyy-MM-dd');
-  while (date <= today) date = format(addDays(parseISO(date), every), 'yyyy-MM-dd');
-  return { date };
+/** "the 14 day reminder", "the due date reminder", "the repeat reminder 3 days after the due date". */
+export function stepWords(step: ReminderStep): string {
+  if (step.repeat) {
+    const n = -step.offset;
+    return `the repeat reminder ${n} ${n === 1 ? 'day' : 'days'} after the due date`;
+  }
+  return step.offset === 0 ? 'the due date reminder' : `the ${step.offset} day reminder`;
 }
 
 /** The plan a report falls back to: the office defaults, sent to the grant owner. */
@@ -213,13 +176,24 @@ export function ReminderChip({
   );
 }
 
-/** The chip that means "keeps reminding after the due date until submitted". */
-export function RepeatChip({ small = false }: { small?: boolean }) {
+/**
+ * The chip that means "keeps reminding after the due date until submitted".
+ * Outlined in gold when a repeat is the report's next email.
+ */
+export function RepeatChip({
+  small = false,
+  next = false,
+  title = 'Keeps reminding after the due date until submitted',
+}: {
+  small?: boolean;
+  next?: boolean;
+  title?: string;
+}) {
   return (
     <span
-      className={'ja-rm-chip' + (small ? ' is-small' : '')}
-      title="Keeps reminding after the due date until submitted"
-      aria-label="Keeps reminding after the due date"
+      className={'ja-rm-chip' + (next ? ' is-next' : '') + (small ? ' is-small' : '')}
+      title={title}
+      aria-label={next ? title : 'Keeps reminding after the due date'}
     >
       <Icon name="repeat" size={11} />
     </span>
@@ -255,11 +229,23 @@ export function ReminderChips({
   markNext?: boolean;
 }) {
   const on = steps
-    .filter(s => s.enabled)
+    .filter(s => s.enabled && !s.repeat)
     .map(s => (s.state === 'next' && !markNext ? { ...s, state: 'scheduled' as const } : s));
   if (on.length === 0 && !keepReminding) {
     return <span className="ja-rm-to">{emptyText}</span>;
   }
+  // Repeats after the due date share the one repeat chip.
+  const repeats = steps.filter(s => s.repeat);
+  const repeatSent = repeats.filter(s => s.state === 'sent').length;
+  const repeatNext = repeats.find(s => s.state === 'next');
+  const repeatTitle = [
+    repeatNext
+      ? `Keeps reminding: sends next ${dateShort(repeatNext.date)}`
+      : 'Keeps reminding after the due date until submitted',
+    repeatSent > 0 && `${repeatSent} sent after the due date`,
+  ]
+    .filter(Boolean)
+    .join(', ');
   return (
     <span className="ja-rm-chips">
       {on.map(s => (
@@ -271,7 +257,7 @@ export function ReminderChips({
           {offsetChip(s.offset)}
         </ReminderChip>
       ))}
-      {keepReminding && <RepeatChip />}
+      {keepReminding && <RepeatChip next={!!repeatNext && markNext} title={repeatTitle} />}
     </span>
   );
 }

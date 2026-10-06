@@ -513,14 +513,19 @@ suggestion: the next transaction from that payee arrives with the rule proposed 
   No other day can be chosen.
 - **Which plan** (`reminderPlanFor`): the report's own plan, else the office defaults: their days,
   sent to the grant owner plus the defaults' "also notify" people, with their keep-reminding setting.
-- **Schedule** (`reminderSchedule`): each chosen day is dated due date minus the offset. Emails go
-  out in the morning, so a reminder dated today or earlier counts as **sent**; the first chosen day
-  after today is **next**; the rest are **scheduled**. `nextReminder` is the earliest next email
-  across every report owed.
-- **Keep reminding after the due date**: once the due date has passed, an email every
-  `repeatEveryDays` days (an office-wide setting, 1 to 30) until someone marks the report
-  submitted. Repeats are worked out in the screen (`nextSend` in `deadlines/ReminderParts.tsx`), so
-  the banner, the chips and `nextReminder` do not see them (tracked in #10).
+- **Schedule** (`planSchedule` for any plan, the reminders panel's draft included;
+  `reminderSchedule` for a report's saved plan): each chosen day is dated due date minus the
+  offset. Emails go out in the morning, so an email dated today or earlier counts as **sent**; the
+  first one after today is **next**; the rest are **scheduled**. `nextReminder` is the earliest next
+  email across every report owed (or the reports given), repeats included. The Reports owed banner
+  and chips, the Deadlines bell and the reminders panel all read these.
+- **Keep reminding after the due date**: an email every `repeatEveryDays` days (an office-wide
+  setting, 1 to 30) after the due date, the first on the due date plus that many days, until
+  someone marks the report submitted. The schedule lists the repeats up to and including the first
+  one after today, each marked as a repeat (offset -3 is three days after the due date); the chips
+  show them as the one repeat mark, outlined in gold when a repeat is the next email.
+- **Submitted**: a submitted report gets no next email and no repeats; a reminder day after the
+  day it was submitted is off.
 - **Send hour**: the defaults' `sendHour`, chosen from 6:00 am to 6:00 pm.
 - **Emails are previewed, never sent.** "Send a test to me" says "Test not sent".
 - Marking a report submitted takes it off the owed list and stops its reminders. Deleting a report
@@ -839,7 +844,7 @@ where it and the mockups or `SAAS-BRIEF.md` disagree:
   spend-down warnings". In the code only Spend-down's What to do reads terms, and only the two named
   "Unspent funds" and "Budget changes"; the budget does not read them.
 
-**Known problems, tracked elsewhere.** Repeat reminders are worked out in the screen (#10). Five
+**Known problems, tracked elsewhere.** Five
 helpers shorten a funder's name, each its own way (#11). The 75/25 Signal Hill split is written in
 (#12). A budget line with expenses cannot be removed and they cannot be moved at once (#13).
 Changing an assigned transaction on Transactions, or undoing a change, replaces its expenses and

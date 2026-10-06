@@ -12,6 +12,7 @@ import type {
   LinePace,
   Pace,
   PaceStatus,
+  ReminderDefaults,
   ReminderPlan,
   ReminderStep,
   Report,
@@ -635,14 +636,62 @@ export function reminderPlanFor(
   };
 }
 
-function dayBefore(dueDate: string, offset: number): string {
+/** The date `offset` days before the due date; a negative offset falls after it. */
+export function dayBefore(dueDate: string, offset: number): string {
   return format(addDays(parseISO(dueDate), -offset), 'yyyy-MM-dd');
 }
 
 /**
- * Every reminder day for a report, furthest first, with where each stands
- * today. Emails go out in the morning, so a reminder dated today has been sent.
+ * The emails a plan sends for a report, furthest first, with where each stands
+ * today. Takes any plan, saved or a draft still being edited.
+ *
+ * - Each chosen reminder day is dated due date minus its offset.
+ * - When the plan keeps reminding, a repeat goes out every `repeatEveryDays`
+ *   after the due date, the first on due date + N. Repeats are listed up to and
+ *   including the first one after today, each marked `repeat` with a negative
+ *   offset (-3 is three days after the due date).
+ * - Emails go out in the morning, so one dated today or earlier is **sent**; the
+ *   first one after today is **next**; the rest are **scheduled**.
+ * - A submitted report gets nothing more: no next, no repeats; a day after it
+ *   was submitted is off.
  */
+export function planSchedule(
+  report: Report,
+  plan: Pick<ReminderPlan, 'offsets' | 'keepReminding'>,
+  defaults: Pick<ReminderDefaults, 'repeatEveryDays'>,
+  today: string,
+): ReminderStep[] {
+  const open = isReportOpen(report);
+  // A closed report sent nothing after it was submitted.
+  const lastSent =
+    !open && report.submittedDate && report.submittedDate < today ? report.submittedDate : today;
+  let nextFound = false;
+  const stateOf = (date: string): ReminderStep['state'] => {
+    if (date <= lastSent) return 'sent';
+    if (!open) return 'off';
+    if (nextFound) return 'scheduled';
+    nextFound = true;
+    return 'next';
+  };
+
+  const steps: ReminderStep[] = REMINDER_OFFSETS.map(offset => {
+    const date = dayBefore(report.dueDate, offset);
+    const enabled = plan.offsets.includes(offset);
+    return { offset, date, enabled, state: enabled ? stateOf(date) : 'off' };
+  });
+
+  if (open && plan.keepReminding) {
+    const every = Math.max(1, Math.round(defaults.repeatEveryDays));
+    for (let after = every; ; after += every) {
+      const date = dayBefore(report.dueDate, -after);
+      steps.push({ offset: -after, date, enabled: true, state: stateOf(date), repeat: true });
+      if (date > today) break;
+    }
+  }
+  return steps;
+}
+
+/** The schedule of a report's saved plan: its own, or the office defaults. */
 export function reminderSchedule(
   state: PortalState,
   reportId: string,
@@ -651,30 +700,20 @@ export function reminderSchedule(
   const report = state.grants.reports.find(r => r.id === reportId);
   if (!report) return [];
   const plan = reminderPlanFor(state, reportId);
-
-  let nextFound = false;
-  return REMINDER_OFFSETS.map(offset => {
-    const date = dayBefore(report.dueDate, offset);
-    const enabled = plan.offsets.includes(offset);
-    let state_: ReminderStep['state'] = 'off';
-    if (enabled) {
-      if (date <= today) state_ = 'sent';
-      else if (!nextFound) {
-        state_ = 'next';
-        nextFound = true;
-      } else state_ = 'scheduled';
-    }
-    return { offset, date, enabled, state: state_ };
-  });
+  return planSchedule(report, plan, state.grants.reminderDefaults, today);
 }
 
-/** The very next reminder email across every report owed, or undefined. */
+/**
+ * The very next reminder email across the given reports (by default every
+ * report owed), repeats after the due date included; undefined when none is left.
+ */
 export function nextReminder(
   state: PortalState,
   today: string,
+  reports: Report[] = reportsOwed(state),
 ): { report: Report; step: ReminderStep; recipientIds: string[] } | undefined {
   let best: { report: Report; step: ReminderStep; recipientIds: string[] } | undefined;
-  for (const report of reportsOwed(state)) {
+  for (const report of reports) {
     const step = reminderSchedule(state, report.id, today).find(s => s.state === 'next');
     if (!step) continue;
     if (!best || step.date < best.step.date) {

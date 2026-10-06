@@ -464,11 +464,13 @@ export type Suggestion =
   | { kind: 'none'; hint: string };
 
 export interface ReminderStep {
-  /** Days before the due date; 0 is the due date. */
+  /** Days before the due date; 0 is the due date; a repeat after it is negative (-3 is 3 days late). */
   offset: number;
   date: string;
   enabled: boolean;
   state: 'sent' | 'next' | 'scheduled' | 'off';
+  /** A "keep reminding" email after the due date rather than one of the reminder days. */
+  repeat?: boolean;
 }
 
 export interface BackupSummary {
