@@ -1,5 +1,6 @@
 import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import type { PortalState } from '../../../core/types';
+import { OWN_HOURS_REFUSAL, mayApprove, mayLogFor } from './derive';
 import { makeSeed } from './seed';
 import type { TimeEntry, TimeEntryStatus, TimesheetsActions, TimesheetsState } from './types';
 
@@ -133,6 +134,24 @@ export const timesheetsSlice: ModuleSlice<TimesheetsState, TimesheetsActions> = 
     } as TimesheetsAction);
   },
   createActions,
+  rules: {
+    // Everyone logs their own hours and nobody else's (decision 0001).
+    logHours: (user, _state, input) => mayLogFor(user, input.staffId),
+    submitEntry: (user, state, id) => {
+      const entry = state.timesheets.entries.find(e => e.id === id);
+      return !!entry && mayLogFor(user, entry.staffId);
+    },
+    deleteEntry: (user, state, id) => {
+      const entry = state.timesheets.entries.find(e => e.id === id);
+      return !!entry && mayLogFor(user, entry.staffId);
+    },
+    approveEntry: (user, state, id) => {
+      const entry = state.timesheets.entries.find(e => e.id === id);
+      if (!entry) return false;
+      if (entry.staffId === user.id) return OWN_HOURS_REFUSAL;
+      return mayApprove(user, entry);
+    },
+  },
   normalise(raw) {
     if (!raw || typeof raw !== 'object') return undefined;
     const candidate = raw as Partial<TimesheetsState>;

@@ -23,6 +23,8 @@ import {
   dateRange,
   fiscalYear,
   isRole,
+  meetsAny,
+  useCan,
   useStore,
 } from '../../core';
 import type { ModuleManifest, Role, StaffMember } from '../../core';
@@ -57,7 +59,11 @@ interface PersonDraft {
 }
 
 export default function Settings() {
-  const { state, today, actions } = useStore();
+  const { state, today, actions, user } = useStore();
+  const allowed = useCan();
+  // Staff and roles; the system's own settings with import, export and reset (decision 0001).
+  const mayStaff = allowed('staff', 'edit');
+  const maySystem = allowed('modules', 'edit');
   const toast = useToast();
   const nav = useNavigate();
   const loc = useLocation();
@@ -144,126 +150,131 @@ export default function Settings() {
 
   return (
     <>
-      <Card title="Staff" subtitle="Who can own a grant, lead a class or log hours." padding="0">
-        <TableScroll minWidth={640}>
-          <DataTable
-            rows={state.core.staff}
-            columns={[
-              { key: 'name', label: 'Name', strong: true },
-              { key: 'title', label: 'Title' },
-              {
-                key: 'role',
-                label: 'Role',
-                render: (row: StaffMember) => ROLE_LABELS[row.role],
-              },
-              {
-                key: 'teaches',
-                label: 'Teaches',
-                width: '110px',
-                render: (row: StaffMember) => (
-                  <Switch
-                    checked={row.teaches}
-                    label={row.teaches ? 'Yes' : 'No'}
-                    onChange={next => {
-                      actions.core.updateStaff(row.id, { teaches: next });
-                      toast({
-                        tone: 'success',
-                        title: next ? `${row.name} teaches` : `${row.name} does not teach`,
-                        message: next
-                          ? 'They can lead an ensemble and log hours.'
-                          : 'They stay off the class and hours lists.',
-                      });
-                    }}
-                  />
-                ),
-              },
-              {
-                key: 'edit',
-                label: '',
-                width: '80px',
-                align: 'right',
-                render: (row: StaffMember) => (
-                  <a
-                    href="#"
-                    onClick={e => {
-                      e.preventDefault();
-                      setPerson({
-                        id: row.id,
-                        name: row.name,
-                        title: row.title,
-                        role: row.role,
-                        teaches: row.teaches,
-                      });
+      {mayStaff && (
+        <Card title="Staff" subtitle="Who can own a grant, lead a class or log hours." padding="0">
+          <TableScroll minWidth={640}>
+            <DataTable
+              rows={state.core.staff}
+              columns={[
+                { key: 'name', label: 'Name', strong: true },
+                { key: 'title', label: 'Title' },
+                {
+                  key: 'role',
+                  label: 'Role',
+                  render: (row: StaffMember) => ROLE_LABELS[row.role],
+                },
+                {
+                  key: 'teaches',
+                  label: 'Teaches',
+                  width: '110px',
+                  render: (row: StaffMember) => (
+                    <Switch
+                      checked={row.teaches}
+                      label={row.teaches ? 'Yes' : 'No'}
+                      onChange={next => {
+                        actions.core.updateStaff(row.id, { teaches: next });
+                        toast({
+                          tone: 'success',
+                          title: next ? `${row.name} teaches` : `${row.name} does not teach`,
+                          message: next
+                            ? 'They can lead an ensemble and log hours.'
+                            : 'They stay off the class and hours lists.',
+                        });
+                      }}
+                    />
+                  ),
+                },
+                {
+                  key: 'edit',
+                  label: '',
+                  width: '80px',
+                  align: 'right',
+                  render: (row: StaffMember) => (
+                    <a
+                      href="#"
+                      onClick={e => {
+                        e.preventDefault();
+                        setPerson({
+                          id: row.id,
+                          name: row.name,
+                          title: row.title,
+                          role: row.role,
+                          teaches: row.teaches,
+                        });
+                      }}
+                    >
+                      Edit
+                    </a>
+                  ),
+                },
+              ]}
+              emptyLabel="No one yet. Add the people who work here."
+            />
+          </TableScroll>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              minHeight: 44,
+              padding: '0 var(--space-4)',
+              background: 'var(--surface-sunken)',
+            }}
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              iconLeft={<Icon name="plus" size={15} />}
+              onClick={() => setPerson({ name: '', title: '', role: 'read-only', teaches: false })}
+            >
+              Add person
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {maySystem && (
+        <Card title="Modules" subtitle="What this portal does. Core stays on.">
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {MODULES.map(m => (
+              <div
+                key={m.id}
+                className="ja-kv"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-4)',
+                  padding: 'var(--space-3) 0',
+                }}
+              >
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div
+                    style={{
+                      font: 'var(--weight-semibold) var(--text-sm)/1.4 var(--font-sans)',
+                      color: 'var(--text-strong)',
                     }}
                   >
-                    Edit
-                  </a>
-                ),
-              },
-            ]}
-            emptyLabel="No one yet. Add the people who work here."
-          />
-        </TableScroll>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            minHeight: 44,
-            padding: '0 var(--space-4)',
-            background: 'var(--surface-sunken)',
-          }}
-        >
-          <Button
-            variant="ghost"
-            size="sm"
-            iconLeft={<Icon name="plus" size={15} />}
-            onClick={() => setPerson({ name: '', title: '', role: 'read-only', teaches: false })}
-          >
-            Add person
-          </Button>
-        </div>
-      </Card>
-
-      <Card title="Modules" subtitle="What this portal does. Core stays on.">
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {MODULES.map(m => (
-            <div
-              key={m.id}
-              className="ja-kv"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--space-4)',
-                padding: 'var(--space-3) 0',
-              }}
-            >
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div
-                  style={{
-                    font: 'var(--weight-semibold) var(--text-sm)/1.4 var(--font-sans)',
-                    color: 'var(--text-strong)',
-                  }}
-                >
-                  {m.label}
+                    {m.label}
+                  </div>
+                  <div style={MUTED_SM}>{m.description}</div>
                 </div>
-                <div style={MUTED_SM}>{m.description}</div>
+                <Switch
+                  checked={enabled.includes(m.id)}
+                  label={enabled.includes(m.id) ? 'On' : 'Off'}
+                  onChange={next => toggleModule(m, next)}
+                />
               </div>
-              <Switch
-                checked={enabled.includes(m.id)}
-                label={enabled.includes(m.id) ? 'On' : 'Off'}
-                onChange={next => toggleModule(m, next)}
-              />
-            </div>
-          ))}
-        </div>
-        <p style={{ ...MUTED_SM, margin: 'var(--space-4) 0 0' }}>
-          Turning a module off hides it from the rail and the dashboard. Its data stays.
-        </p>
-      </Card>
+            ))}
+          </div>
+          <p style={{ ...MUTED_SM, margin: 'var(--space-4) 0 0' }}>
+            Turning a module off hides it from the rail and the dashboard. Its data stays.
+          </p>
+        </Card>
+      )}
 
       {MODULES.filter(m => enabled.includes(m.id))
         .flatMap(m => m.settings ?? [])
-        .map((Panel, i) => (
+        .filter(card => meetsAny(user.role, card.requires))
+        .map(({ component: Panel }, i) => (
           <Panel key={i} />
         ))}
 
@@ -296,131 +307,140 @@ export default function Settings() {
       </Card>
 
       <Card title="Fiscal year" subtitle="Where the year starts for every total on the dashboard.">
-        <div style={{ maxWidth: 280 }}>
-          <Field label="First month of the fiscal year">
-            <Select
-              value={String(state.core.settings.fiscalYearStartMonth)}
-              options={MONTHS.map((m, i) => ({ value: String(i + 1), label: m }))}
-              onChange={e => {
-                const month = Number(e.target.value);
-                actions.core.updateSettings({ fiscalYearStartMonth: month });
-                const next = fiscalYear(today, month);
-                toast({
-                  tone: 'success',
-                  title: 'Fiscal year changed',
-                  message: `${next.label} · ${dateRange(next.start, next.end)}`,
-                });
-              }}
-            />
-          </Field>
-        </div>
-        <p style={{ ...MUTED_SM, margin: 'var(--space-3) 0 0' }}>
+        {maySystem && (
+          <div style={{ maxWidth: 280 }}>
+            <Field label="First month of the fiscal year">
+              <Select
+                value={String(state.core.settings.fiscalYearStartMonth)}
+                options={MONTHS.map((m, i) => ({ value: String(i + 1), label: m }))}
+                onChange={e => {
+                  const month = Number(e.target.value);
+                  actions.core.updateSettings({ fiscalYearStartMonth: month });
+                  const next = fiscalYear(today, month);
+                  toast({
+                    tone: 'success',
+                    title: 'Fiscal year changed',
+                    message: `${next.label} · ${dateRange(next.start, next.end)}`,
+                  });
+                }}
+              />
+            </Field>
+          </div>
+        )}
+        <p style={{ ...MUTED_SM, margin: maySystem ? 'var(--space-3) 0 0' : 0 }}>
           Today sits in <strong style={{ color: 'var(--text-strong)' }}>{fy.label}</strong>, which
           runs {dateRange(fy.start, fy.end)}.
         </p>
       </Card>
 
-      <Card title="Your data" subtitle="Everything lives in this browser until you move it.">
-        <div
-          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}
-        >
-          <Button
-            variant="secondary"
-            iconLeft={<Icon name="download" size={15} />}
-            onClick={exportJson}
-          >
-            Export JSON
-          </Button>
-          <Button
-            variant="secondary"
-            iconLeft={<Icon name="upload" size={15} />}
-            onClick={() => fileInput.current?.click()}
-          >
-            Import JSON
-          </Button>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="application/json,.json"
-            style={{ display: 'none' }}
-            onChange={e => {
-              const file = e.target.files?.[0];
-              e.target.value = '';
-              if (file) void importJson(file);
+      {maySystem && (
+        <Card title="Your data" subtitle="Everything lives in this browser until you move it.">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-3)',
+              flexWrap: 'wrap',
             }}
-          />
-          {confirmReset ? (
-            <>
-              <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
-                This replaces everything with the demo data. Reset?
-              </span>
+          >
+            <Button
+              variant="secondary"
+              iconLeft={<Icon name="download" size={15} />}
+              onClick={exportJson}
+            >
+              Export JSON
+            </Button>
+            <Button
+              variant="secondary"
+              iconLeft={<Icon name="upload" size={15} />}
+              onClick={() => fileInput.current?.click()}
+            >
+              Import JSON
+            </Button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="application/json,.json"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) void importJson(file);
+              }}
+            />
+            {confirmReset ? (
+              <>
+                <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
+                  This replaces everything with the demo data. Reset?
+                </span>
+                <Button
+                  variant="secondary"
+                  style={{ color: 'var(--danger-500)' }}
+                  onClick={() => {
+                    actions.core.resetDemo();
+                    setConfirmReset(false);
+                    toast({
+                      tone: 'success',
+                      title: 'Demo data restored',
+                      message: 'Every module is back to the sample data.',
+                    });
+                  }}
+                >
+                  Yes, reset
+                </Button>
+                <Button variant="ghost" onClick={() => setConfirmReset(false)}>
+                  No, keep my data
+                </Button>
+              </>
+            ) : (
               <Button
                 variant="secondary"
                 style={{ color: 'var(--danger-500)' }}
-                onClick={() => {
-                  actions.core.resetDemo();
-                  setConfirmReset(false);
-                  toast({
-                    tone: 'success',
-                    title: 'Demo data restored',
-                    message: 'Every module is back to the sample data.',
-                  });
+                onClick={() => setConfirmReset(true)}
+              >
+                Reset demo data
+              </Button>
+            )}
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-4)',
+              flexWrap: 'wrap',
+              marginTop: 'var(--space-5)',
+              paddingTop: 'var(--space-4)',
+              borderTop: 'var(--border-width) solid var(--border-subtle)',
+            }}
+          >
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div
+                style={{
+                  font: 'var(--weight-semibold) var(--text-sm)/1.4 var(--font-sans)',
+                  color: 'var(--text-strong)',
                 }}
               >
-                Yes, reset
-              </Button>
-              <Button variant="ghost" onClick={() => setConfirmReset(false)}>
-                No, keep my data
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="secondary"
-              style={{ color: 'var(--danger-500)' }}
-              onClick={() => setConfirmReset(true)}
-            >
-              Reset demo data
-            </Button>
-          )}
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-4)',
-            flexWrap: 'wrap',
-            marginTop: 'var(--space-5)',
-            paddingTop: 'var(--space-4)',
-            borderTop: 'var(--border-width) solid var(--border-subtle)',
-          }}
-        >
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div
-              style={{
-                font: 'var(--weight-semibold) var(--text-sm)/1.4 var(--font-sans)',
-                color: 'var(--text-strong)',
-              }}
-            >
-              Today in the demo
+                Today in the demo
+              </div>
+              <div style={MUTED_SM}>{dateLong(today)}</div>
             </div>
-            <div style={MUTED_SM}>{dateLong(today)}</div>
+            {demoToday ? (
+              <Button variant="secondary" onClick={() => setDemoToday(undefined)}>
+                Use the real date
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={() => setDemoToday(SEED_TODAY)}>
+                Use the demo date
+              </Button>
+            )}
           </div>
-          {demoToday ? (
-            <Button variant="secondary" onClick={() => setDemoToday(undefined)}>
-              Use the real date
-            </Button>
-          ) : (
-            <Button variant="secondary" onClick={() => setDemoToday(SEED_TODAY)}>
-              Use the demo date
-            </Button>
-          )}
-        </div>
 
-        <p style={{ ...MUTED_SM, margin: 'var(--space-4) 0 0' }}>
-          Data lives in this browser only. Export before switching computers. The demo date keeps
-          the sample story on the day it was written for.
-        </p>
-      </Card>
+          <p style={{ ...MUTED_SM, margin: 'var(--space-4) 0 0' }}>
+            Data lives in this browser only. Export before switching computers. The demo date keeps
+            the sample story on the day it was written for.
+          </p>
+        </Card>
+      )}
 
       <Card title="About">
         <div
