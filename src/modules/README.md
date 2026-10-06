@@ -85,5 +85,12 @@ card in Settings all read the registry.
 5. Turning a module off in Settings hides its nav, its routes and its dashboard
    contributions. Its data stays.
 
+The import side of rules 1 and 2 is lint-enforced: `npm run lint` fails when a
+module imports another module's folder other than its `index.ts`, when core imports from
+`modules/`, when the registry or `src/app/` reach past a module's `index.ts`,
+when anything other than `core/repository.ts` and `core/auth.ts` mentions
+`localStorage`, or when a screen calls `new Date()` with no arguments. The
+rules live in `eslint.config.js` at the repo root.
+
 Rail sections with the same name merge, in registry order. **Office** is where
 Timesheets and core's Settings meet, so Settings is always its last item.
