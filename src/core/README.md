@@ -25,8 +25,8 @@ per slice:
 ```ts
 const { state, today, actions } = useStore();
 
-state.core.staff; // the shared nouns
-state.grants.grants; // the grants module's own state
+state.core.staff;                 // the shared nouns
+state.grants.grants;              // the grants module's own state
 actions.core.updateSettings({ fiscalYearStartMonth: 7 });
 actions.grants.transition(id, 'submitted', { date: today });
 ```
@@ -64,19 +64,19 @@ fine, because any slice it does not carry is seeded instead.
 
 ## The files
 
-| File            | What is in it                                                                                                                                                                                                                                                                                                                                            |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `types.ts`      | `StaffMember` (`title` is the job title, `role` is one of the seven `Role`s of decision 0001), `SignedInUser`, `Program`, `Organization`, `Venue`, `Address`, `AppSettings`, `CoreState`, and the augmentable `PortalState` / `PortalActions`.                                                                                                           |
-| `module.ts`     | `ModuleSlice` (with its `rules`: what each action needs), `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are gated Cards for the Settings screen), `ModuleRoute` (`requires`, `allows`), `Requires`, `NavItem`, `NavSection`, `StatSpec`, `AttentionItem`, `GatedCard`, `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with `·`). |
-| `store.tsx`     | `StoreProvider` (its `onRefused` shows a refused action's reason), `useStore`, `useCan`, `coreSlice`, `guardActions` (wraps every slice's actions in its `rules`), `refusalMessage`, `newId`, `savedStaff()` (the staff list as saved, which sign-in reads before the store mounts). |
-| `roles.ts`      | `ROLES`, `ROLE_LABELS` (the words the screens use: Admin, Director, Office manager, Bookkeeper, Teacher, Office assistant, Read-only), `isRole`. |
+| File | What is in it |
+| --- | --- |
+| `types.ts` | `StaffMember` (`title` is the job title, `role` is one of the seven `Role`s of decision 0001), `SignedInUser`, `Program`, `Organization`, `Venue`, `Address`, `AppSettings`, `CoreState`, and the augmentable `PortalState` / `PortalActions`. |
+| `module.ts` | `ModuleSlice` (with its `rules`: what each action needs), `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are gated Cards for the Settings screen), `ModuleRoute` (`requires`, `allows`), `Requires`, `NavItem`, `NavSection`, `StatSpec`, `AttentionItem`, `GatedCard`, `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
+| `store.tsx` | `StoreProvider` (its `onRefused` shows a refused action's reason), `useStore`, `useCan`, `coreSlice`, `guardActions` (wraps every slice's actions in its `rules`), `refusalMessage`, `newId`, `savedStaff()` (the staff list as saved, which sign-in reads before the store mounts). |
+| `roles.ts` | `ROLES`, `ROLE_LABELS` (the words the screens use: Admin, Director, Office manager, Bookkeeper, Teacher, Office assistant, Read-only), `isRole`. |
 | `permissions.ts` | Decision 0001's table as data (`PERMISSION_TABLE`, same rows and columns as the decision file), `can(role, subject, need, own)` the one check, `cell`, `isOwnOnly`, `meets` / `meetsAny`, `mayChangeStaff` (only an Admin makes or changes an Admin). |
-| `repository.ts` | localStorage, one key per slice; export / import / reset; `loadPreference` / `savePreference` for a per-browser UI setting such as the collapsed rail. With `auth.ts`, the only file that may touch localStorage (lint-enforced).                                                                                                                        |
-| `auth.ts`       | Sign-in against SHA-256 credential hashes (no plaintext passwords in source); the session key. Exported as `auth`.                                                                                                                                                                                                                                       |
-| `format.ts`     | `money`, `dateShort`, `dateLong`, `dateRange`, `relativeDays`, `daysUntil`, `initials`.                                                                                                                                                                                                                                                                  |
-| `seed.ts`       | The ten staff (one per demo login, plus the teaching artists), the six programs, one district with two schools, the studio, the settings. `STUDIO_VENUE_ID` and `PARAMOUNT_MS_VENUE_ID` are exported for module seeds.                                                                                                                                   |
-| `derive.ts`     | `fiscalYear`, `staffById`, `programById`, `programName`, `organizationById`, `venueById`, `venueName`, `venuesForOrganization`, `placeLabel`, `addressLine`.                                                                                                                                                                                             |
-| `auth.ts`       | The sign-in check: SHA-256 of `username:password` via Web Crypto, checked against a small table of hashes, no plaintext in source. A login is a username and a `staffId`; its name and role come from that staff record, and a login whose record is missing is refused. The session (who, and when) lives in localStorage under `ja-portal:session:v1`. |
+| `repository.ts` | localStorage, one key per slice; export / import / reset; `loadPreference` / `savePreference` for a per-browser UI setting such as the collapsed rail. With `auth.ts`, the only file that may touch localStorage (lint-enforced). |
+| `auth.ts` | Sign-in against SHA-256 credential hashes (no plaintext passwords in source); the session key. Exported as `auth`. |
+| `format.ts` | `money`, `dateShort`, `dateLong`, `dateRange`, `relativeDays`, `daysUntil`, `initials`. |
+| `seed.ts` | The ten staff (one per demo login, plus the teaching artists), the six programs, one district with two schools, the studio, the settings. `STUDIO_VENUE_ID` and `PARAMOUNT_MS_VENUE_ID` are exported for module seeds. |
+| `derive.ts` | `fiscalYear`, `staffById`, `programById`, `programName`, `organizationById`, `venueById`, `venueName`, `venuesForOrganization`, `placeLabel`, `addressLine`. |
+| `auth.ts` | The sign-in check: SHA-256 of `username:password` via Web Crypto, checked against a small table of hashes, no plaintext in source. A login is a username and a `staffId`; its name and role come from that staff record, and a login whose record is missing is refused. The session (who, and when) lives in localStorage under `ja-portal:session:v1`. |
 
 **Conventions.** Money is whole dollars as an integer. Dates are ISO
 `YYYY-MM-DD` strings. Format only at render time.
@@ -91,19 +91,19 @@ manages both on the Partners screen (`src/app/screens/partners/`).
 
 ## Core actions
 
-| Action                          | What it does                                                                     |
-| ------------------------------- | -------------------------------------------------------------------------------- |
-| `addStaff(input)`               | Adds a person: name, title, role, teaches. Returns the new id.                   |
-| `updateStaff(id, patch)`        | Patches a person, `role` and `teaches` included.                                 |
-| `addOrganization(input)`        | Adds a partner: a district, a community centre. Returns the new id.              |
-| `updateOrganization(id, patch)` | Patches a partner.                                                               |
-| `addVenue(input)`               | Adds a place classes meet, optionally under an organization. Returns the new id. |
-| `updateVenue(id, patch)`        | Patches a venue. Ensembles point at it by id, so a rename shows everywhere.      |
-| `updateSettings(patch)`         | Patches the settings.                                                            |
-| `setModuleEnabled(id, on)`      | Turns a module on or off. Its data stays.                                        |
-| `resetDemo()`                   | Reseeds every slice.                                                             |
-| `importJson(text)`              | Replaces every slice from an exported file. Throws on an unreadable file.        |
-| `exportJson()`                  | The whole portal as pretty JSON.                                                 |
+| Action | What it does |
+| --- | --- |
+| `addStaff(input)` | Adds a person: name, title, role, teaches. Returns the new id. |
+| `updateStaff(id, patch)` | Patches a person, `role` and `teaches` included. |
+| `addOrganization(input)` | Adds a partner: a district, a community centre. Returns the new id. |
+| `updateOrganization(id, patch)` | Patches a partner. |
+| `addVenue(input)` | Adds a place classes meet, optionally under an organization. Returns the new id. |
+| `updateVenue(id, patch)` | Patches a venue. Ensembles point at it by id, so a rename shows everywhere. |
+| `updateSettings(patch)` | Patches the settings. |
+| `setModuleEnabled(id, on)` | Turns a module on or off. Its data stays. |
+| `resetDemo()` | Reseeds every slice. |
+| `importJson(text)` | Replaces every slice from an exported file. Throws on an unreadable file. |
+| `exportJson()` | The whole portal as pretty JSON. |
 
 See `src/modules/README.md` for how to add a module.
 

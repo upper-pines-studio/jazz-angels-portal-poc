@@ -69,9 +69,7 @@
   border-left: var(--border-width) solid var(--border-subtle);
   border-bottom: var(--border-width) solid var(--border-subtle);
 }
-.ja-week__cell.is-today {
-  background: var(--neutral-25);
-}
+.ja-week__cell.is-today { background: var(--neutral-25); }
 
 .ja-week__block {
   width: 100%;
@@ -90,16 +88,10 @@
   box-shadow: var(--shadow-xs);
   transition: var(--transition-control, all 120ms ease);
 }
-.ja-week__block:hover {
-  background: var(--blue-50);
-}
+.ja-week__block:hover { background: var(--blue-50); }
 /* A class whose roll this person does not take: shown, not opened. */
-.ja-week__block.is-static {
-  cursor: default;
-}
-.ja-week__block.is-static:hover {
-  background: var(--surface-card);
-}
+.ja-week__block.is-static { cursor: default; }
+.ja-week__block.is-static:hover { background: var(--surface-card); }
 
 .ja-week__block-top {
   display: flex;
@@ -162,10 +154,6 @@
 }
 
 @media (max-width: 640px) {
-  .ja-week__slot {
-    padding: var(--space-2);
-  }
-  .ja-term-dots {
-    gap: var(--space-4);
-  }
+  .ja-week__slot { padding: var(--space-2); }
+  .ja-term-dots { gap: var(--space-4); }
 }
