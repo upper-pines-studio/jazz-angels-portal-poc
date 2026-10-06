@@ -1,7 +1,8 @@
-import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
+import type { ActionRule, AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
+import { can } from '../../../core/permissions';
 import { makeCoreSeed } from '../../../core/seed';
 import { acceptableSuggestions, splitByPercent } from './money';
-import { availableTransitions } from './phases';
+import { availableTransitions, isPreAward } from './phases';
 import { makeSeed } from './seed';
 import { instantiateDocumentRegister, instantiateTemplate } from './templates';
 import type { PortalState } from '../../../core/types';
@@ -823,6 +824,89 @@ const COLLECTIONS: Array<keyof GrantsState> = [
   'templates',
 ];
 
+// ---------------------------------------------------------------------------
+// Who may change what (decision 0001)
+// ---------------------------------------------------------------------------
+
+/** A file that backs up an expense is money; any other file goes with the grant. */
+function fileSubject(expenseId: string | undefined) {
+  return expenseId ? 'award' : 'grants';
+}
+
+const fileRule: ActionRule<[string, ...unknown[]]> = (user, state, id) =>
+  can(user.role, fileSubject(state.grants.files.find(f => f.id === id)?.expenseId), 'edit');
+
+/**
+ * What each action needs. The rows are the table's: "Grants: pipeline,
+ * checklist, deadlines" (`grants`), "Award, budget, reports" (`award`),
+ * "Transactions: assign, split" and the two QuickBooks rows.
+ */
+const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
+  addFunder: 'grants',
+  updateFunder: 'grants',
+  addGrant: 'grants',
+  updateGrant: 'grants',
+  // Moving a grant into an awarded phase records the award, so it needs both rows.
+  transition: (user, _state, _grantId, to) =>
+    can(user.role, 'grants', 'edit') && (isPreAward(to) || can(user.role, 'award', 'edit')),
+
+  addTask: 'grants',
+  updateTask: 'grants',
+  toggleTask: 'grants',
+  deleteTask: 'grants',
+
+  addDocument: 'grants',
+  updateDocument: 'grants',
+  deleteDocument: 'grants',
+
+  addPayment: 'award',
+  updatePayment: 'award',
+  deletePayment: 'award',
+  markPaymentReceived: 'award',
+
+  addBudgetLine: 'award',
+  updateBudgetLine: 'award',
+  deleteBudgetLine: 'award',
+
+  addExpense: 'award',
+  updateExpense: 'award',
+  deleteExpense: 'award',
+
+  syncQuickBooks: 'quickbooks-sync',
+  setQuickBooksConnected: 'quickbooks-connect',
+  assignTransaction: 'transactions',
+  markNotGrantFunded: 'transactions',
+  unassignTransaction: 'transactions',
+  acceptSuggestions: 'transactions',
+  saveSplitRule: 'transactions',
+  deleteSplitRule: 'transactions',
+
+  addFile: (user, _state, input) => can(user.role, fileSubject(input.expenseId), 'edit'),
+  updateFile: fileRule,
+  deleteFile: fileRule,
+
+  addTerm: 'award',
+  updateTerm: 'award',
+  deleteTerm: 'award',
+
+  // Report reminders are deadlines.
+  saveReminderPlan: 'grants',
+  resetReminderPlan: 'grants',
+  updateReminderDefaults: 'grants',
+
+  addReport: 'award',
+  updateReport: 'award',
+  deleteReport: 'award',
+  markReportSubmitted: 'award',
+
+  addNote: 'grants',
+
+  addTemplate: 'grants',
+  updateTemplate: 'grants',
+  deleteTemplate: 'grants',
+  duplicateTemplate: 'grants',
+};
+
 export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
   id: 'grants',
   seed: () => makeSeed(),
@@ -831,6 +915,7 @@ export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
     return reducer(state, { ...action, type: action.type.slice('grants/'.length) } as GrantsAction);
   },
   createActions,
+  rules,
   normalise(raw) {
     if (!raw || typeof raw !== 'object') return undefined;
     const candidate = raw as Record<string, unknown>;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { staffById } from '../../core';
-import type { AttentionItem, ModuleManifest, PortalState, StatSpec } from '../../core';
+import type { AttentionItem, ModuleManifest, PortalState, Requirement, StatSpec } from '../../core';
 import {
   awaitingApproval,
   formatHours,
@@ -9,6 +9,8 @@ import {
   timesheetsSlice,
 } from './domain';
 import Timesheets from './screens/Timesheets';
+
+const APPROVE: Requirement = { subject: 'timesheets-approve' };
 
 /** The number on the rail and the one thing this module puts on the dashboard. */
 function awaitingCount(state: PortalState): number {
@@ -25,6 +27,8 @@ function stats(state: PortalState, today: string): StatSpec[] {
       unit: 'hrs',
       accent: 'var(--olive-500)',
       href: '/timesheets',
+      // Everyone's hours: for the roles that approve them.
+      requires: APPROVE,
       footnote: `Across ${teachers} ${teachers === 1 ? 'teacher' : 'teachers'}`,
     },
   ];
@@ -46,6 +50,7 @@ function attention(state: PortalState, today: string): AttentionItem[] {
       detail: names.join(', '),
       status: 'info',
       href: '/timesheets',
+      requires: APPROVE,
       source: 'Timesheets',
     },
   ];
@@ -63,10 +68,18 @@ export const manifest: ModuleManifest = {
         label: 'Timesheets',
         icon: 'clock',
         badge: state => awaitingCount(state),
+        // The rail item opens for anyone who logs hours or approves them.
+        requires: [{ subject: 'timesheets-log' }, APPROVE],
       },
     ],
   },
-  routes: [{ path: '/timesheets', element: <Timesheets /> }],
+  routes: [
+    {
+      path: '/timesheets',
+      element: <Timesheets />,
+      requires: [{ subject: 'timesheets-log' }, APPROVE],
+    },
+  ],
   dashboard: { stats, attention },
   slice: timesheetsSlice,
 };

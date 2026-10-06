@@ -35,7 +35,7 @@ export default function Dashboard() {
 
   // A stat or a row shows only to a role that may follow its link (decision 0001).
   const visible = (x: { requires?: StatSpec['requires']; href?: string }) =>
-    x.requires ? meetsAny(user.role, x.requires) : !x.href || mayOpen(user.role, x.href, state);
+    x.requires ? meetsAny(user.role, x.requires) : !x.href || mayOpen(user, x.href, state);
   const stats: StatSpec[] = enabled
     .flatMap(m => m.dashboard?.stats?.(state, today) ?? [])
     .filter(visible);

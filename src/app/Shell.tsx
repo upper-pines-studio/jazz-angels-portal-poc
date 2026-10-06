@@ -2,7 +2,7 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, TopBar, Icon, IconButton, Avatar, Breadcrumb } from '../design-system';
 import { ROLE_LABELS, meetsAny, repository, useStore } from '../core';
-import type { PortalState, Role } from '../core';
+import type { PortalState, SignedInUser } from '../core';
 import { MODULES } from '../modules';
 import { mayOpen } from './access';
 import { useAuth } from './AuthGate';
@@ -46,7 +46,7 @@ interface RailItem {
  * An item the role may not open is left out (an item's own `requires`, else
  * its route's), and a section left with nothing in it goes too.
  */
-function buildNav(state: PortalState, today: string, role: Role): RailItem[] {
+function buildNav(state: PortalState, today: string, user: SignedInUser): RailItem[] {
   const sections: Array<{ name: string; items: RailItem[] }> = [
     {
       name: 'Overview',
@@ -68,8 +68,8 @@ function buildNav(state: PortalState, today: string, role: Role): RailItem[] {
       const target = sectionFor(group.section);
       for (const item of group.items) {
         const open = item.requires
-          ? meetsAny(role, item.requires)
-          : mayOpen(role, item.path, state);
+          ? meetsAny(user.role, item.requires)
+          : mayOpen(user, item.path, state);
         if (!open) continue;
         const count = item.badge?.(state, today);
         target.items.push({
@@ -83,14 +83,18 @@ function buildNav(state: PortalState, today: string, role: Role): RailItem[] {
   }
 
   const office = sectionFor('Office');
-  if (mayOpen(role, '/partners', state))
+  if (mayOpen(user, '/partners', state))
     office.items.push({
       id: '/partners',
       label: 'Partners',
       icon: <Icon name="building-2" size={16} />,
     });
-  if (mayOpen(role, '/settings', state))
-    office.items.push({ id: '/settings', label: 'Settings', icon: <Icon name="settings" size={16} /> });
+  if (mayOpen(user, '/settings', state))
+    office.items.push({
+      id: '/settings',
+      label: 'Settings',
+      icon: <Icon name="settings" size={16} />,
+    });
 
   return sections.flatMap(s => (s.items.length ? [{ section: s.name }, ...s.items] : []));
 }
@@ -123,7 +127,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       writeCollapsed(!c);
       return !c;
     });
-  const items = buildNav(state, today, user.role);
+  const items = buildNav(state, today, user);
 
   // Lucide swaps <i data-lucide> placeholders for SVG; re-run after each render.
   React.useEffect(() => {

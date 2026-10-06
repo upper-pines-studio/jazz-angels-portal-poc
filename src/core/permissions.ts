@@ -30,15 +30,7 @@ export type Subject =
 
 /** One cell, in the decision file's own words. `–` is "no". */
 export type Cell =
-  | 'Edit'
-  | 'View'
-  | 'View all'
-  | 'Any class'
-  | 'Own classes'
-  | 'Counts only'
-  | 'Own'
-  | 'Yes'
-  | '–';
+  'Edit' | 'View' | 'View all' | 'Any class' | 'Own classes' | 'Counts only' | 'Own' | 'Yes' | '–';
 
 /** The seven columns, in the decision file's order. */
 type Row = readonly [Cell, Cell, Cell, Cell, Cell, Cell, Cell];
@@ -83,7 +75,15 @@ export interface Requirement {
 
 /** Cells that hold only for the person's own records: their classes, their hours. */
 const OWN_CELLS: readonly Cell[] = ['Own', 'Own classes'];
-const VIEW_CELLS: readonly Cell[] = ['Edit', 'View', 'View all', 'Any class', 'Own classes', 'Own', 'Yes'];
+const VIEW_CELLS: readonly Cell[] = [
+  'Edit',
+  'View',
+  'View all',
+  'Any class',
+  'Own classes',
+  'Own',
+  'Yes',
+];
 const EDIT_CELLS: readonly Cell[] = ['Edit', 'Any class', 'Own classes', 'Own', 'Yes'];
 
 /**

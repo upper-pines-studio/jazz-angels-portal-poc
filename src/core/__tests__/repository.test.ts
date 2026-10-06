@@ -42,6 +42,7 @@ const notes: ModuleSlice<NoteState, Record<string, never>> = {
   seed: () => ({ notes: ['first'] }),
   reducer: state => state,
   createActions: () => ({}),
+  rules: {},
   normalise: raw => (Array.isArray((raw as NoteState)?.notes) ? (raw as NoteState) : undefined),
 };
 

@@ -1,9 +1,9 @@
 import React from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
-import { StoreProvider, meetsAny, useStore } from '../core';
-import type { Requires } from '../core';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { StoreProvider, useStore } from '../core';
+import type { ModuleRoute } from '../core';
 import { MODULES } from '../modules';
-import { CORE_REQUIRES, moduleRoutes } from './access';
+import { CORE_REQUIRES, mayOpenRoute, moduleRoutes } from './access';
 import { AuthProvider, useAuth } from './AuthGate';
 import { Shell } from './Shell';
 import { ToastHost, useToast } from './ToastHost';
@@ -47,12 +47,18 @@ const CORE_ELEMENTS: Record<string, React.ReactElement> = {
 };
 
 /**
- * A route the signed-in role may not open renders the no-access screen in
- * the frame, not the screen, and keeps its URL (decision 0001).
+ * The route's screen, or the no-access screen when the signed-in person may
+ * not open it (decision 0001). The URL stays as it was.
  */
-function Frame() {
+function Guarded({ route }: { route: ModuleRoute }) {
   const { state, user } = useStore();
-  const routes: Array<{ path: string; element: React.ReactElement; requires?: Requires }> = [
+  const params = useParams();
+  return mayOpenRoute(user, route, state, params) ? route.element : <NoAccess />;
+}
+
+function Frame() {
+  const { state } = useStore();
+  const routes: ModuleRoute[] = [
     ...CORE_REQUIRES.map(r => ({ ...r, element: CORE_ELEMENTS[r.path] })),
     ...moduleRoutes(state),
   ];
@@ -61,11 +67,7 @@ function Frame() {
     <Shell>
       <Routes>
         {routes.map(r => (
-          <Route
-            key={r.path}
-            path={r.path}
-            element={meetsAny(user.role, r.requires) ? r.element : <NoAccess />}
-          />
+          <Route key={r.path} path={r.path} element={<Guarded route={r} />} />
         ))}
         {/* A route from a module that has just been switched off. */}
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -74,11 +76,6 @@ function Frame() {
   );
 }
 
-/**
- * Nothing behind the gate mounts until someone signs in, so the login screen
- * never loads or seeds module state. The router sits above App, so the URL
- * asked for survives the detour through the login screen.
- */
 function Gate() {
   const { user, signOut } = useAuth();
   const refuse = React.useCallback(() => signOut('no-staff'), [signOut]);

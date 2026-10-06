@@ -82,6 +82,16 @@ export interface ModuleRoute {
   element: React.ReactElement;
   /** A role that does not meet it gets the no-access screen, not the element. */
   requires?: Requires;
+  /**
+   * For a route that opens one record an "Own" cell limits, such as a teacher's
+   * roll call: may this person open this one? Read with the route's params.
+   * False gets the no-access screen too.
+   */
+  allows?(
+    user: SignedInUser,
+    state: PortalState,
+    params: Record<string, string | undefined>,
+  ): boolean;
 }
 
 /** One titled group of rail items. */

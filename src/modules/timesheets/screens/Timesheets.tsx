@@ -185,17 +185,17 @@ export default function Timesheets() {
               </IconButton>
             </div>
             {seesEveryone && (
-            <div className="ja-ts-teacher">
-              <Select
-                value={teacher}
-                onChange={e => setTeacher(e.target.value)}
-                options={[
-                  { value: 'all', label: 'All teachers' },
-                  ...teachingStaff.map(s => ({ value: s.id, label: s.name })),
-                ]}
-                style={{ width: '100%' }}
-              />
-            </div>
+              <div className="ja-ts-teacher">
+                <Select
+                  value={teacher}
+                  onChange={e => setTeacher(e.target.value)}
+                  options={[
+                    { value: 'all', label: 'All teachers' },
+                    ...teachingStaff.map(s => ({ value: s.id, label: s.name })),
+                  ]}
+                  style={{ width: '100%' }}
+                />
+              </div>
             )}
             {logButton}
           </div>

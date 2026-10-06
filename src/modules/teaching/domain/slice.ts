@@ -1,5 +1,6 @@
 import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import { PARAMOUNT_MS_VENUE_ID, STUDIO_VENUE_ID } from '../../../core';
+import { mayTakeRoll } from './derive';
 import { makeSeed } from './seed';
 import type {
   AttendanceRecord,
@@ -192,6 +193,16 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     } as TeachingAction);
   },
   createActions,
+  rules: {
+    addMeeting: 'schedule',
+    // A teacher takes roll for the classes they lead; the office for any class.
+    setMark: (user, state, meetingId) => mayTakeRoll(state, user, meetingId),
+    submitRollCall: (user, state, meetingId) => mayTakeRoll(state, user, meetingId),
+    reopenRollCall: (user, state, meetingId) => mayTakeRoll(state, user, meetingId),
+    // The roster changes with "Students: Edit"; a teacher's "Own classes" is to see it.
+    enrollStudent: 'students',
+    updateStudent: 'students',
+  },
   normalise(raw) {
     if (!raw || typeof raw !== 'object') return undefined;
     const candidate = raw as Record<string, unknown>;

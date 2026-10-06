@@ -1,6 +1,6 @@
 import { matchPath } from 'react-router-dom';
 import { meetsAny } from '../core';
-import type { ModuleRoute, PortalState, Requires, Role } from '../core';
+import type { ModuleRoute, PortalState, Requires, SignedInUser } from '../core';
 import { MODULES } from '../modules';
 
 /**
@@ -8,7 +8,7 @@ import { MODULES } from '../modules';
  * ask the same question (decision 0001). Core's own screens are listed here;
  * a module's come from its manifest.
  */
-export const CORE_REQUIRES: Array<{ path: string; requires?: Requires }> = [
+export const CORE_REQUIRES: Array<Pick<ModuleRoute, 'path' | 'requires'>> = [
   { path: '/' },
   { path: '/partners', requires: { subject: 'partners' } },
   { path: '/partners/organizations/:id', requires: { subject: 'partners' } },
@@ -33,16 +33,32 @@ export function moduleRoutes(state: PortalState): ModuleRoute[] {
 }
 
 /**
- * What a link needs: the requirement of the route it lands on. A link that
- * lands nowhere known needs nothing (the frame redirects it home).
+ * May this person open this route? Its `requires` for the role, then its own
+ * `allows` for the record the params name. The frame and `mayOpen` both ask.
  */
-export function requiresFor(href: string, state: PortalState): Requires | undefined {
-  const path = href.split(/[?#]/)[0] || '/';
-  const routes = [...CORE_REQUIRES, ...moduleRoutes(state)];
-  return routes.find(r => matchPath(r.path, path))?.requires;
+export function mayOpenRoute(
+  user: SignedInUser,
+  route: Pick<ModuleRoute, 'requires' | 'allows'>,
+  state: PortalState,
+  params: Record<string, string | undefined>,
+): boolean {
+  if (!meetsAny(user.role, route.requires)) return false;
+  return route.allows ? route.allows(user, state, params) : true;
 }
 
-/** May this role follow this link? */
-export function mayOpen(role: Role, href: string, state: PortalState): boolean {
-  return meetsAny(role, requiresFor(href, state));
+/**
+ * May this person follow this link? A link that lands nowhere known is open
+ * (the frame sends it home). The rail and the dashboard ask this.
+ */
+export function mayOpen(user: SignedInUser, href: string, state: PortalState): boolean {
+  const path = href.split(/[?#]/)[0] || '/';
+  const routes: Array<Pick<ModuleRoute, 'path' | 'requires' | 'allows'>> = [
+    ...CORE_REQUIRES,
+    ...moduleRoutes(state),
+  ];
+  for (const route of routes) {
+    const match = matchPath(route.path, path);
+    if (match) return mayOpenRoute(user, route, state, match.params);
+  }
+  return true;
 }

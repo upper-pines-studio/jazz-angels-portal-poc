@@ -3,6 +3,7 @@ import type { AttentionItem, ModuleManifest, PortalState, StatSpec } from '../..
 import {
   ensembleById,
   enrolledCount,
+  mayTakeRoll,
   recentAttendance,
   sessionWeekLabel,
   teachingSlice,
@@ -86,10 +87,21 @@ export const manifest: ModuleManifest = {
     ],
   },
   routes: [
-    { path: '/schedule', element: <Schedule /> },
-    { path: '/roll/:meetingId', element: <RollCall /> },
-    { path: '/students', element: <Students /> },
+    { path: '/schedule', element: <Schedule />, requires: { subject: 'schedule' } },
+    {
+      path: '/roll/:meetingId',
+      element: <RollCall />,
+      requires: { subject: 'roll-call' },
+      // A teacher opens the roll call of a class they lead, and no other.
+      allows: (user, state, params) => mayTakeRoll(state, user, params.meetingId),
+    },
+    { path: '/students', element: <Students />, requires: { subject: 'students' } },
   ],
-  dashboard: { stats, subtitle, attention, panels: [TodayPanel] },
+  dashboard: {
+    stats,
+    subtitle,
+    attention,
+    panels: [{ component: TodayPanel, requires: { subject: 'schedule' } }],
+  },
   slice: teachingSlice,
 };

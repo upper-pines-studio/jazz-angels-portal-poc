@@ -26,6 +26,7 @@ const counter: ModuleSlice<CountState, { bump(): void }> = {
   seed: () => ({ count: 0 }),
   reducer: (state, action) => (action.type === 'counter/bump' ? { count: state.count + 1 } : state),
   createActions: dispatch => ({ bump: () => dispatch({ type: 'counter/bump' }) }),
+  rules: { bump: () => true },
   normalise: raw =>
     raw && typeof (raw as CountState).count === 'number' ? (raw as CountState) : undefined,
 };
@@ -36,6 +37,7 @@ const notes: ModuleSlice<NoteState, { add(text: string): void }> = {
   reducer: (state, action) =>
     action.type === 'notes/add' ? { notes: [...state.notes, String(action.text)] } : state,
   createActions: dispatch => ({ add: text => dispatch({ type: 'notes/add', text }) }),
+  rules: { add: 'staff' },
 };
 
 const SLICES = [counter, notes] as unknown as PortalSlice[];
