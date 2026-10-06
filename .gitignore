@@ -1,10 +1,11 @@
 node_modules
 dist
+# TypeScript build info
+*.tsbuildinfo
+tsconfig.tsbuildinfo
 .DS_Store
 *.local
 .playwright-mcp
-*.tsbuildinfo
-tsconfig.tsbuildinfo
 # Claude Code: agent worktrees and personal settings stay local; .claude/settings.json is shared.
 .claude/worktrees/
 .claude/settings.local.json
