@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { Badge, Card, EmptyState, Icon } from '../../../../design-system';
 import { dateShort, useCan, useStore } from '../../../../core';
-import { hourLabel, reminderPlanFor, reminderSchedule } from '../../domain';
+import { hourLabel, nextReminder } from '../../domain';
 import type { Report } from '../../domain';
 import { OwnerAvatar } from '../../../../app/components/badges';
 import { useToast } from '../../../../app/ToastHost';
@@ -18,6 +18,7 @@ import {
   kindWord,
   reportContext,
   reportUrgency,
+  stepWords,
 } from './ReminderParts';
 import type { MenuItem } from './ReminderParts';
 
@@ -49,13 +50,8 @@ export function ReportsOwedCard({
   const toast = useToast();
   const hour = hourLabel(state.grants.reminderDefaults.sendHour);
 
-  // The very next email across the reports shown.
-  let next: { report: Report; date: string; offset: number } | undefined;
-  for (const r of reports) {
-    const step = reminderSchedule(state, r.id, today).find(s => s.state === 'next');
-    if (step && (!next || step.date < next.date))
-      next = { report: r, date: step.date, offset: step.offset };
-  }
+  // The very next email across the reports shown, repeats after the due date included.
+  const next = nextReminder(state, today, reports);
 
   const n = reports.length;
   const subtitle = `${n} ${n === 1 ? 'report' : 'reports'} to funders · reminder emails go out at ${hour}`;
@@ -115,15 +111,14 @@ export function ReportsOwedCard({
           {next &&
             (() => {
               const ctx = reportContext(state, next.report);
-              const which =
-                next.offset === 0 ? 'the due date reminder' : `the ${next.offset} day reminder`;
               return (
                 <div className="ja-rm-banner">
                   <Icon name="mail" size={16} color="var(--gold-600)" style={{ marginTop: 2 }} />
                   <span>
-                    Next reminder: <b>{format(parseISO(next.date), 'EEE, MMM d')}</b>, {which} for
-                    the {ctx.funderShort} {kindWord(next.report).toLowerCase()} report, to{' '}
-                    {fullNames(state, reminderPlanFor(state, next.report.id).recipientIds)}.
+                    Next reminder: <b>{format(parseISO(next.step.date), 'EEE, MMM d')}</b>,{' '}
+                    {stepWords(next.step)} for the {ctx.funderShort}{' '}
+                    {kindWord(next.report).toLowerCase()} report, to{' '}
+                    {fullNames(state, next.recipientIds)}.
                   </span>
                 </div>
               );

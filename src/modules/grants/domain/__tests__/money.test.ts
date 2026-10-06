@@ -11,6 +11,7 @@ import {
   nextReminder,
   offPaceGrants,
   percent,
+  planSchedule,
   reminderPlanFor,
   reminderSchedule,
   reportsOwed,
@@ -203,7 +204,7 @@ describe('reminders', () => {
   });
 
   it('the 30 day reminder has gone and the 14 day one is next', () => {
-    const steps = reminderSchedule(state, 'rep-lac-final', today);
+    const steps = reminderSchedule(state, 'rep-lac-final', today).filter(s => !s.repeat);
     expect(steps.map(s => [s.offset, s.date, s.state])).toEqual([
       [30, '2026-08-31', 'sent'],
       [14, '2026-09-16', 'next'],
@@ -212,6 +213,105 @@ describe('reminders', () => {
       [0, '2026-09-30', 'scheduled'],
     ]);
     expect(nextReminder(state, today)?.step.date).toBe('2026-09-16');
+  });
+
+  it('before the due date a plan that keeps reminding lists only the first repeat, scheduled', () => {
+    const repeats = reminderSchedule(state, 'rep-lac-final', today).filter(s => s.repeat);
+    expect(repeats.map(s => [s.offset, s.date, s.state])).toEqual([
+      [-3, '2026-10-03', 'scheduled'],
+    ]);
+  });
+
+  it('after the due date the repeats count every 3 days, up to the next one', () => {
+    const steps = reminderSchedule(state, 'rep-lac-final', '2026-10-07');
+    expect(steps.map(s => [s.offset, s.date, s.state, !!s.repeat])).toEqual([
+      [30, '2026-08-31', 'sent', false],
+      [14, '2026-09-16', 'sent', false],
+      [7, '2026-09-23', 'off', false],
+      [3, '2026-09-27', 'sent', false],
+      [0, '2026-09-30', 'sent', false],
+      [-3, '2026-10-03', 'sent', true],
+      [-6, '2026-10-06', 'sent', true],
+      [-9, '2026-10-09', 'next', true],
+    ]);
+    const next = nextReminder(state, '2026-10-07');
+    expect(next?.report.id).toBe('rep-lac-final');
+    expect(next?.step).toMatchObject({ date: '2026-10-09', repeat: true });
+  });
+
+  it('a repeat dated today has gone; the next is the one after', () => {
+    const repeats = reminderSchedule(state, 'rep-lac-final', '2026-10-03').filter(s => s.repeat);
+    expect(repeats.map(s => [s.date, s.state])).toEqual([
+      ['2026-10-03', 'sent'],
+      ['2026-10-06', 'next'],
+    ]);
+  });
+
+  it('the repeat follows the office setting for days between emails', () => {
+    const s = make();
+    s.grants.reminderDefaults = { ...s.grants.reminderDefaults, repeatEveryDays: 7 };
+    const repeats = reminderSchedule(s, 'rep-lac-final', '2026-10-08').filter(x => x.repeat);
+    expect(repeats.map(x => [x.offset, x.date, x.state])).toEqual([
+      [-7, '2026-10-07', 'sent'],
+      [-14, '2026-10-14', 'next'],
+    ]);
+  });
+
+  it('a plan that does not keep reminding has nothing after the due date', () => {
+    const report = state.grants.reports.find(r => r.id === 'rep-lac-final')!;
+    const plan = { offsets: [30, 14, 3, 0], keepReminding: false };
+    const steps = planSchedule(report, plan, { repeatEveryDays: 3 }, '2026-10-07');
+    expect(steps.some(s => s.repeat)).toBe(false);
+    expect(steps.some(s => s.state === 'next')).toBe(false);
+  });
+
+  it('a draft plan is scheduled by the same rule as a saved one', () => {
+    const report = state.grants.reports.find(r => r.id === 'rep-lac-final')!;
+    const saved = reminderPlanFor(state, 'rep-lac-final');
+    for (const day of [today, '2026-09-30', '2026-10-07']) {
+      expect(planSchedule(report, saved, state.grants.reminderDefaults, day)).toEqual(
+        reminderSchedule(state, 'rep-lac-final', day),
+      );
+    }
+    // Every reminder day switched off: the first repeat is the next email.
+    const steps = planSchedule(
+      report,
+      { offsets: [], keepReminding: true },
+      { repeatEveryDays: 3 },
+      today,
+    );
+    expect(steps.find(s => s.state === 'next')).toMatchObject({ date: '2026-10-03', repeat: true });
+  });
+
+  it('a submitted report sends nothing more: no next, no repeats', () => {
+    const s = make();
+    s.grants.reports = s.grants.reports.map(r =>
+      r.id === 'rep-lac-final'
+        ? { ...r, status: 'submitted' as const, submittedDate: '2026-10-01' }
+        : r,
+    );
+    const steps = reminderSchedule(s, 'rep-lac-final', '2026-10-07');
+    expect(steps.some(x => x.repeat)).toBe(false);
+    expect(steps.some(x => x.state === 'next' || x.state === 'scheduled')).toBe(false);
+    expect(nextReminder(s, '2026-10-07')?.report.id).not.toBe('rep-lac-final');
+  });
+
+  it('a report submitted early never sends the days after it was submitted', () => {
+    const s = make();
+    const report = {
+      ...s.grants.reports.find(r => r.id === 'rep-lac-final')!,
+      status: 'submitted' as const,
+      submittedDate: '2026-09-20',
+    };
+    const plan = reminderPlanFor(s, report.id);
+    const steps = planSchedule(report, plan, s.grants.reminderDefaults, '2026-10-07');
+    expect(steps.map(x => [x.offset, x.state])).toEqual([
+      [30, 'sent'],
+      [14, 'sent'],
+      [7, 'off'],
+      [3, 'off'],
+      [0, 'off'],
+    ]);
   });
 
   it('a report with no plan follows the defaults, sent to the owner and Denise', () => {
