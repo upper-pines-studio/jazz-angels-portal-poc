@@ -11,7 +11,7 @@ import {
   Tabs,
   Tag,
 } from '../../../../design-system';
-import { money, useStore } from '../../../../core';
+import { money, useCan, useStore } from '../../../../core';
 import { usePageHeader } from '../../../../app/Shell';
 import { useToast } from '../../../../app/ToastHost';
 import { WithPanel } from '../../../../app/components/SidePanel';
@@ -96,6 +96,10 @@ function UndoButton({ onUndo }: { onUndo: () => void }) {
  */
 export default function Transactions() {
   const { state, today, actions } = useStore();
+  const allowed = useCan();
+  const mayAssign = allowed('transactions', 'edit');
+  const maySync = allowed('quickbooks-sync');
+  const mayConnect = allowed('quickbooks-connect');
   const toast = useToast();
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -120,7 +124,8 @@ export default function Transactions() {
       : 'all';
   const grantFilter = params.get('grant') ?? undefined;
   const lineFilter = params.get('line') ?? undefined;
-  const panelTx = transactionById(state, params.get('tx') ?? undefined);
+  // The split panel is for assigning, so a View role never opens it.
+  const panelTx = mayAssign ? transactionById(state, params.get('tx') ?? undefined) : undefined;
 
   /** Change the URL in place. Any filter change goes back to the first page. */
   const patch = React.useCallback(
@@ -143,7 +148,7 @@ export default function Transactions() {
 
   // --- Header ----------------------------------------------------------------
   const sync = () => {
-    if (syncing || !qb.connected) return;
+    if (syncing || !qb.connected || !maySync) return;
     setSyncing(true);
     timer.current = window.setTimeout(() => {
       const n = actions.grants.syncQuickBooks();
@@ -168,7 +173,7 @@ export default function Transactions() {
     subtitle: qb.connected
       ? `QuickBooks Online is connected · Last synced ${syncedLabel(state, today)} · Read only, nothing is written back`
       : `QuickBooks is not connected · Last synced ${syncedLabel(state, today)} · Nothing new arrives until it is connected again`,
-    actions: (
+    actions: maySync ? (
       <Button
         variant="secondary"
         size="sm"
@@ -178,7 +183,7 @@ export default function Transactions() {
       >
         {syncing ? 'Syncing' : 'Sync now'}
       </Button>
-    ),
+    ) : undefined,
   });
 
   // --- Rows ------------------------------------------------------------------
@@ -384,9 +389,11 @@ export default function Transactions() {
             <strong>QuickBooks is not connected.</strong> What is already here stays, and you can
             keep assigning it. Nothing new comes in until QuickBooks is connected again.
           </div>
-          <Button variant="secondary" size="sm" onClick={() => nav('/settings')}>
-            Open Settings
-          </Button>
+          {mayConnect && (
+            <Button variant="secondary" size="sm" onClick={() => nav('/settings')}>
+              Open Settings
+            </Button>
+          )}
         </div>
       )}
 
@@ -435,7 +442,7 @@ export default function Transactions() {
                 style={{ width: '100%' }}
               />
             </div>
-            {tab === 'to-assign' && waiting.length > 0 && (
+            {mayAssign && tab === 'to-assign' && waiting.length > 0 && (
               <div className="tx-filters__accept">
                 <Button
                   variant="secondary"
@@ -475,8 +482,8 @@ export default function Transactions() {
               tab={tab}
               connected={qb.connected}
               syncing={syncing}
-              onSync={sync}
-              onSettings={() => nav('/settings')}
+              onSync={maySync ? sync : undefined}
+              onSettings={mayConnect ? () => nav('/settings') : undefined}
               lastSynced={syncedLabel(state, today)}
             />
           ) : rows.length === 0 ? (
@@ -516,6 +523,7 @@ export default function Transactions() {
                   draft={draft}
                   changing={changing.has(tx.id)}
                   on={on}
+                  mayAssign={mayAssign}
                 />
               ))}
             </div>
@@ -574,8 +582,9 @@ function TabEmpty({
   tab: Tab;
   connected: boolean;
   syncing: boolean;
-  onSync: () => void;
-  onSettings: () => void;
+  /** Left out when the role may not sync, or connect, QuickBooks. */
+  onSync?: () => void;
+  onSettings?: () => void;
   lastSynced: string;
 }) {
   if (tab === 'to-assign') {
@@ -589,21 +598,23 @@ function TabEmpty({
             : 'Every transaction is on a budget line or set aside. Connect QuickBooks in Settings to bring in new spending.'
         }
         action={
-          connected ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              iconLeft={<Icon name="refresh-cw" size={15} />}
-              disabled={syncing}
-              onClick={onSync}
-            >
-              {syncing ? 'Syncing' : 'Sync now'}
-            </Button>
-          ) : (
-            <Button variant="secondary" size="sm" onClick={onSettings}>
-              Open Settings
-            </Button>
-          )
+          connected
+            ? onSync && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  iconLeft={<Icon name="refresh-cw" size={15} />}
+                  disabled={syncing}
+                  onClick={onSync}
+                >
+                  {syncing ? 'Syncing' : 'Sync now'}
+                </Button>
+              )
+            : onSettings && (
+                <Button variant="secondary" size="sm" onClick={onSettings}>
+                  Open Settings
+                </Button>
+              )
         }
       />
     );

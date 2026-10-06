@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, EmptyState, Icon } from '../../../../design-system';
-import { dateLong, money, useStore } from '../../../../core';
+import { dateLong, money, useCan, useStore } from '../../../../core';
 import { awardLetter, grantLines, isMapped, lineMatched, linePaces } from '../../domain';
 import type { BudgetLine, Grant } from '../../domain';
 import { CATEGORY_ACCOUNTS } from '../../domain/seed-money';
@@ -32,13 +32,15 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
  */
 export function BudgetTab({ grant }: { grant: Grant }) {
   const { state, today, actions } = useStore();
+  // Budget lines are award records.
+  const mayEdit = useCan()('award', 'edit');
   const toast = useToast();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   // `?edit=<lineId>` or `?edit=new` opens a row in the editor; it is read once, then dropped.
   const [editing, setEditing] = React.useState<Editing>(() => {
     const id = params.get('edit');
-    return id ? { id } : null;
+    return id && mayEdit ? { id } : null;
   });
   React.useEffect(() => {
     if (!params.has('edit')) return;
@@ -83,6 +85,7 @@ export function BudgetTab({ grant }: { grant: Grant }) {
 
   /** Open a row for editing, unless another row has changes that would be lost. */
   const open = (next: Editing) => {
+    if (!mayEdit) return;
     if (editing && next && editing.id === next.id) {
       if (next.removing && !editing.removing) setEditing(next);
       return;
@@ -187,16 +190,18 @@ export function BudgetTab({ grant }: { grant: Grant }) {
       <span className="budget-band__note">
         A QuickBooks transaction matches a line when its account and class both match.
       </span>
-      <span className="budget-band__action">
-        <Button
-          variant="secondary"
-          size="sm"
-          iconLeft={<Icon name="plus" size={14} />}
-          onClick={() => open({ id: 'new' })}
-        >
-          Add line
-        </Button>
-      </span>
+      {mayEdit && (
+        <span className="budget-band__action">
+          <Button
+            variant="secondary"
+            size="sm"
+            iconLeft={<Icon name="plus" size={14} />}
+            onClick={() => open({ id: 'new' })}
+          >
+            Add line
+          </Button>
+        </span>
+      )}
     </div>
   );
 
@@ -219,20 +224,26 @@ export function BudgetTab({ grant }: { grant: Grant }) {
         <EmptyState
           icon={<Icon name="list" size={22} />}
           title="No budget lines yet"
-          message="Lines appear here once you add the categories from the approved budget. Each one maps to QuickBooks accounts and a class, so spending finds its own way here."
+          message={
+            mayEdit
+              ? 'Lines appear here once you add the categories from the approved budget. Each one maps to QuickBooks accounts and a class, so spending finds its own way here.'
+              : 'Lines appear here once someone adds the categories from the approved budget.'
+          }
           action={
-            <span className="budget-empty-actions">
-              <Button variant="primary" onClick={startFromUsual}>
-                Start from the usual five categories
-              </Button>
-              <Button
-                variant="secondary"
-                iconLeft={<Icon name="plus" size={14} />}
-                onClick={() => open({ id: 'new' })}
-              >
-                Add line
-              </Button>
-            </span>
+            mayEdit && (
+              <span className="budget-empty-actions">
+                <Button variant="primary" onClick={startFromUsual}>
+                  Start from the usual five categories
+                </Button>
+                <Button
+                  variant="secondary"
+                  iconLeft={<Icon name="plus" size={14} />}
+                  onClick={() => open({ id: 'new' })}
+                >
+                  Add line
+                </Button>
+              </span>
+            )
           }
         />
       </div>
@@ -251,7 +262,7 @@ export function BudgetTab({ grant }: { grant: Grant }) {
     );
 
   const row = (line: BudgetLine) => {
-    if (editing?.id === line.id) {
+    if (mayEdit && editing?.id === line.id) {
       return (
         <BudgetLineEditor
           key={`${line.id}-edit`}
@@ -272,7 +283,8 @@ export function BudgetTab({ grant }: { grant: Grant }) {
         key={line.id}
         data-budget-line={line.id}
         className={`budget-row budget-row--line${highlight === line.id ? ' is-highlighted' : ''}`}
-        onClick={() => open({ id: line.id })}
+        onClick={mayEdit ? () => open({ id: line.id }) : undefined}
+        style={mayEdit ? undefined : { cursor: 'default' }}
       >
         <span className="budget-cell budget-cell--cat">
           <span className="budget-cat">{line.category}</span>
@@ -292,7 +304,15 @@ export function BudgetTab({ grant }: { grant: Grant }) {
           <BudgetRowMenu
             label={`Actions for ${line.category}`}
             items={[
-              { label: 'Edit line', icon: 'pencil', onSelect: () => open({ id: line.id }) },
+              ...(mayEdit
+                ? [
+                    {
+                      label: 'Edit line',
+                      icon: 'pencil',
+                      onSelect: () => open({ id: line.id }),
+                    },
+                  ]
+                : []),
               {
                 label: 'View transactions',
                 icon: 'receipt',
@@ -303,12 +323,16 @@ export function BudgetTab({ grant }: { grant: Grant }) {
                 icon: 'gauge',
                 onSelect: () => navigate(budgetPacingHref(grant.id)),
               },
-              {
-                label: 'Remove line',
-                icon: 'trash-2',
-                danger: true,
-                onSelect: () => open({ id: line.id, removing: true }),
-              },
+              ...(mayEdit
+                ? [
+                    {
+                      label: 'Remove line',
+                      icon: 'trash-2',
+                      danger: true,
+                      onSelect: () => open({ id: line.id, removing: true }),
+                    },
+                  ]
+                : []),
             ]}
           />
         </span>
@@ -344,7 +368,7 @@ export function BudgetTab({ grant }: { grant: Grant }) {
 
           {lines.map(row)}
 
-          {editing?.id === 'new' && (
+          {mayEdit && editing?.id === 'new' && (
             <BudgetLineEditor
               key="new"
               grant={grant}

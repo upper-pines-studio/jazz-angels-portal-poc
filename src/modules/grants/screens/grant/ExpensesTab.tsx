@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge, Button, EmptyState, Icon } from '../../../../design-system';
-import { dateShort, money, useStore } from '../../../../core';
+import { dateShort, money, useCan, useStore } from '../../../../core';
 import {
   accountLabel,
   backupSummary,
@@ -41,6 +41,10 @@ function slug(name: string): string {
  */
 export function ExpensesTab({ grant }: { grant: Grant }) {
   const { state, today } = useStore();
+  const allowed = useCan();
+  // Expenses are award records.
+  const mayLog = allowed('award', 'edit');
+  const mayOpenTransactions = allowed('transactions');
   const toast = useToast();
   const nav = useNavigate();
   const view = useExpenseView(grant);
@@ -128,7 +132,7 @@ export function ExpensesTab({ grant }: { grant: Grant }) {
     });
   };
 
-  const logDialog = logging && (
+  const logDialog = logging && mayLog && (
     <LogExpenseDialog
       grant={grant}
       onClose={() => setLogging(false)}
@@ -152,21 +156,27 @@ export function ExpensesTab({ grant }: { grant: Grant }) {
           title="Nothing spent against this grant yet"
           message="Expenses arrive from QuickBooks. Assign a transaction to one of this grant's budget lines on the Transactions screen and it shows up here, ready for its receipt."
           action={
-            <div
-              style={{
-                display: 'flex',
-                gap: 'var(--space-3)',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-              }}
-            >
-              <Button variant="primary" onClick={() => nav('/transactions?tab=to-assign')}>
-                Go to Transactions
-              </Button>
-              <Button variant="ghost" onClick={() => setLogging(true)}>
-                Log an expense by hand
-              </Button>
-            </div>
+            (mayOpenTransactions || mayLog) && (
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 'var(--space-3)',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                }}
+              >
+                {mayOpenTransactions && (
+                  <Button variant="primary" onClick={() => nav('/transactions?tab=to-assign')}>
+                    Go to Transactions
+                  </Button>
+                )}
+                {mayLog && (
+                  <Button variant="ghost" onClick={() => setLogging(true)}>
+                    Log an expense by hand
+                  </Button>
+                )}
+              </div>
+            )
           }
         />
         {logDialog}
@@ -318,17 +328,19 @@ export function ExpensesTab({ grant }: { grant: Grant }) {
         </div>
       )}
 
-      <div className="ja-exp__foot">
-        <Button
-          variant="ghost"
-          size="sm"
-          iconLeft={<Icon name="pencil-line" size={14} />}
-          onClick={() => setLogging(true)}
-        >
-          Log an expense by hand
-        </Button>
-        <span>For something that never went through QuickBooks.</span>
-      </div>
+      {mayLog && (
+        <div className="ja-exp__foot">
+          <Button
+            variant="ghost"
+            size="sm"
+            iconLeft={<Icon name="pencil-line" size={14} />}
+            onClick={() => setLogging(true)}
+          >
+            Log an expense by hand
+          </Button>
+          <span>For something that never went through QuickBooks.</span>
+        </div>
+      )}
 
       {logDialog}
     </div>

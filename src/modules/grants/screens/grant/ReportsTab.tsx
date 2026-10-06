@@ -12,7 +12,7 @@ import {
   Input,
   Select,
 } from '../../../../design-system';
-import { dateShort, useStore } from '../../../../core';
+import { dateShort, useCan, useStore } from '../../../../core';
 import { isPostAward, isReportOpen } from '../../domain';
 import type { Grant, Report, ReportStatus } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
@@ -40,6 +40,8 @@ type ReportKind = Report['kind'];
 
 export function ReportsTab({ grant }: { grant: Grant }) {
   const { state, today, actions } = useStore();
+  // Reports are award records.
+  const mayEdit = useCan()('award', 'edit');
   const toast = useToast();
   const nav = useNavigate();
   const [adding, setAdding] = React.useState(false);
@@ -143,7 +145,7 @@ export function ReportsTab({ grant }: { grant: Grant }) {
                   }}
                 >
                   <Badge tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Badge>
-                  {isReportOpen(r) && (
+                  {mayEdit && isReportOpen(r) && (
                     <LinkButton
                       onClick={e => {
                         e.stopPropagation();
@@ -162,7 +164,7 @@ export function ReportsTab({ grant }: { grant: Grant }) {
               width: '1fr',
               wrap: true,
               render: (r: Report) => {
-                if (deleting === r.id) {
+                if (mayEdit && deleting === r.id) {
                   return (
                     <span
                       style={{
@@ -196,7 +198,7 @@ export function ReportsTab({ grant }: { grant: Grant }) {
               width: '120px',
               align: 'right',
               render: (r: Report) =>
-                deleting === r.id ? (
+                mayEdit && deleting === r.id ? (
                   <span
                     style={{
                       display: 'inline-flex',
@@ -231,40 +233,48 @@ export function ReportsTab({ grant }: { grant: Grant }) {
                         Reminders
                       </Button>
                     )}
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 'var(--space-2)',
-                      }}
-                    >
-                      <IconButton
-                        label={`Edit the ${label(r).toLowerCase()}`}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditing(r)}
+                    {mayEdit && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 'var(--space-2)',
+                        }}
                       >
-                        <Icon name="pencil" size={14} />
-                      </IconButton>
-                      <DeleteX
-                        label={`Delete the ${label(r).toLowerCase()}`}
-                        onClick={() => setDeleting(r.id)}
-                      />
-                    </span>
+                        <IconButton
+                          label={`Edit the ${label(r).toLowerCase()}`}
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditing(r)}
+                        >
+                          <Icon name="pencil" size={14} />
+                        </IconButton>
+                        <DeleteX
+                          label={`Delete the ${label(r).toLowerCase()}`}
+                          onClick={() => setDeleting(r.id)}
+                        />
+                      </span>
+                    )}
                   </span>
                 ),
             },
           ]}
           rows={rows}
-          emptyLabel="No reports scheduled yet. Add the ones the award letter asks for."
+          emptyLabel={
+            mayEdit
+              ? 'No reports scheduled yet. Add the ones the award letter asks for.'
+              : 'No reports scheduled yet.'
+          }
         />
       </TableScroll>
 
-      <FooterBand>
-        <AddButton label="Add report" onClick={() => setAdding(true)} />
-      </FooterBand>
+      {mayEdit && (
+        <FooterBand>
+          <AddButton label="Add report" onClick={() => setAdding(true)} />
+        </FooterBand>
+      )}
 
-      {adding && (
+      {adding && mayEdit && (
         <ReportDialog
           today={today}
           onClose={() => setAdding(false)}
@@ -286,7 +296,7 @@ export function ReportsTab({ grant }: { grant: Grant }) {
         />
       )}
 
-      {editing && (
+      {editing && mayEdit && (
         <ReportDialog
           today={today}
           report={editing}

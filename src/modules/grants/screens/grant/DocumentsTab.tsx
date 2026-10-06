@@ -9,7 +9,7 @@ import {
   Input,
   Select,
 } from '../../../../design-system';
-import { dateShort, useStore } from '../../../../core';
+import { dateShort, useCan, useStore } from '../../../../core';
 import type { DocumentKind, DocumentStatus, Grant, GrantDocument } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
 import { AddButton, DialogFields, FooterBand, SectionBand } from './parts';
@@ -59,6 +59,7 @@ const STATUS_OPTIONS = (Object.keys(STATUS_LABEL) as DocumentStatus[]).map(s => 
 
 export function DocumentsTab({ grant }: { grant: Grant }) {
   const { state, actions } = useStore();
+  const mayEdit = useCan()('grants', 'edit');
   const toast = useToast();
   const [editing, setEditing] = React.useState<GrantDocument | null>(null);
   const [adding, setAdding] = React.useState(false);
@@ -130,16 +131,22 @@ export function DocumentsTab({ grant }: { grant: Grant }) {
             },
           ]}
           rows={rows}
-          onRowClick={(r: GrantDocument) => setEditing(r)}
-          emptyLabel="No documents listed yet. Add the first one below."
+          onRowClick={mayEdit ? (r: GrantDocument) => setEditing(r) : undefined}
+          emptyLabel={
+            mayEdit
+              ? 'No documents listed yet. Add the first one below.'
+              : 'No documents listed yet.'
+          }
         />
       </TableScroll>
 
-      <FooterBand>
-        <AddButton label="Add document" onClick={() => setAdding(true)} />
-      </FooterBand>
+      {mayEdit && (
+        <FooterBand>
+          <AddButton label="Add document" onClick={() => setAdding(true)} />
+        </FooterBand>
+      )}
 
-      {adding && (
+      {adding && mayEdit && (
         <DocumentDialog
           title="Add document"
           onClose={() => setAdding(false)}
@@ -150,7 +157,7 @@ export function DocumentsTab({ grant }: { grant: Grant }) {
           }}
         />
       )}
-      {editing && (
+      {editing && mayEdit && (
         <DocumentDialog
           title="Edit document"
           doc={editing}

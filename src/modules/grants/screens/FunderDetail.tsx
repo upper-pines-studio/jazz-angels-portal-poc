@@ -7,13 +7,14 @@ import { KV } from '../../../app/components/badges';
 import { FunderFields, capitalise, type FunderDraft } from './Funders';
 import { TableScroll } from '../../../app/components/TableScroll';
 import { Card, DataTable, Button, Icon, Dialog, EmptyState } from '../../../design-system';
-import { useStore, money } from '../../../core';
+import { useStore, useCan, money } from '../../../core';
 import { funderById, funderTotals, grantsByFunder } from '../domain';
 import type { Grant } from '../domain';
 
 export default function FunderDetail() {
   const { id = '' } = useParams();
   const { state, actions } = useStore();
+  const mayEdit = useCan()('grants', 'edit');
   const nav = useNavigate();
   const toast = useToast();
 
@@ -28,21 +29,22 @@ export default function FunderDetail() {
       ? [capitalise(funder.type), funder.contactName].filter(Boolean).join(' · ')
       : undefined,
     crumbs: [{ label: 'Funders', href: '/funders' }, { label: funder ? funder.name : 'Not found' }],
-    actions: funder ? (
-      <Button
-        variant="secondary"
-        size="sm"
-        iconLeft={<Icon name="pencil" size={15} />}
-        onClick={() => {
-          const { id: _id, ...rest } = funder;
-          setDraft(rest);
-          setShowErrors(false);
-          setEditing(true);
-        }}
-      >
-        Edit funder
-      </Button>
-    ) : undefined,
+    actions:
+      funder && mayEdit ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          iconLeft={<Icon name="pencil" size={15} />}
+          onClick={() => {
+            const { id: _id, ...rest } = funder;
+            setDraft(rest);
+            setShowErrors(false);
+            setEditing(true);
+          }}
+        >
+          Edit funder
+        </Button>
+      ) : undefined,
   });
 
   if (!funder) {
@@ -126,7 +128,11 @@ export default function FunderDetail() {
             <DataTable
               rows={grants.map(g => ({ id: g.id, grant: g }))}
               onRowClick={(r: { id: string }) => nav(`/grants/${r.id}`)}
-              emptyLabel="No grants with this funder yet. Add one from the Grants screen."
+              emptyLabel={
+                mayEdit
+                  ? 'No grants with this funder yet. Add one from the Grants screen.'
+                  : 'No grants with this funder yet.'
+              }
               columns={[
                 {
                   key: 'title',
@@ -174,7 +180,7 @@ export default function FunderDetail() {
         </Card>
       </div>
 
-      {editing && draft && (
+      {editing && draft && mayEdit && (
         <Dialog
           open
           width={560}

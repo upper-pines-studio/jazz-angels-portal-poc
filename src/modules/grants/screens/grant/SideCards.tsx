@@ -10,7 +10,15 @@ import {
   Select,
   Textarea,
 } from '../../../../design-system';
-import { dateLong, dateRange, money, programName, staffById, useStore } from '../../../../core';
+import {
+  dateLong,
+  dateRange,
+  money,
+  programName,
+  staffById,
+  useCan,
+  useStore,
+} from '../../../../core';
 import { funderById, isPostAward } from '../../domain';
 import type { ProgramId } from '../../../../core';
 import type { Grant, GrantDates, Restriction } from '../../domain';
@@ -53,6 +61,7 @@ export function SideCards({ grant }: { grant: Grant }) {
 
 function KeyDatesCard({ grant }: { grant: Grant }) {
   const { state } = useStore();
+  const mayEdit = useCan()('grants', 'edit');
   const [editing, setEditing] = React.useState(false);
   const d = grant.dates;
   const reports = !isPostAward(grant.phase)
@@ -79,7 +88,7 @@ function KeyDatesCard({ grant }: { grant: Grant }) {
     <Card
       title="Key dates"
       padding={CARD_BODY}
-      action={<EditAction onClick={() => setEditing(true)} />}
+      action={mayEdit ? <EditAction onClick={() => setEditing(true)} /> : undefined}
     >
       {rows.length === 0 ? (
         <p
@@ -90,7 +99,9 @@ function KeyDatesCard({ grant }: { grant: Grant }) {
             color: 'var(--text-muted)',
           }}
         >
-          No dates yet. Add them so they show up on the deadlines list.
+          {mayEdit
+            ? 'No dates yet. Add them so they show up on the deadlines list.'
+            : 'No dates yet.'}
         </p>
       ) : (
         rows.map(([label, value]) => (
@@ -101,7 +112,7 @@ function KeyDatesCard({ grant }: { grant: Grant }) {
           />
         ))
       )}
-      {editing && <KeyDatesDialog grant={grant} onClose={() => setEditing(false)} />}
+      {editing && mayEdit && <KeyDatesDialog grant={grant} onClose={() => setEditing(false)} />}
     </Card>
   );
 }
@@ -262,6 +273,7 @@ function FunderLink({ funderId }: { funderId: string }) {
 
 function DetailsCard({ grant }: { grant: Grant }) {
   const { state } = useStore();
+  const mayEdit = useCan()('grants', 'edit');
   const [editing, setEditing] = React.useState(false);
   const owner = staffById(state, grant.ownerId);
 
@@ -269,7 +281,7 @@ function DetailsCard({ grant }: { grant: Grant }) {
     <Card
       title="Details"
       padding={CARD_BODY}
-      action={<EditAction onClick={() => setEditing(true)} />}
+      action={mayEdit ? <EditAction onClick={() => setEditing(true)} /> : undefined}
     >
       <KV
         k={<span style={{ fontSize: 'var(--text-xs)' }}>Requested</span>}
@@ -312,7 +324,7 @@ function DetailsCard({ grant }: { grant: Grant }) {
           {grant.notes}
         </p>
       )}
-      {editing && <DetailsDialog grant={grant} onClose={() => setEditing(false)} />}
+      {editing && mayEdit && <DetailsDialog grant={grant} onClose={() => setEditing(false)} />}
     </Card>
   );
 }

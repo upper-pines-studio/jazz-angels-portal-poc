@@ -353,6 +353,9 @@ describe('the rules', () => {
     expect(ran(a.addGrant({}))).toBe(true);
     expect(ran(a.transition('g', 'submitted'))).toBe(true);
     expect(ran(a.transition('g', 'awarded'))).toBe(false);
+    expect(ran(a.transition('g', 'declined'))).toBe(true);
+    expect(ran(a.updateGrant('g', { notes: 'x' }))).toBe(true);
+    expect(ran(a.updateGrant('g', { amountAwarded: 5000 }))).toBe(false);
     expect(ran(a.addBudgetLine({}))).toBe(false);
     expect(ran(a.assignTransaction('t', []))).toBe(false);
   });

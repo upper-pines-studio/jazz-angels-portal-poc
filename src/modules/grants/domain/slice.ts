@@ -2,10 +2,10 @@ import type { ActionRule, AnyAction, ModuleSlice, SliceContext } from '../../../
 import { can } from '../../../core/permissions';
 import { makeCoreSeed } from '../../../core/seed';
 import { acceptableSuggestions, splitByPercent } from './money';
-import { availableTransitions, isPreAward } from './phases';
+import { availableTransitions, isPostAward } from './phases';
 import { makeSeed } from './seed';
 import { instantiateDocumentRegister, instantiateTemplate } from './templates';
-import type { PortalState } from '../../../core/types';
+import type { PortalState, Role } from '../../../core/types';
 import type {
   Activity,
   Allocation,
@@ -828,6 +828,16 @@ const COLLECTIONS: Array<keyof GrantsState> = [
 // Who may change what (decision 0001)
 // ---------------------------------------------------------------------------
 
+/**
+ * May this role move a grant to this phase? Any move needs the pipeline row;
+ * a move into an awarded phase records the award, so it needs "Award, budget,
+ * reports" too. Declined and withdrawn are pipeline outcomes. The phase
+ * buttons and the store both ask this.
+ */
+export function mayMoveTo(role: Role, to: Phase): boolean {
+  return can(role, 'grants', 'edit') && (!isPostAward(to) || can(role, 'award', 'edit'));
+}
+
 /** A file that backs up an expense is money; any other file goes with the grant. */
 function fileSubject(expenseId: string | undefined) {
   return expenseId ? 'award' : 'grants';
@@ -845,10 +855,11 @@ const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
   addFunder: 'grants',
   updateFunder: 'grants',
   addGrant: 'grants',
-  updateGrant: 'grants',
-  // Moving a grant into an awarded phase records the award, so it needs both rows.
-  transition: (user, _state, _grantId, to) =>
-    can(user.role, 'grants', 'edit') && (isPreAward(to) || can(user.role, 'award', 'edit')),
+  // The amount awarded is the award's; the rest of a grant's record is the pipeline's.
+  updateGrant: (user, _state, _id, patch) =>
+    can(user.role, 'grants', 'edit') &&
+    (patch.amountAwarded === undefined || can(user.role, 'award', 'edit')),
+  transition: (user, _state, _grantId, to) => mayMoveTo(user.role, to),
 
   addTask: 'grants',
   updateTask: 'grants',

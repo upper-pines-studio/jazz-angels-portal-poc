@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { Button } from '../../../../design-system';
-import { dateShort, daysUntil, useStore } from '../../../../core';
+import { dateShort, daysUntil, useCan, useStore } from '../../../../core';
 import {
   REMINDER_OFFSETS,
   firstNames,
@@ -38,6 +38,8 @@ const longDay = (iso: string) => format(parseISO(iso), 'EEEE, MMM d');
  */
 export function ReminderPanel({ report, onClose }: { report: Report; onClose: () => void }) {
   const { state, today, user, actions } = useStore();
+  // Reminder plans are deadlines: a grants record. A View role reads the plan as saved.
+  const mayEdit = useCan()('grants', 'edit');
   const toast = useToast();
   const saved = reminderPlanFor(state, report.id);
   const defaults = state.grants.reminderDefaults;
@@ -143,7 +145,7 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
     (a, b) => Number(b.id === grant?.ownerId) - Number(a.id === grant?.ownerId),
   );
 
-  const footer = confirmClose ? (
+  const footer = !mayEdit ? undefined : confirmClose ? (
     <>
       <span className="ja-rm-note" style={{ marginRight: 'auto', color: 'var(--text-strong)' }}>
         Discard your changes?
@@ -185,7 +187,11 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
           background: 'var(--surface-sunken)',
         }}
       >
-        {saved.isDefault ? (
+        {!mayEdit ? (
+          <span className="ja-rm-note">
+            {saved.isDefault ? 'Following the office defaults.' : 'This report has its own plan.'}
+          </span>
+        ) : saved.isDefault ? (
           <span className="ja-rm-note">
             Following the office defaults{dirty ? '. Saving gives this report its own plan.' : '.'}
           </span>
@@ -199,7 +205,7 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
 
       <PanelSection title="When to send">
         <div>
-          {REMINDER_OFFSETS.map(o => {
+          {REMINDER_OFFSETS.filter(o => mayEdit || saved.offsets.includes(o)).map(o => {
             const date = dayBefore(due, o);
             const past = date <= today;
             const sent = past && saved.offsets.includes(o);
@@ -212,6 +218,14 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
             ) : step?.state === 'next' ? (
               <span className="ja-rm-tag is-next">Next</span>
             ) : null;
+            if (!mayEdit)
+              return (
+                <div key={o} className="ja-rm-check" style={{ cursor: 'default' }}>
+                  <span className="ja-rm-check__text">{offsetLabel(o)}</span>
+                  <span className="ja-rm-check__date">{dateShort(date)}</span>
+                  <span className="ja-rm-check__tag">{tag}</span>
+                </div>
+              );
             return (
               <CheckRow
                 key={o}
@@ -235,25 +249,41 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
 
       <PanelSection title="Who gets the email">
         <div>
-          {staff.map(s => (
-            <CheckRow
-              key={s.id}
-              checked={draft.recipientIds.includes(s.id)}
-              onChange={on => toggleWho(s.id, on)}
-              after={
-                <span className="ja-rm-check__role">
-                  {s.id === grant?.ownerId ? 'Grant owner' : s.title}
+          {staff.map(s =>
+            !mayEdit ? (
+              draft.recipientIds.includes(s.id) && (
+                <div key={s.id} className="ja-rm-check" style={{ cursor: 'default' }}>
+                  <span className="ja-rm-check__text">
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                      <OwnerAvatar staffId={s.id} size={24} />
+                      {s.name}
+                    </span>
+                  </span>
+                  <span className="ja-rm-check__role">
+                    {s.id === grant?.ownerId ? 'Grant owner' : s.title}
+                  </span>
+                </div>
+              )
+            ) : (
+              <CheckRow
+                key={s.id}
+                checked={draft.recipientIds.includes(s.id)}
+                onChange={on => toggleWho(s.id, on)}
+                after={
+                  <span className="ja-rm-check__role">
+                    {s.id === grant?.ownerId ? 'Grant owner' : s.title}
+                  </span>
+                }
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                  <OwnerAvatar staffId={s.id} size={24} />
+                  {s.name}
                 </span>
-              }
-            >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                <OwnerAvatar staffId={s.id} size={24} />
-                {s.name}
-              </span>
-            </CheckRow>
-          ))}
+              </CheckRow>
+            ),
+          )}
         </div>
-        {noOne && (
+        {mayEdit && noOne && (
           <p
             role="alert"
             style={{
@@ -268,38 +298,42 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
         )}
       </PanelSection>
 
-      <PanelSection>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ font: 'var(--type-label)', color: 'var(--text-strong)' }}>
-              Keep reminding after the due date
+      {(mayEdit || draft.keepReminding) && (
+        <PanelSection>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ font: 'var(--type-label)', color: 'var(--text-strong)' }}>
+                Keep reminding after the due date
+              </div>
+              <div
+                style={{
+                  marginTop: 2,
+                  font: 'var(--type-body-sm)',
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                Every {defaults.repeatEveryDays} {defaults.repeatEveryDays === 1 ? 'day' : 'days'}{' '}
+                until someone marks it submitted.
+                {draft.keepReminding && next && next.offset === undefined && (
+                  <> Next one goes out {dateShort(next.date)}.</>
+                )}
+              </div>
             </div>
-            <div
-              style={{
-                marginTop: 2,
-                font: 'var(--type-body-sm)',
-                fontSize: 'var(--text-xs)',
-                color: 'var(--text-muted)',
-              }}
-            >
-              Every {defaults.repeatEveryDays} {defaults.repeatEveryDays === 1 ? 'day' : 'days'}{' '}
-              until someone marks it submitted.
-              {draft.keepReminding && next && next.offset === undefined && (
-                <> Next one goes out {dateShort(next.date)}.</>
-              )}
-            </div>
+            {mayEdit && (
+              <ToggleSwitch
+                checked={draft.keepReminding}
+                label="Keep reminding after the due date"
+                onChange={on => setDraft(d => ({ ...d, keepReminding: on }))}
+              />
+            )}
           </div>
-          <ToggleSwitch
-            checked={draft.keepReminding}
-            label="Keep reminding after the due date"
-            onChange={on => setDraft(d => ({ ...d, keepReminding: on }))}
-          />
-        </div>
-      </PanelSection>
+        </PanelSection>
+      )}
 
       <PanelSection
         title="Email preview"
-        action={<LinkButton onClick={sendTest}>Send a test to me</LinkButton>}
+        action={mayEdit && <LinkButton onClick={sendTest}>Send a test to me</LinkButton>}
       >
         {next ? (
           <div className="ja-rm-mail">
