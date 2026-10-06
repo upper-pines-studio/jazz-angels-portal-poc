@@ -15,7 +15,7 @@ import {
   Select,
   Textarea,
 } from '../../../design-system';
-import { useStore, money, dateShort } from '../../../core';
+import { useStore, useCan, money, dateShort } from '../../../core';
 import { funderTotals, grantsByFunder } from '../domain';
 import type { Funder, FunderType } from '../domain';
 
@@ -118,6 +118,7 @@ export function FunderFields({
 
 export default function Funders() {
   const { state } = useStore();
+  const mayEdit = useCan()('grants', 'edit');
   const nav = useNavigate();
   const toast = useToast();
   const [adding, setAdding] = React.useState(false);
@@ -130,7 +131,7 @@ export default function Funders() {
   usePageHeader({
     title: 'Funders',
     subtitle: `${state.grants.funders.length} funders · ${money(allAwarded)} awarded all time`,
-    actions: (
+    actions: mayEdit ? (
       <Button
         variant="primary"
         size="sm"
@@ -143,7 +144,7 @@ export default function Funders() {
       >
         Add funder
       </Button>
-    ),
+    ) : undefined,
   });
 
   function lastActivity(funderId: string): string | undefined {
@@ -175,7 +176,11 @@ export default function Funders() {
           <DataTable
             onRowClick={(r: Row) => nav(`/funders/${r.id}`)}
             rows={rows}
-            emptyLabel="No funders yet. Add one to start tracking their grants."
+            emptyLabel={
+              mayEdit
+                ? 'No funders yet. Add one to start tracking their grants.'
+                : 'No funders yet.'
+            }
             columns={[
               {
                 key: 'name',
@@ -233,7 +238,7 @@ export default function Funders() {
           />
         </TableScroll>
       </Card>
-      {adding && (
+      {adding && mayEdit && (
         <Dialog
           open
           width={560}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Dialog, Field, Icon, IconButton, Select } from '../../../../design-system';
-import { useStore } from '../../../../core';
+import { useCan, useStore } from '../../../../core';
 import { awardLetter, grantFiles, isPostAward } from '../../domain';
 import type { Grant, GrantFile, GrantFileKind } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
@@ -29,6 +29,8 @@ const KIND_OPTIONS = GRANT_FILE_KINDS.map(k => ({ value: k, label: GRANT_KIND_LA
 
 export function StoredFiles({ grant }: { grant: Grant }) {
   const { state, actions } = useStore();
+  // Files kept with the grant itself (not an expense's backup) are grants records.
+  const mayEdit = useCan()('grants', 'edit');
   const toast = useToast();
   const storeFile = useStoreGrantFile();
   const removeFile = useRemoveGrantFile();
@@ -116,9 +118,11 @@ export function StoredFiles({ grant }: { grant: Grant }) {
             color: 'var(--text-muted)',
           }}
         >
-          {isPostAward(grant.phase)
-            ? 'Nothing stored yet. Add the award letter or the signed agreement below and it opens right here, for anyone in the office.'
-            : 'Nothing stored yet. Add a file below, such as the final proposal or a letter from the funder, and it opens right here for anyone in the office.'}
+          {!mayEdit
+            ? 'Nothing stored yet.'
+            : isPostAward(grant.phase)
+              ? 'Nothing stored yet. Add the award letter or the signed agreement below and it opens right here, for anyone in the office.'
+              : 'Nothing stored yet. Add a file below, such as the final proposal or a letter from the funder, and it opens right here for anyone in the office.'}
         </p>
       )}
       {files.map(f => (
@@ -127,7 +131,7 @@ export function StoredFiles({ grant }: { grant: Grant }) {
           file={f}
           confirming={confirming === f.id}
           onOpen={() => setViewing(f)}
-          onAskRemove={() => setConfirming(f.id)}
+          onAskRemove={mayEdit ? () => setConfirming(f.id) : undefined}
           onCancelRemove={() => setConfirming(null)}
           onRemove={() => {
             removeFile(f);
@@ -138,14 +142,16 @@ export function StoredFiles({ grant }: { grant: Grant }) {
           }}
         />
       ))}
-      <div style={{ padding: 'var(--space-3) var(--space-6) var(--space-5)' }}>
-        <FileDrop
-          onFiles={onFiles}
-          hint="PDF, JPG, PNG or HEIC, up to 20 MB each. You pick what each one is next."
-        />
-      </div>
+      {mayEdit && (
+        <div style={{ padding: 'var(--space-3) var(--space-6) var(--space-5)' }}>
+          <FileDrop
+            onFiles={onFiles}
+            hint="PDF, JPG, PNG or HEIC, up to 20 MB each. You pick what each one is next."
+          />
+        </div>
+      )}
 
-      {picked && (
+      {picked && mayEdit && (
         <Dialog
           open
           title={picked.length === 1 ? 'Store this file' : `Store ${picked.length} files`}
@@ -220,7 +226,8 @@ function StoredRow({
   file: GrantFile;
   confirming: boolean;
   onOpen: () => void;
-  onAskRemove: () => void;
+  /** Left out when the role may not remove files. */
+  onAskRemove?: () => void;
   onCancelRemove: () => void;
   onRemove: () => void;
 }) {
@@ -247,7 +254,7 @@ function StoredRow({
         </span>
       </div>
       <div className="ja-stored__actions">
-        {confirming ? (
+        {confirming && onAskRemove ? (
           <InlineConfirm
             question="Delete this file?"
             onConfirm={onRemove}
@@ -266,14 +273,16 @@ function StoredRow({
             >
               <Icon name="download" size={15} />
             </IconButton>
-            <IconButton
-              label={`Remove ${file.name}`}
-              size="sm"
-              variant="ghost"
-              onClick={onAskRemove}
-            >
-              <Icon name="trash-2" size={15} />
-            </IconButton>
+            {onAskRemove && (
+              <IconButton
+                label={`Remove ${file.name}`}
+                size="sm"
+                variant="ghost"
+                onClick={onAskRemove}
+              >
+                <Icon name="trash-2" size={15} />
+              </IconButton>
+            )}
           </>
         )}
       </div>

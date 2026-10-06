@@ -7,10 +7,12 @@ import React, {
   type ReactNode,
 } from 'react';
 import { toISO } from './format';
-import type { AnyAction, ModuleSlice } from './module';
+import type { ActionRules, AnyAction, ModuleSlice } from './module';
+import { can, mayChangeStaff } from './permissions';
+import type { Need, Subject } from './permissions';
 import * as repository from './repository';
 import type { PortalSlice } from './repository';
-import { isRole } from './roles';
+import { ROLE_LABELS, isRole } from './roles';
 import { DEFAULT_ENABLED_MODULES, makeCoreSeed } from './seed';
 import type {
   AppSettings,
@@ -19,6 +21,7 @@ import type {
   Organization,
   PortalActions,
   PortalState,
+  Role,
   SignedInUser,
   StaffMember,
   Venue,
@@ -146,6 +149,23 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       },
     };
   },
+  rules: {
+    addStaff: (user, _state, input) => mayChangeStaff(user.role, undefined, input.role),
+    updateStaff: (user, state, id, patch) =>
+      mayChangeStaff(
+        user.role,
+        state.core.staff.find(s => s.id === id)?.role,
+        patch.role ?? state.core.staff.find(s => s.id === id)?.role,
+      ),
+    addOrganization: 'partners',
+    updateOrganization: 'partners',
+    addVenue: 'partners',
+    updateVenue: 'partners',
+    // The fiscal year, the demo date and the module switches are the system's
+    // own settings, so they go with "Modules, import, export".
+    updateSettings: 'modules',
+    setModuleEnabled: 'modules',
+  },
   normalise(raw) {
     if (!raw || typeof raw !== 'object') return undefined;
     const c = raw as Partial<CoreState>;
@@ -171,6 +191,52 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     };
   },
 };
+
+// ---------------------------------------------------------------------------
+// The permission check on every action
+// ---------------------------------------------------------------------------
+
+/** "You can't do that as a Teacher." The words a refused change shows. */
+export function refusalMessage(role: Role): string {
+  const noun = role === 'read-only' ? `${ROLE_LABELS[role]} user` : ROLE_LABELS[role];
+  const article = /^[AEIOU]/.test(noun) ? 'an' : 'a';
+  return `You can't do that as ${article} ${noun}.`;
+}
+
+/**
+ * Wrap a slice's actions so each one runs only when its rule lets the
+ * signed-in person through (decision 0001). A refused action changes nothing,
+ * returns undefined and calls `onRefused` with the reason. The screens hide
+ * what this refuses; the check lives here so a stale screen cannot get past it.
+ */
+export function guardActions<A extends object>(
+  actions: A,
+  rules: ActionRules<A>,
+  getState: () => PortalState,
+  user: SignedInUser,
+  onRefused: (message: string) => void = () => {},
+): A {
+  const guarded: Record<string, unknown> = {};
+  for (const [name, fn] of Object.entries(actions)) {
+    if (typeof fn !== 'function') {
+      guarded[name] = fn;
+      continue;
+    }
+    const rule = (rules as Record<string, unknown>)[name] as ActionRules<A>[keyof A] | undefined;
+    guarded[name] = (...args: unknown[]) => {
+      const verdict =
+        rule === undefined
+          ? false
+          : typeof rule === 'function'
+            ? (rule as (...a: unknown[]) => boolean | string)(user, getState(), ...args)
+            : can(user.role, rule as Subject, 'edit');
+      if (verdict === true) return (fn as (...a: unknown[]) => unknown)(...args);
+      onRefused(typeof verdict === 'string' ? verdict : refusalMessage(user.role));
+      return undefined;
+    };
+  }
+  return guarded as A;
+}
 
 // ---------------------------------------------------------------------------
 // The store
@@ -240,6 +306,8 @@ export interface StoreProviderProps {
    * them, say). Nothing below the provider renders until it is fixed.
    */
   onUnknownUser?: () => void;
+  /** Called with the reason when an action is refused for the signed-in person's role. */
+  onRefused?: (message: string) => void;
   children: ReactNode;
 }
 
@@ -248,6 +316,7 @@ export function StoreProvider({
   today: fixedToday,
   userId,
   onUnknownUser,
+  onRefused,
   children,
 }: StoreProviderProps) {
   const clock = useMemo(() => fixedToday ?? toISO(new Date()), [fixedToday]);
@@ -270,6 +339,8 @@ export function StoreProvider({
   // `state` is read by exportJson and by actions that need the latest value.
   const stateRef = React.useRef(state);
   stateRef.current = state;
+  const refusedRef = React.useRef(onRefused);
+  refusedRef.current = onRefused;
 
   // The repository is the only writer, and only the slices that changed are written.
   const savedRef = React.useRef<Record<string, unknown> | null>(null);
@@ -286,26 +357,36 @@ export function StoreProvider({
   const actions = useMemo<PortalActions>(() => {
     const ctx = { today, newId, user };
     const getState = () => stateRef.current;
+    const refuse = (message: string) => refusedRef.current?.(message);
     const bag: Record<string, unknown> = {};
-    for (const slice of all) bag[slice.id] = slice.createActions(dispatch, getState, ctx);
+    for (const slice of all) {
+      const raw = slice.createActions(dispatch, getState, ctx) as object;
+      bag[slice.id] = guardActions(raw, slice.rules, getState, user, refuse);
+    }
 
     const replace = (next: PortalState) => {
       savedRef.current = { ...(next as unknown as Record<string, unknown>) };
       dispatch({ type: 'portal/replace', state: next });
     };
 
-    bag.core = {
-      ...(bag.core as CoreDataActions),
-      resetDemo() {
-        replace(repository.reset(all, today));
+    const data = guardActions<Pick<CoreActions, 'resetDemo' | 'importJson' | 'exportJson'>>(
+      {
+        resetDemo() {
+          replace(repository.reset(all, today));
+        },
+        importJson(text: string) {
+          replace(repository.importJson(all, text, today));
+        },
+        exportJson() {
+          return repository.exportJson(all, stateRef.current);
+        },
       },
-      importJson(text: string) {
-        replace(repository.importJson(all, text, today));
-      },
-      exportJson() {
-        return repository.exportJson(all, stateRef.current);
-      },
-    } satisfies CoreActions;
+      { resetDemo: 'modules', importJson: 'modules', exportJson: 'modules' },
+      getState,
+      user,
+      refuse,
+    );
+    bag.core = { ...(bag.core as CoreDataActions), ...data } satisfies CoreActions;
 
     return bag as unknown as PortalActions;
   }, [all, today, user]);
@@ -323,4 +404,16 @@ export function useStore(): StoreValue {
   const value = useContext(StoreContext);
   if (!value) throw new Error('useStore must be used inside a <StoreProvider>');
   return value;
+}
+
+/**
+ * `can` for the signed-in person: `const allowed = useCan(); allowed('grants', 'edit')`.
+ * Screens use it to leave out what the store would refuse.
+ */
+export function useCan(): (subject: Subject, need?: Need, own?: boolean) => boolean {
+  const { user } = useStore();
+  return React.useCallback(
+    (subject: Subject, need: Need = 'open', own = false) => can(user.role, subject, need, own),
+    [user.role],
+  );
 }

@@ -1,6 +1,7 @@
 import { addDays, endOfMonth, format, startOfMonth, startOfWeek } from 'date-fns';
 import { toDate, toISO } from '../../../core/format';
-import type { PortalState, ProgramId } from '../../../core/types';
+import { can } from '../../../core/permissions';
+import type { PortalState, ProgramId, SignedInUser } from '../../../core/types';
 import type { DateRange, ProgramHours, TimeEntry, WeekTotals } from './types';
 
 /**
@@ -113,4 +114,34 @@ export function hoursThisMonth(state: PortalState, today: string): number {
 /** How many people logged anything this month, for the "Across N teachers" footnote. */
 export function teachersThisMonth(state: PortalState, today: string): number {
   return new Set(entriesInRange(state, monthRange(today)).map(e => e.staffId)).size;
+}
+
+// ---------------------------------------------------------------------------
+// Who may do what (decision 0001)
+// ---------------------------------------------------------------------------
+
+/** Why an approval is refused whatever the role. */
+export const OWN_HOURS_REFUSAL = 'Nobody approves their own hours.';
+
+/**
+ * May this person approve this entry? Only a role that approves, and never
+ * on their own hours. The Approve button and the store both ask this.
+ */
+export function mayApprove(user: SignedInUser, entry: TimeEntry): boolean {
+  return entry.staffId !== user.id && can(user.role, 'timesheets-approve', 'edit');
+}
+
+/** May this person log, submit or delete hours for this staff id? Only their own. */
+export function mayLogFor(user: SignedInUser, staffId: string): boolean {
+  return can(user.role, 'timesheets-log', 'edit', staffId === user.id);
+}
+
+/**
+ * Whose entries the week table lists: everyone's for a role that approves,
+ * otherwise the person's own.
+ */
+export function visibleEntries(user: SignedInUser, entries: TimeEntry[]): TimeEntry[] {
+  return can(user.role, 'timesheets-approve', 'edit')
+    ? entries
+    : entries.filter(e => e.staffId === user.id);
 }

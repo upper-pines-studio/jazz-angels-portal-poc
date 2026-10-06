@@ -16,16 +16,19 @@ import {
 import { usePageHeader } from '../../../app/Shell';
 import { Eyebrow, KV } from '../../../app/components/badges';
 import { TableScroll } from '../../../app/components/TableScroll';
-import { placeLabel, programName, useStore } from '../../../core';
+import { cell, placeLabel, programName, useCan, useStore } from '../../../core';
 import type { ProgramId } from '../../../core';
 import {
   attendanceRateForStudent,
   ensembleById,
+  ensembleCount,
   enrolledCount,
+  leadsEnsemble,
   percent,
+  rosterFor,
   termForDate,
 } from '../domain';
-import type { Mark, Student } from '../domain';
+import type { Mark, RosterStudent } from '../domain';
 import { MarkDots, TONE_COLOR } from './parts';
 import EnrollStudentDialog from './students/EnrollStudentDialog';
 
@@ -35,8 +38,29 @@ const WAITLIST = 'waitlist';
 const STATUS_TONE = { enrolled: 'teal', waitlist: 'neutral', alumni: 'blue' } as const;
 const STATUS_LABEL = { enrolled: 'Enrolled', waitlist: 'Waitlist', alumni: 'Alumni' } as const;
 
+/**
+ * The roster, as decision 0001 allows it: the office sees and edits every
+ * student; an office assistant sees them without guardian contacts; a teacher
+ * sees their own classes' students with contacts; Read-only sees counts.
+ */
 export default function Students() {
-  const { state, today } = useStore();
+  const { user } = useStore();
+  return cell(user.role, 'students') === 'Counts only' ? <StudentCounts /> : <Roster />;
+}
+
+function Roster() {
+  const { state, today, user } = useStore();
+  const allowed = useCan();
+  const mayEdit = allowed('students', 'edit');
+  // The column shows where the role may see contacts at all; `rosterFor` has
+  // already left them off every record this person may not see them on.
+  const showGuardian = allowed('guardian-contacts');
+  const ownOnly = cell(user.role, 'students') === 'Own classes';
+  const students = rosterFor(state, user);
+  const enrolledIn = (programId?: ProgramId) =>
+    students.filter(s => s.status === 'enrolled' && (!programId || s.programId === programId))
+      .length;
+  const waiting = students.filter(s => s.status === 'waitlist').length;
 
   const [tab, setTab] = React.useState<string>(ALL);
   const [q, setQ] = React.useState('');
@@ -49,8 +73,10 @@ export default function Students() {
 
   usePageHeader({
     title: 'Students',
-    subtitle: `${enrolledCount(state)} enrolled · ${state.teaching.students.filter(s => s.status === 'waitlist').length} waiting`,
-    actions: (
+    subtitle: ownOnly
+      ? `${enrolledIn()} in your classes`
+      : `${enrolledIn()} enrolled · ${waiting} waiting`,
+    actions: mayEdit ? (
       <Button
         variant="primary"
         size="sm"
@@ -59,34 +85,34 @@ export default function Students() {
       >
         Enroll student
       </Button>
-    ),
+    ) : undefined,
   });
 
   /** Tabs: every student, then each program with somebody in it, then the waitlist. */
   const programsWithStudents = state.core.programs.filter(p =>
-    state.teaching.students.some(s => s.status === 'enrolled' && s.programId === p.id),
+    students.some(s => s.status === 'enrolled' && s.programId === p.id),
   );
   const tabs = [
-    { id: ALL, label: 'All students', count: enrolledCount(state) },
+    { id: ALL, label: ownOnly ? 'Your students' : 'All students', count: enrolledIn() },
     ...programsWithStudents.map(p => ({
       id: p.id,
       label: p.short,
-      count: enrolledCount(state, p.id),
+      count: enrolledIn(p.id),
     })),
-    {
-      id: WAITLIST,
-      label: 'Waitlist',
-      count: state.teaching.students.filter(s => s.status === 'waitlist').length,
-    },
+    // A teacher's classes have no waitlist: a waiting student is in no class yet.
+    ...(ownOnly ? [] : [{ id: WAITLIST, label: 'Waitlist', count: waiting }]),
   ];
+  const ensembles = ownOnly
+    ? state.teaching.ensembles.filter(e => leadsEnsemble(state, user, e.id))
+    : state.teaching.ensembles;
 
-  const inTab = (s: Student) =>
+  const inTab = (s: RosterStudent) =>
     tab === WAITLIST
       ? s.status === 'waitlist'
       : s.status === 'enrolled' && (tab === ALL || s.programId === tab);
 
   const needle = q.trim().toLowerCase();
-  const rows = state.teaching.students
+  const rows = students
     .filter(inTab)
     .filter(s => ensembleFilter === ALL || s.ensembleId === ensembleFilter)
     .filter(
@@ -94,14 +120,14 @@ export default function Students() {
         !needle ||
         s.name.toLowerCase().includes(needle) ||
         s.instrument.toLowerCase().includes(needle) ||
-        s.guardianName.toLowerCase().includes(needle),
+        !!s.guardianName?.toLowerCase().includes(needle),
     )
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const selected = state.teaching.students.find(s => s.id === selectedId) ?? rows[0];
+  const selected = students.find(s => s.id === selectedId) ?? rows[0];
 
   /** This session's rate, or last session's in muted type where this one has no marks. */
-  const attendanceCell = (s: Student) => {
+  const attendanceCell = (s: RosterStudent) => {
     const thisTerm = window ? attendanceRateForStudent(state, s.id, window) : undefined;
     if (thisTerm !== undefined) return <span>{percent(thisTerm)}</span>;
     const everything = attendanceRateForStudent(state, s.id);
@@ -140,7 +166,7 @@ export default function Students() {
               <Input
                 value={q}
                 onChange={e => setQ(e.target.value)}
-                placeholder="Search students or guardians"
+                placeholder={showGuardian ? 'Search students or guardians' : 'Search students'}
                 prefix={<Icon name="search" size={15} />}
                 style={{ width: '100%' }}
               />
@@ -151,7 +177,7 @@ export default function Students() {
                 onChange={e => setEnsembleFilter(e.target.value)}
                 options={[
                   { value: ALL, label: 'All ensembles' },
-                  ...state.teaching.ensembles.map(e => ({ value: e.id, label: e.name })),
+                  ...ensembles.map(e => ({ value: e.id, label: e.name })),
                 ]}
                 style={{ width: '100%' }}
               />
@@ -162,30 +188,36 @@ export default function Students() {
             <EmptyState
               icon={<Icon name="users" size={22} />}
               title="Nobody here yet"
-              message="No students in this view yet. Enroll a student to add them to the roster."
+              message={
+                mayEdit
+                  ? 'No students in this view yet. Enroll a student to add them to the roster.'
+                  : 'No students in this view yet.'
+              }
               action={
-                <Button
-                  variant="primary"
-                  size="sm"
-                  iconLeft={<Icon name="user-plus" size={15} />}
-                  onClick={() => setEnrolling(true)}
-                >
-                  Enroll student
-                </Button>
+                mayEdit ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    iconLeft={<Icon name="user-plus" size={15} />}
+                    onClick={() => setEnrolling(true)}
+                  >
+                    Enroll student
+                  </Button>
+                ) : undefined
               }
             />
           ) : (
             <TableScroll minWidth={880}>
               <DataTable
                 rows={rows}
-                onRowClick={(s: Student) => setSelectedId(s.id)}
+                onRowClick={(s: RosterStudent) => setSelectedId(s.id)}
                 columns={[
                   {
                     key: 'name',
                     label: 'Student',
                     width: '1.6fr',
                     strong: true,
-                    render: (s: Student) => (
+                    render: (s: RosterStudent) => (
                       <span
                         style={{
                           display: 'inline-flex',
@@ -202,13 +234,13 @@ export default function Students() {
                     key: 'instrument',
                     label: 'Instrument',
                     width: '1.1fr',
-                    render: (s: Student) => s.instrument,
+                    render: (s: RosterStudent) => s.instrument,
                   },
                   {
                     key: 'ensemble',
                     label: 'Ensemble',
                     width: '1.1fr',
-                    render: (s: Student) => {
+                    render: (s: RosterStudent) => {
                       const e = ensembleById(state, s.ensembleId);
                       return e ? (
                         <span>{e.name}</span>
@@ -217,14 +249,18 @@ export default function Students() {
                       );
                     },
                   },
-                  {
-                    key: 'guardian',
-                    label: 'Guardian',
-                    width: '1.2fr',
-                    render: (s: Student) => (
-                      <span style={{ color: 'var(--text-muted)' }}>{s.guardianName}</span>
-                    ),
-                  },
+                  ...(showGuardian
+                    ? [
+                        {
+                          key: 'guardian',
+                          label: 'Guardian',
+                          width: '1.2fr',
+                          render: (s: RosterStudent) => (
+                            <span style={{ color: 'var(--text-muted)' }}>{s.guardianName}</span>
+                          ),
+                        },
+                      ]
+                    : []),
                   {
                     key: 'attendance',
                     label: 'Attendance',
@@ -237,7 +273,7 @@ export default function Students() {
                     key: 'status',
                     label: 'Status',
                     width: '110px',
-                    render: (s: Student) => (
+                    render: (s: RosterStudent) => (
                       <Badge tone={STATUS_TONE[s.status]} dot>
                         {STATUS_LABEL[s.status]}
                       </Badge>
@@ -250,19 +286,23 @@ export default function Students() {
         </Card>
 
         {selected ? (
-          <StudentCard student={selected} />
+          <StudentCard student={selected} mayEdit={mayEdit} />
         ) : (
           <Card padding="0">
             <EmptyState
               icon={<Icon name="user" size={22} />}
               title="No student selected"
-              message="Pick a row on the left and their contact details and attendance show up here."
+              message={
+                showGuardian
+                  ? 'Pick a row on the left and their contact details and attendance show up here.'
+                  : 'Pick a row on the left and their attendance shows up here.'
+              }
             />
           </Card>
         )}
       </div>
 
-      {enrolling && (
+      {enrolling && mayEdit && (
         <EnrollStudentDialog
           open
           onClose={() => setEnrolling(false)}
@@ -281,7 +321,7 @@ export default function Students() {
 
 const WAITLIST_OPTION = '__waitlist__';
 
-function StudentCard({ student }: { student: Student }) {
+function StudentCard({ student, mayEdit }: { student: RosterStudent; mayEdit: boolean }) {
   const { state, today, actions } = useStore();
   const ensemble = ensembleById(state, student.ensembleId);
   const term = termForDate(state, today);
@@ -346,8 +386,12 @@ function StudentCard({ student }: { student: Student }) {
         </div>
 
         <div>
-          <KV k="Guardian" v={student.guardianName} />
-          <KV k="Phone" v={student.guardianPhone ?? 'Not on file'} />
+          {student.guardianName !== undefined && (
+            <>
+              <KV k="Guardian" v={student.guardianName} />
+              <KV k="Phone" v={student.guardianPhone ?? 'Not on file'} />
+            </>
+          )}
           <KV k="Program" v={programName(state, student.programId)} />
           <KV k="Ensemble" v={ensemble?.name ?? 'Not placed'} />
           <KV k={term ? term.name : 'This session'} v={percent(thisTerm)} strong />
@@ -362,25 +406,88 @@ function StudentCard({ student }: { student: Student }) {
         </div>
       </Card>
 
+      {mayEdit && (
+        <Card
+          title="Placement"
+          subtitle="Moving a student takes effect on the next roll call"
+          padding="var(--space-5)"
+        >
+          <Field label="Ensemble">
+            <Select
+              value={student.ensembleId ?? WAITLIST_OPTION}
+              onChange={e => move(e.target.value)}
+              options={[
+                { value: WAITLIST_OPTION, label: 'Waitlist' },
+                ...ensembles.map(e => ({
+                  value: e.id,
+                  label: `${e.name} · ${placeLabel(state, e.venueId, e.room)}`,
+                })),
+              ]}
+              style={{ width: '100%' }}
+            />
+          </Field>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Counts only (Read-only)
+// ---------------------------------------------------------------------------
+
+/**
+ * What a board member or an auditor sees: how many students each program and
+ * each ensemble has, and no names. Nothing personal is read here.
+ */
+function StudentCounts() {
+  const { state } = useStore();
+  const waiting = state.teaching.students.filter(s => s.status === 'waitlist').length;
+
+  usePageHeader({
+    title: 'Students',
+    subtitle: `${enrolledCount(state)} enrolled · ${waiting} waiting`,
+  });
+
+  const programs = state.core.programs
+    .map(p => ({ id: p.id, name: p.name, enrolled: enrolledCount(state, p.id) }))
+    .filter(p => p.enrolled > 0);
+  const ensembles = state.teaching.ensembles.map(e => ({
+    id: e.id,
+    name: e.name,
+    program: programName(state, e.programId),
+    place: placeLabel(state, e.venueId, e.room),
+    enrolled: ensembleCount(state, e.id),
+  }));
+
+  return (
+    <div className="ja-split" style={{ gap: 'var(--space-4)' }}>
       <Card
-        title="Placement"
-        subtitle="Moving a student takes effect on the next roll call"
-        padding="var(--space-5)"
+        padding="0"
+        title="Enrolled by ensemble"
+        subtitle="Counts only. Names and contacts stay with the office."
       >
-        <Field label="Ensemble">
-          <Select
-            value={student.ensembleId ?? WAITLIST_OPTION}
-            onChange={e => move(e.target.value)}
-            options={[
-              { value: WAITLIST_OPTION, label: 'Waitlist' },
-              ...ensembles.map(e => ({
-                value: e.id,
-                label: `${e.name} · ${placeLabel(state, e.venueId, e.room)}`,
-              })),
+        <TableScroll minWidth={560}>
+          <DataTable
+            rows={ensembles}
+            columns={[
+              { key: 'name', label: 'Ensemble', width: '1.4fr', strong: true },
+              { key: 'program', label: 'Program', width: '1.4fr' },
+              { key: 'place', label: 'Where', width: '1.4fr' },
+              { key: 'enrolled', label: 'Enrolled', width: '100px', mono: true, align: 'right' },
             ]}
-            style={{ width: '100%' }}
+            emptyLabel="No ensembles yet."
           />
-        </Field>
+        </TableScroll>
+      </Card>
+      <Card padding="0" title="By program">
+        <DataTable
+          rows={[...programs, { id: 'waitlist', name: 'Waitlist', enrolled: waiting }]}
+          columns={[
+            { key: 'name', label: 'Program', strong: true },
+            { key: 'enrolled', label: 'Students', width: '100px', mono: true, align: 'right' },
+          ]}
+        />
       </Card>
     </div>
   );

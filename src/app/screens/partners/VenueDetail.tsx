@@ -9,6 +9,7 @@ import {
   organizationById,
   programName,
   staffById,
+  useCan,
   useStore,
   venueById,
 } from '../../../core';
@@ -24,6 +25,7 @@ import { VENUE_KINDS, VenueDialog, kindLabel } from './dialogs';
 export default function VenueDetail() {
   const { id = '' } = useParams();
   const { state, today } = useStore();
+  const mayEdit = useCan()('partners', 'edit');
   const nav = useNavigate();
   const [editing, setEditing] = React.useState(false);
 
@@ -44,16 +46,17 @@ export default function VenueDetail() {
         : []),
       { label: venue ? venue.name : 'Not found' },
     ],
-    actions: venue ? (
-      <Button
-        variant="secondary"
-        size="sm"
-        iconLeft={<Icon name="pencil" size={15} />}
-        onClick={() => setEditing(true)}
-      >
-        Edit venue
-      </Button>
-    ) : undefined,
+    actions:
+      venue && mayEdit ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          iconLeft={<Icon name="pencil" size={15} />}
+          onClick={() => setEditing(true)}
+        >
+          Edit venue
+        </Button>
+      ) : undefined,
   });
 
   if (!venue) {
@@ -190,7 +193,7 @@ export default function VenueDetail() {
         </Card>
       </div>
 
-      {editing && <VenueDialog venue={venue} onClose={() => setEditing(false)} />}
+      {editing && mayEdit && <VenueDialog venue={venue} onClose={() => setEditing(false)} />}
     </>
   );
 }

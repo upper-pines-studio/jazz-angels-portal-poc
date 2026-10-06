@@ -31,6 +31,12 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
   seed: () => makeSeed(),
   reducer(state, action) { /* only `teaching/*` reaches here */ },
   createActions(dispatch, getState, { today, newId, user }) { /* credit `user.id` */ },
+  // What each action needs: a row of decision 0001's table (edit on it), or a
+  // rule of its own. TypeScript wants one per action; the store refuses the rest.
+  rules: {
+    addMeeting: 'schedule',
+    setMark: (user, state, meetingId) => mayTakeRoll(state, user, meetingId),
+  },
   normalise(raw) { /* validate a loaded payload, or return undefined */ },
 };
 ```
@@ -44,16 +50,24 @@ export const manifest: ModuleManifest = {
   label: 'Teaching',
   description: 'The class schedule, roll call and the student roster.',
   nav: { section: 'Teaching', items: [{ path: '/schedule', label: 'Schedule', icon: 'calendar' }] },
-  routes: [{ path: '/schedule', element: <Schedule /> }],
-  dashboard: { stats, subtitle, attention, panels: [TodaysClasses] },
+  routes: [{ path: '/schedule', element: <Schedule />, requires: { subject: 'schedule' } }],
+  dashboard: { stats, subtitle, attention, panels: [{ component: TodaysClasses }] },
   slice: teachingSlice,
 };
 ```
 
 `nav` may also be an array of sections when a module needs more than one: grants
 puts its screens under **Grants** and its money screens under **Money**.
-`settings` is an optional list of components, each a Card the Settings screen
-renders after its Modules card while the module is on.
+`settings` is an optional list of `{ component, requires }`, each a Card the
+Settings screen renders after its Modules card while the module is on.
+
+**Who sees what.** A route, a rail item, a stat, an attention row, a panel and a
+Settings card can each name what it `requires`: a row of the permission table
+(`{ subject: 'award' }`, or `need: 'edit'`), or a list of which any one will do.
+A rail item, a stat or a row without one takes its route's. A route that opens
+one record an "Own" cell limits adds `allows(user, state, params)`. Screens ask
+`useCan()` and leave out (not disable) what the role may not do. See
+`src/core/permissions.ts` and decision 0001.
 
 `dashboard.subtitle(state, today)` is the few words the module adds to the
 dashboard's page subtitle, after core's date and fiscal year.
@@ -84,6 +98,8 @@ card in Settings all read the registry.
 4. A module's styles live in its own folder and are imported by its screens.
 5. Turning a module off in Settings hides its nav, its routes and its dashboard
    contributions. Its data stays.
+6. Every action has a rule, and every screen hides what the rule would refuse.
+   Permissions are by role, never by person.
 
 The import side of rules 1 and 2 is lint-enforced: `npm run lint` fails when a
 module imports another module's folder other than its `index.ts`, when core imports from

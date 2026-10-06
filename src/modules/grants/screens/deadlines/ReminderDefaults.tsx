@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Card, Dialog, Field, Input, Select } from '../../../../design-system';
-import { useStore } from '../../../../core';
+import { useCan, useStore } from '../../../../core';
 import { REMINDER_OFFSETS, hourLabel, offsetChip, offsetLabel } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
 import { OwnerAvatar } from '../../../../app/components/badges';
@@ -190,6 +190,7 @@ export function DefaultChips() {
 /** The "Default reminders" card under the reports on Deadlines. */
 export function ReminderDefaultsCard() {
   const { state } = useStore();
+  const mayEdit = useCan()('grants', 'edit');
   const [editing, setEditing] = React.useState(false);
   const d = state.grants.reminderDefaults;
   return (
@@ -212,8 +213,9 @@ export function ReminderDefaultsCard() {
                 color: 'var(--text-muted)',
               }}
             >
-              Every new report starts with these. Change them for one report here, or for everyone
-              in Settings.
+              {mayEdit
+                ? 'Every new report starts with these. Change them for one report here, or for everyone in Settings.'
+                : 'Every new report starts with these.'}
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <DefaultChips />
@@ -222,12 +224,14 @@ export function ReminderDefaultsCard() {
               </span>
             </span>
           </div>
-          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-            Edit defaults
-          </Button>
+          {mayEdit && (
+            <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+              Edit defaults
+            </Button>
+          )}
         </div>
       </Card>
-      {editing && <ReminderDefaultsDialog onClose={() => setEditing(false)} />}
+      {editing && mayEdit && <ReminderDefaultsDialog onClose={() => setEditing(false)} />}
     </>
   );
 }

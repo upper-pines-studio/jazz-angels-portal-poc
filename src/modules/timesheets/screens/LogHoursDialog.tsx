@@ -22,11 +22,9 @@ export default function LogHoursDialog({
 }) {
   const { state, today, user, actions } = useStore();
 
-  const teachers = state.core.staff.filter(s => s.teaches);
-  // Whoever is signed in logs their own hours; someone who does not teach picks a teacher.
-  const defaultTeacher = teachers.some(s => s.id === user.id) ? user.id : (teachers[0]?.id ?? '');
-
-  const [staffId, setStaffId] = React.useState(defaultTeacher);
+  // Everyone logs their own hours and nobody else's (decision 0001), so the
+  // only name on offer is the signed-in person's.
+  const staffId = user.id;
   const [date, setDate] = React.useState(today);
   const [programId, setProgramId] = React.useState<string>(state.core.programs[0]?.id ?? '');
   const [ensembleId, setEnsembleId] = React.useState('');
@@ -76,12 +74,8 @@ export default function LogHoursDialog({
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-        <Field label="Teacher" required>
-          <Select
-            value={staffId}
-            onChange={e => setStaffId(e.target.value)}
-            options={teachers.map(s => ({ value: s.id, label: s.name }))}
-          />
+        <Field label="Teacher" required hint="You log your own hours.">
+          <Select value={staffId} disabled options={[{ value: user.id, label: user.name }]} />
         </Field>
         <Field label="Date">
           <Input type="date" value={date} onChange={e => setDate(e.target.value)} />

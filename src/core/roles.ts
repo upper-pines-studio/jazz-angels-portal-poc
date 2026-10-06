@@ -2,7 +2,7 @@ import type { Role } from './types';
 
 /**
  * The seven roles of decision 0001 (`docs/decisions/0001-roles-and-permissions.md`).
- * This file names them; what each may do is not enforced yet.
+ * This file names them; what each may do is in `permissions.ts`.
  */
 
 /** Every role, in the order decision 0001 lists them. */

@@ -24,6 +24,7 @@ import {
   staffById,
   toDate,
   toISO,
+  useCan,
   useStore,
 } from '../../../core';
 import type { ProgramId } from '../../../core';
@@ -33,9 +34,11 @@ import {
   hoursByProgram,
   hoursForProgram,
   hoursThisMonth,
+  mayApprove,
   monthLabel,
   monthRange,
   teachersThisMonth,
+  visibleEntries,
   weekRange,
   weekStart,
   weekTotals,
@@ -61,8 +64,12 @@ function barColor(programId: ProgramId): string {
 }
 
 export default function Timesheets() {
-  const { state, today, actions } = useStore();
+  const { state, today, actions, user } = useStore();
+  const allowed = useCan();
   const toast = useToast();
+  // A role that approves sees everyone's hours; anyone else sees their own (decision 0001).
+  const seesEveryone = allowed('timesheets-approve', 'edit');
+  const mayLog = allowed('timesheets-log', 'edit', true);
 
   const [monday, setMonday] = React.useState(() => weekStart(today));
   const [teacher, setTeacher] = React.useState('all');
@@ -73,11 +80,21 @@ export default function Timesheets() {
 
   // The stat row summarises today's week and this month; the card below follows
   // whichever week is on screen.
-  const thisWeek = weekTotals(state, thisMonday);
+  // Someone who sees only their own hours gets totals of their own hours too.
+  const scoped = seesEveryone
+    ? state
+    : {
+        ...state,
+        timesheets: {
+          ...state.timesheets,
+          entries: visibleEntries(user, state.timesheets.entries),
+        },
+      };
+  const thisWeek = weekTotals(scoped, thisMonday);
   const month = monthRange(today);
-  const monthHours = hoursThisMonth(state, today);
-  const teachers = teachersThisMonth(state, today);
-  const inSchool = hoursForProgram(state, 'in-school', month.from, month.to);
+  const monthHours = hoursThisMonth(scoped, today);
+  const teachers = teachersThisMonth(scoped, today);
+  const inSchool = hoursForProgram(scoped, 'in-school', month.from, month.to);
   const teachingStaff = state.core.staff.filter(s => s.teaches);
 
   usePageHeader({
@@ -86,8 +103,8 @@ export default function Timesheets() {
   });
 
   const week = weekRange(monday);
-  const shown = entriesForWeek(state, monday).filter(
-    e => teacher === 'all' || e.staffId === teacher,
+  const shown = visibleEntries(user, entriesForWeek(state, monday)).filter(
+    e => !seesEveryone || teacher === 'all' || e.staffId === teacher,
   );
   const shownHours = shown.reduce((sum, e) => sum + e.hours, 0);
 
@@ -100,10 +117,10 @@ export default function Timesheets() {
     });
   };
 
-  const programHours = hoursByProgram(state, month);
+  const programHours = hoursByProgram(scoped, month);
   const biggest = programHours[0]?.hours ?? 0;
 
-  const logButton = (
+  const logButton = mayLog ? (
     <Button
       variant="primary"
       size="sm"
@@ -112,7 +129,7 @@ export default function Timesheets() {
     >
       Log hours
     </Button>
-  );
+  ) : undefined;
 
   return (
     <>
@@ -177,17 +194,19 @@ export default function Timesheets() {
                 <Icon name="chevron-right" size={16} />
               </IconButton>
             </div>
-            <div className="ja-ts-teacher">
-              <Select
-                value={teacher}
-                onChange={e => setTeacher(e.target.value)}
-                options={[
-                  { value: 'all', label: 'All teachers' },
-                  ...teachingStaff.map(s => ({ value: s.id, label: s.name })),
-                ]}
-                style={{ width: '100%' }}
-              />
-            </div>
+            {seesEveryone && (
+              <div className="ja-ts-teacher">
+                <Select
+                  value={teacher}
+                  onChange={e => setTeacher(e.target.value)}
+                  options={[
+                    { value: 'all', label: 'All teachers' },
+                    ...teachingStaff.map(s => ({ value: s.id, label: s.name })),
+                  ]}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            )}
             {logButton}
           </div>
         }
@@ -197,9 +216,11 @@ export default function Timesheets() {
             icon={<Icon name="clock" size={22} />}
             title="Nothing logged yet"
             message={
-              teacher === 'all'
-                ? 'No hours logged for this week yet. Log hours to add the first entry.'
-                : `${staffById(state, teacher)?.name ?? 'This teacher'} logged no hours this week.`
+              !seesEveryone
+                ? 'You have no hours logged for this week yet.'
+                : teacher === 'all'
+                  ? 'No hours logged for this week yet. Log hours to add the first entry.'
+                  : `${staffById(state, teacher)?.name ?? 'This teacher'} logged no hours this week.`
             }
             action={logButton}
           />
@@ -279,8 +300,9 @@ export default function Timesheets() {
                   key: 'approve',
                   label: '',
                   width: '100px',
+                  // Nobody approves their own hours, so the button is not there on them.
                   render: (r: TimeEntry) =>
-                    r.status === 'submitted' ? (
+                    r.status === 'submitted' && mayApprove(user, r) ? (
                       <Button size="sm" variant="ghost" onClick={() => approve(r)}>
                         Approve
                       </Button>

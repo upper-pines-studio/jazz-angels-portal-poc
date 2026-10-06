@@ -1,12 +1,15 @@
 import React from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { StoreProvider, useStore } from '../core';
+import type { ModuleRoute } from '../core';
 import { MODULES } from '../modules';
+import { CORE_REQUIRES, mayOpenRoute, moduleRoutes } from './access';
 import { AuthProvider, useAuth } from './AuthGate';
 import { Shell } from './Shell';
-import { ToastHost } from './ToastHost';
+import { ToastHost, useToast } from './ToastHost';
 import Dashboard from './screens/Dashboard';
 import Login from './screens/Login';
+import NoAccess from './screens/NoAccess';
 import Settings from './screens/Settings';
 import Partners from './screens/partners/Partners';
 import OrganizationDetail from './screens/partners/OrganizationDetail';
@@ -15,21 +18,56 @@ import VenueDetail from './screens/partners/VenueDetail';
 /** Every registered module's slice, in registry order. Core is added by the store. */
 const SLICES = MODULES.map(m => m.slice);
 
+/** The store, with a refused change shown as a toast. */
+function Store({ userId, onUnknownUser }: { userId: string; onUnknownUser: () => void }) {
+  const toast = useToast();
+  const refused = React.useCallback(
+    (message: string) => toast({ tone: 'warning', title: message }),
+    [toast],
+  );
+  return (
+    <StoreProvider
+      slices={SLICES}
+      userId={userId}
+      onUnknownUser={onUnknownUser}
+      onRefused={refused}
+    >
+      <Frame />
+    </StoreProvider>
+  );
+}
+
+/** Core's own screens, by path; what each needs is in `CORE_REQUIRES`. */
+const CORE_ELEMENTS: Record<string, React.ReactElement> = {
+  '/': <Dashboard />,
+  '/partners': <Partners />,
+  '/partners/organizations/:id': <OrganizationDetail />,
+  '/partners/venues/:id': <VenueDetail />,
+  '/settings': <Settings />,
+};
+
+/**
+ * The route's screen, or the no-access screen when the signed-in person may
+ * not open it (decision 0001). The URL stays as it was.
+ */
+function Guarded({ route }: { route: ModuleRoute }) {
+  const { state, user } = useStore();
+  const params = useParams();
+  return mayOpenRoute(user, route, state, params) ? route.element : <NoAccess />;
+}
+
 function Frame() {
   const { state } = useStore();
-  const enabled = state.core.settings.enabledModules;
-  const routes = MODULES.filter(m => enabled.includes(m.id)).flatMap(m => m.routes);
+  const routes: ModuleRoute[] = [
+    ...CORE_REQUIRES.map(r => ({ ...r, element: CORE_ELEMENTS[r.path] })),
+    ...moduleRoutes(state),
+  ];
 
   return (
     <Shell>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/partners" element={<Partners />} />
-        <Route path="/partners/organizations/:id" element={<OrganizationDetail />} />
-        <Route path="/partners/venues/:id" element={<VenueDetail />} />
-        <Route path="/settings" element={<Settings />} />
         {routes.map(r => (
-          <Route key={r.path} path={r.path} element={r.element} />
+          <Route key={r.path} path={r.path} element={<Guarded route={r} />} />
         ))}
         {/* A route from a module that has just been switched off. */}
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -38,21 +76,14 @@ function Frame() {
   );
 }
 
-/**
- * Nothing behind the gate mounts until someone signs in, so the login screen
- * never loads or seeds module state. The router sits above App, so the URL
- * asked for survives the detour through the login screen.
- */
 function Gate() {
   const { user, signOut } = useAuth();
   const refuse = React.useCallback(() => signOut('no-staff'), [signOut]);
   if (!user) return <Login />;
   return (
-    <StoreProvider slices={SLICES} userId={user.staffId} onUnknownUser={refuse}>
-      <ToastHost>
-        <Frame />
-      </ToastHost>
-    </StoreProvider>
+    <ToastHost>
+      <Store userId={user.staffId} onUnknownUser={refuse} />
+    </ToastHost>
   );
 }
 

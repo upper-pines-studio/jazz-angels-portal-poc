@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { AnyAction } from '../../../../core/module';
-import type { PortalState } from '../../../../core/types';
+import { makeCoreSeed } from '../../../../core/seed';
+import { guardActions } from '../../../../core/store';
+import type { PortalState, Role, SignedInUser } from '../../../../core/types';
 import {
   attendanceForMeeting,
+  leadsMeeting,
+  mayTakeRoll,
+  rosterFor,
   markCounts,
   rollCounts,
   rollMarks,
@@ -218,5 +223,100 @@ describe('rollMarks', () => {
     const marks = rollMarks(roster, attendanceForMeeting(h.state(), COMBO_B));
     expect(marks.get(roster[0].id)).toBe('absent');
     expect(rollCounts(marks).present).toBe(roster.length - 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Own classes (decision 0001)
+// ---------------------------------------------------------------------------
+
+const DEVON: SignedInUser = { id: 's-devon', name: 'Devon Price', role: 'teacher' };
+const BARRY: SignedInUser = { id: 's-barry', name: 'Barry Cogert', role: 'director' };
+const as = (role: Role): SignedInUser => ({ id: 's-someone', name: 'Someone', role });
+
+function seeded(): PortalState {
+  return { core: makeCoreSeed(), teaching: makeSeed() } as unknown as PortalState;
+}
+
+/** The actions as the store hands them out, behind the slice's rules. */
+function guarded(user: SignedInUser) {
+  let state = seeded();
+  const refused: string[] = [];
+  const getState = () => state;
+  const actions = guardActions(
+    teachingSlice.createActions(
+      a => {
+        state = { ...state, teaching: teachingSlice.reducer(state.teaching, a) };
+      },
+      getState,
+      { today: SEED_TODAY, newId: p => `${p}-new`, user },
+    ),
+    teachingSlice.rules,
+    getState,
+    user,
+    m => refused.push(m),
+  );
+  return { actions, refused, state: () => state };
+}
+
+const BIG_BAND = () => seeded().teaching.meetings.find(m => m.ensembleId === 'e-big-band')!.id;
+
+describe('own classes', () => {
+  it('are the ensembles a teacher leads', () => {
+    const state = seeded();
+    expect(leadsMeeting(state, DEVON, BIG_BAND())).toBe(true);
+    expect(leadsMeeting(state, DEVON, COMBO_B)).toBe(false); // Barry leads Combo B
+  });
+
+  it('let a teacher take roll for their own class and refuse anyone else’s', () => {
+    expect(mayTakeRoll(seeded(), DEVON, BIG_BAND())).toBe(true);
+    expect(mayTakeRoll(seeded(), DEVON, COMBO_B)).toBe(false);
+
+    const h = guarded(DEVON);
+    h.actions.submitRollCall(COMBO_B, 'Not mine');
+    expect(h.refused).toEqual(["You can't do that as a Teacher."]);
+    expect(
+      h.state().teaching.meetings.find(m => m.id === COMBO_B)?.rollSubmittedAt,
+    ).toBeUndefined();
+
+    h.actions.submitRollCall(BIG_BAND(), 'Mine');
+    expect(h.refused).toHaveLength(1);
+  });
+
+  it('leave a Director who teaches with the Director’s reach', () => {
+    expect(mayTakeRoll(seeded(), BARRY, BIG_BAND())).toBe(true);
+  });
+
+  it('give no roll call to the roles without one', () => {
+    for (const role of ['bookkeeper', 'assistant', 'read-only'] as Role[]) {
+      expect(mayTakeRoll(seeded(), as(role), BIG_BAND())).toBe(false);
+    }
+  });
+
+  it('keep the roster to a teacher’s own students, contacts and all', () => {
+    const state = seeded();
+    const roster = rosterFor(state, DEVON);
+    const devons = state.teaching.ensembles.filter(e => e.leadStaffId === 's-devon').map(e => e.id);
+    expect(roster.length).toBeGreaterThan(0);
+    expect(roster.every(s => devons.includes(s.ensembleId ?? ''))).toBe(true);
+    expect(roster.every(s => typeof s.guardianName === 'string')).toBe(true);
+  });
+
+  it('leave guardian contacts off the record for the office assistant', () => {
+    const roster = rosterFor(seeded(), as('assistant'));
+    expect(roster).toHaveLength(seeded().teaching.students.length);
+    expect(roster.some(s => 'guardianName' in s || 'guardianPhone' in s)).toBe(false);
+  });
+
+  it('give Read-only and the bookkeeper no names at all', () => {
+    expect(rosterFor(seeded(), as('read-only'))).toEqual([]);
+    expect(rosterFor(seeded(), as('bookkeeper'))).toEqual([]);
+  });
+
+  it('do not let a teacher change the roster', () => {
+    const h = guarded(DEVON);
+    const student = rosterFor(h.state(), DEVON)[0];
+    h.actions.updateStudent(student.id, { status: 'alumni' });
+    expect(h.refused).toHaveLength(1);
   });
 });

@@ -3,7 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { usePageHeader } from '../../Shell';
 import { TableScroll } from '../../components/TableScroll';
 import { Button, Card, DataTable, Icon } from '../../../design-system';
-import { addressLine, organizationById, useStore, venuesForOrganization } from '../../../core';
+import {
+  addressLine,
+  organizationById,
+  useCan,
+  useStore,
+  venuesForOrganization,
+} from '../../../core';
 import type { Organization, Venue } from '../../../core';
 import {
   ORGANIZATION_KINDS,
@@ -21,6 +27,7 @@ import {
  */
 export default function Partners() {
   const { state } = useStore();
+  const mayEdit = useCan()('partners', 'edit');
   const nav = useNavigate();
   const [adding, setAdding] = React.useState<'organization' | 'venue' | null>(null);
 
@@ -36,7 +43,7 @@ export default function Partners() {
   usePageHeader({
     title: 'Partners',
     subtitle: `${organizations.length} ${organizations.length === 1 ? 'organization' : 'organizations'} · ${venues.length} venues`,
-    actions: (
+    actions: mayEdit ? (
       <>
         <Button
           variant="secondary"
@@ -55,7 +62,7 @@ export default function Partners() {
           Add venue
         </Button>
       </>
-    ),
+    ) : undefined,
   });
 
   return (
@@ -148,13 +155,13 @@ export default function Partners() {
         </TableScroll>
       </Card>
 
-      {adding === 'organization' && (
+      {adding === 'organization' && mayEdit && (
         <OrganizationDialog
           onClose={() => setAdding(null)}
           onSaved={id => nav(`/partners/organizations/${id}`)}
         />
       )}
-      {adding === 'venue' && (
+      {adding === 'venue' && mayEdit && (
         <VenueDialog
           onClose={() => setAdding(null)}
           onSaved={id => nav(`/partners/venues/${id}`)}

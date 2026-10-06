@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { Badge, Card, EmptyState, Icon } from '../../../../design-system';
-import { dateShort, useStore } from '../../../../core';
+import { dateShort, useCan, useStore } from '../../../../core';
 import { hourLabel, reminderPlanFor, reminderSchedule } from '../../domain';
 import type { Report } from '../../domain';
 import { OwnerAvatar } from '../../../../app/components/badges';
@@ -41,6 +41,10 @@ export function ReportsOwedCard({
   empty: React.ReactNode;
 }) {
   const { state, today, actions } = useStore();
+  const allowed = useCan();
+  // Reminder plans are deadlines (grants); the report itself is an award record.
+  const mayEditReminders = allowed('grants', 'edit');
+  const mayEditReport = allowed('award', 'edit');
   const nav = useNavigate();
   const toast = useToast();
   const hour = hourLabel(state.grants.reminderDefaults.sendHour);
@@ -58,10 +62,10 @@ export function ReportsOwedCard({
 
   const menuFor = (r: Report): MenuItem[] => {
     const ctx = reportContext(state, r);
-    const items: MenuItem[] = [
-      { label: 'Edit reminders', icon: 'bell', onSelect: () => onOpen(r.id) },
-    ];
-    if (r.status === 'upcoming') {
+    const items: MenuItem[] = [];
+    if (mayEditReminders)
+      items.push({ label: 'Edit reminders', icon: 'bell', onSelect: () => onOpen(r.id) });
+    if (mayEditReport && r.status === 'upcoming') {
       items.push({
         label: 'Start drafting',
         icon: 'pencil-line',
@@ -75,19 +79,20 @@ export function ReportsOwedCard({
         },
       });
     }
-    items.push({
-      label: 'Mark submitted',
-      icon: 'send',
-      onSelect: () => {
-        actions.grants.markReportSubmitted(r.id, today);
-        onGone(r.id);
-        toast({
-          tone: 'success',
-          title: 'Report submitted',
-          message: `${ctx.title} is off the list and its reminders have stopped.`,
-        });
-      },
-    });
+    if (mayEditReport)
+      items.push({
+        label: 'Mark submitted',
+        icon: 'send',
+        onSelect: () => {
+          actions.grants.markReportSubmitted(r.id, today);
+          onGone(r.id);
+          toast({
+            tone: 'success',
+            title: 'Report submitted',
+            message: `${ctx.title} is off the list and its reminders have stopped.`,
+          });
+        },
+      });
     items.push({
       label: 'Open grant',
       icon: 'arrow-up-right',

@@ -67,9 +67,10 @@ fine, because any slice it does not carry is seeded instead.
 | File | What is in it |
 | --- | --- |
 | `types.ts` | `StaffMember` (`title` is the job title, `role` is one of the seven `Role`s of decision 0001), `SignedInUser`, `Program`, `Organization`, `Venue`, `Address`, `AppSettings`, `CoreState`, and the augmentable `PortalState` / `PortalActions`. |
-| `module.ts` | `ModuleSlice`, `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are Cards for the Settings screen), `NavItem`, `NavSection`, `StatSpec`, `AttentionItem`, `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
-| `store.tsx` | `StoreProvider`, `useStore`, `coreSlice`, `newId`, `savedStaff()` (the staff list as saved, which sign-in reads before the store mounts). |
-| `roles.ts` | `ROLES`, `ROLE_LABELS` (the words the screens use: Admin, Director, Office manager, Bookkeeper, Teacher, Office assistant, Read-only), `isRole`. Naming only; nothing is enforced yet. |
+| `module.ts` | `ModuleSlice` (with its `rules`: what each action needs), `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are gated Cards for the Settings screen), `ModuleRoute` (`requires`, `allows`), `Requires`, `NavItem`, `NavSection`, `StatSpec`, `AttentionItem`, `GatedCard`, `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
+| `store.tsx` | `StoreProvider` (its `onRefused` shows a refused action's reason), `useStore`, `useCan`, `coreSlice`, `guardActions` (wraps every slice's actions in its `rules`), `refusalMessage`, `newId`, `savedStaff()` (the staff list as saved, which sign-in reads before the store mounts). |
+| `roles.ts` | `ROLES`, `ROLE_LABELS` (the words the screens use: Admin, Director, Office manager, Bookkeeper, Teacher, Office assistant, Read-only), `isRole`. |
+| `permissions.ts` | Decision 0001's table as data (`PERMISSION_TABLE`, same rows and columns as the decision file), `can(role, subject, need, own)` the one check, `cell`, `isOwnOnly`, `meets` / `meetsAny`, `mayChangeStaff` (only an Admin makes or changes an Admin). |
 | `repository.ts` | localStorage, one key per slice; export / import / reset; `loadPreference` / `savePreference` for a per-browser UI setting such as the collapsed rail. With `auth.ts`, the only file that may touch localStorage (lint-enforced). |
 | `auth.ts` | Sign-in against SHA-256 credential hashes (no plaintext passwords in source); the session key. Exported as `auth`. |
 | `format.ts` | `money`, `dateShort`, `dateLong`, `dateRange`, `relativeDays`, `daysUntil`, `initials`. |

@@ -22,7 +22,7 @@ import { ReportsOwedCard, ReportsOwedEmpty } from './deadlines/ReportsOwedCard';
 import { ReminderDefaultsCard } from './deadlines/ReminderDefaults';
 import { ReminderPanel } from './deadlines/ReminderPanel';
 import { LinkButton } from './money/shared';
-import { dateShort, toDate, useStore } from '../../../core';
+import { dateShort, toDate, useCan, useStore } from '../../../core';
 import {
   deadlines,
   funderById,
@@ -56,6 +56,7 @@ const KIND_PLURAL: Record<DeadlineKind, string> = {
 export default function Deadlines() {
   const nav = useNavigate();
   const { state, today } = useStore();
+  const mayAddGrant = useCan()('grants', 'edit');
   const [params, setParams] = useSearchParams();
   const view = params.get('view') === 'calendar' ? 'calendar' : 'list';
 
@@ -72,7 +73,7 @@ export default function Deadlines() {
   usePageHeader({
     title: 'Deadlines',
     subtitle: 'Every date across every grant, and who gets reminded',
-    actions: (
+    actions: mayAddGrant ? (
       <Button
         variant="primary"
         size="sm"
@@ -81,7 +82,7 @@ export default function Deadlines() {
       >
         Add grant
       </Button>
-    ),
+    ) : undefined,
   });
 
   /** Change some query params, keep the rest. `null` removes one. */

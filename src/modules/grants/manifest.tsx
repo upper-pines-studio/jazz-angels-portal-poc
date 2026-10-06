@@ -1,6 +1,6 @@
 import React from 'react';
 import { money } from '../../core';
-import type { AttentionItem, ModuleManifest, PortalState, StatSpec } from '../../core';
+import type { AttentionItem, ModuleManifest, PortalState, Requirement, StatSpec } from '../../core';
 import {
   aboutMoney,
   deadlines,
@@ -29,6 +29,9 @@ import SpendDown from './screens/money/SpendDown';
 import { MoneyPanel } from './screens/money/MoneyPanel';
 import { QuickBooksCard } from './screens/settings/QuickBooksCard';
 import { RemindersCard } from './screens/settings/RemindersCard';
+
+const GRANTS: Requirement = { subject: 'grants' };
+const AWARD: Requirement = { subject: 'award' };
 
 /** Phases whose award money actually landed (declined/withdrawn never count). */
 const WON_PHASES: Phase[] = ['awarded', 'active', 'reporting', 'closed'];
@@ -192,18 +195,32 @@ export const manifest: ModuleManifest = {
       ],
     },
   ],
+  // Each route names its row of decision 0001: the grant screens are "Grants:
+  // pipeline, checklist, deadlines", the money screens "Award, budget, reports"
+  // and "Transactions: assign, split".
   routes: [
-    { path: '/grants', element: <Grants /> },
-    { path: '/grants/:id', element: <GrantDetail /> },
-    { path: '/deadlines', element: <DeadlinesScreen /> },
-    { path: '/funders', element: <Funders /> },
-    { path: '/funders/:id', element: <FunderDetail /> },
-    { path: '/playbook', element: <Playbook /> },
-    { path: '/transactions', element: <Transactions /> },
-    { path: '/budget', element: <BudgetVsActual /> },
-    { path: '/spend-down', element: <SpendDown /> },
+    { path: '/grants', element: <Grants />, requires: GRANTS },
+    { path: '/grants/:id', element: <GrantDetail />, requires: GRANTS },
+    { path: '/deadlines', element: <DeadlinesScreen />, requires: GRANTS },
+    { path: '/funders', element: <Funders />, requires: GRANTS },
+    { path: '/funders/:id', element: <FunderDetail />, requires: GRANTS },
+    { path: '/playbook', element: <Playbook />, requires: GRANTS },
+    { path: '/transactions', element: <Transactions />, requires: { subject: 'transactions' } },
+    { path: '/budget', element: <BudgetVsActual />, requires: AWARD },
+    { path: '/spend-down', element: <SpendDown />, requires: AWARD },
   ],
-  dashboard: { stats, attention, panels: [PipelinePanel, MoneyPanel] },
-  settings: [QuickBooksCard, RemindersCard],
+  dashboard: {
+    stats,
+    attention,
+    panels: [
+      { component: PipelinePanel, requires: GRANTS },
+      { component: MoneyPanel, requires: AWARD },
+    ],
+  },
+  settings: [
+    // Shown to whoever may sync; the Connect button inside asks for "QuickBooks: connect".
+    { component: QuickBooksCard, requires: { subject: 'quickbooks-sync' } },
+    { component: RemindersCard, requires: GRANTS },
+  ],
   slice: grantsSlice,
 };

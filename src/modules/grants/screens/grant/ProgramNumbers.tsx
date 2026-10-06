@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, EmptyState, Icon } from '../../../../design-system';
-import { dateRange, programName, useStore } from '../../../../core';
+import { dateRange, programName, useCan, useStore } from '../../../../core';
 import type { PortalState, ProgramId } from '../../../../core';
 import { isPostAward } from '../../domain';
 import type { Grant } from '../../domain';
@@ -54,6 +54,8 @@ type Source = keyof typeof SOURCE;
 
 export function ProgramNumbers({ grant }: { grant: Grant }) {
   const { state, today } = useStore();
+  // Only the admin turns modules on, so only they get the way to Settings.
+  const mayTurnOn = useCan()('modules', 'edit');
   const nav = useNavigate();
 
   // Nothing to count until the funder has said yes and the period is set.
@@ -91,7 +93,9 @@ export function ProgramNumbers({ grant }: { grant: Grant }) {
       subtitle="What the next report will need, already counted."
       padding={counted ? 'var(--space-4) var(--space-6) var(--space-5)' : '0'}
     >
-      {off.length > 0 && <ModulesOff off={off} onSettings={() => nav('/settings')} />}
+      {off.length > 0 && (
+        <ModulesOff off={off} onSettings={mayTurnOn ? () => nav('/settings') : undefined} />
+      )}
 
       {numbers && !counted && (
         <EmptyState
@@ -157,7 +161,7 @@ export function ProgramNumbers({ grant }: { grant: Grant }) {
 }
 
 /** Teaching or Timesheets is switched off in Settings, so the numbers are not there to read. */
-function ModulesOff({ off, onSettings }: { off: string[]; onSettings: () => void }) {
+function ModulesOff({ off, onSettings }: { off: string[]; onSettings?: () => void }) {
   const both = off.length === 2;
   const names = both
     ? 'Teaching and Timesheets'
@@ -176,9 +180,11 @@ function ModulesOff({ off, onSettings }: { off: string[]; onSettings: () => void
       title={`${names} ${both ? 'are' : 'is'} turned off`}
       message={message}
       action={
-        <Button variant="secondary" size="sm" onClick={onSettings}>
-          Open Settings
-        </Button>
+        onSettings && (
+          <Button variant="secondary" size="sm" onClick={onSettings}>
+            Open Settings
+          </Button>
+        )
       }
     />
   );

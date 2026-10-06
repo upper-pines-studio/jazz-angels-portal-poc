@@ -5,9 +5,10 @@ import { Button, Card, DataTable, EmptyState, Icon, StatCard } from '../../desig
 import { usePageHeader } from '../Shell';
 import { AttentionStatusBadge, OwnerAvatar, SourceBadge } from '../components/badges';
 import { TableScroll } from '../components/TableScroll';
-import { dateShort, fiscalYear, toDate, useStore } from '../../core';
+import { can, dateShort, fiscalYear, meetsAny, toDate, useStore } from '../../core';
 import type { AttentionItem, StatSpec } from '../../core';
 import { MODULES } from '../../modules';
+import { mayOpen } from '../access';
 
 /**
  * The dashboard is composed, not written: every enabled module contributes its
@@ -27,22 +28,32 @@ function byUrgency(a: AttentionItem, b: AttentionItem): number {
 
 export default function Dashboard() {
   const nav = useNavigate();
-  const { state, today } = useStore();
+  const { state, today, user } = useStore();
 
   const enabled = MODULES.filter(m => state.core.settings.enabledModules.includes(m.id));
   const fy = fiscalYear(today, state.core.settings.fiscalYearStartMonth);
 
-  const stats: StatSpec[] = enabled.flatMap(m => m.dashboard?.stats?.(state, today) ?? []);
+  // A stat or a row shows only to a role that may follow its link (decision 0001).
+  const visible = (x: { requires?: StatSpec['requires']; href?: string }) =>
+    x.requires ? meetsAny(user.role, x.requires) : !x.href || mayOpen(user, x.href, state);
+  const stats: StatSpec[] = enabled
+    .flatMap(m => m.dashboard?.stats?.(state, today) ?? [])
+    .filter(visible);
   const attention = enabled
     .flatMap(m => m.dashboard?.attention?.(state, today) ?? [])
+    .filter(visible)
     .sort(byUrgency);
-  const panels = enabled.flatMap(m => m.dashboard?.panels ?? []);
+  const panels = enabled
+    .flatMap(m => m.dashboard?.panels ?? [])
+    .filter(p => meetsAny(user.role, p.requires))
+    .map(p => p.component);
 
   // Four cards fit the row. A fifth is written into the Attention header instead.
   const shown = stats.slice(0, 4);
   const spare = stats[4];
 
-  const canAddGrant = state.core.settings.enabledModules.includes('grants');
+  const canAddGrant =
+    state.core.settings.enabledModules.includes('grants') && can(user.role, 'grants', 'edit');
 
   // Core says the day and the fiscal year; each module adds its own few words.
   const subtitle = [

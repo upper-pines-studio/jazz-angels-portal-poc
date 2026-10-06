@@ -4,7 +4,14 @@ import { format } from 'date-fns';
 import { Button, Card, EmptyState, Icon } from '../../../design-system';
 import { OwnerAvatar } from '../../../app/components/badges';
 import { placeLabel, staffById, toDate, useStore } from '../../../core';
-import { ensembleById, ensembleCount, nextMeeting, timeLabel, todaysMeetings } from '../domain';
+import {
+  ensembleById,
+  ensembleCount,
+  mayTakeRoll,
+  nextMeeting,
+  timeLabel,
+  todaysMeetings,
+} from '../domain';
 import { RollBadge } from './parts';
 
 /**
@@ -13,7 +20,7 @@ import { RollBadge } from './parts';
  */
 export function TodayPanel() {
   const nav = useNavigate();
-  const { state, today } = useStore();
+  const { state, today, user } = useStore();
 
   const meetings = todaysMeetings(state, today);
   const next = nextMeeting(state, today);
@@ -95,10 +102,12 @@ export function TodayPanel() {
 
               {submitted ? (
                 <RollBadge submitted due={false} />
-              ) : (
+              ) : mayTakeRoll(state, user, meeting.id) ? (
                 <Button variant="ghost" size="sm" onClick={() => nav(`/roll/${meeting.id}`)}>
                   Take roll
                 </Button>
+              ) : (
+                <RollBadge submitted={false} due />
               )}
 
               <OwnerAvatar staffId={ensemble?.leadStaffId} size={24} />

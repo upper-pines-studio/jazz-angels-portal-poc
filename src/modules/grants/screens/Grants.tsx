@@ -15,7 +15,7 @@ import {
   Icon,
   EmptyState,
 } from '../../../design-system';
-import { useStore, programName, money, dateShort } from '../../../core';
+import { useStore, useCan, programName, money, dateShort } from '../../../core';
 import {
   grantsByView,
   nextDeadline,
@@ -48,6 +48,7 @@ const COLS = [
 
 export default function Grants() {
   const { state, today } = useStore();
+  const mayEdit = useCan()('grants', 'edit');
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
 
@@ -56,7 +57,7 @@ export default function Grants() {
   const [owner, setOwner] = React.useState('all');
   const [program, setProgram] = React.useState('all');
   const [phase, setPhase] = React.useState<string>(params.get('phase') ?? 'all');
-  const [adding, setAdding] = React.useState(params.get('add') === '1');
+  const [adding, setAdding] = React.useState(mayEdit && params.get('add') === '1');
 
   // ?phase= preselects the filter, ?add=1 opens the dialog; both are one-shot.
   React.useEffect(() => {
@@ -67,12 +68,12 @@ export default function Grants() {
       setPhase(wantPhase);
       setView('all');
     }
-    if (wantAdd) setAdding(true);
+    if (wantAdd && mayEdit) setAdding(true);
     const next = new URLSearchParams(params);
     next.delete('phase');
     next.delete('add');
     setParams(next, { replace: true });
-  }, [params, setParams]);
+  }, [params, setParams, mayEdit]);
 
   const fy = fyTotals(state, today);
   const activeCount = grantsByView(state, 'active').length;
@@ -83,7 +84,7 @@ export default function Grants() {
   usePageHeader({
     title: 'Grants',
     subtitle: `${activeCount} active · ${money(pipeline)} in pipeline · ${money(fy.awarded)} awarded this FY`,
-    actions: (
+    actions: mayEdit ? (
       <Button
         variant="primary"
         size="sm"
@@ -92,7 +93,7 @@ export default function Grants() {
       >
         Add grant
       </Button>
-    ),
+    ) : undefined,
   });
 
   const tabs = VIEWS.map(v => ({
@@ -226,16 +227,22 @@ export default function Grants() {
           <EmptyState
             icon={<Icon name="landmark" size={22} />}
             title="Nothing here yet"
-            message="No grants in this view yet. Add a grant to start tracking it."
+            message={
+              mayEdit
+                ? 'No grants in this view yet. Add a grant to start tracking it.'
+                : 'No grants in this view yet.'
+            }
             action={
-              <Button
-                variant="primary"
-                size="sm"
-                iconLeft={<Icon name="plus" size={15} />}
-                onClick={() => setAdding(true)}
-              >
-                Add grant
-              </Button>
+              mayEdit && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  iconLeft={<Icon name="plus" size={15} />}
+                  onClick={() => setAdding(true)}
+                >
+                  Add grant
+                </Button>
+              )
             }
           />
         ) : (
@@ -248,7 +255,7 @@ export default function Grants() {
           </TableScroll>
         )}
       </Card>
-      {adding && <AddGrantDialog open onClose={() => setAdding(false)} />}
+      {adding && mayEdit && <AddGrantDialog open onClose={() => setAdding(false)} />}
     </>
   );
 }

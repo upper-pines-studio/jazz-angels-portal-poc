@@ -1,9 +1,10 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, TopBar, Icon, IconButton, Avatar, Breadcrumb } from '../design-system';
-import { ROLE_LABELS, repository, useStore } from '../core';
-import type { PortalState } from '../core';
+import { ROLE_LABELS, meetsAny, repository, useStore } from '../core';
+import type { PortalState, SignedInUser } from '../core';
 import { MODULES } from '../modules';
+import { mayOpen } from './access';
 import { useAuth } from './AuthGate';
 
 export interface Crumb {
@@ -41,8 +42,11 @@ interface RailItem {
  * The rail: Overview first, then every enabled module's section in registry
  * order (sections with the same name merge), then Partners and Settings at the
  * end of Office: core screens, so they stay whichever modules are on.
+ *
+ * An item the role may not open is left out (an item's own `requires`, else
+ * its route's), and a section left with nothing in it goes too.
  */
-function buildNav(state: PortalState, today: string): RailItem[] {
+function buildNav(state: PortalState, today: string, user: SignedInUser): RailItem[] {
   const sections: Array<{ name: string; items: RailItem[] }> = [
     {
       name: 'Overview',
@@ -63,6 +67,10 @@ function buildNav(state: PortalState, today: string): RailItem[] {
     for (const group of Array.isArray(module.nav) ? module.nav : [module.nav]) {
       const target = sectionFor(group.section);
       for (const item of group.items) {
+        const open = item.requires
+          ? meetsAny(user.role, item.requires)
+          : mayOpen(user, item.path, state);
+        if (!open) continue;
         const count = item.badge?.(state, today);
         target.items.push({
           id: item.path,
@@ -74,10 +82,19 @@ function buildNav(state: PortalState, today: string): RailItem[] {
     }
   }
 
-  sectionFor('Office').items.push(
-    { id: '/partners', label: 'Partners', icon: <Icon name="building-2" size={16} /> },
-    { id: '/settings', label: 'Settings', icon: <Icon name="settings" size={16} /> },
-  );
+  const office = sectionFor('Office');
+  if (mayOpen(user, '/partners', state))
+    office.items.push({
+      id: '/partners',
+      label: 'Partners',
+      icon: <Icon name="building-2" size={16} />,
+    });
+  if (mayOpen(user, '/settings', state))
+    office.items.push({
+      id: '/settings',
+      label: 'Settings',
+      icon: <Icon name="settings" size={16} />,
+    });
 
   return sections.flatMap(s => (s.items.length ? [{ section: s.name }, ...s.items] : []));
 }
@@ -110,7 +127,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       writeCollapsed(!c);
       return !c;
     });
-  const items = buildNav(state, today);
+  const items = buildNav(state, today, user);
 
   // Lucide swaps <i data-lucide> placeholders for SVG; re-run after each render.
   React.useEffect(() => {

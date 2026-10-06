@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { AnyAction } from '../../../../core/module';
 import { makeCoreSeed } from '../../../../core/seed';
-import type { PortalState, SignedInUser } from '../../../../core/types';
+import { guardActions } from '../../../../core/store';
+import type { PortalState, Role, SignedInUser } from '../../../../core/types';
 import { activityWho } from '../derive';
 import { makeSeed } from '../seed';
 import { creditActivity, grantsSlice, reducer } from '../slice';
+import type { GrantsActions } from '../slice';
 import type { Activity, Grant, GrantsState } from '../types';
 
 const base = (): GrantsState => makeSeed();
@@ -311,5 +313,81 @@ describe('credit for a change', () => {
     const saved = base();
     saved.activity = [{ id: 'c', grantId: 'g', at, who: 'Barry Cogert', text: 'z' }];
     expect(grantsSlice.normalise!(saved)!.activity[0].whoId).toBe('s-barry');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Who may change what (decision 0001)
+// ---------------------------------------------------------------------------
+
+describe('the rules', () => {
+  /** Every action stubbed to say it ran, behind the slice's real rules. */
+  function check(role: Role) {
+    const user: SignedInUser = { id: 's-someone', name: 'Someone', role };
+    const state = { core: makeCoreSeed(), grants: base() } as unknown as PortalState;
+    const stub = Object.fromEntries(
+      Object.keys(grantsSlice.rules).map(name => [name, () => 'ran']),
+    ) as unknown as GrantsActions;
+    return guardActions(stub, grantsSlice.rules, () => state, user) as unknown as Record<
+      keyof GrantsActions,
+      (...args: unknown[]) => unknown
+    >;
+  }
+  const ran = (value: unknown) => value === 'ran';
+
+  it('names a rule for every action', () => {
+    const actions = grantsSlice.createActions(
+      () => {},
+      () => ({}) as never,
+      {
+        today: '2026-09-13',
+        newId: p => p,
+        user: { id: 's-barry', name: 'Barry', role: 'director' },
+      },
+    );
+    expect(Object.keys(grantsSlice.rules).sort()).toEqual(Object.keys(actions).sort());
+  });
+
+  it('lets the office assistant work the pipeline but not record an award', () => {
+    const a = check('assistant');
+    expect(ran(a.addGrant({}))).toBe(true);
+    expect(ran(a.transition('g', 'submitted'))).toBe(true);
+    expect(ran(a.transition('g', 'awarded'))).toBe(false);
+    expect(ran(a.transition('g', 'declined'))).toBe(true);
+    expect(ran(a.updateGrant('g', { notes: 'x' }))).toBe(true);
+    expect(ran(a.updateGrant('g', { amountAwarded: 5000 }))).toBe(false);
+    expect(ran(a.addBudgetLine({}))).toBe(false);
+    expect(ran(a.assignTransaction('t', []))).toBe(false);
+  });
+
+  it('lets the bookkeeper do the money but not the pipeline', () => {
+    const b = check('bookkeeper');
+    expect(ran(b.addGrant({}))).toBe(false);
+    expect(ran(b.transition('g', 'awarded'))).toBe(false);
+    expect(ran(b.addBudgetLine({}))).toBe(true);
+    expect(ran(b.assignTransaction('t', []))).toBe(true);
+    expect(ran(b.syncQuickBooks())).toBe(true);
+    expect(ran(b.setQuickBooksConnected(true))).toBe(false);
+  });
+
+  it('files a backup with the money and any other file with the grant', () => {
+    expect(ran(check('assistant').addFile({ grantId: 'g' }))).toBe(true);
+    expect(ran(check('assistant').addFile({ grantId: 'g', expenseId: 'x' }))).toBe(false);
+    expect(ran(check('bookkeeper').addFile({ grantId: 'g', expenseId: 'x' }))).toBe(true);
+  });
+
+  it('gives Read-only and a teacher nothing to change', () => {
+    for (const role of ['read-only', 'teacher'] as Role[]) {
+      const r = check(role);
+      expect(ran(r.addGrant({}))).toBe(false);
+      expect(ran(r.addNote('g', 'hi'))).toBe(false);
+      expect(ran(r.assignTransaction('t', []))).toBe(false);
+      expect(ran(r.syncQuickBooks())).toBe(false);
+    }
+  });
+
+  it('keeps connecting QuickBooks to the Admin', () => {
+    expect(ran(check('admin').setQuickBooksConnected(true))).toBe(true);
+    expect(ran(check('director').setQuickBooksConnected(true))).toBe(false);
   });
 });

@@ -39,6 +39,7 @@ export function TransactionRow({
   draft,
   changing,
   on,
+  mayAssign,
 }: {
   tx: Transaction;
   parts: Expense[];
@@ -46,6 +47,8 @@ export function TransactionRow({
   draft?: DraftSummary;
   changing: boolean;
   on: RowHandlers;
+  /** False for a View role: the row reads where the money went and offers nothing to change. */
+  mayAssign: boolean;
 }) {
   const { state, today } = useStore();
 
@@ -56,7 +59,11 @@ export function TransactionRow({
   };
 
   return (
-    <div className={'tx-row' + (selected ? ' is-selected' : '')} onClick={onRowClick}>
+    <div
+      className={'tx-row' + (selected ? ' is-selected' : '')}
+      onClick={mayAssign ? onRowClick : undefined}
+      style={mayAssign ? undefined : { cursor: 'default' }}
+    >
       <div className="tx-cell tx-cell--date">
         {dateShort(tx.date)}
         {tx.date.slice(0, 4) !== today.slice(0, 4) && (
@@ -64,9 +71,15 @@ export function TransactionRow({
         )}
       </div>
       <div className="tx-cell tx-cell--payee tx-two">
-        <button type="button" className="tx-payee" onClick={() => on.open(tx)} title={tx.payee}>
-          {tx.payee}
-        </button>
+        {mayAssign ? (
+          <button type="button" className="tx-payee" onClick={() => on.open(tx)} title={tx.payee}>
+            {tx.payee}
+          </button>
+        ) : (
+          <span className="tx-l1" title={tx.payee}>
+            {tx.payee}
+          </span>
+        )}
         <span className="tx-l2" title={tx.memo}>
           {tx.memo || tx.ref}
         </span>
@@ -79,10 +92,10 @@ export function TransactionRow({
       </div>
       <div className="tx-cell tx-cell--amount">{money(tx.amount)}</div>
       <div className="tx-cell tx-cell--assign">
-        {selected && draft && draft.txId === tx.id ? (
+        {mayAssign && selected && draft && draft.txId === tx.id ? (
           <DraftCell draft={draft} />
         ) : (
-          <AssignCell tx={tx} parts={parts} changing={changing} on={on} />
+          <AssignCell tx={tx} parts={parts} changing={changing} on={on} mayAssign={mayAssign} />
         )}
       </div>
     </div>
@@ -134,11 +147,13 @@ function AssignCell({
   parts,
   changing,
   on,
+  mayAssign,
 }: {
   tx: Transaction;
   parts: Expense[];
   changing: boolean;
   on: RowHandlers;
+  mayAssign: boolean;
 }) {
   const { state, today } = useStore();
   const who = whoWhen(staffById(state, tx.assignedById)?.name, tx.assignedAt, today);
@@ -182,7 +197,9 @@ function AssignCell({
             <span className="tx-l2">Split · {who}</span>
           </div>
         )}
-        <TransactionMenu label={`More for ${tx.payee}, ${money(tx.amount)}`} items={items} />
+        {mayAssign && (
+          <TransactionMenu label={`More for ${tx.payee}, ${money(tx.amount)}`} items={items} />
+        )}
       </div>
     );
   }
@@ -194,16 +211,21 @@ function AssignCell({
           <span className="tx-l1 plain">Not grant-funded</span>
           <span className="tx-l2">Set aside · {who}</span>
         </div>
-        <TransactionMenu
-          label={`More for ${tx.payee}, ${money(tx.amount)}`}
-          items={[
-            { label: 'Assign to a grant', icon: 'split', onSelect: () => on.open(tx) },
-            { label: 'Send back to assign', icon: 'undo-2', onSelect: () => on.sendBack(tx) },
-          ]}
-        />
+        {mayAssign && (
+          <TransactionMenu
+            label={`More for ${tx.payee}, ${money(tx.amount)}`}
+            items={[
+              { label: 'Assign to a grant', icon: 'split', onSelect: () => on.open(tx) },
+              { label: 'Send back to assign', icon: 'undo-2', onSelect: () => on.sendBack(tx) },
+            ]}
+          />
+        )}
       </div>
     );
   }
+
+  // Not assigned yet, and this role may not assign it: nothing to show.
+  if (!mayAssign) return null;
 
   const suggestion = suggestionFor(state, tx);
   if (

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, EmptyState, Icon, Tabs } from '../../../../design-system';
-import { dateLong, money, useStore } from '../../../../core';
+import { dateLong, money, useCan, useStore } from '../../../../core';
 import type { PortalState } from '../../../../core';
 import { usePageHeader } from '../../../../app/Shell';
 import { useToast } from '../../../../app/ToastHost';
@@ -101,6 +101,7 @@ function exportCsv(state: PortalState, today: string, rows: PacedGrant[]): strin
  */
 export default function SpendDown() {
   const { state, today } = useStore();
+  const mayConnect = useCan()('quickbooks-connect');
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const location = useLocation();
@@ -214,8 +215,13 @@ export default function SpendDown() {
       </div>
       {!qb.connected && (
         <p className="sd-filter__note">
-          QuickBooks is not connected, so these figures stop at the last sync.{' '}
-          <Link to="/settings">Connect it in Settings</Link>.
+          QuickBooks is not connected, so these figures stop at the last sync.
+          {mayConnect && (
+            <>
+              {' '}
+              <Link to="/settings">Connect it in Settings</Link>.
+            </>
+          )}
         </p>
       )}
       {nothing && (
@@ -248,6 +254,7 @@ export default function SpendDown() {
 /** One running grant: head, chart, figures, what to do and the lines behind it. */
 function GrantCard({ grant, pace }: { grant: Grant; pace: Pace }) {
   const { state, today } = useStore();
+  const mayAddLines = useCan()('award', 'edit');
   const nav = useNavigate();
   const [showLines, setShowLines] = React.useState(false);
   const funder = funderById(state, grant.funderId)?.name ?? 'Unknown funder';
@@ -333,9 +340,16 @@ function GrantCard({ grant, pace }: { grant: Grant; pace: Pace }) {
               <div id={linesId} className="sd-lines">
                 {lines.length === 0 && (
                   <p className="sd-lines__empty">
-                    No budget lines yet.{' '}
-                    <Link to={`/grants/${grant.id}?tab=budget`}>Add them on the Budget tab</Link> to
-                    see which line is driving the pace.
+                    No budget lines yet.
+                    {mayAddLines && (
+                      <>
+                        {' '}
+                        <Link to={`/grants/${grant.id}?tab=budget`}>
+                          Add them on the Budget tab
+                        </Link>{' '}
+                        to see which line is driving the pace.
+                      </>
+                    )}
                   </p>
                 )}
                 {lines.map(l => (

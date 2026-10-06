@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, Icon } from '../../../../design-system';
-import { useStore } from '../../../../core';
+import { useCan, useStore } from '../../../../core';
 import { expensesMissingBackup, funderById, percent, transactionCounts } from '../../domain';
 import { PACE_COLOR, PaceBar, PaceMark } from './shared';
 import { pacedGrants, shortFunder } from './spend';
@@ -11,11 +11,13 @@ import './spenddown.css';
 export function MoneyPanel() {
   const nav = useNavigate();
   const { state, today } = useStore();
+  const allowed = useCan();
   const rows = pacedGrants(state, today);
   if (rows.length === 0) return null;
 
-  const toAssign = transactionCounts(state)['to-assign'];
-  const missing = expensesMissingBackup(state);
+  // The two to-dos are offered only to someone who may do them.
+  const toAssign = allowed('transactions', 'edit') ? transactionCounts(state)['to-assign'] : 0;
+  const missing = allowed('award', 'edit') ? expensesMissingBackup(state) : [];
   const firstMissingGrant = missing[0]?.grantId;
 
   return (

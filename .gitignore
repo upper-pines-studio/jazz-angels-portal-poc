@@ -1,5 +1,8 @@
 node_modules
 dist
+# TypeScript build info
+*.tsbuildinfo
+tsconfig.tsbuildinfo
 .DS_Store
 *.local
 .playwright-mcp

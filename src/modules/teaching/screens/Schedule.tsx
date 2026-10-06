@@ -22,11 +22,13 @@ import {
   staffById,
   toDate,
   toISO,
+  useCan,
   useStore,
 } from '../../../core';
 import {
   ensembleById,
   ensembleCount,
+  mayTakeRoll,
   meetingsForWeek,
   termForDate,
   termWeek,
@@ -45,6 +47,7 @@ const DAYS = [0, 1, 2, 3, 4];
 export default function Schedule() {
   const nav = useNavigate();
   const { state, today } = useStore();
+  const mayAdd = useCan()('schedule', 'edit');
   const [params, setParams] = useSearchParams();
   const view = params.get('view') === 'term' ? 'term' : 'week';
 
@@ -59,7 +62,7 @@ export default function Schedule() {
     subtitle: term
       ? `${term.name}${week ? ` · week ${week} of ${term.meetingsPlanned}` : ''} · ${state.teaching.ensembles.length} ensembles`
       : `${state.teaching.ensembles.length} ensembles`,
-    actions: (
+    actions: mayAdd ? (
       <Button
         variant="primary"
         size="sm"
@@ -68,7 +71,7 @@ export default function Schedule() {
       >
         Add class
       </Button>
-    ),
+    ) : undefined,
   });
 
   const setView = (next: string) => {
@@ -92,12 +95,16 @@ export default function Schedule() {
       </div>
 
       {view === 'week' ? (
-        <WeekGrid start={start} onStart={setStart} onAdd={() => setAdding(true)} />
+        <WeekGrid
+          start={start}
+          onStart={setStart}
+          onAdd={mayAdd ? () => setAdding(true) : undefined}
+        />
       ) : (
         <TermView />
       )}
 
-      {adding && (
+      {adding && mayAdd && (
         <AddClassDialog
           open
           onClose={() => setAdding(false)}
@@ -119,10 +126,11 @@ function WeekGrid({
 }: {
   start: string;
   onStart: (iso: string) => void;
-  onAdd: () => void;
+  /** Unset for a role that may not add a class. */
+  onAdd?: () => void;
 }) {
   const nav = useNavigate();
-  const { state, today } = useStore();
+  const { state, today, user } = useStore();
 
   const meetings = meetingsForWeek(state, start);
   const end = toISO(addDays(toDate(start), 6));
@@ -173,11 +181,17 @@ function WeekGrid({
         <EmptyState
           icon={<Icon name="calendar" size={22} />}
           title="No classes this week"
-          message="Classes for the week show up here as a grid. Add a class to put one on the schedule."
+          message={
+            onAdd
+              ? 'Classes for the week show up here as a grid. Add a class to put one on the schedule.'
+              : 'Classes for the week show up here as a grid.'
+          }
           action={
-            <Button variant="secondary" size="sm" onClick={onAdd}>
-              Add class
-            </Button>
+            onAdd ? (
+              <Button variant="secondary" size="sm" onClick={onAdd}>
+                Add class
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -209,7 +223,12 @@ function WeekGrid({
                         <MeetingBlock
                           meeting={meeting}
                           today={today}
-                          onOpen={() => nav(`/roll/${meeting.id}`)}
+                          // Only a class whose roll this person takes opens.
+                          onOpen={
+                            mayTakeRoll(state, user, meeting.id)
+                              ? () => nav(`/roll/${meeting.id}`)
+                              : undefined
+                          }
                         />
                       )}
                     </div>
@@ -231,21 +250,17 @@ function MeetingBlock({
 }: {
   meeting: ClassMeeting;
   today: string;
-  onOpen: () => void;
+  onOpen?: () => void;
 }) {
   const { state } = useStore();
   const ensemble = ensembleById(state, meeting.ensembleId);
   const submitted = Boolean(meeting.rollSubmittedAt);
   const due = !submitted && meeting.date <= today;
 
-  return (
-    <button
-      type="button"
-      className="ja-week__block"
-      style={{ ['--block-tone' as string]: TONE_COLOR[ensemble?.tone ?? 'neutral'] }}
-      onClick={onOpen}
-      title={`${ensemble?.name ?? 'Class'} · ${timeRange(meeting)} · ${placeLabel(state, meeting.venueId, meeting.room)}`}
-    >
+  const title = `${ensemble?.name ?? 'Class'} · ${timeRange(meeting)} · ${placeLabel(state, meeting.venueId, meeting.room)}`;
+  const style = { ['--block-tone' as string]: TONE_COLOR[ensemble?.tone ?? 'neutral'] };
+  const body = (
+    <>
       <span className="ja-week__block-top">
         <span className="ja-week__block-name">{ensemble?.name ?? 'Class'}</span>
         {submitted && <Icon name="check" size={13} color="var(--teal-500)" />}
@@ -257,7 +272,17 @@ function MeetingBlock({
       <span className="ja-week__block-foot">
         <OwnerAvatar staffId={ensemble?.leadStaffId} size={20} />
       </span>
+    </>
+  );
+
+  return onOpen ? (
+    <button type="button" className="ja-week__block" style={style} onClick={onOpen} title={title}>
+      {body}
     </button>
+  ) : (
+    <div className="ja-week__block is-static" style={style} title={title}>
+      {body}
+    </div>
   );
 }
 
@@ -267,7 +292,8 @@ function MeetingBlock({
 
 function TermView() {
   const nav = useNavigate();
-  const { state, today } = useStore();
+  const { state, today, user } = useStore();
+  const allowed = useCan();
   const term = termForDate(state, today);
 
   if (!term) {
@@ -345,7 +371,11 @@ function TermView() {
         <TableScroll minWidth={820}>
           <DataTable
             rows={rows}
-            onRowClick={(r: Row) => (r.first ? nav(`/roll/${r.first.id}`) : nav('/students'))}
+            onRowClick={(r: Row) => {
+              // A row opens the first roll call for whoever takes it, else the roster.
+              if (r.first && mayTakeRoll(state, user, r.first.id)) nav(`/roll/${r.first.id}`);
+              else if (allowed('students')) nav('/students');
+            }}
             columns={[
               {
                 key: 'name',

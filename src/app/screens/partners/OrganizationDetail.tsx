@@ -4,7 +4,13 @@ import { usePageHeader } from '../../Shell';
 import { TableScroll } from '../../components/TableScroll';
 import { KV } from '../../components/badges';
 import { Button, Card, DataTable, EmptyState, Icon } from '../../../design-system';
-import { addressLine, organizationById, useStore, venuesForOrganization } from '../../../core';
+import {
+  addressLine,
+  organizationById,
+  useCan,
+  useStore,
+  venuesForOrganization,
+} from '../../../core';
 import type { Venue } from '../../../core';
 import {
   ORGANIZATION_KINDS,
@@ -19,6 +25,7 @@ import {
 export default function OrganizationDetail() {
   const { id = '' } = useParams();
   const { state } = useStore();
+  const mayEdit = useCan()('partners', 'edit');
   const nav = useNavigate();
   const [editing, setEditing] = React.useState(false);
   const [addingVenue, setAddingVenue] = React.useState(false);
@@ -37,16 +44,17 @@ export default function OrganizationDetail() {
       { label: 'Partners', href: '/partners' },
       { label: organization ? organization.name : 'Not found' },
     ],
-    actions: organization ? (
-      <Button
-        variant="secondary"
-        size="sm"
-        iconLeft={<Icon name="pencil" size={15} />}
-        onClick={() => setEditing(true)}
-      >
-        Edit organization
-      </Button>
-    ) : undefined,
+    actions:
+      organization && mayEdit ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          iconLeft={<Icon name="pencil" size={15} />}
+          onClick={() => setEditing(true)}
+        >
+          Edit organization
+        </Button>
+      ) : undefined,
   });
 
   if (!organization) {
@@ -135,31 +143,33 @@ export default function OrganizationDetail() {
               ]}
             />
           </TableScroll>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              minHeight: 44,
-              padding: '0 var(--space-4)',
-              background: 'var(--surface-sunken)',
-            }}
-          >
-            <Button
-              variant="ghost"
-              size="sm"
-              iconLeft={<Icon name="plus" size={15} />}
-              onClick={() => setAddingVenue(true)}
+          {mayEdit && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                minHeight: 44,
+                padding: '0 var(--space-4)',
+                background: 'var(--surface-sunken)',
+              }}
             >
-              Add venue
-            </Button>
-          </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                iconLeft={<Icon name="plus" size={15} />}
+                onClick={() => setAddingVenue(true)}
+              >
+                Add venue
+              </Button>
+            </div>
+          )}
         </Card>
       </div>
 
-      {editing && (
+      {editing && mayEdit && (
         <OrganizationDialog organization={organization} onClose={() => setEditing(false)} />
       )}
-      {addingVenue && (
+      {addingVenue && mayEdit && (
         <VenueDialog
           organizationId={organization.id}
           onClose={() => setAddingVenue(false)}

@@ -1,7 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Button, Card, DataTable, Icon, IconButton } from '../../../../design-system';
-import { dateLong, dateRange, money, programName, staffById, useStore } from '../../../../core';
+import {
+  dateLong,
+  dateRange,
+  money,
+  programName,
+  staffById,
+  useCan,
+  useStore,
+} from '../../../../core';
 import { awardLetter, funderById, grantFiles } from '../../domain';
 import type { AwardTerm, Grant, GrantFile, Payment } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
@@ -100,6 +108,11 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 export function AwardTab({ grant }: { grant: Grant }) {
   const { state, today, actions } = useStore();
+  const allowed = useCan();
+  // Payments and terms are award records.
+  const mayEdit = allowed('award', 'edit');
+  // The record is saved on the grant (a grants write) and is the award itself, so it needs both.
+  const mayEditRecord = mayEdit && allowed('grants', 'edit');
   const toast = useToast();
   const [editingRecord, setEditingRecord] = React.useState(false);
   const [addingPayment, setAddingPayment] = React.useState(false);
@@ -168,16 +181,18 @@ export function AwardTab({ grant }: { grant: Grant }) {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-3)' }}>
         <Badge tone={overdue ? 'danger' : 'neutral'}>{overdue ? 'Overdue' : 'Expected'}</Badge>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={e => {
-            e.stopPropagation();
-            markReceived(p);
-          }}
-        >
-          Mark received
-        </Button>
+        {mayEdit && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={e => {
+              e.stopPropagation();
+              markReceived(p);
+            }}
+          >
+            Mark received
+          </Button>
+        )}
       </span>
     );
   };
@@ -189,14 +204,16 @@ export function AwardTab({ grant }: { grant: Grant }) {
         title="Award record"
         note={letter ? 'As the award letter states it' : undefined}
         action={
-          <Button
-            variant="ghost"
-            size="sm"
-            iconLeft={<Icon name="pencil" size={14} />}
-            onClick={() => setEditingRecord(true)}
-          >
-            Edit record
-          </Button>
+          mayEditRecord && (
+            <Button
+              variant="ghost"
+              size="sm"
+              iconLeft={<Icon name="pencil" size={14} />}
+              onClick={() => setEditingRecord(true)}
+            >
+              Edit record
+            </Button>
+          )
         }
       />
       <div className="ja-award-head">
@@ -206,15 +223,20 @@ export function AwardTab({ grant }: { grant: Grant }) {
               <span className="ja-award-fact__amount">{money(awarded)}</span>
             ) : (
               <span className="ja-award-fact__value" style={{ color: 'var(--text-muted)' }}>
-                Not recorded.{' '}
-                <button
-                  type="button"
-                  className="ja-page-link"
-                  style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)' }}
-                  onClick={() => setEditingRecord(true)}
-                >
-                  Add it
-                </button>
+                Not recorded.
+                {mayEditRecord && (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      className="ja-page-link"
+                      style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)' }}
+                      onClick={() => setEditingRecord(true)}
+                    >
+                      Add it
+                    </button>
+                  </>
+                )}
               </span>
             )}
           </Fact>
@@ -265,7 +287,7 @@ export function AwardTab({ grant }: { grant: Grant }) {
       <Band
         title="Payment schedule"
         note={receivedNote}
-        action={<AddButton label="Add payment" onClick={() => setAddingPayment(true)} />}
+        action={mayEdit && <AddButton label="Add payment" onClick={() => setAddingPayment(true)} />}
       />
       <TableScroll minWidth={620}>
         <DataTable
@@ -275,19 +297,22 @@ export function AwardTab({ grant }: { grant: Grant }) {
               label: 'Installment',
               strong: true,
               width: '1.2fr',
-              render: (r: Payment) => (
-                <button
-                  type="button"
-                  className="ja-text-button"
-                  title="Edit this payment"
-                  onClick={e => {
-                    e.stopPropagation();
-                    setEditingPayment(r);
-                  }}
-                >
-                  {r.label}
-                </button>
-              ),
+              render: (r: Payment) =>
+                mayEdit ? (
+                  <button
+                    type="button"
+                    className="ja-text-button"
+                    title="Edit this payment"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setEditingPayment(r);
+                    }}
+                  >
+                    {r.label}
+                  </button>
+                ) : (
+                  r.label
+                ),
             },
             {
               key: 'expectedDate',
@@ -325,8 +350,12 @@ export function AwardTab({ grant }: { grant: Grant }) {
             },
           ]}
           rows={payments}
-          onRowClick={(r: Payment) => setEditingPayment(r)}
-          emptyLabel="No installments yet. Add each payment the award letter promises, then mark it received when it arrives."
+          onRowClick={mayEdit ? (r: Payment) => setEditingPayment(r) : undefined}
+          emptyLabel={
+            mayEdit
+              ? 'No installments yet. Add each payment the award letter promises, then mark it received when it arrives.'
+              : 'No installments yet.'
+          }
         />
       </TableScroll>
       {payments.length > 0 && awarded !== undefined && scheduled !== awarded && (
@@ -347,7 +376,7 @@ export function AwardTab({ grant }: { grant: Grant }) {
       <Band
         title="Terms and restrictions"
         note="As written in the award letter, with the page each came from"
-        action={<AddButton label="Add term" onClick={() => setAddingTerm(true)} />}
+        action={mayEdit && <AddButton label="Add term" onClick={() => setAddingTerm(true)} />}
       />
       {terms.length === 0 ? (
         <p
@@ -359,14 +388,25 @@ export function AwardTab({ grant }: { grant: Grant }) {
             color: 'var(--text-muted)',
           }}
         >
-          No terms yet. Add each condition in the award letter, with the page it is on, so the
-          budget and the spend-down warnings can point back to it.
+          {mayEdit
+            ? 'No terms yet. Add each condition in the award letter, with the page it is on, so the budget and the spend-down warnings can point back to it.'
+            : 'No terms yet.'}
         </p>
       ) : (
         <div style={{ borderTop: 'var(--border-width) solid var(--border-subtle)' }}>
           {terms.map(t => (
             <div key={t.id} className="ja-term">
-              {confirmingTerm === t.id ? (
+              {!mayEdit ? (
+                <>
+                  <span className="ja-term__main" style={{ cursor: 'default' }}>
+                    <span className="ja-term__label">{t.label}</span>
+                    <span className="ja-term__text">{t.text}</span>
+                  </span>
+                  <span className="ja-term__side">
+                    <PageLink page={t.page} letter={letter} onOpen={openLetter} />
+                  </span>
+                </>
+              ) : confirmingTerm === t.id ? (
                 <>
                   <span className="ja-term__label" style={{ alignSelf: 'center' }}>
                     {t.label}
@@ -406,8 +446,10 @@ export function AwardTab({ grant }: { grant: Grant }) {
         </div>
       )}
 
-      {editingRecord && <EditRecordDialog grant={grant} onClose={() => setEditingRecord(false)} />}
-      {(addingPayment || editingPayment) && (
+      {editingRecord && mayEditRecord && (
+        <EditRecordDialog grant={grant} onClose={() => setEditingRecord(false)} />
+      )}
+      {mayEdit && (addingPayment || editingPayment) && (
         <PaymentDialog
           payment={editingPayment ?? undefined}
           letterPages={letter?.pages}
@@ -431,7 +473,7 @@ export function AwardTab({ grant }: { grant: Grant }) {
           }
         />
       )}
-      {(addingTerm || editingTerm) && (
+      {mayEdit && (addingTerm || editingTerm) && (
         <TermDialog
           term={editingTerm ?? undefined}
           letterPages={letter?.pages}
@@ -466,6 +508,8 @@ export function AwardTab({ grant }: { grant: Grant }) {
 /** The right-hand column of the Award tab: the award letter, and the other files kept with the grant. */
 export function AwardAside({ grant }: { grant: Grant }) {
   const { state, actions } = useStore();
+  // The letter is a file kept with the grant (not an expense's backup): a grants record.
+  const mayStore = useCan()('grants', 'edit');
   const toast = useToast();
   const storeFile = useStoreGrantFile();
   const removeFile = useRemoveGrantFile();
@@ -509,9 +553,9 @@ export function AwardAside({ grant }: { grant: Grant }) {
             key={letter.id}
             letter={letter}
             onOpen={page => setViewing({ file: letter, page })}
-            onReplace={take}
+            onReplace={mayStore ? take : undefined}
           />
-        ) : (
+        ) : mayStore ? (
           <div
             style={{
               display: 'flex',
@@ -544,6 +588,19 @@ export function AwardAside({ grant }: { grant: Grant }) {
               page link on the Award tab opens it at that page.
             </p>
           </div>
+        ) : (
+          <p
+            style={{
+              margin: 0,
+              padding: 'var(--space-5) var(--space-6)',
+              font: 'var(--type-body-sm)',
+              fontSize: 'var(--text-xs)',
+              lineHeight: 1.55,
+              color: 'var(--text-muted)',
+            }}
+          >
+            The award letter has not been stored yet.
+          </p>
         )}
 
         {others.map(f => (
@@ -580,7 +637,8 @@ function LetterView({
 }: {
   letter: GrantFile;
   onOpen: (page: number) => void;
-  onReplace: (file: File) => void;
+  /** Left out when the role may not store files with the grant. */
+  onReplace?: (file: File) => void;
 }) {
   const [page, setPage] = React.useState(1);
   const input = React.useRef<HTMLInputElement | null>(null);
@@ -634,27 +692,31 @@ function LetterView({
         >
           Download
         </Button>
-        <span className="ja-letter-actions__replace">
-          <Button
-            variant="ghost"
-            size="sm"
-            iconLeft={<Icon name="refresh-cw" size={14} />}
-            onClick={() => input.current?.click()}
-          >
-            Replace
-          </Button>
-        </span>
-        <input
-          ref={input}
-          type="file"
-          hidden
-          accept={ACCEPTED_FILES}
-          onChange={e => {
-            const f = e.target.files?.[0];
-            if (f) onReplace(f);
-            e.target.value = '';
-          }}
-        />
+        {onReplace && (
+          <>
+            <span className="ja-letter-actions__replace">
+              <Button
+                variant="ghost"
+                size="sm"
+                iconLeft={<Icon name="refresh-cw" size={14} />}
+                onClick={() => input.current?.click()}
+              >
+                Replace
+              </Button>
+            </span>
+            <input
+              ref={input}
+              type="file"
+              hidden
+              accept={ACCEPTED_FILES}
+              onChange={e => {
+                const f = e.target.files?.[0];
+                if (f) onReplace(f);
+                e.target.value = '';
+              }}
+            />
+          </>
+        )}
       </div>
     </div>
   );

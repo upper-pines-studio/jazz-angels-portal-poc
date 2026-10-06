@@ -1,6 +1,6 @@
 import { addDays } from 'date-fns';
-import { toDate, toISO } from '../../../core';
-import type { PortalState, ProgramId } from '../../../core';
+import { can, toDate, toISO } from '../../../core';
+import type { PortalState, ProgramId, SignedInUser } from '../../../core';
 import type {
   AttendanceRecord,
   AttendanceSummary,
@@ -352,4 +352,79 @@ export function timeRange(meeting: ClassMeeting): string {
 /** 0.94 → '94%'. An unknown rate reads as a dash. */
 export function percent(rate: number | undefined): string {
   return rate === undefined ? '—' : `${Math.round(rate * 100)}%`;
+}
+
+// ---------------------------------------------------------------------------
+// Own classes (decision 0001)
+// ---------------------------------------------------------------------------
+
+/**
+ * "Own classes" are the ensembles a person leads: `Ensemble.leadStaffId`. The
+ * roll call screen, the roster and the slice's rules all ask these, so a
+ * hidden button and a refused write agree.
+ */
+export function leadsEnsemble(
+  state: PortalState,
+  user: Pick<SignedInUser, 'id'>,
+  ensembleId: string | undefined,
+): boolean {
+  if (!ensembleId) return false;
+  return state.teaching.ensembles.find(e => e.id === ensembleId)?.leadStaffId === user.id;
+}
+
+/** True when the meeting is a class of an ensemble the person leads. */
+export function leadsMeeting(
+  state: PortalState,
+  user: Pick<SignedInUser, 'id'>,
+  meetingId: string | undefined,
+): boolean {
+  const meeting = state.teaching.meetings.find(m => m.id === meetingId);
+  return !!meeting && leadsEnsemble(state, user, meeting.ensembleId);
+}
+
+/** May this person take, submit or reopen the roll for this class? */
+export function mayTakeRoll(
+  state: PortalState,
+  user: SignedInUser,
+  meetingId: string | undefined,
+): boolean {
+  return can(user.role, 'roll-call', 'edit', leadsMeeting(state, user, meetingId));
+}
+
+/** May this person read this student's name, marks and record? */
+export function maySeeStudent(state: PortalState, user: SignedInUser, student: Student): boolean {
+  return can(user.role, 'students', 'view', leadsEnsemble(state, user, student.ensembleId));
+}
+
+/** May this person read this student's guardian name and phone? */
+export function maySeeGuardian(state: PortalState, user: SignedInUser, student: Student): boolean {
+  return can(
+    user.role,
+    'guardian-contacts',
+    'view',
+    leadsEnsemble(state, user, student.ensembleId),
+  );
+}
+
+/** A student as the roster shows them: the guardian fields only for those who may see them. */
+export type RosterStudent = Omit<Student, 'guardianName' | 'guardianPhone'> & {
+  guardianName?: string;
+  guardianPhone?: string;
+};
+
+/**
+ * The students this person may see, by name: everyone for the office, a
+ * teacher's own classes for a teacher, nobody for a role that sees counts or
+ * nothing. Guardian name and phone are left off the record, not just hidden,
+ * for anyone who may not see them, so they never reach the screen.
+ */
+export function rosterFor(state: PortalState, user: SignedInUser): RosterStudent[] {
+  return state.teaching.students
+    .filter(s => maySeeStudent(state, user, s))
+    .map(s => {
+      if (maySeeGuardian(state, user, s)) return s;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { guardianName, guardianPhone, ...rest } = s;
+      return rest;
+    });
 }

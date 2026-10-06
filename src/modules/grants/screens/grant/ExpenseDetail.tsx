@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge, Button, Card, Icon, IconButton, Textarea } from '../../../../design-system';
-import { dateLong, dateShort, money, staffById, useStore } from '../../../../core';
+import { dateLong, dateShort, money, staffById, useCan, useStore } from '../../../../core';
 import {
   accountLabel,
   backupSummary,
@@ -138,6 +138,10 @@ function provenance(ref: string): string {
 
 function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense; view: View }) {
   const { state, actions } = useStore();
+  const allowed = useCan();
+  // The expense and its backup are award records; sending a transaction back is a transactions write.
+  const mayEdit = allowed('award', 'edit');
+  const maySendBack = mayEdit && allowed('transactions', 'edit');
   const toast = useToast();
   const [reassigning, setReassigning] = React.useState(false);
   const [confirming, setConfirming] = React.useState(false);
@@ -350,87 +354,114 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
       </div>
       {files.length === 0 && (
         <p className="ja-exp-aside__empty">
-          No receipt or invoice yet. Add one below so this expense is ready for an audit.
+          {mayEdit
+            ? 'No receipt or invoice yet. Add one below so this expense is ready for an audit.'
+            : 'No receipt or invoice yet.'}
         </p>
       )}
       {files.map(f => (
-        <FileRow key={f.id} file={f} expense={expense} remaining={files.length - 1} />
+        <FileRow
+          key={f.id}
+          file={f}
+          expense={expense}
+          remaining={files.length - 1}
+          mayRemove={mayEdit}
+        />
       ))}
-      <div className="ja-exp-aside__drop">
-        <FileDrop onFiles={onFiles} />
-      </div>
+      {mayEdit && (
+        <div className="ja-exp-aside__drop">
+          <FileDrop onFiles={onFiles} />
+        </div>
+      )}
 
-      <NoteField key={expense.id} expense={expense} />
-
-      <div className="ja-exp-aside__move">
-        {!confirming ? (
-          <div className="ja-exp-aside__move-actions">
-            <Button
-              variant="ghost"
-              size="sm"
-              iconLeft={<Icon name="arrow-right-left" size={14} />}
-              onClick={() => setReassigning(true)}
-            >
-              Reassign
-            </Button>
-            {tx ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                iconLeft={<Icon name="undo-2" size={14} />}
-                onClick={() => setConfirming(true)}
-              >
-                Send back to Transactions
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                iconLeft={<Icon name="trash-2" size={14} />}
-                style={{ color: 'var(--danger-500)' }}
-                onClick={() => setConfirming(true)}
-              >
-                Delete
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="ja-exp-aside__confirm" role="alert">
-            <p>
-              {tx ? (
-                <>
-                  This takes{' '}
-                  {parts.length > 1 ? `all ${parts.length} parts of ${tx.ref}` : 'the expense'} off
-                  the budget
-                  {files.length
-                    ? ` and deletes ${files.length === 1 ? 'its backup file' : `its ${files.length} backup files`}`
-                    : ''}
-                  . The transaction goes back to the To assign list on Transactions. QuickBooks is
-                  not changed.
-                </>
-              ) : (
-                <>
-                  This deletes the expense
-                  {files.length
-                    ? ` and ${files.length === 1 ? 'its backup file' : `its ${files.length} backup files`}`
-                    : ''}
-                  . It cannot be undone.
-                </>
-              )}
+      {mayEdit ? (
+        <NoteField key={expense.id} expense={expense} />
+      ) : (
+        expense.backupNote && (
+          <div className="ja-exp-aside__note">
+            <span className="ja-exp-aside__label">Note</span>
+            <p style={{ margin: 0, font: 'var(--type-body-sm)', color: 'var(--text-body)' }}>
+              {expense.backupNote}
             </p>
-            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-              <Button variant="danger" size="sm" onClick={tx ? sendBack : deleteByHand}>
-                {tx ? 'Send back' : 'Delete expense'}
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => setConfirming(false)}>
-                Keep it
-              </Button>
-            </div>
           </div>
-        )}
-      </div>
+        )
+      )}
 
-      {reassigning && (
+      {(mayEdit || maySendBack) && (
+        <div className="ja-exp-aside__move">
+          {!confirming ? (
+            <div className="ja-exp-aside__move-actions">
+              {mayEdit && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconLeft={<Icon name="arrow-right-left" size={14} />}
+                  onClick={() => setReassigning(true)}
+                >
+                  Reassign
+                </Button>
+              )}
+              {tx ? (
+                maySendBack && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconLeft={<Icon name="undo-2" size={14} />}
+                    onClick={() => setConfirming(true)}
+                  >
+                    Send back to Transactions
+                  </Button>
+                )
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconLeft={<Icon name="trash-2" size={14} />}
+                  style={{ color: 'var(--danger-500)' }}
+                  onClick={() => setConfirming(true)}
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="ja-exp-aside__confirm" role="alert">
+              <p>
+                {tx ? (
+                  <>
+                    This takes{' '}
+                    {parts.length > 1 ? `all ${parts.length} parts of ${tx.ref}` : 'the expense'}{' '}
+                    off the budget
+                    {files.length
+                      ? ` and deletes ${files.length === 1 ? 'its backup file' : `its ${files.length} backup files`}`
+                      : ''}
+                    . The transaction goes back to the To assign list on Transactions. QuickBooks is
+                    not changed.
+                  </>
+                ) : (
+                  <>
+                    This deletes the expense
+                    {files.length
+                      ? ` and ${files.length === 1 ? 'its backup file' : `its ${files.length} backup files`}`
+                      : ''}
+                    . It cannot be undone.
+                  </>
+                )}
+              </p>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                <Button variant="danger" size="sm" onClick={tx ? sendBack : deleteByHand}>
+                  {tx ? 'Send back' : 'Delete expense'}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setConfirming(false)}>
+                  Keep it
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {reassigning && mayEdit && (
         <ReassignDialog
           grant={grant}
           expense={expense}
@@ -464,10 +495,12 @@ function FileRow({
   file,
   expense,
   remaining,
+  mayRemove,
 }: {
   file: GrantFile;
   expense: Expense;
   remaining: number;
+  mayRemove: boolean;
 }) {
   const { state, actions } = useStore();
   const toast = useToast();
@@ -509,7 +542,7 @@ function FileRow({
         <span className="ja-exp-file__meta">
           Added by {who}, <span className="ja-exp-aside__mono">{dateShort(file.uploadedAt)}</span>
         </span>
-        {removing ? (
+        {removing && mayRemove ? (
           <span className="ja-exp-file__confirm">
             Remove this file?
             <button type="button" className="is-danger" onClick={remove}>
@@ -539,15 +572,17 @@ function FileRow({
             >
               Download
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              iconLeft={<Icon name="trash-2" size={13} />}
-              style={{ ...TIGHT, color: 'var(--danger-500)' }}
-              onClick={() => setRemoving(true)}
-            >
-              Remove
-            </Button>
+            {mayRemove && (
+              <Button
+                variant="ghost"
+                size="sm"
+                iconLeft={<Icon name="trash-2" size={13} />}
+                style={{ ...TIGHT, color: 'var(--danger-500)' }}
+                onClick={() => setRemoving(true)}
+              >
+                Remove
+              </Button>
+            )}
           </span>
         )}
       </div>

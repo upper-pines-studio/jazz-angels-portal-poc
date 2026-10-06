@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { makeCoreSeed } from '../../../../core/seed';
-import type { PortalState } from '../../../../core/types';
-import { awaitingApproval } from '../derive';
+import { guardActions } from '../../../../core/store';
+import type { PortalState, Role, SignedInUser } from '../../../../core/types';
+import { OWN_HOURS_REFUSAL, awaitingApproval, mayApprove, mayLogFor } from '../derive';
 import { SEED_TODAY, makeSeed } from '../seed';
 import { reducer, timesheetsSlice, toQuarterHours } from '../slice';
 import type { TimeEntry } from '../types';
@@ -174,5 +175,111 @@ describe('the slice', () => {
       ],
     });
     expect(filled!.entries[0].status).toBe('draft');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Who may log and approve (decision 0001), through the store's check
+// ---------------------------------------------------------------------------
+
+/** The actions as the store hands them out: every one behind the slice's rules. */
+function guarded(user: SignedInUser) {
+  let state = makeSeed();
+  const refused: string[] = [];
+  const getState = () => portal(state);
+  const actions = guardActions(
+    timesheetsSlice.createActions(
+      a => {
+        state = timesheetsSlice.reducer(state, a);
+      },
+      getState,
+      { today, newId: prefix => `${prefix}-new`, user },
+    ),
+    timesheetsSlice.rules,
+    getState,
+    user,
+    message => refused.push(message),
+  );
+  return { actions, refused, state: () => state };
+}
+
+const as = (id: string, role: Role): SignedInUser => ({ id, name: id, role });
+const DEVON = as('s-devon', 'teacher');
+const KEISHA = as('s-keisha', 'office-manager');
+
+const hours = (staffId: string) => ({
+  staffId,
+  date: today,
+  programId: 'studio-sessions' as const,
+  activity: 'Sectional',
+  hours: 1,
+});
+
+describe('approving hours', () => {
+  it('lets the office approve somebody else’s submitted hours', () => {
+    const h = guarded(KEISHA);
+    const entry = submitted();
+    h.actions.approveEntry(entry.id);
+    expect(h.refused).toEqual([]);
+    expect(h.state().entries.find(e => e.id === entry.id)?.status).toBe('approved');
+  });
+
+  it('refuses your own hours whatever the role, with the reason', () => {
+    const entry = submitted();
+    for (const role of ['admin', 'director', 'office-manager', 'bookkeeper'] as Role[]) {
+      const self = as(entry.staffId, role);
+      expect(mayApprove(self, entry)).toBe(false);
+      const h = guarded(self);
+      h.actions.approveEntry(entry.id);
+      expect(h.refused).toEqual([OWN_HOURS_REFUSAL]);
+      expect(h.state().entries.find(e => e.id === entry.id)?.status).toBe('submitted');
+    }
+  });
+
+  it('refuses a role that does not approve', () => {
+    const entry = submitted();
+    for (const role of ['teacher', 'assistant', 'read-only'] as Role[]) {
+      const h = guarded(as('s-someone-else', role));
+      h.actions.approveEntry(entry.id);
+      expect(h.refused).toHaveLength(1);
+      expect(h.state().entries.find(e => e.id === entry.id)?.status).toBe('submitted');
+    }
+  });
+});
+
+describe('logging hours', () => {
+  it('lets every role but Read-only log their own', () => {
+    for (const role of [
+      'admin',
+      'director',
+      'office-manager',
+      'bookkeeper',
+      'teacher',
+      'assistant',
+    ] as Role[]) {
+      const me = as('s-me', role);
+      expect(mayLogFor(me, 's-me')).toBe(true);
+      const h = guarded(me);
+      h.actions.logHours(hours('s-me'));
+      expect(h.refused).toEqual([]);
+    }
+    expect(mayLogFor(as('s-me', 'read-only'), 's-me')).toBe(false);
+  });
+
+  it('refuses hours logged for somebody else, even by the office', () => {
+    const h = guarded(KEISHA);
+    const before = h.state().entries.length;
+    h.actions.logHours(hours('s-devon'));
+    expect(h.refused).toEqual(["You can't do that as an Office manager."]);
+    expect(h.state().entries).toHaveLength(before);
+  });
+
+  it('refuses a teacher deleting somebody else’s draft', () => {
+    const h = guarded(DEVON);
+    const theirs = h.state().entries.find(e => e.staffId !== 's-devon' && e.status === 'draft');
+    expect(theirs).toBeDefined();
+    h.actions.deleteEntry(theirs!.id);
+    expect(h.refused).toHaveLength(1);
+    expect(h.state().entries.some(e => e.id === theirs!.id)).toBe(true);
   });
 });

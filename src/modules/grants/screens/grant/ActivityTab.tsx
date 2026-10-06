@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Textarea } from '../../../../design-system';
-import { dateLong, toISO, useStore } from '../../../../core';
+import { dateLong, toISO, useCan, useStore } from '../../../../core';
 import { activityWho, grantActivity } from '../../domain';
 import type { Grant } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
@@ -32,6 +32,7 @@ function timeOf(at: string, today: string): string {
 
 export function ActivityTab({ grant }: { grant: Grant }) {
   const { state, today, actions } = useStore();
+  const mayNote = useCan()('grants', 'edit');
   const toast = useToast();
   const [note, setNote] = React.useState('');
   const rows = grantActivity(state, grant.id);
@@ -46,27 +47,29 @@ export function ActivityTab({ grant }: { grant: Grant }) {
 
   return (
     <div>
-      <div
-        style={{
-          padding: 'var(--space-5) var(--space-6)',
-          borderBottom: 'var(--border-width) solid var(--border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--space-3)',
-        }}
-      >
-        <Textarea
-          rows={2}
-          value={note}
-          placeholder="Add a note: a call, a promise, something the next person should know."
-          onChange={e => setNote(e.target.value)}
-        />
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button variant="primary" size="sm" disabled={!note.trim()} onClick={add}>
-            Add note
-          </Button>
+      {mayNote && (
+        <div
+          style={{
+            padding: 'var(--space-5) var(--space-6)',
+            borderBottom: 'var(--border-width) solid var(--border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-3)',
+          }}
+        >
+          <Textarea
+            rows={2}
+            value={note}
+            placeholder="Add a note: a call, a promise, something the next person should know."
+            onChange={e => setNote(e.target.value)}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button variant="primary" size="sm" disabled={!note.trim()} onClick={add}>
+              Add note
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div style={{ padding: 'var(--space-5) var(--space-6)' }}>
         {rows.length === 0 && (

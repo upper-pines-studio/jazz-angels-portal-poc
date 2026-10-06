@@ -3,7 +3,14 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { usePageHeader } from '../../../app/Shell';
 import { Button, Card, EmptyState, Icon, Tabs } from '../../../design-system';
 import { programName, staffById, useStore } from '../../../core';
-import { availableTransitions, funderById, grantById, grantFiles, isPostAward } from '../domain';
+import {
+  availableTransitions,
+  funderById,
+  grantById,
+  grantFiles,
+  isPostAward,
+  mayMoveTo,
+} from '../domain';
 import type { Transition } from '../domain';
 import { PhaseStepper } from './grant/PhaseStepper';
 import { TransitionDialog } from './grant/TransitionDialog';
@@ -26,14 +33,18 @@ const QUICKBOOKS_TABS = ['budget', 'expenses'];
 export default function GrantDetail() {
   const { id = '' } = useParams();
   const nav = useNavigate();
-  const { state } = useStore();
+  const { state, user } = useStore();
   const [params, setParams] = useSearchParams();
   const [pending, setPending] = React.useState<Transition | null>(null);
 
   const grant = grantById(state, id);
   const funder = grant ? funderById(state, grant.funderId) : undefined;
   const owner = grant ? staffById(state, grant.ownerId) : undefined;
-  const transitions = grant ? availableTransitions(grant) : [];
+  // Only the moves this role may make, as the store asks: recording an award
+  // also needs the award row.
+  const transitions = grant
+    ? availableTransitions(grant).filter(t => mayMoveTo(user.role, t.to))
+    : [];
 
   usePageHeader(
     grant
@@ -167,7 +178,7 @@ export default function GrantDetail() {
         {aside}
       </div>
 
-      {pending && (
+      {pending && transitions.some(t => t.to === pending.to) && (
         <TransitionDialog grant={grant} transition={pending} onClose={() => setPending(null)} />
       )}
     </>

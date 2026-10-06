@@ -89,6 +89,9 @@
   transition: var(--transition-control, all 120ms ease);
 }
 .ja-week__block:hover { background: var(--blue-50); }
+/* A class whose roll this person does not take: shown, not opened. */
+.ja-week__block.is-static { cursor: default; }
+.ja-week__block.is-static:hover { background: var(--surface-card); }
 
 .ja-week__block-top {
   display: flex;

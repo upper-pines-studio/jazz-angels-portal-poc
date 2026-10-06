@@ -10,7 +10,7 @@ import {
   ProgressBar,
   Select,
 } from '../../../../design-system';
-import { dateShort, useStore } from '../../../../core';
+import { dateShort, useCan, useStore } from '../../../../core';
 import { PHASES, PHASE_ORDER, checklistProgress } from '../../domain';
 import type { Grant, Phase, Task } from '../../domain';
 import { PhaseBadge } from '../badges';
@@ -21,6 +21,7 @@ import { AddButton, DeleteX, DialogFields, FooterBand, InlineConfirm } from './p
 /** The checklist that came from the playbook template, grouped by phase. */
 export function ChecklistTab({ grant }: { grant: Grant }) {
   const { state, today, actions } = useStore();
+  const mayEdit = useCan()('grants', 'edit');
   const toast = useToast();
   const [adding, setAdding] = React.useState(false);
 
@@ -75,7 +76,7 @@ export function ChecklistTab({ grant }: { grant: Grant }) {
             color: 'var(--text-muted)',
           }}
         >
-          No tasks yet. Add the first one below.
+          {mayEdit ? 'No tasks yet. Add the first one below.' : 'No tasks yet.'}
         </div>
       )}
 
@@ -83,16 +84,18 @@ export function ChecklistTab({ grant }: { grant: Grant }) {
         <React.Fragment key={group.phase}>
           <GroupHeader phase={group.phase} rows={group.rows} />
           {group.rows.map(task => (
-            <TaskRow key={task.id} task={task} grant={grant} today={today} />
+            <TaskRow key={task.id} task={task} grant={grant} today={today} mayEdit={mayEdit} />
           ))}
         </React.Fragment>
       ))}
 
-      <FooterBand>
-        <AddButton label="Add task" onClick={() => setAdding(true)} />
-      </FooterBand>
+      {mayEdit && (
+        <FooterBand>
+          <AddButton label="Add task" onClick={() => setAdding(true)} />
+        </FooterBand>
+      )}
 
-      {adding && (
+      {adding && mayEdit && (
         <AddTaskDialog
           grant={grant}
           onClose={() => setAdding(false)}
@@ -149,7 +152,17 @@ function GroupHeader({ phase, rows }: { phase: Phase; rows: Task[] }) {
   );
 }
 
-function TaskRow({ task, grant, today }: { task: Task; grant: Grant; today: string }) {
+function TaskRow({
+  task,
+  grant,
+  today,
+  mayEdit,
+}: {
+  task: Task;
+  grant: Grant;
+  today: string;
+  mayEdit: boolean;
+}) {
   const { actions } = useStore();
   const toast = useToast();
   const [hover, setHover] = React.useState(false);
@@ -177,7 +190,11 @@ function TaskRow({ task, grant, today }: { task: Task; grant: Grant; today: stri
         transition: 'background-color var(--duration-fast) var(--ease-standard)',
       }}
     >
-      <Checkbox checked={task.done} onChange={() => actions.grants.toggleTask(task.id)} />
+      {mayEdit ? (
+        <Checkbox checked={task.done} onChange={() => actions.grants.toggleTask(task.id)} />
+      ) : (
+        <span />
+      )}
       <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
         <span
           style={{
@@ -201,7 +218,8 @@ function TaskRow({ task, grant, today }: { task: Task; grant: Grant; today: stri
             }}
           />
         ) : (
-          hover && (
+          hover &&
+          mayEdit && (
             <span style={{ marginLeft: 'auto', display: 'flex' }}>
               <DeleteX label="Delete task" onClick={() => setConfirming(true)} />
             </span>

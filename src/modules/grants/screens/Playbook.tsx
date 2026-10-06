@@ -13,7 +13,7 @@ import {
 import { usePageHeader } from '../../../app/Shell';
 import { useToast } from '../../../app/ToastHost';
 import { PhaseBadge } from './badges';
-import { useStore } from '../../../core';
+import { useCan, useStore } from '../../../core';
 import { DEFAULT_TEMPLATE_ID, PHASES, PHASE_ORDER, timingLabel } from '../domain';
 import type { ChecklistTemplate, ChecklistTemplateItem, DateAnchor, Phase } from '../domain';
 import './playbook.css';
@@ -38,6 +38,8 @@ const MONO_SM: React.CSSProperties = {
 
 export default function Playbook() {
   const { state, actions } = useStore();
+  // Templates are grants records: a View role reads the playbook as it stands.
+  const mayEdit = useCan()('grants', 'edit');
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const [adding, setAdding] = React.useState(false);
@@ -56,7 +58,7 @@ export default function Playbook() {
   usePageHeader({
     title: 'Playbook',
     subtitle: 'The checklists every grant follows',
-    actions: (
+    actions: mayEdit ? (
       <Button
         variant="secondary"
         size="sm"
@@ -68,7 +70,7 @@ export default function Playbook() {
       >
         New template
       </Button>
-    ),
+    ) : undefined,
   });
 
   /** Every edit is a patch of the whole items array. */
@@ -177,73 +179,75 @@ export default function Playbook() {
             title={selected.name}
             subtitle={selected.id === DEFAULT_TEMPLATE_ID ? 'Default for new grants' : undefined}
             action={
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-3)',
-                  flex: '0 0 auto',
-                  flexWrap: 'wrap',
-                }}
-              >
-                {confirmDelete ? (
-                  <>
-                    <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
-                      Delete this template?
-                    </span>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        actions.grants.deleteTemplate(selected.id);
-                        setConfirmDelete(false);
-                        const next = templates.find(t => t.id !== selected.id);
-                        if (next) select(next.id);
-                        toast({
-                          tone: 'success',
-                          title: 'Template deleted',
-                          message: selected.name,
-                        });
-                      }}
-                    >
-                      Yes, delete
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
-                      Keep it
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        const id = actions.grants.duplicateTemplate(selected.id);
-                        select(id);
-                        toast({
-                          tone: 'success',
-                          title: 'Template duplicated',
-                          message: `Copy of ${selected.name}`,
-                        });
-                      }}
-                    >
-                      Duplicate
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={selected.id === DEFAULT_TEMPLATE_ID}
-                      style={{
-                        color:
-                          selected.id === DEFAULT_TEMPLATE_ID ? undefined : 'var(--danger-500)',
-                      }}
-                      onClick={() => setConfirmDelete(true)}
-                    >
-                      Delete
-                    </Button>
-                  </>
-                )}
-              </div>
+              mayEdit && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-3)',
+                    flex: '0 0 auto',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  {confirmDelete ? (
+                    <>
+                      <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
+                        Delete this template?
+                      </span>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          actions.grants.deleteTemplate(selected.id);
+                          setConfirmDelete(false);
+                          const next = templates.find(t => t.id !== selected.id);
+                          if (next) select(next.id);
+                          toast({
+                            tone: 'success',
+                            title: 'Template deleted',
+                            message: selected.name,
+                          });
+                        }}
+                      >
+                        Yes, delete
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                        Keep it
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          const id = actions.grants.duplicateTemplate(selected.id);
+                          select(id);
+                          toast({
+                            tone: 'success',
+                            title: 'Template duplicated',
+                            message: `Copy of ${selected.name}`,
+                          });
+                        }}
+                      >
+                        Duplicate
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={selected.id === DEFAULT_TEMPLATE_ID}
+                        style={{
+                          color:
+                            selected.id === DEFAULT_TEMPLATE_ID ? undefined : 'var(--danger-500)',
+                        }}
+                        onClick={() => setConfirmDelete(true)}
+                      >
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )
             }
           >
             {used.map(phase => {
@@ -274,13 +278,15 @@ export default function Playbook() {
                         borderBottom: 'var(--border-width) solid var(--border-subtle)',
                       }}
                     >
-                      <span
-                        className="ja-playbook-row__grip"
-                        style={{ color: 'var(--neutral-300)', display: 'flex' }}
-                      >
-                        <Icon name="grip-vertical" size={14} />
-                      </span>
-                      {editingId === item.id ? (
+                      {mayEdit && (
+                        <span
+                          className="ja-playbook-row__grip"
+                          style={{ color: 'var(--neutral-300)', display: 'flex' }}
+                        >
+                          <Icon name="grip-vertical" size={14} />
+                        </span>
+                      )}
+                      {mayEdit && editingId === item.id ? (
                         <TitleEditor
                           className="ja-playbook-row__title"
                           value={draft}
@@ -291,15 +297,19 @@ export default function Playbook() {
                       ) : (
                         <span
                           className="ja-playbook-row__title"
-                          onClick={() => {
-                            setDraft(item.title);
-                            setEditingId(item.id);
-                          }}
-                          title="Rename this step"
+                          onClick={
+                            mayEdit
+                              ? () => {
+                                  setDraft(item.title);
+                                  setEditingId(item.id);
+                                }
+                              : undefined
+                          }
+                          title={mayEdit ? 'Rename this step' : undefined}
                           style={{
                             font: 'var(--type-body-sm)',
                             color: 'var(--text-body)',
-                            cursor: 'text',
+                            cursor: mayEdit ? 'text' : undefined,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -310,11 +320,11 @@ export default function Playbook() {
                       )}
                       <span
                         className="ja-playbook-row__timing"
-                        onClick={() => setTimingItem(item)}
-                        title="Change when this step is due"
+                        onClick={mayEdit ? () => setTimingItem(item) : undefined}
+                        title={mayEdit ? 'Change when this step is due' : undefined}
                         style={{
                           ...MONO_SM,
-                          cursor: 'pointer',
+                          cursor: mayEdit ? 'pointer' : undefined,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
@@ -322,42 +332,46 @@ export default function Playbook() {
                       >
                         {timingLabel(item)}
                       </span>
-                      <button
-                        className="ja-playbook-row__remove"
-                        onClick={() => removeItem(item)}
-                        aria-label={`Remove ${item.title}`}
-                        style={{
-                          border: 0,
-                          background: 'none',
-                          cursor: 'pointer',
-                          color: 'var(--neutral-300)',
-                          font: '16px/1 var(--font-sans)',
-                          padding: 0,
-                        }}
-                      >
-                        &times;
-                      </button>
+                      {mayEdit && (
+                        <button
+                          className="ja-playbook-row__remove"
+                          onClick={() => removeItem(item)}
+                          aria-label={`Remove ${item.title}`}
+                          style={{
+                            border: 0,
+                            background: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--neutral-300)',
+                            font: '16px/1 var(--font-sans)',
+                            padding: 0,
+                          }}
+                        >
+                          &times;
+                        </button>
+                      )}
                     </div>
                   ))}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      minHeight: 34,
-                      padding: '0 var(--space-4)',
-                      borderBottom: 'var(--border-width) solid var(--border-subtle)',
-                      background: 'var(--neutral-0)',
-                    }}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      iconLeft={<Icon name="plus" size={15} />}
-                      onClick={() => addStep(phase)}
+                  {mayEdit && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        minHeight: 34,
+                        padding: '0 var(--space-4)',
+                        borderBottom: 'var(--border-width) solid var(--border-subtle)',
+                        background: 'var(--neutral-0)',
+                      }}
                     >
-                      Add step to {PHASES[phase].label}
-                    </Button>
-                  </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconLeft={<Icon name="plus" size={15} />}
+                        onClick={() => addStep(phase)}
+                      >
+                        Add step to {PHASES[phase].label}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -370,11 +384,13 @@ export default function Playbook() {
                   color: 'var(--text-muted)',
                 }}
               >
-                No steps yet. Pick a phase below and add the first one.
+                {mayEdit
+                  ? 'No steps yet. Pick a phase below and add the first one.'
+                  : 'No steps yet.'}
               </div>
             )}
 
-            {unused.length > 0 && (
+            {mayEdit && unused.length > 0 && (
               <div
                 style={{
                   display: 'flex',
@@ -412,7 +428,7 @@ export default function Playbook() {
         )}
       </div>
 
-      {adding && (
+      {adding && mayEdit && (
         <Dialog
           open
           title="New template"
@@ -448,7 +464,7 @@ export default function Playbook() {
         </Dialog>
       )}
 
-      {timingItem && (
+      {timingItem && mayEdit && (
         <TimingDialog
           item={timingItem}
           onClose={() => setTimingItem(null)}
