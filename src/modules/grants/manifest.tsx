@@ -6,6 +6,7 @@ import {
   deadlines,
   expensesMissingBackup,
   funderById,
+  funderShortName,
   fyTotals,
   grantById,
   grantPace,
@@ -15,7 +16,6 @@ import {
   transactionCounts,
 } from './domain';
 import type { Phase } from './domain';
-import { funderShort } from './screens/deadlines/helpers';
 import { PipelinePanel } from './screens/PipelinePanel';
 import Grants from './screens/Grants';
 import GrantDetail from './screens/GrantDetail';
@@ -51,7 +51,9 @@ function stats(state: PortalState, today: string): StatSpec[] {
       g.dates.decided <= fy.end &&
       WON_PHASES.includes(g.phase),
   );
-  const wonFunders = won.map(g => funderShort(funderById(state, g.funderId)?.name, 20)).join(', ');
+  const wonFunders = won
+    .map(g => funderShortName(funderById(state, g.funderId)?.name, true))
+    .join(', ');
 
   const preAward = state.grants.grants.filter(g => isPreAward(g.phase));
   const inPipeline = preAward.reduce((sum, g) => sum + (g.amountRequested ?? 0), 0);

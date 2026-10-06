@@ -5,6 +5,7 @@ import {
   accountName,
   eligibleGrants,
   eligibleLines,
+  funderShortName,
   grantById,
   lineById,
   suggestionFor,
@@ -12,7 +13,7 @@ import {
 import type { Expense, Suggestion, Transaction } from '../../domain';
 import { LinkButton } from './shared';
 import { TransactionMenu } from './TransactionMenu';
-import { grantFunder, joinWords } from './transactionHelpers';
+import { funderOfGrant, joinWords } from './transactionHelpers';
 
 /** What a row can ask the page to do. The page owns the toasts and the Undo. */
 export interface RowHandlers {
@@ -108,7 +109,9 @@ function DraftCell({ draft }: { draft: DraftSummary }) {
   const total = draft.parts.reduce((s, p) => s + p.amount, 0);
   if (draft.parts.length > 1) {
     const funders = joinWords(
-      draft.parts.map(p => (p.grantId ? grantFunder(state, p.grantId, true) : 'a grant to choose')),
+      draft.parts.map(p =>
+        p.grantId ? funderShortName(funderOfGrant(state, p.grantId), true) : 'a grant to choose',
+      ),
     );
     const shares = joinWords(
       draft.parts.map(p => `${total > 0 ? Math.round((p.amount / total) * 100) : 0}%`),
@@ -129,7 +132,8 @@ function DraftCell({ draft }: { draft: DraftSummary }) {
     <div className="tx-two">
       <span className="tx-l1 plain">{line?.category ?? 'Choosing a line'}</span>
       <span className="tx-l2">
-        {part?.grantId ? `${grantFunder(state, part.grantId, true)} · ` : ''}Editing on the right
+        {part?.grantId ? `${funderShortName(funderOfGrant(state, part.grantId), true)} · ` : ''}
+        Editing on the right
       </span>
     </div>
   );
@@ -164,7 +168,10 @@ function AssignCell({
       { label: 'Change', icon: 'split', onSelect: () => on.open(tx) },
       { label: 'Send back to assign', icon: 'undo-2', onSelect: () => on.sendBack(tx) },
       ...grants.map(p => ({
-        label: grants.length > 1 ? `See in ${grantFunder(state, p.grantId, true)}` : 'See in grant',
+        label:
+          grants.length > 1
+            ? `See in ${funderShortName(funderOfGrant(state, p.grantId), true)}`
+            : 'See in grant',
         icon: 'arrow-up-right',
         onSelect: () => on.seeInGrant(p),
       })),
@@ -179,7 +186,9 @@ function AssignCell({
                 : 'Assigned'}
             </span>
             <span className="tx-l2">
-              {parts[0] ? `${grantFunder(state, parts[0].grantId, true)} · ` : ''}
+              {parts[0]
+                ? `${funderShortName(funderOfGrant(state, parts[0].grantId), true)} · `
+                : ''}
               {who}
             </span>
           </div>
@@ -189,7 +198,10 @@ function AssignCell({
               <span key={p.id} className="tx-partline">
                 <span className="tx-partline__what">
                   {lineById(state, p.budgetLineId)?.category ?? 'A removed line'}
-                  <span className="tx-muted"> · {grantFunder(state, p.grantId, true)}</span>
+                  <span className="tx-muted">
+                    {' '}
+                    · {funderShortName(funderOfGrant(state, p.grantId), true)}
+                  </span>
                 </span>
                 <span className="tx-mono">{money(p.amount)}</span>
               </span>
@@ -271,17 +283,19 @@ function SuggestionCell({
 
   if (suggestion.kind === 'line') {
     what = lineById(state, suggestion.budgetLineId)?.category;
-    why = grantFunder(state, suggestion.grantId, true);
+    why = funderShortName(funderOfGrant(state, suggestion.grantId), true);
   } else if (suggestion.kind === 'not-grant-funded') {
     what = 'Not grant-funded';
     why = `Last ${suggestion.months} ${suggestion.months === 1 ? 'month' : 'months'}`;
   } else if (suggestion.kind === 'split' && suggestion.rule.parts.length === 1) {
     // A saved rule with one part is simply "always this line".
     what = lineById(state, suggestion.rule.parts[0].budgetLineId)?.category;
-    why = `${grantFunder(state, suggestion.rule.parts[0].grantId, true)} · Rule`;
+    why = `${funderShortName(funderOfGrant(state, suggestion.rule.parts[0].grantId), true)} · Rule`;
   } else if (suggestion.kind === 'split') {
     const funders = [
-      ...new Set(suggestion.rule.parts.map(p => grantFunder(state, p.grantId, true))),
+      ...new Set(
+        suggestion.rule.parts.map(p => funderShortName(funderOfGrant(state, p.grantId), true)),
+      ),
     ];
     what = (
       <span className="tx-splitcell">
@@ -349,7 +363,8 @@ export function LinePicker({
           <optgroup label={`Fits ${tx.accountCode}`}>
             {fits.map(c => (
               <option key={`fit-${c.budgetLineId}`} value={c.budgetLineId}>
-                {lineById(state, c.budgetLineId)?.category} · {grantFunder(state, c.grantId, true)}
+                {lineById(state, c.budgetLineId)?.category} ·{' '}
+                {funderShortName(funderOfGrant(state, c.grantId), true)}
               </option>
             ))}
           </optgroup>
@@ -357,7 +372,7 @@ export function LinePicker({
         {grants.map(g => (
           <optgroup
             key={g.id}
-            label={`${grantById(state, g.id)?.title} · ${grantFunder(state, g.id)}`}
+            label={`${grantById(state, g.id)?.title} · ${funderShortName(funderOfGrant(state, g.id))}`}
           >
             {lines
               .filter(l => l.grantId === g.id)
