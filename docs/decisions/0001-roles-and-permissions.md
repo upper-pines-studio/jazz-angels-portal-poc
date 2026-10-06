@@ -55,6 +55,18 @@ director's role and gets a teacher's view of their own classes on top.
   refused at sign-in.
 - The signed-in person is passed to every action, and the activity log uses them.
 - The rail, the routes and the buttons read one permission check, so a hidden screen and a
-  refused write agree. The database enforces the same table with row-level security; the
-  screens only hide what the database would refuse anyway.
-- "Own classes" means the ensembles the teacher is assigned to teach.
+  refused write agree. Done (#17): the table above is written as data in
+  `src/core/permissions.ts` (`PERMISSION_TABLE`, same rows and columns), and `can(role, row,
+  need, own)` answers from it. The rail (`app/Shell.tsx`) and the routes (`app/App.tsx`, with
+  `app/access.ts`) read each manifest's `requires`; a refused route shows a no-access screen
+  and keeps its URL. Every store action names the row it needs in its slice's `rules`, and the
+  store (`guardActions` in `core/store.tsx`) refuses the rest with a toast ("You can't do that
+  as a Teacher"). The screens leave out what the store would refuse. The database enforces the
+  same table with row-level security (#22); the screens only hide what the database would
+  refuse anyway.
+- Beyond the table, only an Admin makes someone an Admin or changes an Admin's record, so the
+  "Staff and roles" row cannot hand out "Modules, import, export" (`mayChangeStaff`).
+- "Own classes" means the ensembles the teacher is assigned to teach: `Ensemble.leadStaffId`
+  (`leadsEnsemble` and `mayTakeRoll` in `modules/teaching/domain/derive.ts`). Guardian name and
+  phone are left off a student's record before it reaches the screen for anyone who may not see
+  them (`rosterFor`).

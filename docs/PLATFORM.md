@@ -93,29 +93,42 @@ export interface ModuleSlice<S, A> {
   id: string;                                   // storage key + state key, e.g. 'grants'
   seed(today: string): S;
   reducer(state: S, action: AnyAction): S;      // actions are `{ type: '<slice>/<name>', ... }`
-  createActions(dispatch, getState: () => PortalState, ctx: { today: string; newId(prefix): string }): A;
+  createActions(dispatch, getState: () => PortalState, ctx: { today: string; newId(prefix): string; user: SignedInUser }): A;
+  /** One per action: a row of decision 0001 (edit on it), or (user, state, ...args) => boolean | reason.
+   *  The store refuses an action its rule refuses, with a toast. */
+  rules: ActionRules<A>;
   /** Optional: validate + fill a loaded payload. Return undefined to reject. */
   normalise?(raw: unknown): S | undefined;
 }
 
-export interface NavItem { path: string; label: string; icon: string; badge?(state: PortalState, today: string): number }
-export interface StatSpec { id: string; label: string; value: string; unit?: string; footnote?: string; accent: string; href?: string }
+// What a thing needs to show: one row of the permission table, or several of which any one will do.
+export type Requires = Requirement | Requirement[];   // Requirement = { subject: Subject; need?: 'open'|'view'|'edit' }
+export interface NavItem { path: string; label: string; icon: string; badge?(state: PortalState, today: string): number; requires?: Requires }
+export interface StatSpec { id: string; label: string; value: string; unit?: string; footnote?: string; accent: string; href?: string; requires?: Requires }
 export interface AttentionItem {
   id: string; date: string; label: string; detail: string;
   status: 'overdue'|'due-soon'|'info'; href: string; ownerId?: string;
   source: string;                                // module label, shown as a Badge
+  requires?: Requires;                           // defaults to what `href` needs
 }
+export interface ModuleRoute {
+  path: string; element: React.ReactElement;
+  requires?: Requires;                           // refused: the no-access screen, at the same URL
+  allows?(user, state, params): boolean;         // the record in hand, for an "Own" cell
+}
+export interface GatedCard { component: React.ComponentType; requires?: Requires }
 export interface DashboardContribution {
   stats?(state: PortalState, today: string): StatSpec[];          // at most 2 per module
   attention?(state: PortalState, today: string): AttentionItem[];
-  panels?: React.ComponentType[];                                  // each renders a Card
+  panels?: GatedCard[];                                            // each renders a Card
 }
 
 export interface ModuleManifest {
   id: string; label: string; description: string;   // description shows in Settings → Modules
   nav: { section: string; items: NavItem[] };
-  routes: Array<{ path: string; element: React.ReactElement }>;
+  routes: ModuleRoute[];
   dashboard?: DashboardContribution;
+  settings?: GatedCard[];
   slice: ModuleSlice<any, any>;
 }
 ```
