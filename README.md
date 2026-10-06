@@ -95,6 +95,14 @@ published demo, not real security. A real login needs a backend.
 node -e "const c=require('crypto');console.log(c.createHash('sha256').update('USERNAME:NEWPASSWORD').digest('hex'))"
 ```
 
+**End-to-end tests.** `npm run test:e2e` runs the Playwright smoke tests in `e2e/` headless
+against the dev server, which it starts on `PORT` (5181 by default; `PORT=5207 npm run test:e2e`
+beside another worktree). Run `npx playwright install chromium` once first. Each test starts
+from fresh demo data. The sign-in spec reads `DEMO_<ROLE>_USERNAME` and `DEMO_<ROLE>_PASSWORD`
+from the environment, or from `.env.local`, which `playwright.config.ts` loads; a role whose
+password is not set is skipped, not failed. The other specs need no password: they start signed
+in by writing the session into localStorage.
+
 ## Demo data
 
 The seed is written around **Sunday, September 13, 2026**, the first day of the Fall session: ten
