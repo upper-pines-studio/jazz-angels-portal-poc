@@ -38,7 +38,7 @@ describe('seed', () => {
   });
 
   it('leaves some drafts about as well as approvals', () => {
-    const statuses = new Set(makeSeed().entries.map((e) => e.status));
+    const statuses = new Set(makeSeed().entries.map(e => e.status));
     expect(statuses).toEqual(new Set(['draft', 'submitted', 'approved']));
   });
 });
@@ -52,7 +52,7 @@ describe('approveEntry', () => {
       by: CURRENT_USER.id,
       at: today,
     });
-    const approved = next.entries.find((e) => e.id === entry.id)!;
+    const approved = next.entries.find(e => e.id === entry.id)!;
 
     expect(approved.status).toBe('approved');
     expect(approved.approvedBy).toBe(CURRENT_USER.id);
@@ -62,7 +62,7 @@ describe('approveEntry', () => {
 
   it('leaves an already approved entry alone', () => {
     const state = makeSeed();
-    const already = state.entries.find((e) => e.status === 'approved')!;
+    const already = state.entries.find(e => e.status === 'approved')!;
     const next = reducer(state, { type: 'approve', id: already.id, by: 's-denise', at: today });
     expect(next).toBe(state);
   });
@@ -76,10 +76,10 @@ describe('approveEntry', () => {
 describe('submitEntry', () => {
   it('moves a draft into the queue and stops there', () => {
     const state = makeSeed();
-    const draft = state.entries.find((e) => e.status === 'draft')!;
+    const draft = state.entries.find(e => e.status === 'draft')!;
     const next = reducer(state, { type: 'submit', id: draft.id });
 
-    expect(next.entries.find((e) => e.id === draft.id)!.status).toBe('submitted');
+    expect(next.entries.find(e => e.id === draft.id)!.status).toBe('submitted');
     expect(awaitingApproval(portal(next))).toHaveLength(3);
     // Submitting again changes nothing.
     expect(reducer(next, { type: 'submit', id: draft.id })).toBe(next);
@@ -125,7 +125,7 @@ describe('the slice', () => {
       by: CURRENT_USER.id,
       at: today,
     });
-    expect(next.entries.find((e) => e.id === entry.id)!.status).toBe('approved');
+    expect(next.entries.find(e => e.id === entry.id)!.status).toBe('approved');
   });
 
   it('accepts a payload with entries and rejects anything else', () => {
@@ -138,7 +138,16 @@ describe('the slice', () => {
 
   it('fills a status it does not recognise with draft', () => {
     const filled = timesheetsSlice.normalise!({
-      entries: [{ id: 'x', staffId: 's-devon', date: today, programId: 'in-school', activity: 'x', hours: 1 }],
+      entries: [
+        {
+          id: 'x',
+          staffId: 's-devon',
+          date: today,
+          programId: 'in-school',
+          activity: 'x',
+          hours: 1,
+        },
+      ],
     });
     expect(filled!.entries[0].status).toBe('draft');
   });

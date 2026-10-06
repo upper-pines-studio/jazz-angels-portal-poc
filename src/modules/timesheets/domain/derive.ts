@@ -52,7 +52,7 @@ function byDate(a: TimeEntry, b: TimeEntry): number {
 
 /** Every entry in the inclusive range, oldest first. */
 export function entriesInRange(state: PortalState, { from, to }: DateRange): TimeEntry[] {
-  return state.timesheets.entries.filter((e) => e.date >= from && e.date <= to).sort(byDate);
+  return state.timesheets.entries.filter(e => e.date >= from && e.date <= to).sort(byDate);
 }
 
 /** Every entry in the Monday-to-Sunday week starting `weekStartISO`. */
@@ -62,11 +62,11 @@ export function entriesForWeek(state: PortalState, weekStartISO: string): TimeEn
 
 export function weekTotals(state: PortalState, weekStartISO: string): WeekTotals {
   const entries = entriesForWeek(state, weekStartISO);
-  const submitted = entries.filter((e) => e.status === 'submitted');
+  const submitted = entries.filter(e => e.status === 'submitted');
   return {
     hours: round2(entries.reduce((sum, e) => sum + e.hours, 0)),
     entries: entries.length,
-    teachers: new Set(entries.map((e) => e.staffId)).size,
+    teachers: new Set(entries.map(e => e.staffId)).size,
     awaiting: submitted.length,
     awaitingHours: round2(submitted.reduce((sum, e) => sum + e.hours, 0)),
   };
@@ -74,7 +74,7 @@ export function weekTotals(state: PortalState, weekStartISO: string): WeekTotals
 
 /** Everything submitted and still waiting on the office, oldest first. */
 export function awaitingApproval(state: PortalState): TimeEntry[] {
-  return state.timesheets.entries.filter((e) => e.status === 'submitted').sort(byDate);
+  return state.timesheets.entries.filter(e => e.status === 'submitted').sort(byDate);
 }
 
 /**
@@ -100,7 +100,7 @@ export function hoursForProgram(
 ): number {
   return round2(
     entriesInRange(state, { from, to })
-      .filter((e) => e.programId === programId)
+      .filter(e => e.programId === programId)
       .reduce((sum, e) => sum + e.hours, 0),
   );
 }
@@ -112,5 +112,5 @@ export function hoursThisMonth(state: PortalState, today: string): number {
 
 /** How many people logged anything this month, for the "Across N teachers" footnote. */
 export function teachersThisMonth(state: PortalState, today: string): number {
-  return new Set(entriesInRange(state, monthRange(today)).map((e) => e.staffId)).size;
+  return new Set(entriesInRange(state, monthRange(today)).map(e => e.staffId)).size;
 }

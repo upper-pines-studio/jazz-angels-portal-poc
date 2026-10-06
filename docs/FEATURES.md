@@ -34,6 +34,7 @@ Shared by every module. Owned by `core/` and `app/`.
 | Storage | | Mocked: localStorage, one key per module | | `core/repository.ts` |
 | Docked side panel | | Built | `app/components/SidePanel.tsx` | |
 | Toasts | | Built | `app/ToastHost.tsx` | |
+| Lint and formatting: module boundaries, storage, `new Date()` in screens | (`npm run lint`) | Built | | `eslint.config.js`, `prettier.config.js` (repo root) |
 
 ## Grants
 

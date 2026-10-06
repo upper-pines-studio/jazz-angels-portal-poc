@@ -63,9 +63,11 @@ export function ExpenseAside({ grant }: { grant: Grant }) {
 
   return (
     <div id="expense-detail" className="ja-exp-aside">
-      {view.selected
-        ? <ExpenseCard key={view.selected.id} grant={grant} expense={view.selected} view={view} />
-        : <IdleCard grant={grant} view={view} />}
+      {view.selected ? (
+        <ExpenseCard key={view.selected.id} grant={grant} expense={view.selected} view={view} />
+      ) : (
+        <IdleCard grant={grant} view={view} />
+      )}
     </div>
   );
 }
@@ -78,24 +80,49 @@ function IdleCard({ grant, view }: { grant: Grant; view: View }) {
   const s = backupSummary(state, grant.id);
 
   let sentence: string;
-  if (s.expenses === 0) sentence = 'Nothing has been spent against this grant yet, so there is no backup to keep.';
-  else if (s.missing === 0) sentence = `All ${expensesLabel(s.expenses)} have their backup, ${filesLabel(s.files)} in all.`;
+  if (s.expenses === 0)
+    sentence = 'Nothing has been spent against this grant yet, so there is no backup to keep.';
+  else if (s.missing === 0)
+    sentence = `All ${expensesLabel(s.expenses)} have their backup, ${filesLabel(s.files)} in all.`;
   else {
-    sentence = `${s.withBackup} of ${expensesLabel(s.expenses)} have their backup, ${filesLabel(s.files)} in all. `
-      + `${s.missing} ${s.missing === 1 ? 'is' : 'are'} missing a receipt, ${money(s.missingTotal)} together.`;
+    sentence =
+      `${s.withBackup} of ${expensesLabel(s.expenses)} have their backup, ${filesLabel(s.files)} in all. ` +
+      `${s.missing} ${s.missing === 1 ? 'is' : 'are'} missing a receipt, ${money(s.missingTotal)} together.`;
   }
 
   const firstMissing = view.missing[0];
   return (
     <Card padding="var(--space-5)">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
-        <span className="ja-exp-aside__icon"><Icon name="receipt" size={18} /></span>
-        <h3 style={{ margin: 0, font: 'var(--weight-semibold) var(--text-base)/1.3 var(--font-sans)', color: 'var(--text-strong)', letterSpacing: 0 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-3)',
+          alignItems: 'flex-start',
+        }}
+      >
+        <span className="ja-exp-aside__icon">
+          <Icon name="receipt" size={18} />
+        </span>
+        <h3
+          style={{
+            margin: 0,
+            font: 'var(--weight-semibold) var(--text-base)/1.3 var(--font-sans)',
+            color: 'var(--text-strong)',
+            letterSpacing: 0,
+          }}
+        >
           {s.expenses ? 'Choose an expense to see its backup' : 'No expenses yet'}
         </h3>
-        <p style={{ margin: 0, font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>{sentence}</p>
+        <p style={{ margin: 0, font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
+          {sentence}
+        </p>
         {firstMissing && (
-          <Button variant="secondary" size="sm" onClick={() => view.patch({ backup: 'missing', expense: firstMissing.id })}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => view.patch({ backup: 'missing', expense: firstMissing.id })}
+          >
             Start with the missing ones
           </Button>
         )}
@@ -137,17 +164,29 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
         continue;
       }
       const id = actions.grants.addFile({
-        grantId: grant.id, expenseId: expense.id, kind: guessKind(d.format), name: d.name, format: d.format, sizeKb: d.sizeKb,
+        grantId: grant.id,
+        expenseId: expense.id,
+        kind: guessKind(d.format),
+        name: d.name,
+        format: d.format,
+        sizeKb: d.sizeKb,
       });
       rememberFile(id, file);
       added.push(d.name);
     }
     if (!added.length) return;
     const what = added.length === 1 ? added[0] : filesLabel(added.length);
-    const after = before === 0
-      ? view.filter === 'missing' ? 'Its backup is complete, so it has left the Missing list.' : 'Its backup is complete.'
-      : `It has ${filesLabel(before + added.length)} now.`;
-    toast({ tone: 'success', title: 'Backup added', message: `${what} is with ${expense.payee}. ${after}` });
+    const after =
+      before === 0
+        ? view.filter === 'missing'
+          ? 'Its backup is complete, so it has left the Missing list.'
+          : 'Its backup is complete.'
+        : `It has ${filesLabel(before + added.length)} now.`;
+    toast({
+      tone: 'success',
+      title: 'Backup added',
+      message: `${what} is with ${expense.payee}. ${after}`,
+    });
   };
 
   const removeAll = (expenseIds: string[]) => {
@@ -162,7 +201,8 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
     view.select(null);
     actions.grants.unassignTransaction(tx.id);
     toast({
-      tone: 'success', title: 'Sent back to Transactions',
+      tone: 'success',
+      title: 'Sent back to Transactions',
       message: `${tx.ref} from ${tx.payee}, ${money(tx.amount)}, is waiting to be assigned again.${files.length ? ' Its backup was removed.' : ''}`,
     });
   };
@@ -171,10 +211,15 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
     removeAll([expense.id]);
     view.select(null);
     actions.grants.deleteExpense(expense.id);
-    toast({ tone: 'success', title: 'Expense deleted', message: `${expense.payee}, ${money(expense.amount)}, is off ${line?.category ?? 'the budget'}.` });
+    toast({
+      tone: 'success',
+      title: 'Expense deleted',
+      message: `${expense.payee}, ${money(expense.amount)}, is off ${line?.category ?? 'the budget'}.`,
+    });
   };
 
-  const partsNote = parts.length > 1 ? ` for ${money(tx?.amount)}, split across ${parts.length} budget lines` : '';
+  const partsNote =
+    parts.length > 1 ? ` for ${money(tx?.amount)}, split across ${parts.length} budget lines` : '';
 
   return (
     <Card padding="0">
@@ -182,14 +227,35 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
         <div className="ja-exp-aside__top">
           <Eyebrow>Expense</Eyebrow>
           <span className="ja-exp-aside__nav">
-            <IconButton label="Previous expense" size="sm" variant="ghost" disabled={!prev} onClick={() => prev && view.select(prev.id)}>
+            <IconButton
+              label="Previous expense"
+              size="sm"
+              variant="ghost"
+              disabled={!prev}
+              onClick={() => prev && view.select(prev.id)}
+            >
               <Icon name="chevron-left" size={15} />
             </IconButton>
-            {at >= 0 && <span>{at + 1} of {list.length}</span>}
-            <IconButton label="Next expense" size="sm" variant="ghost" disabled={!next} onClick={() => next && view.select(next.id)}>
+            {at >= 0 && (
+              <span>
+                {at + 1} of {list.length}
+              </span>
+            )}
+            <IconButton
+              label="Next expense"
+              size="sm"
+              variant="ghost"
+              disabled={!next}
+              onClick={() => next && view.select(next.id)}
+            >
               <Icon name="chevron-right" size={15} />
             </IconButton>
-            <IconButton label="Close the expense" size="sm" variant="ghost" onClick={() => view.select(null)}>
+            <IconButton
+              label="Close the expense"
+              size="sm"
+              variant="ghost"
+              onClick={() => view.select(null)}
+            >
               <Icon name="x" size={15} />
             </IconButton>
           </span>
@@ -199,20 +265,51 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
           <span className="ja-exp-aside__money">{money(expense.amount)}</span>
           <span className="ja-exp-aside__date">{dateLong(expense.date)}</span>
           <span style={{ marginLeft: 'auto' }}>
-            {files.length ? <Badge tone="teal" dot>Backup complete</Badge> : <Badge tone="gold" dot>Missing backup</Badge>}
+            {files.length ? (
+              <Badge tone="teal" dot>
+                Backup complete
+              </Badge>
+            ) : (
+              <Badge tone="gold" dot>
+                Missing backup
+              </Badge>
+            )}
           </span>
         </div>
       </div>
 
       <div className="ja-exp-aside__body">
-        <Row k="Budget line" v={line
-          ? <LinkButton onClick={() => view.patch({ tab: 'budget', line: line.id, expense: null, backup: null })}>{line.category}</LinkButton>
-          : 'No line'} />
-        <Row k="Description" v={expense.note ?? <span style={{ color: 'var(--text-faint)' }}>None given</span>} />
+        <Row
+          k="Budget line"
+          v={
+            line ? (
+              <LinkButton
+                onClick={() =>
+                  view.patch({ tab: 'budget', line: line.id, expense: null, backup: null })
+                }
+              >
+                {line.category}
+              </LinkButton>
+            ) : (
+              'No line'
+            )
+          }
+        />
+        <Row
+          k="Description"
+          v={expense.note ?? <span style={{ color: 'var(--text-faint)' }}>None given</span>}
+        />
         {tx ? (
           <>
             <Row k="QuickBooks account" mono v={accountLabel(state, tx.accountCode)} />
-            <Row k="QuickBooks class" v={className(state, tx.classId) ?? <span style={{ color: 'var(--text-faint)' }}>No class</span>} />
+            <Row
+              k="QuickBooks class"
+              v={
+                className(state, tx.classId) ?? (
+                  <span style={{ color: 'var(--text-faint)' }}>No class</span>
+                )
+              }
+            />
           </>
         ) : (
           <Row k="Source" v="Entered by hand" />
@@ -221,12 +318,28 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
           <Icon name="lock" size={14} />
           {tx ? (
             <span>
-              Came from QuickBooks as {provenance(tx.ref)}{partsNote}
-              {assigner ? <>, assigned by {assigner.name}{tx.assignedAt && <> on <span className="ja-exp-aside__mono">{dateShort(tx.assignedAt)}</span></>}</> : ''}.
-              {' '}Amounts are read only here.
+              Came from QuickBooks as {provenance(tx.ref)}
+              {partsNote}
+              {assigner ? (
+                <>
+                  , assigned by {assigner.name}
+                  {tx.assignedAt && (
+                    <>
+                      {' '}
+                      on <span className="ja-exp-aside__mono">{dateShort(tx.assignedAt)}</span>
+                    </>
+                  )}
+                </>
+              ) : (
+                ''
+              )}
+              . Amounts are read only here.
             </span>
           ) : (
-            <span>Entered by hand, for something that never went through QuickBooks. Only the portal knows about it.</span>
+            <span>
+              Entered by hand, for something that never went through QuickBooks. Only the portal
+              knows about it.
+            </span>
           )}
         </div>
       </div>
@@ -240,7 +353,9 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
           No receipt or invoice yet. Add one below so this expense is ready for an audit.
         </p>
       )}
-      {files.map(f => <FileRow key={f.id} file={f} expense={expense} remaining={files.length - 1} />)}
+      {files.map(f => (
+        <FileRow key={f.id} file={f} expense={expense} remaining={files.length - 1} />
+      ))}
       <div className="ja-exp-aside__drop">
         <FileDrop onFiles={onFiles} />
       </div>
@@ -250,16 +365,31 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
       <div className="ja-exp-aside__move">
         {!confirming ? (
           <div className="ja-exp-aside__move-actions">
-            <Button variant="ghost" size="sm" iconLeft={<Icon name="arrow-right-left" size={14} />} onClick={() => setReassigning(true)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              iconLeft={<Icon name="arrow-right-left" size={14} />}
+              onClick={() => setReassigning(true)}
+            >
               Reassign
             </Button>
             {tx ? (
-              <Button variant="ghost" size="sm" iconLeft={<Icon name="undo-2" size={14} />} onClick={() => setConfirming(true)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                iconLeft={<Icon name="undo-2" size={14} />}
+                onClick={() => setConfirming(true)}
+              >
                 Send back to Transactions
               </Button>
             ) : (
-              <Button variant="ghost" size="sm" iconLeft={<Icon name="trash-2" size={14} />} style={{ color: 'var(--danger-500)' }}
-                onClick={() => setConfirming(true)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                iconLeft={<Icon name="trash-2" size={14} />}
+                style={{ color: 'var(--danger-500)' }}
+                onClick={() => setConfirming(true)}
+              >
                 Delete
               </Button>
             )}
@@ -267,29 +397,54 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
         ) : (
           <div className="ja-exp-aside__confirm" role="alert">
             <p>
-              {tx
-                ? <>This takes {parts.length > 1 ? `all ${parts.length} parts of ${tx.ref}` : 'the expense'} off the budget
-                  {files.length ? ` and deletes ${files.length === 1 ? 'its backup file' : `its ${files.length} backup files`}` : ''}.
-                  The transaction goes back to the To assign list on Transactions. QuickBooks is not changed.</>
-                : <>This deletes the expense{files.length ? ` and ${files.length === 1 ? 'its backup file' : `its ${files.length} backup files`}` : ''}. It cannot be undone.</>}
+              {tx ? (
+                <>
+                  This takes{' '}
+                  {parts.length > 1 ? `all ${parts.length} parts of ${tx.ref}` : 'the expense'} off
+                  the budget
+                  {files.length
+                    ? ` and deletes ${files.length === 1 ? 'its backup file' : `its ${files.length} backup files`}`
+                    : ''}
+                  . The transaction goes back to the To assign list on Transactions. QuickBooks is
+                  not changed.
+                </>
+              ) : (
+                <>
+                  This deletes the expense
+                  {files.length
+                    ? ` and ${files.length === 1 ? 'its backup file' : `its ${files.length} backup files`}`
+                    : ''}
+                  . It cannot be undone.
+                </>
+              )}
             </p>
             <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-              <Button variant="danger" size="sm" onClick={tx ? sendBack : deleteByHand}>{tx ? 'Send back' : 'Delete expense'}</Button>
-              <Button variant="secondary" size="sm" onClick={() => setConfirming(false)}>Keep it</Button>
+              <Button variant="danger" size="sm" onClick={tx ? sendBack : deleteByHand}>
+                {tx ? 'Send back' : 'Delete expense'}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setConfirming(false)}>
+                Keep it
+              </Button>
             </div>
           </div>
         )}
       </div>
 
       {reassigning && (
-        <ReassignDialog grant={grant} expense={expense} onClose={() => setReassigning(false)} onSaved={lineId => {
-          actions.grants.updateExpense(expense.id, { budgetLineId: lineId });
-          setReassigning(false);
-          toast({
-            tone: 'success', title: 'Expense moved',
-            message: `${expense.payee}, ${money(expense.amount)}, now counts against ${lineById(state, lineId)?.category ?? 'that line'}.`,
-          });
-        }} />
+        <ReassignDialog
+          grant={grant}
+          expense={expense}
+          onClose={() => setReassigning(false)}
+          onSaved={lineId => {
+            actions.grants.updateExpense(expense.id, { budgetLineId: lineId });
+            setReassigning(false);
+            toast({
+              tone: 'success',
+              title: 'Expense moved',
+              message: `${expense.payee}, ${money(expense.amount)}, now counts against ${lineById(state, lineId)?.category ?? 'that line'}.`,
+            });
+          }}
+        />
       )}
     </Card>
   );
@@ -305,46 +460,94 @@ function Row({ k, v, mono = false }: { k: React.ReactNode; v: React.ReactNode; m
 }
 
 /** One backup file: its picture, what it is, who added it, and what can be done with it. */
-function FileRow({ file, expense, remaining }: { file: GrantFile; expense: Expense; remaining: number }) {
+function FileRow({
+  file,
+  expense,
+  remaining,
+}: {
+  file: GrantFile;
+  expense: Expense;
+  remaining: number;
+}) {
   const { state, actions } = useStore();
   const toast = useToast();
   const [viewing, setViewing] = React.useState(false);
   const [removing, setRemoving] = React.useState(false);
   const who = staffById(state, file.uploadedById)?.name ?? 'someone';
-  const kind = file.kind === 'receipt' && file.format !== 'pdf' ? 'Receipt photo' : FILE_KIND_LABEL[file.kind];
+  const kind =
+    file.kind === 'receipt' && file.format !== 'pdf' ? 'Receipt photo' : FILE_KIND_LABEL[file.kind];
 
   const remove = () => {
     actions.grants.deleteFile(file.id);
     forgetFile(file.id);
     toast({
-      tone: 'success', title: 'File removed',
+      tone: 'success',
+      title: 'File removed',
       message: `${file.name} is gone. ${remaining ? `${expense.payee} has ${filesLabel(remaining)} left.` : `${expense.payee} is missing its backup now.`}`,
     });
   };
 
   return (
     <div className="ja-exp-file">
-      <button type="button" className="ja-exp-file__thumb" aria-label={`Open ${file.name}`} onClick={() => setViewing(true)}>
+      <button
+        type="button"
+        className="ja-exp-file__thumb"
+        aria-label={`Open ${file.name}`}
+        onClick={() => setViewing(true)}
+      >
         <FilePaper file={file} />
       </button>
       <div className="ja-exp-file__info">
-        <span className="ja-exp-file__name" title={file.name}>{file.name}</span>
-        <span className="ja-exp-file__meta">
-          {kind}{file.pages ? ` · ${file.pages} ${file.pages === 1 ? 'page' : 'pages'}` : ''} · <span className="ja-exp-aside__mono">{fileSize(file.sizeKb)}</span>
+        <span className="ja-exp-file__name" title={file.name}>
+          {file.name}
         </span>
-        <span className="ja-exp-file__meta">Added by {who}, <span className="ja-exp-aside__mono">{dateShort(file.uploadedAt)}</span></span>
+        <span className="ja-exp-file__meta">
+          {kind}
+          {file.pages ? ` · ${file.pages} ${file.pages === 1 ? 'page' : 'pages'}` : ''} ·{' '}
+          <span className="ja-exp-aside__mono">{fileSize(file.sizeKb)}</span>
+        </span>
+        <span className="ja-exp-file__meta">
+          Added by {who}, <span className="ja-exp-aside__mono">{dateShort(file.uploadedAt)}</span>
+        </span>
         {removing ? (
           <span className="ja-exp-file__confirm">
             Remove this file?
-            <button type="button" className="is-danger" onClick={remove}>Remove</button>
-            <button type="button" onClick={() => setRemoving(false)}>Keep</button>
+            <button type="button" className="is-danger" onClick={remove}>
+              Remove
+            </button>
+            <button type="button" onClick={() => setRemoving(false)}>
+              Keep
+            </button>
           </span>
         ) : (
           <span className="ja-exp-file__actions">
-            <Button variant="ghost" size="sm" iconLeft={<Icon name="external-link" size={13} />} style={TIGHT} onClick={() => setViewing(true)}>Open</Button>
-            <Button variant="ghost" size="sm" iconLeft={<Icon name="download" size={13} />} style={TIGHT} onClick={() => downloadFile(file)}>Download</Button>
-            <Button variant="ghost" size="sm" iconLeft={<Icon name="trash-2" size={13} />} style={{ ...TIGHT, color: 'var(--danger-500)' }}
-              onClick={() => setRemoving(true)}>Remove</Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              iconLeft={<Icon name="external-link" size={13} />}
+              style={TIGHT}
+              onClick={() => setViewing(true)}
+            >
+              Open
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              iconLeft={<Icon name="download" size={13} />}
+              style={TIGHT}
+              onClick={() => downloadFile(file)}
+            >
+              Download
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              iconLeft={<Icon name="trash-2" size={13} />}
+              style={{ ...TIGHT, color: 'var(--danger-500)' }}
+              onClick={() => setRemoving(true)}
+            >
+              Remove
+            </Button>
           </span>
         )}
       </div>
@@ -368,20 +571,37 @@ function NoteField({ expense }: { expense: Expense }) {
     if (text === last.current.trim()) return;
     last.current = text;
     actions.grants.updateExpense(expense.id, { backupNote: text || undefined });
-    toast({ tone: 'success', title: text ? 'Note saved' : 'Note cleared', message: `On ${expense.payee}. It goes out with the audit download.` });
+    toast({
+      tone: 'success',
+      title: text ? 'Note saved' : 'Note cleared',
+      message: `On ${expense.payee}. It goes out with the audit download.`,
+    });
   };
 
   return (
-    <div ref={wrap} className="ja-exp-aside__note"
-      onBlur={e => { if (!wrap.current?.contains(e.relatedTarget as Node | null)) save(); }}>
+    <div
+      ref={wrap}
+      className="ja-exp-aside__note"
+      onBlur={e => {
+        if (!wrap.current?.contains(e.relatedTarget as Node | null)) save();
+      }}
+    >
       <label>
         <span className="ja-exp-aside__label">Note</span>
-        <Textarea rows={3} value={draft} placeholder="Anything an auditor should know: who approved it, what it replaced."
-          onChange={e => setDraft(e.target.value)} />
+        <Textarea
+          rows={3}
+          value={draft}
+          placeholder="Anything an auditor should know: who approved it, what it replaced."
+          onChange={e => setDraft(e.target.value)}
+        />
       </label>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minHeight: 28 }}>
         <span className="ja-exp-aside__hint">Included in the audit download.</span>
-        {dirty && <Button variant="secondary" size="sm" style={{ marginLeft: 'auto' }} onClick={save}>Save</Button>}
+        {dirty && (
+          <Button variant="secondary" size="sm" style={{ marginLeft: 'auto' }} onClick={save}>
+            Save
+          </Button>
+        )}
       </div>
     </div>
   );

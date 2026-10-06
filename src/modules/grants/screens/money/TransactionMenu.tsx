@@ -37,7 +37,7 @@ export function TransactionMenu({ label, items }: { label: string; items: MenuIt
   }, [open]);
 
   return (
-    <div className="tx-menu" ref={wrap} onClick={(e) => e.stopPropagation()}>
+    <div className="tx-menu" ref={wrap} onClick={e => e.stopPropagation()}>
       <button
         ref={button}
         type="button"
@@ -45,13 +45,13 @@ export function TransactionMenu({ label, items }: { label: string; items: MenuIt
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(v => !v)}
       >
         <Icon name="ellipsis" size={16} />
       </button>
       {open && (
         <div className="tx-menu__list" role="menu" data-ja-menu="">
-          {items.map((item) => (
+          {items.map(item => (
             <button
               key={item.label}
               type="button"

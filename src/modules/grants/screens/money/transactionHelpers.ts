@@ -10,7 +10,12 @@ import type { Allocation, GrantsActions, TransactionStatus } from '../../domain'
  */
 
 /** The colours a split's parts take, in order. */
-export const PART_COLORS = ['var(--blue-500)', 'var(--teal-500)', 'var(--olive-500)', 'var(--gold-400)'];
+export const PART_COLORS = [
+  'var(--blue-500)',
+  'var(--teal-500)',
+  'var(--olive-500)',
+  'var(--gold-400)',
+];
 
 export const MAX_PARTS = 4;
 
@@ -19,7 +24,8 @@ export const MAX_PARTS = 4;
  * Community Foundation" → "Long Beach CF", for a table cell.
  */
 export function funderShort(name: string, tight = false): string {
-  if (/ Community Foundation$/.test(name)) return tight ? name.replace(/ Community Foundation$/, ' CF') : name;
+  if (/ Community Foundation$/.test(name))
+    return tight ? name.replace(/ Community Foundation$/, ' CF') : name;
   if (/ Foundation$/.test(name)) return name.replace(/ Foundation$/, '');
   const dept = name.match(/^(.*?) (Dept\.|Department) of /);
   if (dept) return dept[1];
@@ -30,7 +36,7 @@ export function funderShort(name: string, tight = false): string {
 export function grantFunder(state: PortalState, grantId: string, tight = false): string {
   const grant = grantById(state, grantId);
   const funder = grant && funderById(state, grant.funderId);
-  return funder ? funderShort(funder.name, tight) : grant?.title ?? 'Unknown grant';
+  return funder ? funderShort(funder.name, tight) : (grant?.title ?? 'Unknown grant');
 }
 
 /** "General operating support 2026 · Herb Alpert", for a grant select. */
@@ -63,7 +69,11 @@ export function isPeriod(v: string | null): v is Period {
 }
 
 /** The first and last day a period covers, as ISO dates. */
-export function periodRange(state: PortalState, period: Period, today: string): { from?: string; to?: string } {
+export function periodRange(
+  state: PortalState,
+  period: Period,
+  today: string,
+): { from?: string; to?: string } {
   const day = (d: Date) => format(d, 'yyyy-MM-dd');
   if (period === '30') return { from: day(subDays(parseISO(today), 30)) };
   if (period === '90') return { from: day(subDays(parseISO(today), 90)) };
@@ -79,7 +89,7 @@ export function defaultPeriod(state: PortalState, today: string): Period {
   const waiting = transactionsByStatus(state, 'to-assign');
   for (const p of ['30', '90', 'fy'] as Period[]) {
     const { from, to } = periodRange(state, p, today);
-    if (waiting.every((t) => (!from || t.date >= from) && (!to || t.date <= to))) return p;
+    if (waiting.every(t => (!from || t.date >= from) && (!to || t.date <= to))) return p;
   }
   return 'all';
 }
@@ -95,7 +105,7 @@ export interface Snapshot {
 }
 
 export function snapshot(state: PortalState, id: string): Snapshot {
-  const tx = state.grants.transactions.find((t) => t.id === id);
+  const tx = state.grants.transactions.find(t => t.id === id);
   return { status: tx?.status ?? 'to-assign', parts: transactionAllocations(state, id) };
 }
 

@@ -8,7 +8,20 @@ import { createPortal } from 'react-dom';
  * its anchor when the page scrolls, flips above when there is no room below,
  * and closes on a click outside it or its anchor.
  */
-export function BudgetPopover({ anchor, open, onClose, width, align = 'left', maxHeight = 320, children, className, id, role, ariaLabel, onKeyDown }: {
+export function BudgetPopover({
+  anchor,
+  open,
+  onClose,
+  width,
+  align = 'left',
+  maxHeight = 320,
+  children,
+  className,
+  id,
+  role,
+  ariaLabel,
+  onKeyDown,
+}: {
   anchor: React.RefObject<HTMLElement>;
   open: boolean;
   onClose: () => void;
@@ -75,9 +88,15 @@ export function BudgetPopover({ anchor, open, onClose, width, align = 'left', ma
 
   if (!open) return null;
   return createPortal(
-    <div ref={panel} id={id} role={role} aria-label={ariaLabel} onKeyDown={onKeyDown}
+    <div
+      ref={panel}
+      id={id}
+      role={role}
+      aria-label={ariaLabel}
+      onKeyDown={onKeyDown}
       className={`budget-popover${className ? ` ${className}` : ''}`}
-      style={box ?? { position: 'fixed', visibility: 'hidden' }}>
+      style={box ?? { position: 'fixed', visibility: 'hidden' }}
+    >
       {children}
     </div>,
     document.body,

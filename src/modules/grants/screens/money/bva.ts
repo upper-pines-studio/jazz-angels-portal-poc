@@ -47,7 +47,21 @@ export interface BvaTotals {
   leftOnEnded: Array<{ name: string; amount: number }>;
 }
 
-const NUMBER_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+const NUMBER_WORDS = [
+  'no',
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+  'eleven',
+  'twelve',
+];
 
 function words(n: number): string {
   return NUMBER_WORDS[n] ?? String(n);
@@ -82,7 +96,8 @@ export function howLongBefore(day: string, end: string): string {
 /** "Los Angeles County Department of Arts and Culture" → "LA County"; "Herb Alpert Foundation" → "Herb Alpert". */
 export function shortFunder(name: string): string {
   let short = name.split(/ Dep(?:artment|t\.)/)[0].replace(/^Los Angeles\b/, 'LA');
-  if (/ Foundation$/.test(short) && !/ Community Foundation$/.test(short)) short = short.replace(/ Foundation$/, '');
+  if (/ Foundation$/.test(short) && !/ Community Foundation$/.test(short))
+    short = short.replace(/ Foundation$/, '');
   return short;
 }
 
@@ -121,7 +136,9 @@ export function grantsForPeriod(state: PortalState, today: string, period: BvaPe
   if (period === 'fy') return trackedGrantsInFy(state, today);
   if (period === 'all') return [...trackedGrants(state), ...closedWithAward(state)];
   const prev = previousFy(today, state.core.settings.fiscalYearStartMonth);
-  return [...trackedGrants(state), ...closedWithAward(state)].filter(g => touches(g, prev.start, prev.end));
+  return [...trackedGrants(state), ...closedWithAward(state)].filter(g =>
+    touches(g, prev.start, prev.end),
+  );
 }
 
 export function bvaGrants(state: PortalState, today: string, period: BvaPeriod): BvaGrant[] {
@@ -142,7 +159,9 @@ export function bvaGrants(state: PortalState, today: string, period: BvaPeriod):
 
 /** A line with nothing spent well into a running period. */
 export function isIdle(p: LinePace): boolean {
-  return lineNeedsAttention(p) && p.spent === 0 && p.spent <= p.budget && p.status !== 'spending-fast';
+  return (
+    lineNeedsAttention(p) && p.spent === 0 && p.spent <= p.budget && p.status !== 'spending-fast'
+  );
 }
 
 export function bvaTotals(rows: BvaGrant[]): BvaTotals {
@@ -194,21 +213,45 @@ export function reportName(report: Report): string {
 /** One sentence for the CSV's last column: where the money is headed. */
 export function projection(p: Pace): string {
   if (p.spent > p.budget) return `${money(p.spent - p.budget)} over budget`;
-  if (p.status === 'period-ended') return p.remaining > 0 ? `${money(p.remaining)} left unspent` : 'Fully spent';
-  if (p.runsOutOn && p.status === 'spending-fast') return `Runs out around ${dateLong(p.runsOutOn)}`;
-  if (p.status === 'spending-slow') return p.spent === 0 ? 'No spending yet' : `About ${aboutMoney(p.projectedUnspent)} left unspent`;
+  if (p.status === 'period-ended')
+    return p.remaining > 0 ? `${money(p.remaining)} left unspent` : 'Fully spent';
+  if (p.runsOutOn && p.status === 'spending-fast')
+    return `Runs out around ${dateLong(p.runsOutOn)}`;
+  if (p.status === 'spending-slow')
+    return p.spent === 0
+      ? 'No spending yet'
+      : `About ${aboutMoney(p.projectedUnspent)} left unspent`;
   if (p.status === 'not-started') return p.headline;
   return 'On course to finish on time';
 }
 
 /** The CSV the Excel button saves: a row per grant, then a row per line. */
 export function bvaCsvRows(rows: BvaGrant[]): Array<Array<string | number>> {
-  const out: Array<Array<string | number>> = [[
-    'Grant', 'Funder', 'Budget line', 'Budgeted', 'Spent', 'Remaining', 'Percent used', 'Percent of period gone', 'Status', 'Projected run-out or unspent',
-  ]];
+  const out: Array<Array<string | number>> = [
+    [
+      'Grant',
+      'Funder',
+      'Budget line',
+      'Budgeted',
+      'Spent',
+      'Remaining',
+      'Percent used',
+      'Percent of period gone',
+      'Status',
+      'Projected run-out or unspent',
+    ],
+  ];
   const row = (r: BvaGrant, line: string, p: Pace) => [
-    r.grant.title, r.funder, line, p.budget, p.spent, p.remaining,
-    percent(p.used), percent(p.elapsed), r.closed ? 'Closed' : PACE_LABEL[p.status], projection(p),
+    r.grant.title,
+    r.funder,
+    line,
+    p.budget,
+    p.spent,
+    p.remaining,
+    percent(p.used),
+    percent(p.elapsed),
+    r.closed ? 'Closed' : PACE_LABEL[p.status],
+    projection(p),
   ];
   for (const r of rows) {
     out.push(row(r, 'All lines', r.pace));

@@ -68,6 +68,32 @@ export function saveSlice(sliceId: string, data: unknown): void {
   }
 }
 
+/**
+ * A small per-browser preference (the collapsed rail), stored under its own key
+ * and outside the slices, so export, import and reset leave it alone. Null when
+ * nothing is stored or storage is unavailable.
+ */
+export function loadPreference(key: string): string | null {
+  const ls = storage();
+  if (!ls) return null;
+  try {
+    return ls.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+/** Write a preference. Silently does nothing when storage is unavailable or full. */
+export function savePreference(key: string, value: string): void {
+  const ls = storage();
+  if (!ls) return;
+  try {
+    ls.setItem(key, value);
+  } catch {
+    // Quota or private mode — the preference lasts for this tab only.
+  }
+}
+
 /** The whole portal: every registered slice, loaded or seeded. */
 export function loadState(slices: PortalSlice[], today: string): PortalState {
   const state: Record<string, unknown> = {};

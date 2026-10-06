@@ -8,8 +8,20 @@ import type { Deadline, DeadlineKind } from '../../domain';
 
 /** Trailing words that carry no identity, dropped first when a name is too long. */
 const GENERIC_TAIL = new Set([
-  'foundation', 'fund', 'sponsorship', 'trust', 'inc', 'inc.', 'llc', 'company',
-  'corporation', 'grant', 'grants', 'program', 'community', 'department',
+  'foundation',
+  'fund',
+  'sponsorship',
+  'trust',
+  'inc',
+  'inc.',
+  'llc',
+  'company',
+  'corporation',
+  'grant',
+  'grants',
+  'program',
+  'community',
+  'department',
 ]);
 
 /**
@@ -20,7 +32,11 @@ const GENERIC_TAIL = new Set([
 export function funderShort(name: string | undefined, max = 24): string {
   if (!name) return '—';
   const words = name.replace(/^The\s+/i, '').split(/\s+/);
-  while (words.length > 2 && words.join(' ').length > max && GENERIC_TAIL.has(words[words.length - 1].toLowerCase())) {
+  while (
+    words.length > 2 &&
+    words.join(' ').length > max &&
+    GENERIC_TAIL.has(words[words.length - 1].toLowerCase())
+  ) {
     words.pop();
   }
   const kept = words.join(' ');
@@ -44,7 +60,14 @@ export function monthMatrix(month: Date): Date[][] {
 export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export const DEADLINE_KINDS: DeadlineKind[] = [
-  'task', 'loi', 'application', 'decision', 'report', 'payment', 'period-end', 'start',
+  'task',
+  'loi',
+  'application',
+  'decision',
+  'report',
+  'payment',
+  'period-end',
+  'start',
 ];
 
 export const KIND_LABELS: Record<DeadlineKind, string> = {

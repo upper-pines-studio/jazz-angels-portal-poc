@@ -227,12 +227,7 @@ export interface SplitRule {
 }
 
 export type GrantFileKind =
-  | 'award-letter'
-  | 'agreement'
-  | 'receipt'
-  | 'invoice'
-  | 'timesheet'
-  | 'other';
+  'award-letter' | 'agreement' | 'receipt' | 'invoice' | 'timesheet' | 'other';
 
 export type GrantFileFormat = 'pdf' | 'jpg' | 'png' | 'heic';
 
@@ -389,14 +384,7 @@ export interface NewGrantInput {
 // ---------------------------------------------------------------------------
 
 export type DeadlineKind =
-  | 'task'
-  | 'loi'
-  | 'application'
-  | 'decision'
-  | 'report'
-  | 'payment'
-  | 'period-end'
-  | 'start';
+  'task' | 'loi' | 'application' | 'decision' | 'report' | 'payment' | 'period-end' | 'start';
 
 export type DeadlineStatus = 'overdue' | 'due-soon' | 'upcoming';
 
@@ -462,7 +450,11 @@ export type Suggestion =
   | { kind: 'line'; grantId: string; budgetLineId: string }
   | { kind: 'split'; rule: SplitRule }
   | { kind: 'not-grant-funded'; months: number }
-  | { kind: 'ambiguous'; candidates: Array<{ grantId: string; budgetLineId: string }>; hint: string }
+  | {
+      kind: 'ambiguous';
+      candidates: Array<{ grantId: string; budgetLineId: string }>;
+      hint: string;
+    }
   | { kind: 'none'; hint: string };
 
 export interface ReminderStep {

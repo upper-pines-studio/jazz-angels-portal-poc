@@ -19,11 +19,16 @@ export function MoneyPanel() {
   const firstMissingGrant = missing[0]?.grantId;
 
   return (
-    <Card title="Money" subtitle="Spending against the grant period" padding="var(--space-3) var(--space-5) var(--space-4)">
+    <Card
+      title="Money"
+      subtitle="Spending against the grant period"
+      padding="var(--space-3) var(--space-5) var(--space-4)"
+    >
       <div className="mp-rows">
         {rows.map(({ grant, pace }) => {
           const funder = funderById(state, grant.funderId)?.name ?? '';
-          const gone = pace.status === 'period-ended' ? 'period over' : `${percent(pace.elapsed)} gone`;
+          const gone =
+            pace.status === 'period-ended' ? 'period over' : `${percent(pace.elapsed)} gone`;
           return (
             <button
               key={grant.id}
@@ -38,7 +43,9 @@ export function MoneyPanel() {
               </span>
               <PaceBar used={pace.used} elapsed={pace.elapsed} color={PACE_COLOR[pace.status]} />
               <span className="mp-row__foot">
-                <span className="mp-row__nums">{percent(pace.used)} used · {gone}</span>
+                <span className="mp-row__nums">
+                  {percent(pace.used)} used · {gone}
+                </span>
                 <PaceMark status={pace.status} />
               </span>
             </button>

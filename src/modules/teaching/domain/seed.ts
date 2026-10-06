@@ -59,40 +59,120 @@ interface Pattern {
 
 const PATTERN: Pattern[] = [
   {
-    ensemble: { id: 'e-combo-a', name: 'Combo A', programId: 'studio-sessions', venueId: STUDIO_VENUE_ID, room: 'Studio 1', leadStaffId: 's-albert', tone: 'blue' },
-    weekday: 0, start: '15:00', end: '16:00',
+    ensemble: {
+      id: 'e-combo-a',
+      name: 'Combo A',
+      programId: 'studio-sessions',
+      venueId: STUDIO_VENUE_ID,
+      room: 'Studio 1',
+      leadStaffId: 's-albert',
+      tone: 'blue',
+    },
+    weekday: 0,
+    start: '15:00',
+    end: '16:00',
   },
   {
-    ensemble: { id: 'e-combo-b', name: 'Combo B', programId: 'studio-sessions', venueId: STUDIO_VENUE_ID, room: 'Studio 1', leadStaffId: 's-barry', tone: 'teal' },
-    weekday: 0, start: '16:00', end: '17:00',
+    ensemble: {
+      id: 'e-combo-b',
+      name: 'Combo B',
+      programId: 'studio-sessions',
+      venueId: STUDIO_VENUE_ID,
+      room: 'Studio 1',
+      leadStaffId: 's-barry',
+      tone: 'teal',
+    },
+    weekday: 0,
+    start: '16:00',
+    end: '17:00',
   },
   {
-    ensemble: { id: 'e-big-band', name: 'Big Band', programId: 'studio-sessions', venueId: STUDIO_VENUE_ID, room: 'Main room', leadStaffId: 's-devon', tone: 'olive' },
-    weekday: 0, start: '17:15', end: '18:45',
+    ensemble: {
+      id: 'e-big-band',
+      name: 'Big Band',
+      programId: 'studio-sessions',
+      venueId: STUDIO_VENUE_ID,
+      room: 'Main room',
+      leadStaffId: 's-devon',
+      tone: 'olive',
+    },
+    weekday: 0,
+    start: '17:15',
+    end: '18:45',
   },
   {
-    ensemble: { id: 'e-homeschool-1', name: 'Homeschool I', programId: 'homeschool', venueId: STUDIO_VENUE_ID, room: 'Studio 2', leadStaffId: 's-renee', tone: 'blue' },
-    weekday: 1, start: '16:00', end: '17:00',
+    ensemble: {
+      id: 'e-homeschool-1',
+      name: 'Homeschool I',
+      programId: 'homeschool',
+      venueId: STUDIO_VENUE_ID,
+      room: 'Studio 2',
+      leadStaffId: 's-renee',
+      tone: 'blue',
+    },
+    weekday: 1,
+    start: '16:00',
+    end: '17:00',
   },
   {
-    ensemble: { id: 'e-homeschool-2', name: 'Homeschool II', programId: 'homeschool', venueId: STUDIO_VENUE_ID, room: 'Studio 2', leadStaffId: 's-renee', tone: 'teal' },
-    weekday: 1, start: '17:15', end: '18:15',
+    ensemble: {
+      id: 'e-homeschool-2',
+      name: 'Homeschool II',
+      programId: 'homeschool',
+      venueId: STUDIO_VENUE_ID,
+      room: 'Studio 2',
+      leadStaffId: 's-renee',
+      tone: 'teal',
+    },
+    weekday: 1,
+    start: '17:15',
+    end: '18:15',
   },
   {
-    ensemble: { id: 'e-jazz-legacy', name: 'Jazz Legacy', programId: 'jazz-legacy', venueId: STUDIO_VENUE_ID, room: 'Main room', leadStaffId: 's-albert', tone: 'olive' },
-    weekday: 2, start: '16:00', end: '17:30',
+    ensemble: {
+      id: 'e-jazz-legacy',
+      name: 'Jazz Legacy',
+      programId: 'jazz-legacy',
+      venueId: STUDIO_VENUE_ID,
+      room: 'Main room',
+      leadStaffId: 's-albert',
+      tone: 'olive',
+    },
+    weekday: 2,
+    start: '16:00',
+    end: '17:30',
   },
   {
-    ensemble: { id: 'e-advanced-workshop', name: 'Advanced Workshop', programId: 'advanced-workshop', venueId: STUDIO_VENUE_ID, room: 'Studio 1', leadStaffId: 's-barry', tone: 'blue' },
-    weekday: 2, start: '18:30', end: '20:00',
+    ensemble: {
+      id: 'e-advanced-workshop',
+      name: 'Advanced Workshop',
+      programId: 'advanced-workshop',
+      venueId: STUDIO_VENUE_ID,
+      room: 'Studio 1',
+      leadStaffId: 's-barry',
+      tone: 'blue',
+    },
+    weekday: 2,
+    start: '18:30',
+    end: '20:00',
   },
   {
-    ensemble: { id: 'e-paramount-ms', name: 'Paramount MS', programId: 'in-school', venueId: PARAMOUNT_MS_VENUE_ID, room: 'Band room B-12', leadStaffId: 's-devon', tone: 'neutral' },
-    weekday: 4, start: '15:00', end: '16:00',
+    ensemble: {
+      id: 'e-paramount-ms',
+      name: 'Paramount MS',
+      programId: 'in-school',
+      venueId: PARAMOUNT_MS_VENUE_ID,
+      room: 'Band room B-12',
+      leadStaffId: 's-devon',
+      tone: 'neutral',
+    },
+    weekday: 4,
+    start: '15:00',
+    end: '16:00',
   },
 ];
 
-const ENSEMBLES: Ensemble[] = PATTERN.map((p) => p.ensemble);
+const ENSEMBLES: Ensemble[] = PATTERN.map(p => p.ensemble);
 
 // --- Students ---------------------------------------------------------------
 
@@ -107,7 +187,8 @@ type SeedStudent = [
 /** Roster by ensemble, then the waitlist. 45 enrolled, 4 waiting. */
 const ROSTER: Array<{ ensembleId: string; programId: ProgramId; students: SeedStudent[] }> = [
   {
-    ensembleId: 'e-combo-a', programId: 'studio-sessions',
+    ensembleId: 'e-combo-a',
+    programId: 'studio-sessions',
     students: [
       ['Maya Robinson', 'Trumpet', 3, 'Lorraine Robinson', '(562) 555-0148'],
       ['Devon Ellis', 'Alto sax', 2, 'Angela Ellis', ''],
@@ -122,7 +203,8 @@ const ROSTER: Array<{ ensembleId: string; programId: ProgramId; students: SeedSt
     ],
   },
   {
-    ensembleId: 'e-combo-b', programId: 'studio-sessions',
+    ensembleId: 'e-combo-b',
+    programId: 'studio-sessions',
     students: [
       ['Iris Delgado', 'Alto sax', 3, 'Paulina Delgado', '(562) 555-0119'],
       ['Caleb Nguyen', 'Piano', 2, 'Tuyen Nguyen', ''],
@@ -134,7 +216,8 @@ const ROSTER: Array<{ ensembleId: string; programId: ProgramId; students: SeedSt
     ],
   },
   {
-    ensembleId: 'e-big-band', programId: 'studio-sessions',
+    ensembleId: 'e-big-band',
+    programId: 'studio-sessions',
     students: [
       ['Xavier Toussaint', 'Baritone sax', 3, 'Yvette Toussaint', ''],
       ['Hana Sato', 'Flute', 2, 'Kenji Sato', '(562) 555-0132'],
@@ -147,7 +230,8 @@ const ROSTER: Array<{ ensembleId: string; programId: ProgramId; students: SeedSt
     ],
   },
   {
-    ensembleId: 'e-homeschool-1', programId: 'homeschool',
+    ensembleId: 'e-homeschool-1',
+    programId: 'homeschool',
     students: [
       ['Levi Ostrander', 'Clarinet', 1, 'Bea Ostrander', ''],
       ['Juno Park', 'Violin', 2, 'Min Park', '(562) 555-0109'],
@@ -156,7 +240,8 @@ const ROSTER: Array<{ ensembleId: string; programId: ProgramId; students: SeedSt
     ],
   },
   {
-    ensembleId: 'e-homeschool-2', programId: 'homeschool',
+    ensembleId: 'e-homeschool-2',
+    programId: 'homeschool',
     students: [
       ['Cora Lindqvist', 'Piano', 3, 'Erik Lindqvist', '(562) 555-0198'],
       ['Ismael Duarte', 'Guitar', 2, 'Ana Duarte', ''],
@@ -164,7 +249,8 @@ const ROSTER: Array<{ ensembleId: string; programId: ProgramId; students: SeedSt
     ],
   },
   {
-    ensembleId: 'e-jazz-legacy', programId: 'jazz-legacy',
+    ensembleId: 'e-jazz-legacy',
+    programId: 'jazz-legacy',
     students: [
       ['Aurelio Santos', 'Tenor sax', 5, 'Maria Santos', '(562) 555-0121'],
       ['Noor Rahimi', 'Upright bass', 4, 'Farid Rahimi', ''],
@@ -173,7 +259,8 @@ const ROSTER: Array<{ ensembleId: string; programId: ProgramId; students: SeedSt
     ],
   },
   {
-    ensembleId: 'e-advanced-workshop', programId: 'advanced-workshop',
+    ensembleId: 'e-advanced-workshop',
+    programId: 'advanced-workshop',
     students: [
       ['Selena Ruiz', 'Alto sax', 5, 'Hector Ruiz', ''],
       ['Dashiell Moore', 'Drums', 4, 'Renata Moore', '(562) 555-0152'],
@@ -181,7 +268,8 @@ const ROSTER: Array<{ ensembleId: string; programId: ProgramId; students: SeedSt
     ],
   },
   {
-    ensembleId: 'e-paramount-ms', programId: 'in-school',
+    ensembleId: 'e-paramount-ms',
+    programId: 'in-school',
     students: [
       ['Andre Fuentes', 'Trumpet', 1, 'Lupe Fuentes', ''],
       ['Kayla Simmons', 'Flute', 1, 'Trina Simmons', '(562) 555-0137'],
@@ -195,7 +283,10 @@ const ROSTER: Array<{ ensembleId: string; programId: ProgramId; students: SeedSt
 
 const WAITLIST: Array<{ programId: ProgramId; student: SeedStudent }> = [
   { programId: 'studio-sessions', student: ['Bram Hollis', 'Trumpet', 0, 'Meg Hollis', ''] },
-  { programId: 'studio-sessions', student: ['Nadia Okafor', 'Piano', 0, 'Chidi Okafor', '(562) 555-0114'] },
+  {
+    programId: 'studio-sessions',
+    student: ['Nadia Okafor', 'Piano', 0, 'Chidi Okafor', '(562) 555-0114'],
+  },
   { programId: 'homeschool', student: ['Colby Renner', 'Drums', 0, 'Jess Renner', ''] },
   { programId: 'in-school', student: ['Yasmin Farouk', 'Vocals', 0, 'Layla Farouk', ''] },
 ];
@@ -245,7 +336,7 @@ function firstOccurrence(startISO: string, weekday: number): Date {
 
 /** `meetingsPlanned` weekly meetings per ensemble, from the standing pattern. */
 function buildMeetings(term: Term, suffix: string): ClassMeeting[] {
-  return PATTERN.flatMap((p) => {
+  return PATTERN.flatMap(p => {
     const first = firstOccurrence(term.start, p.weekday);
     return Array.from({ length: term.meetingsPlanned }, (_, i) => ({
       id: `${p.ensemble.id}-${suffix}${i + 1}`,
@@ -301,7 +392,7 @@ function seedSpringAttendance(
 
   const submitted = meetings.map((meeting, index) => {
     const roster = students.filter(
-      (s) => s.status === 'enrolled' && s.ensembleId === meeting.ensembleId,
+      s => s.status === 'enrolled' && s.ensembleId === meeting.ensembleId,
     );
     const random = rngFor(meeting.id);
     const rate = 0.85 + random() * 0.11;
@@ -310,9 +401,9 @@ function seedSpringAttendance(
 
     // Deterministic shuffle: the first few are out, the next one is late.
     const order = roster
-      .map((s) => ({ s, k: random() }))
+      .map(s => ({ s, k: random() }))
       .sort((a, b) => a.k - b.k)
-      .map((x) => x.s);
+      .map(x => x.s);
 
     order.forEach((student, i) => {
       const mark: Mark = i < absent ? 'absent' : i < absent + late ? 'late' : 'present';
@@ -338,16 +429,16 @@ function seedFallWeekOne(
   meetings: ClassMeeting[],
   students: Student[],
 ): { meetings: ClassMeeting[]; attendance: AttendanceRecord[] } {
-  const comboA = meetings.find((m) => m.id === 'e-combo-a-f1');
+  const comboA = meetings.find(m => m.id === 'e-combo-a-f1');
   if (!comboA) return { meetings, attendance: [] };
 
-  const roster = students.filter((s) => s.status === 'enrolled' && s.ensembleId === 'e-combo-a');
+  const roster = students.filter(s => s.status === 'enrolled' && s.ensembleId === 'e-combo-a');
   const attendance = roster.map((student, i) =>
     record(comboA.id, student.id, i === 3 ? 'late' : 'present'),
   );
 
   return {
-    meetings: meetings.map((m) =>
+    meetings: meetings.map(m =>
       m.id === comboA.id
         ? {
             ...m,
@@ -370,8 +461,8 @@ export function makeSeed(): TeachingState {
   const fall = seedFallWeekOne(buildMeetings(TERMS[1], 'f'), students);
 
   return {
-    terms: TERMS.map((t) => ({ ...t })),
-    ensembles: ENSEMBLES.map((e) => ({ ...e })),
+    terms: TERMS.map(t => ({ ...t })),
+    ensembles: ENSEMBLES.map(e => ({ ...e })),
     meetings: [...spring.meetings, ...fall.meetings],
     students,
     attendance: [...spring.attendance, ...fall.attendance],

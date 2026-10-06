@@ -9,6 +9,8 @@ per module.
 - `npm run dev` — http://localhost:5181
 - `npm run build` — typecheck + vite build (Netlify runs this)
 - `npm test` — vitest (core and module domain layers only)
+- `npm run lint` — ESLint over `src/` (the module boundaries, localStorage only in core, no bare `new Date()` in screens), then `prettier --check`
+- `npm run format` — Prettier over the TypeScript in `src/` and the root config files; run it before `npm run lint`
 
 ## Where things are
 - `docs/FEATURES.md` — the feature map: every feature, its route, its status, the files that own it, and the known gaps. Read it to find where to work. Update its row when you add, move or finish a feature.

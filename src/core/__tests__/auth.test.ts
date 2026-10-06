@@ -18,9 +18,9 @@ function installStorage() {
       return data.size;
     },
     clear: () => data.clear(),
-    getItem: (k) => data.get(k) ?? null,
-    key: (i) => Array.from(data.keys())[i] ?? null,
-    removeItem: (k) => void data.delete(k),
+    getItem: k => data.get(k) ?? null,
+    key: i => Array.from(data.keys())[i] ?? null,
+    removeItem: k => void data.delete(k),
     setItem: (k, v) => void data.set(k, v),
   };
   (globalThis as { localStorage?: Storage }).localStorage = ls;
@@ -104,7 +104,7 @@ describe('verify', () => {
 describe('the real USERS table', () => {
   it('has exactly two entries for barry and intern', () => {
     expect(USERS).toHaveLength(2);
-    expect(USERS.map((u) => u.username).sort()).toEqual(['barry', 'intern']);
+    expect(USERS.map(u => u.username).sort()).toEqual(['barry', 'intern']);
   });
 
   it('stores only a 64-char lowercase hex hash, never a plaintext password', () => {
@@ -154,7 +154,7 @@ describe('session', () => {
   it('returns null when the stored username is not in the table', () => {
     globalThis.localStorage!.setItem(
       SESSION_KEY,
-      JSON.stringify({ username: 'nobody', signedInAt: new Date().toISOString() })
+      JSON.stringify({ username: 'nobody', signedInAt: new Date().toISOString() }),
     );
     expect(currentUser(testUsers)).toBeNull();
   });
@@ -168,7 +168,9 @@ describe('session', () => {
 
   it('does not throw and returns null when localStorage is unavailable', () => {
     delete (globalThis as { localStorage?: Storage }).localStorage;
-    expect(() => startSession({ username: 'tester', name: 'Test Person', role: 'Tester' })).not.toThrow();
+    expect(() =>
+      startSession({ username: 'tester', name: 'Test Person', role: 'Tester' }),
+    ).not.toThrow();
     expect(() => endSession()).not.toThrow();
     expect(currentUser(testUsers)).toBeNull();
   });

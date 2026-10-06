@@ -15,7 +15,8 @@ export const budgetPacingHref = (grantId: string) => `/budget?grant=${encodeURIC
 export function BudgetOk({ children }: { children: React.ReactNode }) {
   return (
     <span className="budget-ok">
-      <Icon name="check" size={13} color="var(--teal-500)" />{children}
+      <Icon name="check" size={13} color="var(--teal-500)" />
+      {children}
     </span>
   );
 }
@@ -24,7 +25,8 @@ export function BudgetOk({ children }: { children: React.ReactNode }) {
 export function BudgetAttention({ children }: { children: React.ReactNode }) {
   return (
     <span className="budget-attention">
-      <Icon name="circle-alert" size={13} color="var(--gold-500)" />{children}
+      <Icon name="circle-alert" size={13} color="var(--gold-500)" />
+      {children}
     </span>
   );
 }
@@ -36,7 +38,10 @@ export function BudgetAccountChips({ codes }: { codes?: string[] }) {
   return (
     <span className="budget-chips">
       {codes.map(code => (
-        <span key={code} className="budget-chip"><b>{code}</b>{accountName(state, code)}</span>
+        <span key={code} className="budget-chip">
+          <b>{code}</b>
+          {accountName(state, code)}
+        </span>
       ))}
     </span>
   );
@@ -60,10 +65,16 @@ export function BudgetMatched({ grantId, lineId }: { grantId: string; lineId: st
   const { amount, count } = lineMatched(state, lineId);
   if (count === 0) return <span className="budget-match budget-match--none">Nothing yet</span>;
   return (
-    <button type="button" className="budget-match budget-match--link"
+    <button
+      type="button"
+      className="budget-match budget-match--link"
       aria-label={`${money(amount)} matched from ${count} ${count === 1 ? 'expense' : 'expenses'}. View transactions`}
       title="View these transactions"
-      onClick={e => { e.stopPropagation(); navigate(budgetTransactionsHref(grantId, lineId)); }}>
+      onClick={e => {
+        e.stopPropagation();
+        navigate(budgetTransactionsHref(grantId, lineId));
+      }}
+    >
       <span className="budget-match__amt">{money(amount)}</span>
       <span className="budget-match__n">{count}</span>
     </button>

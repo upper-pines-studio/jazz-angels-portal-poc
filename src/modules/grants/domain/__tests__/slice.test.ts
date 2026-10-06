@@ -5,8 +5,7 @@ import type { Grant, GrantsState } from '../types';
 
 const base = (): GrantsState => makeSeed();
 
-const grantOf = (state: GrantsState, id: string): Grant =>
-  state.grants.find((g) => g.id === id)!;
+const grantOf = (state: GrantsState, id: string): Grant => state.grants.find(g => g.id === id)!;
 
 describe('reducer: add-grant', () => {
   const state = reducer(base(), {
@@ -34,26 +33,26 @@ describe('reducer: add-grant', () => {
   });
 
   it('adds the funder and the grant', () => {
-    expect(state.funders.some((f) => f.id === 'f-new')).toBe(true);
+    expect(state.funders.some(f => f.id === 'f-new')).toBe(true);
     expect(grantOf(state, 'g-new').title).toBe('Test grant');
   });
 
   it('instantiates the checklist with computed due dates', () => {
-    const tasks = state.tasks.filter((t) => t.grantId === 'g-new');
+    const tasks = state.tasks.filter(t => t.grantId === 'g-new');
     expect(tasks.length).toBeGreaterThan(10);
-    expect(tasks.some((t) => t.phase === 'loi')).toBe(false);
-    expect(tasks.find((t) => t.title === 'Submit application')?.dueDate).toBe('2026-11-02');
-    expect(new Set(tasks.map((t) => t.id)).size).toBe(tasks.length);
+    expect(tasks.some(t => t.phase === 'loi')).toBe(false);
+    expect(tasks.find(t => t.title === 'Submit application')?.dueDate).toBe('2026-11-02');
+    expect(new Set(tasks.map(t => t.id)).size).toBe(tasks.length);
   });
 
   it('creates the standard document register as needed', () => {
-    const docs = state.documents.filter((d) => d.grantId === 'g-new');
+    const docs = state.documents.filter(d => d.grantId === 'g-new');
     expect(docs).toHaveLength(5);
-    expect(docs.every((d) => d.status === 'needed')).toBe(true);
+    expect(docs.every(d => d.status === 'needed')).toBe(true);
   });
 
   it('logs "Grant added"', () => {
-    expect(state.activity.find((a) => a.id === 'act-new')).toMatchObject({
+    expect(state.activity.find(a => a.id === 'act-new')).toMatchObject({
       grantId: 'g-new',
       text: 'Grant added',
       who: 'Barry Cogert',
@@ -77,7 +76,7 @@ describe('reducer: transition', () => {
     const grant = grantOf(next, 'g-arts-council-lb-2026');
     expect(grant.phase).toBe('submitted');
     expect(grant.dates.submitted).toBe('2026-09-13');
-    expect(next.activity.find((a) => a.id === 'a1')?.text).toBe('Mark submitted');
+    expect(next.activity.find(a => a.id === 'a1')?.text).toBe('Mark submitted');
   });
 
   it('records the award amount and period', () => {
@@ -102,7 +101,7 @@ describe('reducer: transition', () => {
       periodStart: '2026-11-01',
       periodEnd: '2027-10-31',
     });
-    expect(next.activity.find((a) => a.id === 'a2')?.text).toBe('Record award');
+    expect(next.activity.find(a => a.id === 'a2')?.text).toBe('Record award');
   });
 
   it('records a decline with its reason', () => {
@@ -116,7 +115,7 @@ describe('reducer: transition', () => {
       who: 'Denise Moreno',
     });
     expect(grantOf(next, 'g-signal-hill-2026').dates.decided).toBe('2026-10-16');
-    expect(next.activity.find((a) => a.id === 'a3')?.text).toBe(
+    expect(next.activity.find(a => a.id === 'a3')?.text).toBe(
       'Record decline — Funds went to park programming',
     );
   });
@@ -158,22 +157,27 @@ describe('reducer: collections', () => {
       key: 'budgetLines',
       item: { id: 'bl-x', grantId: 'g-herb-alpert-2026', category: 'Travel', planned: 500 },
     });
-    expect(state.budgetLines.find((l) => l.id === 'bl-x')?.planned).toBe(500);
+    expect(state.budgetLines.find(l => l.id === 'bl-x')?.planned).toBe(500);
 
-    state = reducer(state, { type: 'update', key: 'budgetLines', id: 'bl-x', patch: { planned: 750 } });
-    expect(state.budgetLines.find((l) => l.id === 'bl-x')?.planned).toBe(750);
+    state = reducer(state, {
+      type: 'update',
+      key: 'budgetLines',
+      id: 'bl-x',
+      patch: { planned: 750 },
+    });
+    expect(state.budgetLines.find(l => l.id === 'bl-x')?.planned).toBe(750);
 
     state = reducer(state, { type: 'remove', key: 'budgetLines', id: 'bl-x' });
-    expect(state.budgetLines.some((l) => l.id === 'bl-x')).toBe(false);
+    expect(state.budgetLines.some(l => l.id === 'bl-x')).toBe(false);
   });
 
   it('toggles a task both ways', () => {
     const start = base();
-    const id = start.tasks.find((t) => !t.done)!.id;
+    const id = start.tasks.find(t => !t.done)!.id;
     const on = reducer(start, { type: 'toggle-task', id, date: '2026-09-13' });
-    expect(on.tasks.find((t) => t.id === id)).toMatchObject({ done: true, doneAt: '2026-09-13' });
+    expect(on.tasks.find(t => t.id === id)).toMatchObject({ done: true, doneAt: '2026-09-13' });
     const off = reducer(on, { type: 'toggle-task', id, date: '2026-09-14' });
-    expect(off.tasks.find((t) => t.id === id)).toMatchObject({ done: false, doneAt: undefined });
+    expect(off.tasks.find(t => t.id === id)).toMatchObject({ done: false, doneAt: undefined });
   });
 
   it('duplicates a template with fresh item ids', () => {
@@ -182,10 +186,10 @@ describe('reducer: collections', () => {
       id: 'tpl-foundation-standard',
       newTemplateId: 'tpl-copy',
     });
-    const copy = state.templates.find((t) => t.id === 'tpl-copy')!;
+    const copy = state.templates.find(t => t.id === 'tpl-copy')!;
     expect(copy.name).toBe('Foundation grant — standard (copy)');
     expect(copy.items).toHaveLength(state.templates[0].items.length);
-    expect(copy.items.every((i) => i.id.startsWith('tpl-copy-i'))).toBe(true);
+    expect(copy.items.every(i => i.id.startsWith('tpl-copy-i'))).toBe(true);
   });
 
   it('applies a batch in order', () => {
@@ -196,7 +200,10 @@ describe('reducer: collections', () => {
         { type: 'update', key: 'grants', id: 'g-parsons-2026', patch: { amountAwarded: 0 } },
       ],
     });
-    expect(grantOf(state, 'g-parsons-2026')).toMatchObject({ amountRequested: 31000, amountAwarded: 0 });
+    expect(grantOf(state, 'g-parsons-2026')).toMatchObject({
+      amountRequested: 31000,
+      amountAwarded: 0,
+    });
   });
 
   it('does not mutate the state it was given', () => {
@@ -210,9 +217,15 @@ describe('reducer: collections', () => {
 describe('the slice', () => {
   it('only answers to its own namespace', () => {
     const start = base();
-    expect(grantsSlice.reducer(start, { type: 'teaching/remove', key: 'grants', id: 'g-parsons-2026' })).toBe(start);
-    const next = grantsSlice.reducer(start, { type: 'grants/remove', key: 'grants', id: 'g-parsons-2026' });
-    expect(next.grants.some((g) => g.id === 'g-parsons-2026')).toBe(false);
+    expect(
+      grantsSlice.reducer(start, { type: 'teaching/remove', key: 'grants', id: 'g-parsons-2026' }),
+    ).toBe(start);
+    const next = grantsSlice.reducer(start, {
+      type: 'grants/remove',
+      key: 'grants',
+      id: 'g-parsons-2026',
+    });
+    expect(next.grants.some(g => g.id === 'g-parsons-2026')).toBe(false);
   });
 
   it('rejects a payload that is missing a collection', () => {

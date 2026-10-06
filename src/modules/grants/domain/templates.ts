@@ -88,7 +88,8 @@ const STANDARD: ChecklistTemplate = {
 const GOVERNMENT: ChecklistTemplate = {
   id: GOVERNMENT_ID,
   name: 'Government grant',
-  description: 'City, county, state and federal funders — portal registration and extra compliance.',
+  description:
+    'City, county, state and federal funders — portal registration and extra compliance.',
   items: items(GOVERNMENT_ID, [
     ['prospect', 'Confirm eligibility and fit', 0, 'startBy'],
     ['prospect', 'Read the guidelines and scoring rubric', 2, 'startBy'],
@@ -150,7 +151,8 @@ const CORPORATE: ChecklistTemplate = {
 const RENEWAL: ChecklistTemplate = {
   id: RENEWAL_ID,
   name: 'Renewal (returning funder)',
-  description: 'A funder we already have a relationship with — refresh last year rather than start over.',
+  description:
+    'A funder we already have a relationship with — refresh last year rather than start over.',
   items: items(RENEWAL_ID, [
     ['prospect', 'Confirm the funder is renewing this cycle', 0, 'startBy'],
     ['prospect', "Pull last year's report and outcomes", 2, 'startBy'],
@@ -192,8 +194,8 @@ export function instantiateTemplate(
 ): Array<Omit<Task, 'id'>> {
   const excluded = new Set(excludeItemIds);
   return template.items
-    .filter((item) => !excluded.has(item.id))
-    .filter((item) => item.phase !== 'loi' || grant.loiRequired)
+    .filter(item => !excluded.has(item.id))
+    .filter(item => item.phase !== 'loi' || grant.loiRequired)
     .map((item, index) => ({
       grantId: grant.id,
       phase: item.phase,
@@ -250,7 +252,7 @@ export function instantiateDocumentRegister(
   grantId: string,
   updatedAt: string,
 ): Array<Omit<GrantDocument, 'id'>> {
-  return DEFAULT_DOCUMENT_REGISTER.map((doc) => ({
+  return DEFAULT_DOCUMENT_REGISTER.map(doc => ({
     grantId,
     name: doc.name,
     kind: doc.kind,

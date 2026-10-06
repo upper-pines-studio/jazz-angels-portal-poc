@@ -112,7 +112,13 @@ export type GrantsAction =
       at: string;
       who: string;
     }
-  | { type: 'set-transaction-status'; id: string; status: 'to-assign' | 'not-grant-funded'; by?: string; date?: string }
+  | {
+      type: 'set-transaction-status';
+      id: string;
+      status: 'to-assign' | 'not-grant-funded';
+      by?: string;
+      date?: string;
+    }
   | { type: 'sync'; at: string }
   | { type: 'set-quickbooks'; patch: Partial<GrantsState['quickbooks']> }
   | { type: 'save-reminder-plan'; plan: ReminderPlan }
@@ -122,7 +128,7 @@ export type GrantsAction =
 const DOLLARS = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
 function withId<T extends { id: string }>(rows: T[], id: string, patch: Partial<T>): T[] {
-  return rows.map((row) => (row.id === id ? { ...row, ...patch } : row));
+  return rows.map(row => (row.id === id ? { ...row, ...patch } : row));
 }
 
 /** The module's own reducer. The store only ever reaches it through the slice. */
@@ -146,12 +152,12 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
 
     case 'remove': {
       const rows = state[action.key] as Array<{ id: string }>;
-      return { ...state, [action.key]: rows.filter((row) => row.id !== action.id) } as GrantsState;
+      return { ...state, [action.key]: rows.filter(row => row.id !== action.id) } as GrantsState;
     }
 
     case 'add-grant': {
       const template = action.templateId
-        ? state.templates.find((t) => t.id === action.templateId)
+        ? state.templates.find(t => t.id === action.templateId)
         : undefined;
 
       const tasks: Task[] = template
@@ -161,10 +167,12 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
         : [];
 
       const documents: GrantDocument[] = action.includeDocumentRegister
-        ? instantiateDocumentRegister(action.grant.id, action.grant.createdAt).map((doc, index) => ({
-            ...doc,
-            id: `${action.grant.id}-d${index + 1}`,
-          }))
+        ? instantiateDocumentRegister(action.grant.id, action.grant.createdAt).map(
+            (doc, index) => ({
+              ...doc,
+              id: `${action.grant.id}-d${index + 1}`,
+            }),
+          )
         : [];
 
       return {
@@ -187,7 +195,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
     }
 
     case 'transition': {
-      const grant = state.grants.find((g) => g.id === action.grantId);
+      const grant = state.grants.find(g => g.id === action.grantId);
       if (!grant) return state;
 
       const { to, payload } = action;
@@ -204,8 +212,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
       }
       patch.dates = dates;
 
-      const label =
-        availableTransitions(grant).find((t) => t.to === to)?.label ?? `Moved to ${to}`;
+      const label = availableTransitions(grant).find(t => t.to === to)?.label ?? `Moved to ${to}`;
       const reason = payload.reason ? ` — ${payload.reason}` : '';
 
       return {
@@ -225,7 +232,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
     }
 
     case 'toggle-task': {
-      const task = state.tasks.find((t) => t.id === action.id);
+      const task = state.tasks.find(t => t.id === action.id);
       if (!task) return state;
       const done = !task.done;
       return {
@@ -235,7 +242,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
     }
 
     case 'duplicate-template': {
-      const source = state.templates.find((t) => t.id === action.id);
+      const source = state.templates.find(t => t.id === action.id);
       if (!source) return state;
       const copy: ChecklistTemplate = {
         ...source,
@@ -250,10 +257,10 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
     }
 
     case 'assign-transaction': {
-      const tx = state.transactions.find((t) => t.id === action.id);
+      const tx = state.transactions.find(t => t.id === action.id);
       if (!tx) return state;
 
-      const expenses: Expense[] = action.parts.map((part) => ({
+      const expenses: Expense[] = action.parts.map(part => ({
         id: part.expenseId,
         grantId: part.grantId,
         budgetLineId: part.budgetLineId,
@@ -264,8 +271,8 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
         transactionId: tx.id,
       }));
       const split = action.parts.length > 1;
-      const activity: Activity[] = action.parts.map((part) => {
-        const line = state.budgetLines.find((l) => l.id === part.budgetLineId);
+      const activity: Activity[] = action.parts.map(part => {
+        const line = state.budgetLines.find(l => l.id === part.budgetLineId);
         return {
           id: part.activityId,
           grantId: part.grantId,
@@ -280,7 +287,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
       return {
         ...state,
         // Reassigning replaces whatever the transaction was on before.
-        expenses: [...state.expenses.filter((e) => e.transactionId !== tx.id), ...expenses],
+        expenses: [...state.expenses.filter(e => e.transactionId !== tx.id), ...expenses],
         transactions: withId(state.transactions, tx.id, {
           status: 'assigned',
           assignedById: action.by,
@@ -291,14 +298,14 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
     }
 
     case 'set-transaction-status': {
-      const tx = state.transactions.find((t) => t.id === action.id);
+      const tx = state.transactions.find(t => t.id === action.id);
       if (!tx) return state;
-      const parts = new Set(state.expenses.filter((e) => e.transactionId === tx.id).map((e) => e.id));
+      const parts = new Set(state.expenses.filter(e => e.transactionId === tx.id).map(e => e.id));
       return {
         ...state,
-        expenses: state.expenses.filter((e) => !parts.has(e.id)),
+        expenses: state.expenses.filter(e => !parts.has(e.id)),
         // Backup belongs to the expense, so it goes when the expense does.
-        files: state.files.filter((f) => !f.expenseId || !parts.has(f.expenseId)),
+        files: state.files.filter(f => !f.expenseId || !parts.has(f.expenseId)),
         transactions: withId(state.transactions, tx.id, {
           status: action.status,
           assignedById: action.status === 'to-assign' ? undefined : action.by,
@@ -321,11 +328,17 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
     case 'save-reminder-plan':
       return {
         ...state,
-        reminderPlans: [...state.reminderPlans.filter((p) => p.reportId !== action.plan.reportId), action.plan],
+        reminderPlans: [
+          ...state.reminderPlans.filter(p => p.reportId !== action.plan.reportId),
+          action.plan,
+        ],
       };
 
     case 'reset-reminder-plan':
-      return { ...state, reminderPlans: state.reminderPlans.filter((p) => p.reportId !== action.reportId) };
+      return {
+        ...state,
+        reminderPlans: state.reminderPlans.filter(p => p.reportId !== action.reportId),
+      };
 
     case 'set-reminder-defaults':
       return { ...state, reminderDefaults: { ...state.reminderDefaults, ...action.patch } };
@@ -461,7 +474,7 @@ function createActions(
   const assignAction = (id: string, parts: Allocation[]): GrantsAction => ({
     type: 'assign-transaction',
     id,
-    parts: parts.map((part) => ({ ...part, expenseId: newId('ex'), activityId: newId('act') })),
+    parts: parts.map(part => ({ ...part, expenseId: newId('ex'), activityId: newId('act') })),
     by: CURRENT_USER.id,
     date: today,
     at: now(),
@@ -541,7 +554,7 @@ function createActions(
       update('tasks', id, patch);
     },
     toggleTask(id) {
-        send({ type: 'toggle-task', id, date: today });
+      send({ type: 'toggle-task', id, date: today });
     },
     deleteTask(id) {
       remove('tasks', id);
@@ -571,7 +584,7 @@ function createActions(
       remove('payments', id);
     },
     markPaymentReceived(id, date) {
-      const payment = getState().grants.payments.find((p) => p.id === id);
+      const payment = getState().grants.payments.find(p => p.id === id);
       update('payments', id, { receivedDate: date });
       if (payment) {
         logActivity(
@@ -602,13 +615,13 @@ function createActions(
       update('expenses', id, patch);
     },
     deleteExpense(id) {
-      const expense = getState().grants.expenses.find((e) => e.id === id);
+      const expense = getState().grants.expenses.find(e => e.id === id);
       if (expense?.transactionId) {
         send({ type: 'set-transaction-status', id: expense.transactionId, status: 'to-assign' });
         return;
       }
       // Backup belongs to the expense, so it goes when the expense does.
-      const files = getState().grants.files.filter((f) => f.expenseId === id);
+      const files = getState().grants.files.filter(f => f.expenseId === id);
       send({
         type: 'batch',
         actions: [
@@ -632,7 +645,13 @@ function createActions(
       send(assignAction(id, parts));
     },
     markNotGrantFunded(id) {
-      send({ type: 'set-transaction-status', id, status: 'not-grant-funded', by: CURRENT_USER.id, date: today });
+      send({
+        type: 'set-transaction-status',
+        id,
+        status: 'not-grant-funded',
+        by: CURRENT_USER.id,
+        date: today,
+      });
     },
     unassignTransaction(id) {
       send({ type: 'set-transaction-status', id, status: 'to-assign' });
@@ -642,23 +661,40 @@ function createActions(
       const actions: GrantsAction[] = waiting.map(({ tx, suggestion }) => {
         if (suggestion.kind === 'line') {
           return assignAction(tx.id, [
-            { grantId: suggestion.grantId, budgetLineId: suggestion.budgetLineId, amount: tx.amount },
+            {
+              grantId: suggestion.grantId,
+              budgetLineId: suggestion.budgetLineId,
+              amount: tx.amount,
+            },
           ]);
         }
         if (suggestion.kind === 'split') {
-          const amounts = splitByPercent(tx.amount, suggestion.rule.parts.map((p) => p.percent));
+          const amounts = splitByPercent(
+            tx.amount,
+            suggestion.rule.parts.map(p => p.percent),
+          );
           return assignAction(
             tx.id,
-            suggestion.rule.parts.map((p, i) => ({ grantId: p.grantId, budgetLineId: p.budgetLineId, amount: amounts[i] })),
+            suggestion.rule.parts.map((p, i) => ({
+              grantId: p.grantId,
+              budgetLineId: p.budgetLineId,
+              amount: amounts[i],
+            })),
           );
         }
-        return { type: 'set-transaction-status', id: tx.id, status: 'not-grant-funded', by: CURRENT_USER.id, date: today };
+        return {
+          type: 'set-transaction-status',
+          id: tx.id,
+          status: 'not-grant-funded',
+          by: CURRENT_USER.id,
+          date: today,
+        };
       });
       if (actions.length) send({ type: 'batch', actions });
       return actions.length;
     },
     saveSplitRule(input) {
-      const existing = getState().grants.splitRules.find((r) => r.payee === input.payee);
+      const existing = getState().grants.splitRules.find(r => r.payee === input.payee);
       if (existing) {
         update('splitRules', existing.id, input);
         return existing.id;
@@ -685,7 +721,7 @@ function createActions(
 
     addTerm(input) {
       const id = newId('term');
-      const order = getState().grants.terms.filter((t) => t.grantId === input.grantId).length + 1;
+      const order = getState().grants.terms.filter(t => t.grantId === input.grantId).length + 1;
       insert('terms', { ...input, id, order });
       return id;
     },
@@ -724,10 +760,13 @@ function createActions(
       });
     },
     markReportSubmitted(id, date) {
-      const report = getState().grants.reports.find((r) => r.id === id);
+      const report = getState().grants.reports.find(r => r.id === id);
       update('reports', id, { submittedDate: date, status: 'submitted' });
       if (report) {
-        logActivity(report.grantId, `${report.kind === 'final' ? 'Final' : 'Interim'} report submitted`);
+        logActivity(
+          report.grantId,
+          `${report.kind === 'final' ? 'Final' : 'Interim'} report submitted`,
+        );
       }
     },
 

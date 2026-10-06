@@ -1,7 +1,13 @@
 import { SEED_TODAY } from '../../../core/seed';
 import { PHASE_ORDER } from './phases';
 import { DEFAULT_TEMPLATES, DEFAULT_TEMPLATE_ID, instantiateTemplate } from './templates';
-import { LAC_BUDGET_LINES, LAC_EXPENSES, PAYMENT_PAGES, makeMoneySeed, mapLine } from './seed-money';
+import {
+  LAC_BUDGET_LINES,
+  LAC_EXPENSES,
+  PAYMENT_PAGES,
+  makeMoneySeed,
+  mapLine,
+} from './seed-money';
 import type {
   Activity,
   BudgetLine,
@@ -481,18 +487,68 @@ const PAYMENTS: Payment[] = [
 
 const BUDGET_LINES: BudgetLine[] = [
   // Herb Alpert — 50,000 planned, matching the award.
-  { id: 'bl-ha-stipends', grantId: 'g-herb-alpert-2026', category: 'Teaching artist stipends', planned: 22000 },
-  { id: 'bl-ha-music', grantId: 'g-herb-alpert-2026', category: 'Sheet music and charts', planned: 3000 },
-  { id: 'bl-ha-repair', grantId: 'g-herb-alpert-2026', category: 'Instrument repair', planned: 5000 },
-  { id: 'bl-ha-venue', grantId: 'g-herb-alpert-2026', category: 'Venue and performances', planned: 12000 },
-  { id: 'bl-ha-admin', grantId: 'g-herb-alpert-2026', category: 'Admin and insurance', planned: 8000 },
+  {
+    id: 'bl-ha-stipends',
+    grantId: 'g-herb-alpert-2026',
+    category: 'Teaching artist stipends',
+    planned: 22000,
+  },
+  {
+    id: 'bl-ha-music',
+    grantId: 'g-herb-alpert-2026',
+    category: 'Sheet music and charts',
+    planned: 3000,
+  },
+  {
+    id: 'bl-ha-repair',
+    grantId: 'g-herb-alpert-2026',
+    category: 'Instrument repair',
+    planned: 5000,
+  },
+  {
+    id: 'bl-ha-venue',
+    grantId: 'g-herb-alpert-2026',
+    category: 'Venue and performances',
+    planned: 12000,
+  },
+  {
+    id: 'bl-ha-admin',
+    grantId: 'g-herb-alpert-2026',
+    category: 'Admin and insurance',
+    planned: 8000,
+  },
 
   // Long Beach Community Foundation — 8,500 planned.
-  { id: 'bl-lbcf-stipends', grantId: 'g-lb-community-foundation-2026', category: 'Teaching artist stipends', planned: 4500 },
-  { id: 'bl-lbcf-music', grantId: 'g-lb-community-foundation-2026', category: 'Sheet music and charts', planned: 800 },
-  { id: 'bl-lbcf-repair', grantId: 'g-lb-community-foundation-2026', category: 'Instrument repair', planned: 1200 },
-  { id: 'bl-lbcf-venue', grantId: 'g-lb-community-foundation-2026', category: 'Venue and performances', planned: 1200 },
-  { id: 'bl-lbcf-admin', grantId: 'g-lb-community-foundation-2026', category: 'Admin and insurance', planned: 800 },
+  {
+    id: 'bl-lbcf-stipends',
+    grantId: 'g-lb-community-foundation-2026',
+    category: 'Teaching artist stipends',
+    planned: 4500,
+  },
+  {
+    id: 'bl-lbcf-music',
+    grantId: 'g-lb-community-foundation-2026',
+    category: 'Sheet music and charts',
+    planned: 800,
+  },
+  {
+    id: 'bl-lbcf-repair',
+    grantId: 'g-lb-community-foundation-2026',
+    category: 'Instrument repair',
+    planned: 1200,
+  },
+  {
+    id: 'bl-lbcf-venue',
+    grantId: 'g-lb-community-foundation-2026',
+    category: 'Venue and performances',
+    planned: 1200,
+  },
+  {
+    id: 'bl-lbcf-admin',
+    grantId: 'g-lb-community-foundation-2026',
+    category: 'Admin and insurance',
+    planned: 800,
+  },
 ];
 
 /** Herb Alpert expenses total exactly 18,240. */
@@ -673,21 +729,51 @@ const ACTIVITY_SEED: ActivitySeed[] = [
   ['g-herb-alpert-2026', '2026-02-10', 'Barry Cogert', 'Grant added'],
   ['g-herb-alpert-2026', '2026-03-02', 'Barry Cogert', 'Phase changed to Applying'],
   ['g-herb-alpert-2026', '2026-04-28', 'Barry Cogert', 'Marked submitted'],
-  ['g-herb-alpert-2026', '2026-07-06', 'Barry Cogert', 'Award recorded: $50,000 for Jul 1, 2026 – Jun 30, 2027'],
+  [
+    'g-herb-alpert-2026',
+    '2026-07-06',
+    'Barry Cogert',
+    'Award recorded: $50,000 for Jul 1, 2026 – Jun 30, 2027',
+  ],
   ['g-herb-alpert-2026', '2026-07-14', 'Denise Moreno', 'Agreement signed'],
-  ['g-herb-alpert-2026', '2026-07-15', 'Denise Moreno', 'Payment received: $25,000 (First installment)'],
-  ['g-herb-alpert-2026', '2026-08-15', 'Denise Moreno', 'Logged $8,000 to Teaching artist stipends'],
+  [
+    'g-herb-alpert-2026',
+    '2026-07-15',
+    'Denise Moreno',
+    'Payment received: $25,000 (First installment)',
+  ],
+  [
+    'g-herb-alpert-2026',
+    '2026-08-15',
+    'Denise Moreno',
+    'Logged $8,000 to Teaching artist stipends',
+  ],
 
   ['g-la-county-2026', '2025-01-15', 'Barry Cogert', 'Grant added'],
   ['g-la-county-2026', '2025-03-10', 'Barry Cogert', 'Marked submitted'],
-  ['g-la-county-2026', '2025-06-20', 'Barry Cogert', 'Award recorded: $22,000 for Jul 1, 2025 – Jun 30, 2026'],
+  [
+    'g-la-county-2026',
+    '2025-06-20',
+    'Barry Cogert',
+    'Award recorded: $22,000 for Jul 1, 2025 – Jun 30, 2026',
+  ],
   ['g-la-county-2026', '2025-07-08', 'Denise Moreno', 'Agreement signed'],
   ['g-la-county-2026', '2026-08-24', 'Barry Cogert', 'Started the final report'],
 
   ['g-lb-community-foundation-2026', '2025-11-20', 'Denise Moreno', 'Grant added'],
   ['g-lb-community-foundation-2026', '2026-01-14', 'Denise Moreno', 'Marked submitted'],
-  ['g-lb-community-foundation-2026', '2026-07-09', 'Denise Moreno', 'Award recorded: $8,500 for Mar 1, 2026 – Feb 28, 2027'],
-  ['g-lb-community-foundation-2026', '2026-07-20', 'Denise Moreno', 'Payment received: $8,500 (Full award)'],
+  [
+    'g-lb-community-foundation-2026',
+    '2026-07-09',
+    'Denise Moreno',
+    'Award recorded: $8,500 for Mar 1, 2026 – Feb 28, 2027',
+  ],
+  [
+    'g-lb-community-foundation-2026',
+    '2026-07-20',
+    'Denise Moreno',
+    'Payment received: $8,500 (Full award)',
+  ],
 
   ['g-signal-hill-2026', '2026-06-01', 'Denise Moreno', 'Grant added'],
   ['g-signal-hill-2026', '2026-07-06', 'Denise Moreno', 'Phase changed to Applying'],
@@ -704,15 +790,30 @@ const ACTIVITY_SEED: ActivitySeed[] = [
 
   ['g-arts-council-lb-2026', '2026-06-25', 'Denise Moreno', 'Grant added'],
   ['g-arts-council-lb-2026', '2026-07-10', 'Denise Moreno', 'Phase changed to Applying'],
-  ['g-arts-council-lb-2026', '2026-09-04', 'Barry Cogert', 'Note: narrative approved, waiting on the portal login'],
+  [
+    'g-arts-council-lb-2026',
+    '2026-09-04',
+    'Barry Cogert',
+    'Note: narrative approved, waiting on the portal login',
+  ],
 
   ['g-boeing-2026', '2026-03-01', 'Barry Cogert', 'Grant added'],
   ['g-boeing-2026', '2026-04-10', 'Barry Cogert', 'Marked submitted'],
-  ['g-boeing-2026', '2026-06-02', 'Barry Cogert', 'Decline recorded: fund directed to health and human services this cycle'],
+  [
+    'g-boeing-2026',
+    '2026-06-02',
+    'Barry Cogert',
+    'Decline recorded: fund directed to health and human services this cycle',
+  ],
 
   ['g-wells-fargo-2025', '2024-10-01', 'Denise Moreno', 'Grant added'],
   ['g-wells-fargo-2025', '2024-11-12', 'Denise Moreno', 'Marked submitted'],
-  ['g-wells-fargo-2025', '2025-01-20', 'Denise Moreno', 'Award recorded: $12,000 for Feb 1, 2025 – Jan 31, 2026'],
+  [
+    'g-wells-fargo-2025',
+    '2025-01-20',
+    'Denise Moreno',
+    'Award recorded: $12,000 for Feb 1, 2025 – Jan 31, 2026',
+  ],
   ['g-wells-fargo-2025', '2025-02-12', 'Denise Moreno', 'Payment received: $12,000 (Full award)'],
   ['g-wells-fargo-2025', '2026-04-22', 'Denise Moreno', 'Final report submitted'],
   ['g-wells-fargo-2025', '2026-05-14', 'Barry Cogert', 'Grant closed'],
@@ -733,18 +834,20 @@ function seedActivity(): Activity[] {
 /** A fresh copy of the demo data set. Never mutate the result in place. */
 export function makeSeed(): GrantsState {
   const templates: ChecklistTemplate[] = JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
-  const standard =
-    templates.find((t) => t.id === DEFAULT_TEMPLATE_ID) ?? templates[0];
+  const standard = templates.find(t => t.id === DEFAULT_TEMPLATE_ID) ?? templates[0];
 
   const grants: Grant[] = JSON.parse(JSON.stringify(GRANTS));
 
-  const tasks: Task[] = grants.flatMap((grant) => seedTasks(grant, standard, SEED_TODAY));
+  const tasks: Task[] = grants.flatMap(grant => seedTasks(grant, standard, SEED_TODAY));
   const documents: GrantDocument[] = grants.flatMap(seedDocuments);
 
   // Every budget line is mapped to QuickBooks, and every expense came from it.
   const budgetLines: BudgetLine[] = [...BUDGET_LINES, ...LAC_BUDGET_LINES].map(mapLine);
-  const moneySeed = makeMoneySeed(budgetLines, JSON.parse(JSON.stringify([...EXPENSES, ...LAC_EXPENSES])));
-  const payments: Payment[] = PAYMENTS.map((p) => ({ ...p, sourcePage: PAYMENT_PAGES[p.id] }));
+  const moneySeed = makeMoneySeed(
+    budgetLines,
+    JSON.parse(JSON.stringify([...EXPENSES, ...LAC_EXPENSES])),
+  );
+  const payments: Payment[] = PAYMENTS.map(p => ({ ...p, sourcePage: PAYMENT_PAGES[p.id] }));
 
   return {
     funders: JSON.parse(JSON.stringify(FUNDERS)),

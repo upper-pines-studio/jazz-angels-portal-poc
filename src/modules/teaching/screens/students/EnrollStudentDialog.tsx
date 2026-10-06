@@ -43,8 +43,8 @@ export default function EnrollStudentDialog({
   const valid = !nameError && !instrumentError && !guardianError;
 
   // The ensembles that belong to the chosen program, plus the waitlist.
-  const ensembles = state.teaching.ensembles.filter((e) => e.programId === programId);
-  const chosen = ensembles.some((e) => e.id === ensembleId) ? ensembleId : WAITLIST;
+  const ensembles = state.teaching.ensembles.filter(e => e.programId === programId);
+  const chosen = ensembles.some(e => e.id === ensembleId) ? ensembleId : WAITLIST;
 
   const submit = () => {
     if (!valid) {
@@ -81,34 +81,58 @@ export default function EnrollStudentDialog({
       width={460}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={submit}>Enroll student</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={submit}>
+            Enroll student
+          </Button>
         </>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <Field label="Student" required error={showErrors ? nameError : undefined}>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Maya Robinson" style={{ width: '100%' }} />
+          <Input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Maya Robinson"
+            style={{ width: '100%' }}
+          />
         </Field>
 
         <Field label="Instrument" required error={showErrors ? instrumentError : undefined}>
-          <Input value={instrument} onChange={(e) => setInstrument(e.target.value)} placeholder="Trumpet" style={{ width: '100%' }} />
+          <Input
+            value={instrument}
+            onChange={e => setInstrument(e.target.value)}
+            placeholder="Trumpet"
+            style={{ width: '100%' }}
+          />
         </Field>
 
         <div className="ja-grid-2">
           <Field label="Guardian" required error={showErrors ? guardianError : undefined}>
-            <Input value={guardianName} onChange={(e) => setGuardianName(e.target.value)} placeholder="Lorraine Robinson" style={{ width: '100%' }} />
+            <Input
+              value={guardianName}
+              onChange={e => setGuardianName(e.target.value)}
+              placeholder="Lorraine Robinson"
+              style={{ width: '100%' }}
+            />
           </Field>
           <Field label="Guardian phone">
-            <Input value={guardianPhone} onChange={(e) => setGuardianPhone(e.target.value)} placeholder="(562) 555-0148" style={{ width: '100%' }} />
+            <Input
+              value={guardianPhone}
+              onChange={e => setGuardianPhone(e.target.value)}
+              placeholder="(562) 555-0148"
+              style={{ width: '100%' }}
+            />
           </Field>
         </div>
 
         <Field label="Program" required>
           <Select
             value={programId}
-            onChange={(e) => setProgramId(e.target.value as ProgramId)}
-            options={state.core.programs.map((p) => ({ value: p.id, label: p.name }))}
+            onChange={e => setProgramId(e.target.value as ProgramId)}
+            options={state.core.programs.map(p => ({ value: p.id, label: p.name }))}
             style={{ width: '100%' }}
           />
         </Field>
@@ -116,10 +140,13 @@ export default function EnrollStudentDialog({
         <Field label="Ensemble" hint="Leave this on the waitlist until a seat opens.">
           <Select
             value={chosen}
-            onChange={(e) => setEnsembleId(e.target.value)}
+            onChange={e => setEnsembleId(e.target.value)}
             options={[
               { value: WAITLIST, label: 'Waitlist' },
-              ...ensembles.map((e) => ({ value: e.id, label: `${e.name} · ${placeLabel(state, e.venueId, e.room)}` })),
+              ...ensembles.map(e => ({
+                value: e.id,
+                label: `${e.name} · ${placeLabel(state, e.venueId, e.room)}`,
+              })),
             ]}
             style={{ width: '100%' }}
           />

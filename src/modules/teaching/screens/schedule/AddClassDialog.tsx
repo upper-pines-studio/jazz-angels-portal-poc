@@ -36,7 +36,8 @@ export default function AddClassDialog({
   const venue = venueById(state, venueId);
 
   const dateError = !date ? 'Pick the date the class meets.' : undefined;
-  const timeError = start && end && end <= start ? 'The class has to end after it starts.' : undefined;
+  const timeError =
+    start && end && end <= start ? 'The class has to end after it starts.' : undefined;
   const valid = !dateError && !timeError && Boolean(ensembleId) && Boolean(venueId);
 
   const submit = () => {
@@ -61,8 +62,12 @@ export default function AddClassDialog({
       width={460}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={submit}>Add class</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={submit}>
+            Add class
+          </Button>
         </>
       }
     >
@@ -70,38 +75,67 @@ export default function AddClassDialog({
         <Field label="Ensemble" required>
           <Select
             value={ensembleId}
-            onChange={(e) => { setEnsembleId(e.target.value); setPlace(null); }}
-            options={state.teaching.ensembles.map((en) => ({ value: en.id, label: en.name }))}
+            onChange={e => {
+              setEnsembleId(e.target.value);
+              setPlace(null);
+            }}
+            options={state.teaching.ensembles.map(en => ({ value: en.id, label: en.name }))}
             style={{ width: '100%' }}
           />
         </Field>
 
         <Field label="Date" required error={showErrors ? dateError : undefined}>
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: '100%' }} />
-        </Field>
-
-        <div className="ja-grid-2">
-          <Field label="Start time" required>
-            <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} style={{ width: '100%' }} />
-          </Field>
-          <Field label="End time" required error={showErrors ? timeError : undefined}>
-            <Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} style={{ width: '100%' }} />
-          </Field>
-        </div>
-
-        <Field label="Venue" required hint="Where the ensemble usually meets. Add venues in Settings.">
-          <Select
-            value={venueId}
-            onChange={(e) => setPlace({ venueId: e.target.value, room: '' })}
-            options={state.core.venues.map((v) => ({ value: v.id, label: v.name }))}
+          <Input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
             style={{ width: '100%' }}
           />
         </Field>
 
-        <Field label="Room" hint={venue?.kind === 'studio' ? 'Studio 1, Studio 2, Main room.' : 'The space inside the building, if it matters.'}>
+        <div className="ja-grid-2">
+          <Field label="Start time" required>
+            <Input
+              type="time"
+              value={start}
+              onChange={e => setStart(e.target.value)}
+              style={{ width: '100%' }}
+            />
+          </Field>
+          <Field label="End time" required error={showErrors ? timeError : undefined}>
+            <Input
+              type="time"
+              value={end}
+              onChange={e => setEnd(e.target.value)}
+              style={{ width: '100%' }}
+            />
+          </Field>
+        </div>
+
+        <Field
+          label="Venue"
+          required
+          hint="Where the ensemble usually meets. Add venues in Settings."
+        >
+          <Select
+            value={venueId}
+            onChange={e => setPlace({ venueId: e.target.value, room: '' })}
+            options={state.core.venues.map(v => ({ value: v.id, label: v.name }))}
+            style={{ width: '100%' }}
+          />
+        </Field>
+
+        <Field
+          label="Room"
+          hint={
+            venue?.kind === 'studio'
+              ? 'Studio 1, Studio 2, Main room.'
+              : 'The space inside the building, if it matters.'
+          }
+        >
           <Input
             value={room}
-            onChange={(e) => setPlace({ venueId, room: e.target.value })}
+            onChange={e => setPlace({ venueId, room: e.target.value })}
             placeholder={venue?.kind === 'studio' ? 'Studio 1' : 'Band room'}
             style={{ width: '100%' }}
           />

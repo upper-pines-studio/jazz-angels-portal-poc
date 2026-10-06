@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  type ReactNode,
+} from 'react';
 import { toISO } from './format';
 import type { AnyAction, ModuleSlice } from './module';
 import * as repository from './repository';
@@ -43,7 +50,7 @@ type CoreAction =
   | { type: 'core/update-settings'; patch: Partial<AppSettings> };
 
 function withId<T extends { id: string }>(rows: T[], id: string, patch: Partial<T>): T[] {
-  return rows.map((row) => (row.id === id ? { ...row, ...patch } : row));
+  return rows.map(row => (row.id === id ? { ...row, ...patch } : row));
 }
 
 function coreReducer(state: CoreState, raw: AnyAction): CoreState {
@@ -106,7 +113,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       },
       setModuleEnabled(id, on) {
         const current = getState().core.settings.enabledModules;
-        const next = on ? [...new Set([...current, id])] : current.filter((m) => m !== id);
+        const next = on ? [...new Set([...current, id])] : current.filter(m => m !== id);
         dispatch({ type: 'core/update-settings', patch: { enabledModules: next } });
       },
     };
@@ -120,8 +127,8 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     // teaching module's venue ids still resolve.
     const seeded = makeCoreSeed();
     return {
-      staff: c.staff.map((s) => ({ ...s, teaches: s.teaches ?? false })),
-      programs: c.programs.map((p) => ({ ...p, short: p.short ?? p.name })),
+      staff: c.staff.map(s => ({ ...s, teaches: s.teaches ?? false })),
+      programs: c.programs.map(p => ({ ...p, short: p.short ?? p.name })),
       organizations: Array.isArray(c.organizations) ? c.organizations : seeded.organizations,
       venues: Array.isArray(c.venues) ? c.venues : seeded.venues,
       settings: {
@@ -149,7 +156,7 @@ export function makeReducer(slices: PortalSlice[]) {
       return (action as ReplaceAction).state as PortalState;
     }
     const sliceId = action.type.split('/')[0];
-    const slice = slices.find((s) => s.id === sliceId);
+    const slice = slices.find(s => s.id === sliceId);
     if (!slice) return state;
 
     const bag = state as unknown as Record<string, unknown>;
@@ -207,7 +214,8 @@ export function StoreProvider({ slices, today: fixedToday, children }: StoreProv
     const bag = state as unknown as Record<string, unknown>;
     const saved = savedRef.current;
     for (const slice of all) {
-      if (!saved || saved[slice.id] !== bag[slice.id]) repository.saveSlice(slice.id, bag[slice.id]);
+      if (!saved || saved[slice.id] !== bag[slice.id])
+        repository.saveSlice(slice.id, bag[slice.id]);
     }
     savedRef.current = { ...bag };
   }, [state, all]);

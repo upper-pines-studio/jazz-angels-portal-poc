@@ -43,13 +43,17 @@ export function trackedGrants(state: PortalState): Grant[] {
   return state.grants.grants
     .filter(isTracked)
     .slice()
-    .sort((a, b) => (b.dates.periodEnd ?? '').localeCompare(a.dates.periodEnd ?? '') || a.title.localeCompare(b.title));
+    .sort(
+      (a, b) =>
+        (b.dates.periodEnd ?? '').localeCompare(a.dates.periodEnd ?? '') ||
+        a.title.localeCompare(b.title),
+    );
 }
 
 /** Tracked grants whose period touches the fiscal year containing `today`. */
 export function trackedGrantsInFy(state: PortalState, today: string): Grant[] {
   const fy = fiscalYear(today, state.core.settings.fiscalYearStartMonth);
-  return trackedGrants(state).filter((g) => {
+  return trackedGrants(state).filter(g => {
     const start = g.dates.periodStart ?? fy.start;
     const end = g.dates.periodEnd ?? fy.end;
     // A grant that ended just before the year still owes its report in it.
@@ -59,17 +63,17 @@ export function trackedGrantsInFy(state: PortalState, today: string): Grant[] {
 
 export function grantExpenses(state: PortalState, grantId: string): Expense[] {
   return state.grants.expenses
-    .filter((e) => e.grantId === grantId)
+    .filter(e => e.grantId === grantId)
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date) || b.amount - a.amount);
 }
 
 export function grantLines(state: PortalState, grantId: string): BudgetLine[] {
-  return state.grants.budgetLines.filter((l) => l.grantId === grantId);
+  return state.grants.budgetLines.filter(l => l.grantId === grantId);
 }
 
 export function lineById(state: PortalState, id: string): BudgetLine | undefined {
-  return state.grants.budgetLines.find((l) => l.id === id);
+  return state.grants.budgetLines.find(l => l.id === id);
 }
 
 /** What has been matched to a line so far: the dollars and how many expenses. */
@@ -149,7 +153,10 @@ function pace(
   };
 
   if (!periodStart || !periodEnd || today < periodStart) {
-    const daysTotal = periodStart && periodEnd ? differenceInCalendarDays(parseISO(periodEnd), parseISO(periodStart)) + 1 : 0;
+    const daysTotal =
+      periodStart && periodEnd
+        ? differenceInCalendarDays(parseISO(periodEnd), parseISO(periodStart)) + 1
+        : 0;
     return {
       ...base,
       status: 'not-started',
@@ -186,7 +193,12 @@ function pace(
       perMonthNeeded: 0,
       projectedSpent: spent,
       projectedUnspent: remaining,
-      headline: remaining > 0 ? `${money(remaining)} left unspent` : remaining < 0 ? `${money(-remaining)} over` : 'Fully spent',
+      headline:
+        remaining > 0
+          ? `${money(remaining)} left unspent`
+          : remaining < 0
+            ? `${money(-remaining)} over`
+            : 'Fully spent',
     };
   }
 
@@ -208,9 +220,13 @@ function pace(
 
   let headline = 'On course to finish on time';
   if (spent > budget) headline = `${money(spent - budget)} over budget`;
-  else if (status === 'spending-fast' && runsOutOn) headline = `Runs out around ${dateLong(runsOutOn)}`;
+  else if (status === 'spending-fast' && runsOutOn)
+    headline = `Runs out around ${dateLong(runsOutOn)}`;
   else if (status === 'spending-slow') {
-    headline = spent === 0 ? 'No spending yet' : `About ${aboutMoney(projectedUnspent)} unspent on ${dateLong(periodEnd)}`;
+    headline =
+      spent === 0
+        ? 'No spending yet'
+        : `About ${aboutMoney(projectedUnspent)} unspent on ${dateLong(periodEnd)}`;
   } else if (status === 'ahead') headline = 'Ahead of pace';
 
   return {
@@ -231,8 +247,10 @@ function pace(
 
 /** Pacing for a whole grant: the award against everything spent on it. */
 export function grantPace(state: PortalState, grantId: string, today: string): Pace {
-  const grant = state.grants.grants.find((g) => g.id === grantId);
-  const spent = state.grants.expenses.filter((e) => e.grantId === grantId).reduce((sum, e) => sum + e.amount, 0);
+  const grant = state.grants.grants.find(g => g.id === grantId);
+  const spent = state.grants.expenses
+    .filter(e => e.grantId === grantId)
+    .reduce((sum, e) => sum + e.amount, 0);
   return pace(
     grant?.amountAwarded ?? 0,
     spent,
@@ -246,8 +264,8 @@ export function grantPace(state: PortalState, grantId: string, today: string): P
 
 /** Pacing for each budget line on a grant, in budget order. */
 export function linePaces(state: PortalState, grantId: string, today: string): LinePace[] {
-  const grant = state.grants.grants.find((g) => g.id === grantId);
-  return grantLines(state, grantId).map((line) => ({
+  const grant = state.grants.grants.find(g => g.id === grantId);
+  return grantLines(state, grantId).map(line => ({
     line,
     ...pace(
       line.planned,
@@ -268,18 +286,22 @@ export function lineNeedsAttention(p: LinePace): boolean {
 }
 
 /** The line doing most to push a grant off pace, if any. */
-export function paceDriver(state: PortalState, grantId: string, today: string): LinePace | undefined {
+export function paceDriver(
+  state: PortalState,
+  grantId: string,
+  today: string,
+): LinePace | undefined {
   const lines = linePaces(state, grantId, today);
   const grant = grantPace(state, grantId, today);
   if (grant.status === 'spending-fast') {
-    return lines.filter((l) => l.status === 'spending-fast').sort((a, b) => b.used - a.used)[0];
+    return lines.filter(l => l.status === 'spending-fast').sort((a, b) => b.used - a.used)[0];
   }
   return undefined;
 }
 
 /** Grants that are spending fast or slow: the number on the Spend-down rail item. */
 export function offPaceGrants(state: PortalState, today: string): Grant[] {
-  return trackedGrants(state).filter((g) => {
+  return trackedGrants(state).filter(g => {
     const status = grantPace(state, g.id, today).status;
     return status === 'spending-fast' || status === 'spending-slow';
   });
@@ -289,11 +311,16 @@ export function offPaceGrants(state: PortalState, today: string): Grant[] {
  * Cumulative spending on a grant, one point per day something was spent, from
  * the first day of the period. For the spend-down chart.
  */
-export function spendSeries(state: PortalState, grantId: string, today: string): Array<{ date: string; total: number }> {
-  const grant = state.grants.grants.find((g) => g.id === grantId);
+export function spendSeries(
+  state: PortalState,
+  grantId: string,
+  today: string,
+): Array<{ date: string; total: number }> {
+  const grant = state.grants.grants.find(g => g.id === grantId);
   const start = grant?.dates.periodStart;
   if (!start) return [];
-  const end = grant?.dates.periodEnd && grant.dates.periodEnd < today ? grant.dates.periodEnd : today;
+  const end =
+    grant?.dates.periodEnd && grant.dates.periodEnd < today ? grant.dates.periodEnd : today;
 
   const byDay = new Map<string, number>();
   for (const e of state.grants.expenses) {
@@ -318,7 +345,7 @@ export function spendSeries(state: PortalState, grantId: string, today: string):
 // ---------------------------------------------------------------------------
 
 export function accountName(state: PortalState, code: string): string {
-  return state.grants.accounts.find((a) => a.code === code)?.name ?? 'Unknown account';
+  return state.grants.accounts.find(a => a.code === code)?.name ?? 'Unknown account';
 }
 
 /** "6200 Contract instructors" */
@@ -327,7 +354,7 @@ export function accountLabel(state: PortalState, code: string): string {
 }
 
 export function className(state: PortalState, classId: string | undefined): string | undefined {
-  return classId ? state.grants.classes.find((c) => c.id === classId)?.name : undefined;
+  return classId ? state.grants.classes.find(c => c.id === classId)?.name : undefined;
 }
 
 /** "today, 8:40 am" on the day of the sync, "Sep 12, 8:40 am" after it. */
@@ -340,8 +367,15 @@ export function syncedLabel(state: PortalState, today: string): string {
 }
 
 /** The lines on a grant that already count an account, this line excluded. */
-export function accountUsedBy(state: PortalState, grantId: string, code: string, exceptLineId?: string): BudgetLine[] {
-  return grantLines(state, grantId).filter((l) => l.id !== exceptLineId && l.accountCodes?.includes(code));
+export function accountUsedBy(
+  state: PortalState,
+  grantId: string,
+  code: string,
+  exceptLineId?: string,
+): BudgetLine[] {
+  return grantLines(state, grantId).filter(
+    l => l.id !== exceptLineId && l.accountCodes?.includes(code),
+  );
 }
 
 /** A line is mapped when it names at least one account and a class. */
@@ -353,19 +387,30 @@ export function isMapped(line: BudgetLine): boolean {
 // Transactions
 // ---------------------------------------------------------------------------
 
-export function transactionById(state: PortalState, id: string | undefined): Transaction | undefined {
-  return id ? state.grants.transactions.find((t) => t.id === id) : undefined;
+export function transactionById(
+  state: PortalState,
+  id: string | undefined,
+): Transaction | undefined {
+  return id ? state.grants.transactions.find(t => t.id === id) : undefined;
 }
 
-export function transactionsByStatus(state: PortalState, status: TransactionStatus | 'all'): Transaction[] {
+export function transactionsByStatus(
+  state: PortalState,
+  status: TransactionStatus | 'all',
+): Transaction[] {
   return state.grants.transactions
-    .filter((t) => status === 'all' || t.status === status)
+    .filter(t => status === 'all' || t.status === status)
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date) || a.payee.localeCompare(b.payee));
 }
 
 export function transactionCounts(state: PortalState): Record<TransactionStatus | 'all', number> {
-  const counts = { 'to-assign': 0, assigned: 0, 'not-grant-funded': 0, all: state.grants.transactions.length };
+  const counts = {
+    'to-assign': 0,
+    assigned: 0,
+    'not-grant-funded': 0,
+    all: state.grants.transactions.length,
+  };
   for (const t of state.grants.transactions) counts[t.status] += 1;
   return counts;
 }
@@ -373,25 +418,31 @@ export function transactionCounts(state: PortalState): Record<TransactionStatus 
 /** Where an assigned transaction went: one part, or several when it was split. */
 export function transactionAllocations(state: PortalState, transactionId: string): Allocation[] {
   return state.grants.expenses
-    .filter((e) => e.transactionId === transactionId)
-    .map((e) => ({ grantId: e.grantId, budgetLineId: e.budgetLineId, amount: e.amount }));
+    .filter(e => e.transactionId === transactionId)
+    .map(e => ({ grantId: e.grantId, budgetLineId: e.budgetLineId, amount: e.amount }));
 }
 
 /** Lines a transaction dated `date` could be charged to: open grants whose period covers the day. */
 export function eligibleLines(state: PortalState, date: string): BudgetLine[] {
   const open = new Set(
     state.grants.grants
-      .filter((g) => (g.phase === 'awarded' || g.phase === 'active') && typeof g.amountAwarded === 'number')
-      .filter((g) => (!g.dates.periodStart || g.dates.periodStart <= date) && (!g.dates.periodEnd || g.dates.periodEnd >= date))
-      .map((g) => g.id),
+      .filter(
+        g => (g.phase === 'awarded' || g.phase === 'active') && typeof g.amountAwarded === 'number',
+      )
+      .filter(
+        g =>
+          (!g.dates.periodStart || g.dates.periodStart <= date) &&
+          (!g.dates.periodEnd || g.dates.periodEnd >= date),
+      )
+      .map(g => g.id),
   );
-  return state.grants.budgetLines.filter((l) => open.has(l.grantId));
+  return state.grants.budgetLines.filter(l => open.has(l.grantId));
 }
 
 /** Grants a transaction dated `date` could be charged to. */
 export function eligibleGrants(state: PortalState, date: string): Grant[] {
-  const ids = new Set(eligibleLines(state, date).map((l) => l.grantId));
-  return state.grants.grants.filter((g) => ids.has(g.id));
+  const ids = new Set(eligibleLines(state, date).map(l => l.grantId));
+  return state.grants.grants.filter(g => ids.has(g.id));
 }
 
 const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
@@ -402,30 +453,38 @@ const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
  * gave it a class, the class matches too.
  */
 export function suggestionFor(state: PortalState, tx: Transaction): Suggestion {
-  const rule = state.grants.splitRules.find((r) => r.payee === tx.payee);
-  if (rule && rule.parts.every((p) => lineById(state, p.budgetLineId))) return { kind: 'split', rule };
+  const rule = state.grants.splitRules.find(r => r.payee === tx.payee);
+  if (rule && rule.parts.every(p => lineById(state, p.budgetLineId)))
+    return { kind: 'split', rule };
 
-  let candidates = eligibleLines(state, tx.date).filter((l) => l.accountCodes?.includes(tx.accountCode));
-  if (tx.classId) candidates = candidates.filter((l) => l.classId === tx.classId);
+  let candidates = eligibleLines(state, tx.date).filter(l =>
+    l.accountCodes?.includes(tx.accountCode),
+  );
+  if (tx.classId) candidates = candidates.filter(l => l.classId === tx.classId);
 
   if (candidates.length === 1) {
     return { kind: 'line', grantId: candidates[0].grantId, budgetLineId: candidates[0].id };
   }
 
   if (candidates.length > 1) {
-    const grants = new Set(candidates.map((l) => l.grantId)).size;
-    const what = grants > 1 ? `${COUNT_WORDS[grants] ?? grants} grants` : `${COUNT_WORDS[candidates.length] ?? candidates.length} lines`;
+    const grants = new Set(candidates.map(l => l.grantId)).size;
+    const what =
+      grants > 1
+        ? `${COUNT_WORDS[grants] ?? grants} grants`
+        : `${COUNT_WORDS[candidates.length] ?? candidates.length} lines`;
     return {
       kind: 'ambiguous',
-      candidates: candidates.map((l) => ({ grantId: l.grantId, budgetLineId: l.id })),
+      candidates: candidates.map(l => ({ grantId: l.grantId, budgetLineId: l.id })),
       hint: `${tx.accountCode} fits ${what}. Pick one or split.`,
     };
   }
 
   // Nothing matches. If this payee has been set aside before, propose that again.
-  const before = state.grants.transactions.filter((t) => t.status === 'not-grant-funded' && t.payee === tx.payee);
+  const before = state.grants.transactions.filter(
+    t => t.status === 'not-grant-funded' && t.payee === tx.payee,
+  );
   if (before.length >= 2) {
-    const months = new Set(before.map((t) => t.date.slice(0, 7))).size;
+    const months = new Set(before.map(t => t.date.slice(0, 7))).size;
     return { kind: 'not-grant-funded', months };
   }
 
@@ -433,10 +492,17 @@ export function suggestionFor(state: PortalState, tx: Transaction): Suggestion {
 }
 
 /** Transactions waiting with a proposal that can be accepted in one click. */
-export function acceptableSuggestions(state: PortalState): Array<{ tx: Transaction; suggestion: Suggestion }> {
+export function acceptableSuggestions(
+  state: PortalState,
+): Array<{ tx: Transaction; suggestion: Suggestion }> {
   return transactionsByStatus(state, 'to-assign')
-    .map((tx) => ({ tx, suggestion: suggestionFor(state, tx) }))
-    .filter(({ suggestion }) => suggestion.kind === 'line' || suggestion.kind === 'split' || suggestion.kind === 'not-grant-funded');
+    .map(tx => ({ tx, suggestion: suggestionFor(state, tx) }))
+    .filter(
+      ({ suggestion }) =>
+        suggestion.kind === 'line' ||
+        suggestion.kind === 'split' ||
+        suggestion.kind === 'not-grant-funded',
+    );
 }
 
 /**
@@ -444,7 +510,7 @@ export function acceptableSuggestions(state: PortalState): Array<{ tx: Transacti
  * amount: the last part takes whatever rounding left over.
  */
 export function splitByPercent(amount: number, percents: number[]): number[] {
-  const parts = percents.map((p) => Math.round((amount * p) / 100));
+  const parts = percents.map(p => Math.round((amount * p) / 100));
   const drift = amount - parts.reduce((sum, n) => sum + n, 0);
   if (parts.length) parts[parts.length - 1] += drift;
   return parts;
@@ -457,27 +523,34 @@ export function splitByPercent(amount: number, percents: number[]): number[] {
 /** The backup for one expense, oldest first. */
 export function expenseFiles(state: PortalState, expenseId: string): GrantFile[] {
   return state.grants.files
-    .filter((f) => f.expenseId === expenseId)
+    .filter(f => f.expenseId === expenseId)
     .slice()
     .sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
 }
 
 /** Files kept with the grant itself: the award letter, the signed agreement. */
 export function grantFiles(state: PortalState, grantId: string): GrantFile[] {
-  return state.grants.files.filter((f) => f.grantId === grantId && !f.expenseId);
+  return state.grants.files.filter(f => f.grantId === grantId && !f.expenseId);
 }
 
 export function awardLetter(state: PortalState, grantId: string): GrantFile | undefined {
-  return grantFiles(state, grantId).find((f) => f.kind === 'award-letter');
+  return grantFiles(state, grantId).find(f => f.kind === 'award-letter');
 }
 
 export function backupSummary(state: PortalState, grantId: string): BackupSummary {
-  const expenses = state.grants.expenses.filter((e) => e.grantId === grantId);
+  const expenses = state.grants.expenses.filter(e => e.grantId === grantId);
   const counts = new Map<string, number>();
   for (const f of state.grants.files) {
     if (f.expenseId) counts.set(f.expenseId, (counts.get(f.expenseId) ?? 0) + 1);
   }
-  const summary: BackupSummary = { expenses: expenses.length, total: 0, withBackup: 0, files: 0, missing: 0, missingTotal: 0 };
+  const summary: BackupSummary = {
+    expenses: expenses.length,
+    total: 0,
+    withBackup: 0,
+    files: 0,
+    missing: 0,
+    missingTotal: 0,
+  };
   for (const e of expenses) {
     summary.total += e.amount;
     const n = counts.get(e.id) ?? 0;
@@ -494,9 +567,9 @@ export function backupSummary(state: PortalState, grantId: string): BackupSummar
 
 /** Expenses on open grants with no backup attached yet. */
 export function expensesMissingBackup(state: PortalState): Expense[] {
-  const backed = new Set(state.grants.files.map((f) => f.expenseId).filter(Boolean));
-  const open = new Set(trackedGrants(state).map((g) => g.id));
-  return state.grants.expenses.filter((e) => open.has(e.grantId) && !backed.has(e.id));
+  const backed = new Set(state.grants.files.map(f => f.expenseId).filter(Boolean));
+  const open = new Set(trackedGrants(state).map(g => g.id));
+  return state.grants.expenses.filter(e => open.has(e.grantId) && !backed.has(e.id));
 }
 
 /** 412 → "412 KB", 1229 → "1.2 MB". */
@@ -529,23 +602,30 @@ export function isReportOpen(report: Report): boolean {
 /** Reports still owed on grants that are not finished, soonest first. */
 export function reportsOwed(state: PortalState): Report[] {
   const live = new Set(
-    state.grants.grants.filter((g) => !['closed', 'declined', 'withdrawn'].includes(g.phase)).map((g) => g.id),
+    state.grants.grants
+      .filter(g => !['closed', 'declined', 'withdrawn'].includes(g.phase))
+      .map(g => g.id),
   );
   return state.grants.reports
-    .filter((r) => live.has(r.grantId) && isReportOpen(r))
+    .filter(r => live.has(r.grantId) && isReportOpen(r))
     .slice()
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 }
 
 /** The plan a report follows: its own, or the office defaults sent to the grant owner. */
-export function reminderPlanFor(state: PortalState, reportId: string): ReminderPlan & { isDefault: boolean } {
-  const own = state.grants.reminderPlans.find((p) => p.reportId === reportId);
+export function reminderPlanFor(
+  state: PortalState,
+  reportId: string,
+): ReminderPlan & { isDefault: boolean } {
+  const own = state.grants.reminderPlans.find(p => p.reportId === reportId);
   if (own) return { ...own, isDefault: false };
 
   const defaults = state.grants.reminderDefaults;
-  const report = state.grants.reports.find((r) => r.id === reportId);
-  const grant = report && state.grants.grants.find((g) => g.id === report.grantId);
-  const recipients = [...new Set([grant?.ownerId, ...defaults.alsoNotifyIds].filter((id): id is string => !!id))];
+  const report = state.grants.reports.find(r => r.id === reportId);
+  const grant = report && state.grants.grants.find(g => g.id === report.grantId);
+  const recipients = [
+    ...new Set([grant?.ownerId, ...defaults.alsoNotifyIds].filter((id): id is string => !!id)),
+  ];
   return {
     reportId,
     offsets: [...defaults.offsets],
@@ -563,13 +643,17 @@ function dayBefore(dueDate: string, offset: number): string {
  * Every reminder day for a report, furthest first, with where each stands
  * today. Emails go out in the morning, so a reminder dated today has been sent.
  */
-export function reminderSchedule(state: PortalState, reportId: string, today: string): ReminderStep[] {
-  const report = state.grants.reports.find((r) => r.id === reportId);
+export function reminderSchedule(
+  state: PortalState,
+  reportId: string,
+  today: string,
+): ReminderStep[] {
+  const report = state.grants.reports.find(r => r.id === reportId);
   if (!report) return [];
   const plan = reminderPlanFor(state, reportId);
 
   let nextFound = false;
-  return REMINDER_OFFSETS.map((offset) => {
+  return REMINDER_OFFSETS.map(offset => {
     const date = dayBefore(report.dueDate, offset);
     const enabled = plan.offsets.includes(offset);
     let state_: ReminderStep['state'] = 'off';
@@ -591,7 +675,7 @@ export function nextReminder(
 ): { report: Report; step: ReminderStep; recipientIds: string[] } | undefined {
   let best: { report: Report; step: ReminderStep; recipientIds: string[] } | undefined;
   for (const report of reportsOwed(state)) {
-    const step = reminderSchedule(state, report.id, today).find((s) => s.state === 'next');
+    const step = reminderSchedule(state, report.id, today).find(s => s.state === 'next');
     if (!step) continue;
     if (!best || step.date < best.step.date) {
       best = { report, step, recipientIds: reminderPlanFor(state, report.id).recipientIds };
@@ -603,7 +687,7 @@ export function nextReminder(
 /** "Barry and Denise", from first names. */
 export function firstNames(state: PortalState, staffIds: string[]): string {
   const names = staffIds
-    .map((id) => state.core.staff.find((s) => s.id === id)?.name.split(' ')[0])
+    .map(id => state.core.staff.find(s => s.id === id)?.name.split(' ')[0])
     .filter((n): n is string => !!n);
   if (names.length === 0) return 'nobody';
   if (names.length === 1) return names[0];

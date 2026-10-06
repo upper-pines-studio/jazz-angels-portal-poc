@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { AnyAction } from '../../../../core/module';
 import type { PortalState } from '../../../../core/types';
 import {
-  attendanceForMeeting, markCounts, rollCounts, rollMarks, rosterForEnsemble, unsubmittedRollCalls,
+  attendanceForMeeting,
+  markCounts,
+  rollCounts,
+  rollMarks,
+  rosterForEnsemble,
+  unsubmittedRollCalls,
 } from '../derive';
 import { SEED_TODAY, makeSeed } from '../seed';
 import { teachingSlice } from '../slice';
@@ -25,7 +30,7 @@ function harness() {
   return {
     actions,
     state: () => ({ teaching }) as unknown as PortalState,
-    meeting: (id: string) => teaching.meetings.find((m) => m.id === id)!,
+    meeting: (id: string) => teaching.meetings.find(m => m.id === id)!,
   };
 }
 
@@ -54,7 +59,10 @@ describe('submitRollCall', () => {
     const records = attendanceForMeeting(h.state(), COMBO_B);
     expect(records).toHaveLength(roster.length);
     expect(markCounts(records)).toEqual({
-      present: roster.length - 2, late: 1, absent: 1, marked: roster.length,
+      present: roster.length - 2,
+      late: 1,
+      absent: 1,
+      marked: roster.length,
     });
   });
 
@@ -67,7 +75,7 @@ describe('submitRollCall', () => {
 
   it('closes the marks until the roll call is reopened', () => {
     const h = harness();
-    const student = h.state().teaching.students.find((s) => s.ensembleId === 'e-combo-b')!;
+    const student = h.state().teaching.students.find(s => s.ensembleId === 'e-combo-b')!;
 
     h.actions.setMark(COMBO_B, student.id, 'present');
     h.actions.submitRollCall(COMBO_B);
@@ -84,14 +92,17 @@ describe('submitRollCall', () => {
 describe('setMark', () => {
   it('writes one record per student and changes it in place', () => {
     const h = harness();
-    const [a, b] = h.state().teaching.students.filter((s) => s.ensembleId === 'e-combo-b');
+    const [a, b] = h.state().teaching.students.filter(s => s.ensembleId === 'e-combo-b');
 
     h.actions.setMark(COMBO_B, a.id, 'present');
     h.actions.setMark(COMBO_B, b.id, 'late');
     h.actions.setMark(COMBO_B, a.id, 'absent');
 
     expect(markCounts(attendanceForMeeting(h.state(), COMBO_B))).toEqual({
-      present: 0, late: 1, absent: 1, marked: 2,
+      present: 0,
+      late: 1,
+      absent: 1,
+      marked: 2,
     });
   });
 });
@@ -108,10 +119,10 @@ describe('the roster', () => {
       status: 'waitlist',
     });
 
-    expect(h.state().teaching.students.find((s) => s.id === id)?.status).toBe('waitlist');
+    expect(h.state().teaching.students.find(s => s.id === id)?.status).toBe('waitlist');
 
     h.actions.updateStudent(id, { status: 'enrolled', ensembleId: 'e-combo-b' });
-    const moved = h.state().teaching.students.find((s) => s.id === id);
+    const moved = h.state().teaching.students.find(s => s.id === id);
     expect(moved?.status).toBe('enrolled');
     expect(moved?.ensembleId).toBe('e-combo-b');
   });
@@ -128,7 +139,7 @@ describe('addMeeting', () => {
       venueId: 'v-studio',
       room: 'Studio 1',
     });
-    expect(unsubmittedRollCalls(h.state(), SEED_TODAY).map((m) => m.id)).toContain(id);
+    expect(unsubmittedRollCalls(h.state(), SEED_TODAY).map(m => m.id)).toContain(id);
   });
 });
 
@@ -140,8 +151,19 @@ describe('normalise', () => {
 
   it('fills a student that predates the status field', () => {
     const raw = {
-      terms: [], ensembles: [], meetings: [], attendance: [],
-      students: [{ id: 'st-99', name: 'Old Row', instrument: 'Piano', guardianName: 'A. Row', programId: 'homeschool' }],
+      terms: [],
+      ensembles: [],
+      meetings: [],
+      attendance: [],
+      students: [
+        {
+          id: 'st-99',
+          name: 'Old Row',
+          instrument: 'Piano',
+          guardianName: 'A. Row',
+          programId: 'homeschool',
+        },
+      ],
     };
     const filled = teachingSlice.normalise?.(raw) as TeachingState;
     expect(filled.students[0].status).toBe('enrolled');
@@ -164,13 +186,16 @@ describe('normalise', () => {
       })),
     };
     const filled = teachingSlice.normalise?.(stripped);
-    expect(filled?.ensembles.find((e) => e.id === 'e-combo-a')).toMatchObject({ venueId: 'v-studio', room: 'Studio 1' });
-    expect(filled?.ensembles.find((e) => e.id === 'e-paramount-ms')).toMatchObject({
+    expect(filled?.ensembles.find(e => e.id === 'e-combo-a')).toMatchObject({
+      venueId: 'v-studio',
+      room: 'Studio 1',
+    });
+    expect(filled?.ensembles.find(e => e.id === 'e-paramount-ms')).toMatchObject({
       venueId: 'v-paramount-ms',
       room: 'Band room B-12',
     });
-    expect(filled?.meetings.every((m) => Boolean(m.venueId))).toBe(true);
-    expect(filled?.meetings.some((m) => m.room === 'Off-site')).toBe(false);
+    expect(filled?.meetings.every(m => Boolean(m.venueId))).toBe(true);
+    expect(filled?.meetings.some(m => m.room === 'Off-site')).toBe(false);
   });
 });
 
@@ -179,7 +204,10 @@ describe('rollMarks', () => {
     const h = harness();
     const roster = rosterForEnsemble(h.state(), 'e-combo-b');
     expect(rollCounts(rollMarks(roster, []))).toEqual({
-      present: roster.length, late: 0, absent: 0, marked: roster.length,
+      present: roster.length,
+      late: 0,
+      absent: 0,
+      marked: roster.length,
     });
 
     h.actions.setMark(COMBO_B, roster[0].id, 'absent');

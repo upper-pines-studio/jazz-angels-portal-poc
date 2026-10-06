@@ -1,8 +1,14 @@
 import React from 'react';
 import type { AttentionItem, ModuleManifest, PortalState, StatSpec } from '../../core';
 import {
-  ensembleById, enrolledCount, recentAttendance, sessionWeekLabel, teachingSlice,
-  termForDate, timeLabel, unsubmittedRollCalls,
+  ensembleById,
+  enrolledCount,
+  recentAttendance,
+  sessionWeekLabel,
+  teachingSlice,
+  termForDate,
+  timeLabel,
+  unsubmittedRollCalls,
 } from './domain';
 import { TodayPanel } from './screens/TodayPanel';
 import Schedule from './screens/Schedule';
@@ -48,7 +54,7 @@ function subtitle(state: PortalState, today: string): string | undefined {
 }
 
 function attention(state: PortalState, today: string): AttentionItem[] {
-  return unsubmittedRollCalls(state, today).map((meeting) => {
+  return unsubmittedRollCalls(state, today).map(meeting => {
     const ensemble = ensembleById(state, meeting.ensembleId);
     return {
       id: `teaching-roll-${meeting.id}`,

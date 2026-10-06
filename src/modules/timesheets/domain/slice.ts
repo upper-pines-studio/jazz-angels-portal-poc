@@ -34,11 +34,11 @@ function patch(
   id: string,
   change: (entry: TimeEntry) => TimeEntry | undefined,
 ): TimesheetsState {
-  const entry = state.entries.find((e) => e.id === id);
+  const entry = state.entries.find(e => e.id === id);
   if (!entry) return state;
   const next = change(entry);
   if (!next) return state;
-  return { ...state, entries: state.entries.map((e) => (e.id === id ? next : e)) };
+  return { ...state, entries: state.entries.map(e => (e.id === id ? next : e)) };
 }
 
 /** The module's own reducer. The store only ever reaches it through the slice. */
@@ -49,19 +49,19 @@ export function reducer(state: TimesheetsState, action: TimesheetsAction): Times
 
     case 'submit':
       // Only a draft can be handed over; a submitted or approved entry stands.
-      return patch(state, action.id, (entry) =>
+      return patch(state, action.id, entry =>
         entry.status === 'draft' ? { ...entry, status: 'submitted' } : undefined,
       );
 
     case 'approve':
-      return patch(state, action.id, (entry) =>
+      return patch(state, action.id, entry =>
         entry.status === 'approved'
           ? undefined
           : { ...entry, status: 'approved', approvedBy: action.by, approvedAt: action.at },
       );
 
     case 'delete':
-      return { ...state, entries: state.entries.filter((e) => e.id !== action.id) };
+      return { ...state, entries: state.entries.filter(e => e.id !== action.id) };
 
     default:
       return state;
@@ -139,7 +139,7 @@ export const timesheetsSlice: ModuleSlice<TimesheetsState, TimesheetsActions> = 
     const candidate = raw as Partial<TimesheetsState>;
     if (!Array.isArray(candidate.entries)) return undefined;
     return {
-      entries: candidate.entries.map((entry) => ({
+      entries: candidate.entries.map(entry => ({
         ...entry,
         hours: typeof entry.hours === 'number' ? entry.hours : 0,
         status: STATUSES.includes(entry.status) ? entry.status : 'draft',

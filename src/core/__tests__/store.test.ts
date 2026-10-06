@@ -12,16 +12,19 @@ import type { PortalState } from '../types';
  * about grants, teaching or timesheets.
  */
 
-interface CountState { count: number }
-interface NoteState { notes: string[] }
+interface CountState {
+  count: number;
+}
+interface NoteState {
+  notes: string[];
+}
 
 const counter: ModuleSlice<CountState, { bump(): void }> = {
   id: 'counter',
   seed: () => ({ count: 0 }),
-  reducer: (state, action) =>
-    action.type === 'counter/bump' ? { count: state.count + 1 } : state,
-  createActions: (dispatch) => ({ bump: () => dispatch({ type: 'counter/bump' }) }),
-  normalise: (raw) =>
+  reducer: (state, action) => (action.type === 'counter/bump' ? { count: state.count + 1 } : state),
+  createActions: dispatch => ({ bump: () => dispatch({ type: 'counter/bump' }) }),
+  normalise: raw =>
     raw && typeof (raw as CountState).count === 'number' ? (raw as CountState) : undefined,
 };
 
@@ -30,7 +33,7 @@ const notes: ModuleSlice<NoteState, { add(text: string): void }> = {
   seed: () => ({ notes: [] }),
   reducer: (state, action) =>
     action.type === 'notes/add' ? { notes: [...state.notes, String(action.text)] } : state,
-  createActions: (dispatch) => ({ add: (text) => dispatch({ type: 'notes/add', text }) }),
+  createActions: dispatch => ({ add: text => dispatch({ type: 'notes/add', text }) }),
 };
 
 const SLICES = [counter, notes] as unknown as PortalSlice[];
@@ -41,7 +44,7 @@ describe('newId', () => {
   it('prefixes and never repeats', () => {
     const ids = new Set(Array.from({ length: 200 }, () => newId('g')));
     expect(ids.size).toBe(200);
-    expect([...ids].every((id) => id.startsWith('g-'))).toBe(true);
+    expect([...ids].every(id => id.startsWith('g-'))).toBe(true);
   });
 });
 
@@ -81,7 +84,7 @@ describe('composing slices', () => {
     counter.createActions(dispatch, () => seeded(), ctx).bump();
     notes.createActions(dispatch, () => seeded(), ctx).add('chart');
 
-    expect(dispatch.mock.calls.map((c) => c[0].type)).toEqual(['counter/bump', 'notes/add']);
+    expect(dispatch.mock.calls.map(c => c[0].type)).toEqual(['counter/bump', 'notes/add']);
   });
 });
 
@@ -91,15 +94,15 @@ describe('the core slice', () => {
   it('seeds the five staff, the six programs and all three modules', () => {
     const state = seed();
     expect(state.staff).toHaveLength(5);
-    expect(state.staff.filter((s) => s.teaches).map((s) => s.name)).toEqual([
+    expect(state.staff.filter(s => s.teaches).map(s => s.name)).toEqual([
       'Barry Cogert',
       'Albert Alva',
       'Devon Price',
       'Renee Cole',
     ]);
-    expect(state.programs.every((p) => p.short.length > 0)).toBe(true);
-    expect(state.organizations.map((o) => o.name)).toEqual(['Paramount Unified School District']);
-    expect(state.venues.map((v) => v.name)).toEqual([
+    expect(state.programs.every(p => p.short.length > 0)).toBe(true);
+    expect(state.organizations.map(o => o.name)).toEqual(['Paramount Unified School District']);
+    expect(state.venues.map(v => v.name)).toEqual([
       'Jazz Angels Studio',
       'Paramount Middle School',
       'Alondra Middle School',
@@ -114,7 +117,7 @@ describe('the core slice', () => {
   it('adds and patches a person', () => {
     const dispatched: Array<{ type: string; [k: string]: unknown }> = [];
     const actions = coreSlice.createActions(
-      (a) => dispatched.push(a),
+      a => dispatched.push(a),
       () => ({ core: seed() }) as PortalState,
       { today: '2026-09-13', newId },
     );
@@ -125,25 +128,38 @@ describe('the core slice', () => {
     for (const action of dispatched) state = coreSlice.reducer(state, action);
     expect(state.staff.at(-1)).toMatchObject({ name: 'Dana Whitfield', teaches: true });
 
-    state = coreSlice.reducer(state, { type: 'core/update-staff', id: 's-denise', patch: { teaches: true } });
-    expect(state.staff.find((s) => s.id === 's-denise')?.teaches).toBe(true);
+    state = coreSlice.reducer(state, {
+      type: 'core/update-staff',
+      id: 's-denise',
+      patch: { teaches: true },
+    });
+    expect(state.staff.find(s => s.id === 's-denise')?.teaches).toBe(true);
   });
 
   it('adds a venue under an organization and patches it', () => {
     let state = seed();
     const actions = coreSlice.createActions(
-      (a) => {
+      a => {
         state = coreSlice.reducer(state, a);
       },
       () => ({ core: state }) as PortalState,
       { today: '2026-09-13', newId },
     );
 
-    const orgId = actions.addOrganization({ name: 'Long Beach Unified School District', kind: 'school-district' });
-    const venueId = actions.addVenue({ name: 'Wilson High School', kind: 'school', organizationId: orgId });
+    const orgId = actions.addOrganization({
+      name: 'Long Beach Unified School District',
+      kind: 'school-district',
+    });
+    const venueId = actions.addVenue({
+      name: 'Wilson High School',
+      kind: 'school',
+      organizationId: orgId,
+    });
     expect(orgId.startsWith('org-')).toBe(true);
     expect(venueId.startsWith('v-')).toBe(true);
-    expect(venuesForOrganization({ core: state } as PortalState, orgId).map((v) => v.name)).toEqual(['Wilson High School']);
+    expect(venuesForOrganization({ core: state } as PortalState, orgId).map(v => v.name)).toEqual([
+      'Wilson High School',
+    ]);
 
     actions.updateVenue(venueId, { contactName: 'Dana Whitfield, band director' });
     actions.updateOrganization(orgId, { contactPhone: '(562) 555-0199' });
@@ -155,7 +171,7 @@ describe('the core slice', () => {
     const dispatched: Array<{ type: string; [k: string]: unknown }> = [];
     let state = seed();
     const actions = coreSlice.createActions(
-      (a) => {
+      a => {
         dispatched.push(a);
         state = coreSlice.reducer(state, a);
       },
@@ -175,10 +191,16 @@ describe('the core slice', () => {
     // Seeded: the demo story's day, whatever the clock says.
     expect(resolveToday(state.settings, clock)).toBe(SEED_TODAY);
 
-    state = coreSlice.reducer(state, { type: 'core/update-settings', patch: { demoToday: undefined } });
+    state = coreSlice.reducer(state, {
+      type: 'core/update-settings',
+      patch: { demoToday: undefined },
+    });
     expect(resolveToday(state.settings, clock)).toBe(clock);
 
-    state = coreSlice.reducer(state, { type: 'core/update-settings', patch: { demoToday: SEED_TODAY } });
+    state = coreSlice.reducer(state, {
+      type: 'core/update-settings',
+      patch: { demoToday: SEED_TODAY },
+    });
     expect(resolveToday(state.settings, clock)).toBe(SEED_TODAY);
   });
 
@@ -193,7 +215,7 @@ describe('the core slice', () => {
     expect(filled?.settings.enabledModules).toEqual(['grants', 'teaching', 'timesheets']);
     expect(filled?.settings.demoToday).toBeUndefined();
     // Saved before places existed: the seeded venues come along, so venue ids resolve.
-    expect(filled?.venues.map((v) => v.id)).toContain('v-studio');
+    expect(filled?.venues.map(v => v.id)).toContain('v-studio');
     expect(filled?.organizations).toHaveLength(1);
   });
 });

@@ -21,21 +21,23 @@ import type {
 // --- Lookups ----------------------------------------------------------------
 
 export function ensembleById(state: PortalState, id: string | undefined): Ensemble | undefined {
-  return id ? state.teaching.ensembles.find((e) => e.id === id) : undefined;
+  return id ? state.teaching.ensembles.find(e => e.id === id) : undefined;
 }
 
 export function studentById(state: PortalState, id: string | undefined): Student | undefined {
-  return id ? state.teaching.students.find((s) => s.id === id) : undefined;
+  return id ? state.teaching.students.find(s => s.id === id) : undefined;
 }
 
 export function meetingById(state: PortalState, id: string | undefined): ClassMeeting | undefined {
-  return id ? state.teaching.meetings.find((m) => m.id === id) : undefined;
+  return id ? state.teaching.meetings.find(m => m.id === id) : undefined;
 }
 
 /** The term `dateISO` falls inside, or the next one to start. */
 export function termForDate(state: PortalState, dateISO: string): Term | undefined {
   const terms = [...state.teaching.terms].sort((a, b) => a.start.localeCompare(b.start));
-  return terms.find((t) => dateISO >= t.start && dateISO <= t.end) ?? terms.find((t) => t.start > dateISO);
+  return (
+    terms.find(t => dateISO >= t.start && dateISO <= t.end) ?? terms.find(t => t.start > dateISO)
+  );
 }
 
 /** Which week of the term `dateISO` is, counting from 1. Undefined outside a term. */
@@ -68,37 +70,33 @@ function byClock(a: ClassMeeting, b: ClassMeeting): number {
 /** Every meeting in the Sunday-to-Saturday week beginning `weekStartISO`. */
 export function meetingsForWeek(state: PortalState, weekStartISO: string): ClassMeeting[] {
   const end = toISO(addDays(toDate(weekStartISO), 6));
-  return state.teaching.meetings
-    .filter((m) => m.date >= weekStartISO && m.date <= end)
-    .sort(byClock);
+  return state.teaching.meetings.filter(m => m.date >= weekStartISO && m.date <= end).sort(byClock);
 }
 
 /** Today's classes, earliest first. */
 export function todaysMeetings(state: PortalState, today: string): ClassMeeting[] {
-  return state.teaching.meetings.filter((m) => m.date === today).sort(byClock);
+  return state.teaching.meetings.filter(m => m.date === today).sort(byClock);
 }
 
 /** The next class after `today`, for the empty state on a day with none. */
 export function nextMeeting(state: PortalState, today: string): ClassMeeting | undefined {
-  return state.teaching.meetings.filter((m) => m.date > today).sort(byClock)[0];
+  return state.teaching.meetings.filter(m => m.date > today).sort(byClock)[0];
 }
 
 /** The enrolled students of one ensemble, by name. */
 export function rosterForEnsemble(state: PortalState, ensembleId: string): Student[] {
   return state.teaching.students
-    .filter((s) => s.status === 'enrolled' && s.ensembleId === ensembleId)
+    .filter(s => s.status === 'enrolled' && s.ensembleId === ensembleId)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function attendanceForMeeting(state: PortalState, meetingId: string): AttendanceRecord[] {
-  return state.teaching.attendance.filter((a) => a.meetingId === meetingId);
+  return state.teaching.attendance.filter(a => a.meetingId === meetingId);
 }
 
 /** Meetings that have happened with no roll submitted, oldest first. */
 export function unsubmittedRollCalls(state: PortalState, today: string): ClassMeeting[] {
-  return state.teaching.meetings
-    .filter((m) => !m.rollSubmittedAt && m.date <= today)
-    .sort(byClock);
+  return state.teaching.meetings.filter(m => !m.rollSubmittedAt && m.date <= today).sort(byClock);
 }
 
 // --- Attendance -------------------------------------------------------------
@@ -123,7 +121,8 @@ export function markCounts(records: AttendanceRecord[]): MarkCounts {
  */
 export function rollMarks(roster: Student[], records: AttendanceRecord[]): Map<string, Mark> {
   const marks = new Map<string, Mark>();
-  for (const s of roster) marks.set(s.id, records.find((r) => r.studentId === s.id)?.mark ?? 'present');
+  for (const s of roster)
+    marks.set(s.id, records.find(r => r.studentId === s.id)?.mark ?? 'present');
   return marks;
 }
 
@@ -153,11 +152,11 @@ export function attendanceRateForStudent(
 ): number | undefined {
   const inWindow = new Set(
     state.teaching.meetings
-      .filter((m) => !window || (m.date >= window.from && m.date <= window.to))
-      .map((m) => m.id),
+      .filter(m => !window || (m.date >= window.from && m.date <= window.to))
+      .map(m => m.id),
   );
   return rateOf(
-    state.teaching.attendance.filter((a) => a.studentId === studentId && inWindow.has(a.meetingId)),
+    state.teaching.attendance.filter(a => a.studentId === studentId && inWindow.has(a.meetingId)),
   );
 }
 
@@ -171,10 +170,10 @@ export interface TrendPoint {
 /** The last five submitted meetings of one ensemble, oldest first. */
 export function ensembleTrend(state: PortalState, ensembleId: string, upTo?: string): TrendPoint[] {
   return state.teaching.meetings
-    .filter((m) => m.ensembleId === ensembleId && m.rollSubmittedAt && (!upTo || m.date <= upTo))
+    .filter(m => m.ensembleId === ensembleId && m.rollSubmittedAt && (!upTo || m.date <= upTo))
     .sort(byClock)
     .slice(-5)
-    .map((m) => ({ meetingId: m.id, date: m.date, rate: meetingRate(state, m.id) ?? 0 }));
+    .map(m => ({ meetingId: m.id, date: m.date, rate: meetingRate(state, m.id) ?? 0 }));
 }
 
 /** How long a meeting runs, in hours. */
@@ -196,7 +195,7 @@ export function attendanceSummary(state: PortalState, window: AttendanceWindow):
     !window.programId || ensembleById(state, m.ensembleId)?.programId === window.programId;
 
   const meetings = state.teaching.meetings.filter(
-    (m) => m.rollSubmittedAt && m.date >= window.from && m.date <= window.to && inProgram(m),
+    m => m.rollSubmittedAt && m.date >= window.from && m.date <= window.to && inProgram(m),
   );
 
   const served = new Set<string>();
@@ -206,7 +205,7 @@ export function attendanceSummary(state: PortalState, window: AttendanceWindow):
 
   for (const meeting of meetings) {
     const records = attendanceForMeeting(state, meeting.id);
-    const here = records.filter((r) => r.mark !== 'absent');
+    const here = records.filter(r => r.mark !== 'absent');
     for (const r of here) served.add(r.studentId);
     marked += records.length;
     attended += here.length;
@@ -238,7 +237,7 @@ export interface AttendanceHeadline {
 /** The term that finished most recently before `dateISO`. */
 function lastFinishedTerm(state: PortalState, dateISO: string): Term | undefined {
   return [...state.teaching.terms]
-    .filter((t) => t.end < dateISO)
+    .filter(t => t.end < dateISO)
     .sort((a, b) => a.end.localeCompare(b.end))
     .pop();
 }
@@ -248,7 +247,10 @@ function lastFinishedTerm(state: PortalState, dateISO: string): Term | undefined
  * enough submitted rolls to mean anything; on the first Sunday of a session
  * they do not, so the previous term answers instead and says so.
  */
-export function recentAttendance(state: PortalState, today: string): AttendanceHeadline | undefined {
+export function recentAttendance(
+  state: PortalState,
+  today: string,
+): AttendanceHeadline | undefined {
   const recent = attendanceSummary(state, {
     from: toISO(addDays(toDate(today), -RECENT_DAYS)),
     to: today,
@@ -270,15 +272,14 @@ export function recentAttendance(state: PortalState, today: string): AttendanceH
 /** How many students are on the roster, for the whole studio or one program. */
 export function enrolledCount(state: PortalState, programId?: ProgramId): number {
   return state.teaching.students.filter(
-    (s) => s.status === 'enrolled' && (!programId || s.programId === programId),
+    s => s.status === 'enrolled' && (!programId || s.programId === programId),
   ).length;
 }
 
 /** How many students sit in one ensemble. */
 export function ensembleCount(state: PortalState, ensembleId: string): number {
-  return state.teaching.students.filter(
-    (s) => s.status === 'enrolled' && s.ensembleId === ensembleId,
-  ).length;
+  return state.teaching.students.filter(s => s.status === 'enrolled' && s.ensembleId === ensembleId)
+    .length;
 }
 
 /**
@@ -291,8 +292,8 @@ export function ensembleOptions(
   programId?: ProgramId,
 ): Array<{ id: string; name: string }> {
   return state.teaching.ensembles
-    .filter((e) => !programId || e.programId === programId)
-    .map((e) => ({ id: e.id, name: e.name }));
+    .filter(e => !programId || e.programId === programId)
+    .map(e => ({ id: e.id, name: e.name }));
 }
 
 /** One ensemble as a venue page lists it: what meets here, when, led by whom. */
@@ -313,12 +314,12 @@ export interface VenueClass {
  */
 export function classesAtVenue(state: PortalState, venueId: string, today: string): VenueClass[] {
   return state.teaching.ensembles
-    .filter((e) => e.venueId === venueId)
-    .map((e) => {
+    .filter(e => e.venueId === venueId)
+    .map(e => {
       const meetings = state.teaching.meetings
-        .filter((m) => m.ensembleId === e.id && m.venueId === venueId)
+        .filter(m => m.ensembleId === e.id && m.venueId === venueId)
         .sort((x, y) => x.date.localeCompare(y.date));
-      const next = meetings.find((m) => m.date >= today) ?? meetings.at(-1);
+      const next = meetings.find(m => m.date >= today) ?? meetings.at(-1);
       return {
         ensembleId: e.id,
         name: e.name,

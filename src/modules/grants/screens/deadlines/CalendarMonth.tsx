@@ -63,17 +63,31 @@ export function CalendarMonth({
                   className="ja-cal-cell"
                   style={{
                     background: out ? 'var(--surface-page)' : 'var(--surface-card)',
-                    borderRight: col === 6 ? 'none' : 'var(--border-width) solid var(--border-subtle)',
-                    borderBottom: row === weeks.length - 1 ? 'none' : 'var(--border-width) solid var(--border-subtle)',
+                    borderRight:
+                      col === 6 ? 'none' : 'var(--border-width) solid var(--border-subtle)',
+                    borderBottom:
+                      row === weeks.length - 1
+                        ? 'none'
+                        : 'var(--border-width) solid var(--border-subtle)',
                   }}
                 >
-                  <div style={{
-                    font: 'var(--weight-medium) var(--text-2xs)/1 var(--font-mono)',
-                    height: 22, display: 'flex', alignItems: 'center',
-                    ...(isToday
-                      ? { width: 22, borderRadius: 999, background: 'var(--blue-500)', color: 'var(--neutral-0)', justifyContent: 'center' }
-                      : { color: out ? 'var(--neutral-300)' : 'var(--text-body)' }),
-                  }}>
+                  <div
+                    style={{
+                      font: 'var(--weight-medium) var(--text-2xs)/1 var(--font-mono)',
+                      height: 22,
+                      display: 'flex',
+                      alignItems: 'center',
+                      ...(isToday
+                        ? {
+                            width: 22,
+                            borderRadius: 999,
+                            background: 'var(--blue-500)',
+                            color: 'var(--neutral-0)',
+                            justifyContent: 'center',
+                          }
+                        : { color: out ? 'var(--neutral-300)' : 'var(--text-body)' }),
+                    }}
+                  >
                     {day.getDate()}
                   </div>
 
@@ -83,17 +97,20 @@ export function CalendarMonth({
                       className="ja-cal-chip"
                       title={chipText(d)}
                       onClick={() => onOpen(d)}
-                      style={{
-                        '--chip-color': deadlineKindColor(d.kind, d.status),
-                        '--chip-tint': deadlineChipTint(d.kind, d.status),
-                      } as React.CSSProperties}
+                      style={
+                        {
+                          '--chip-color': deadlineKindColor(d.kind, d.status),
+                          '--chip-tint': deadlineChipTint(d.kind, d.status),
+                        } as React.CSSProperties
+                      }
                     >
                       <span className="ja-cal-chip__text">{chipText(d)}</span>
                     </span>
                   ))}
                   {dayItems.length > MAX_CHIPS && (
                     <span className="ja-cal-more">
-                      +{dayItems.length - MAX_CHIPS}<span className="ja-cal-more__word"> more</span>
+                      +{dayItems.length - MAX_CHIPS}
+                      <span className="ja-cal-more__word"> more</span>
                     </span>
                   )}
                 </div>
@@ -103,9 +120,28 @@ export function CalendarMonth({
         </div>
       </Card>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: '0 2px', flexWrap: 'wrap' }}>
-        <span style={{ font: 'var(--type-body-sm)', fontSize: 'var(--text-xs)', color: 'var(--text-faint)', marginRight: 2 }}>Kinds</span>
-        {DEADLINE_KINDS.map(k => <DeadlineKindBadge key={k} kind={k} />)}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-2)',
+          padding: '0 2px',
+          flexWrap: 'wrap',
+        }}
+      >
+        <span
+          style={{
+            font: 'var(--type-body-sm)',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-faint)',
+            marginRight: 2,
+          }}
+        >
+          Kinds
+        </span>
+        {DEADLINE_KINDS.map(k => (
+          <DeadlineKindBadge key={k} kind={k} />
+        ))}
         <Badge tone="danger">Overdue</Badge>
       </div>
     </>

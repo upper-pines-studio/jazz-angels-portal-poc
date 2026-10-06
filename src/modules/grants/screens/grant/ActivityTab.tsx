@@ -46,11 +46,25 @@ export function ActivityTab({ grant }: { grant: Grant }) {
 
   return (
     <div>
-      <div style={{ padding: 'var(--space-5) var(--space-6)', borderBottom: 'var(--border-width) solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-        <Textarea rows={2} value={note} placeholder="Add a note: a call, a promise, something the next person should know."
-          onChange={e => setNote(e.target.value)} />
+      <div
+        style={{
+          padding: 'var(--space-5) var(--space-6)',
+          borderBottom: 'var(--border-width) solid var(--border-subtle)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-3)',
+        }}
+      >
+        <Textarea
+          rows={2}
+          value={note}
+          placeholder="Add a note: a call, a promise, something the next person should know."
+          onChange={e => setNote(e.target.value)}
+        />
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button variant="primary" size="sm" disabled={!note.trim()} onClick={add}>Add note</Button>
+          <Button variant="primary" size="sm" disabled={!note.trim()} onClick={add}>
+            Add note
+          </Button>
         </div>
       </div>
 
@@ -64,19 +78,64 @@ export function ActivityTab({ grant }: { grant: Grant }) {
           const time = timeOf(row.at, today);
           const last = i === rows.length - 1;
           return (
-            <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '8px 1fr', gap: 'var(--space-4)' }}>
+            <div
+              key={row.id}
+              style={{ display: 'grid', gridTemplateColumns: '8px 1fr', gap: 'var(--space-4)' }}
+            >
               <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-                <span style={{ position: 'absolute', left: 'calc(50% - 0.5px)', top: 0, bottom: last ? 'auto' : 0, height: last ? 14 : undefined, width: 1, background: 'var(--border-default)' }} />
-                <span style={{ position: 'relative', marginTop: 6, width: 8, height: 8, borderRadius: 'var(--radius-pill)', background: i === 0 ? 'var(--teal-500)' : 'var(--neutral-300)' }} />
+                <span
+                  style={{
+                    position: 'absolute',
+                    left: 'calc(50% - 0.5px)',
+                    top: 0,
+                    bottom: last ? 'auto' : 0,
+                    height: last ? 14 : undefined,
+                    width: 1,
+                    background: 'var(--border-default)',
+                  }}
+                />
+                <span
+                  style={{
+                    position: 'relative',
+                    marginTop: 6,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 'var(--radius-pill)',
+                    background: i === 0 ? 'var(--teal-500)' : 'var(--neutral-300)',
+                  }}
+                />
               </div>
               <div style={{ paddingBottom: last ? 0 : 'var(--space-4)' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                  <span style={{ font: 'var(--weight-medium) var(--text-2xs)/1.3 var(--font-mono)', color: 'var(--text-muted)' }}>
-                    {dateLong(dayOf(row.at))}{time && ` · ${time}`}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 'var(--space-2)',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <span
+                    style={{
+                      font: 'var(--weight-medium) var(--text-2xs)/1.3 var(--font-mono)',
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    {dateLong(dayOf(row.at))}
+                    {time && ` · ${time}`}
                   </span>
-                  <span style={{ font: 'var(--type-body-sm)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{row.who}</span>
+                  <span
+                    style={{
+                      font: 'var(--type-body-sm)',
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    {row.who}
+                  </span>
                 </div>
-                <div style={{ font: 'var(--type-body-sm)', color: 'var(--text-body)' }}>{row.text}</div>
+                <div style={{ font: 'var(--type-body-sm)', color: 'var(--text-body)' }}>
+                  {row.text}
+                </div>
               </div>
             </div>
           );
