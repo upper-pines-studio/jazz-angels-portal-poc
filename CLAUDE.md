@@ -6,11 +6,12 @@ date-fns, vitest. No backend: state lives in localStorage behind `src/core/repos
 per module.
 
 ## Commands
-- `npm run dev` — http://localhost:5181
+- `npm run dev` — http://localhost:5181; set `PORT` to use another (`PORT=5190 npm run dev`, or `PORT=` in `.env.local`) so worktrees run side by side
 - `npm run build` — typecheck + vite build (Netlify runs this)
 - `npm test` — vitest (core and module domain layers only)
 - `npm run lint` — ESLint over `src/` (the module boundaries, localStorage only in core, no bare `new Date()` in screens), then `prettier --check`
 - `npm run format` — Prettier over the TypeScript in `src/` and the root config files; run it before `npm run lint`
+- Stop hook (`.claude/settings.json` → `.claude/hooks/check.sh`) — runs `npm run typecheck` and `npm run lint` when an agent stops; a failure is shown to the agent to fix before it finishes
 
 ## Where things are
 - `docs/FEATURES.md` — the feature map: every feature, its route, its status, the files that own it, and the known gaps. Read it to find where to work. Update its row when you add, move or finish a feature.
