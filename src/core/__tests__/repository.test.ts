@@ -4,8 +4,10 @@ import {
   clear,
   exportJson,
   importJson,
+  loadPreference,
   loadState,
   reset,
+  savePreference,
   saveSlice,
   saveState,
   storageKey,
@@ -83,6 +85,28 @@ describe('one key per slice', () => {
     delete (globalThis as { localStorage?: Storage }).localStorage;
     expect(() => saveState(SLICES, loadState(SLICES, TODAY))).not.toThrow();
     expect(loadState(SLICES, TODAY).core.staff).toHaveLength(5);
+  });
+});
+
+describe('preferences', () => {
+  it('reads back what was written, under the key it was given', () => {
+    const { data } = installStorage();
+    expect(loadPreference('ja-sidebar-collapsed')).toBeNull();
+    savePreference('ja-sidebar-collapsed', '1');
+    expect(data.get('ja-sidebar-collapsed')).toBe('1');
+    expect(loadPreference('ja-sidebar-collapsed')).toBe('1');
+  });
+
+  it('survives a reset, which only touches the slices', () => {
+    savePreference('ja-sidebar-collapsed', '1');
+    reset(SLICES, TODAY);
+    expect(loadPreference('ja-sidebar-collapsed')).toBe('1');
+  });
+
+  it('fails quietly with no localStorage at all', () => {
+    delete (globalThis as { localStorage?: Storage }).localStorage;
+    expect(() => savePreference('ja-sidebar-collapsed', '1')).not.toThrow();
+    expect(loadPreference('ja-sidebar-collapsed')).toBeNull();
   });
 });
 

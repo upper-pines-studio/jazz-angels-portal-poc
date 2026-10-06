@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, TopBar, Icon, IconButton, Avatar, Breadcrumb } from '../design-system';
-import { useStore } from '../core';
+import { repository, useStore } from '../core';
 import type { PortalState } from '../core';
 import { MODULES } from '../modules';
 import { useAuth } from './AuthGate';
@@ -68,13 +68,13 @@ function buildNav(state: PortalState, today: string): RailItem[] {
   return sections.flatMap(s => (s.items.length ? [{ section: s.name }, ...s.items] : []));
 }
 
-/** The collapsed-rail preference survives reloads; storage may be unavailable, so fail quietly. */
+/** The collapsed-rail preference survives reloads; the repository fails quietly without storage. */
 const COLLAPSED_KEY = 'ja-sidebar-collapsed';
 function readCollapsed(): boolean {
-  try { return window.localStorage.getItem(COLLAPSED_KEY) === '1'; } catch { return false; }
+  return repository.loadPreference(COLLAPSED_KEY) === '1';
 }
 function writeCollapsed(value: boolean) {
-  try { window.localStorage.setItem(COLLAPSED_KEY, value ? '1' : '0'); } catch { /* ignore */ }
+  repository.savePreference(COLLAPSED_KEY, value ? '1' : '0');
 }
 
 function activeFor(items: RailItem[], pathname: string): string {
