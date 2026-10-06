@@ -11,7 +11,7 @@ the app is the source of truth once built.
 
 ```bash
 npm install
-npm run dev      # http://localhost:5181
+npm run dev      # http://localhost:5181 (PORT=5190 npm run dev for another port)
 npm test         # core and domain-layer tests
 npm run build    # typecheck + production build (what Netlify runs)
 ```
