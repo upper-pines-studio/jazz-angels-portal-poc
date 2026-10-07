@@ -29,13 +29,17 @@ function restore(): { user: AuthUser | null; refusal: SignInRefusal | null } {
   if (!user) return { user: null, refusal: null };
   const refused = auth.staffRefusal(user, savedStaff());
   if (!refused) return { user, refusal: null };
-  auth.endSession();
+  // The session is ended in an effect, not here: React may run this twice in
+  // development, and the second run must see the same session as the first.
   return { user: null, refusal: refused };
 }
 
 /** Holds who is signed in. Starts from the saved session so a reload stays signed in. */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initial] = React.useState(restore);
+  React.useEffect(() => {
+    if (initial.refusal) auth.endSession();
+  }, [initial]);
   const [user, setUser] = React.useState<AuthUser | null>(initial.user);
   const [refusal, setRefusal] = React.useState<SignInRefusal | null>(initial.refusal);
 

@@ -74,12 +74,26 @@ export function ArchivedBadge() {
   return <Badge tone="neutral">Archived</Badge>;
 }
 
-/** A row's name, with the Archived badge after it when the record is archived. */
+/**
+ * A row's name, with the Archived badge after it when the record is archived.
+ * In a narrow column the badge drops under the name rather than being cut off.
+ */
 export function ArchivedName({ name, record }: { name: React.ReactNode; record: Archivable }) {
   if (!record.archivedAt) return <>{name}</>;
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-      {name}
+    <span
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        columnGap: 'var(--space-2)',
+        rowGap: 'var(--space-1)',
+        minWidth: 0,
+      }}
+    >
+      <span style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {name}
+      </span>
       <ArchivedBadge />
     </span>
   );

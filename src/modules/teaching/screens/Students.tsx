@@ -267,7 +267,7 @@ function Roster() {
                         }}
                       >
                         <Avatar name={s.name} size={24} />
-                        <ArchivedName name={s.name} record={s} />
+                        {s.name}
                       </span>
                     ),
                   },
@@ -314,10 +314,17 @@ function Roster() {
                     key: 'status',
                     label: 'Status',
                     width: '110px',
+                    // Archived is not a status: an archived student keeps theirs, and the
+                    // Archived badge sits under it.
                     render: (s: RosterStudent) => (
-                      <Badge tone={STATUS_TONE[s.status]} dot>
-                        {STATUS_LABEL[s.status]}
-                      </Badge>
+                      <ArchivedName
+                        record={s}
+                        name={
+                          <Badge tone={STATUS_TONE[s.status]} dot>
+                            {STATUS_LABEL[s.status]}
+                          </Badge>
+                        }
+                      />
                     ),
                   },
                 ]}

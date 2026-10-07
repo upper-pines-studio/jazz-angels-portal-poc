@@ -39,6 +39,7 @@ import {
   ensembleById,
   ensembleCount,
   ensemblesList,
+  isScheduled,
   mayTakeRoll,
   meetingsForWeek,
   termForDate,
@@ -347,10 +348,17 @@ function TermView() {
   const done = sundays.filter(m => m.rollSubmittedAt).length;
 
   const rows = ensemblesList(state, showArchived).map(e => {
-    const first = state.teaching.meetings
+    const inTerm = state.teaching.meetings
       .filter(m => m.ensembleId === e.id && m.date >= term.start && m.date <= term.end)
-      .sort((a, b) => a.date.localeCompare(b.date))[0];
-    return { id: e.id, ensemble: e, first };
+      .sort((a, b) => a.date.localeCompare(b.date));
+    // When it meets reads from any of its classes; the roll from one still on the
+    // schedule, so an archived ensemble shows no roll due.
+    return {
+      id: e.id,
+      ensemble: e,
+      usual: inTerm[0],
+      first: inTerm.find(m => isScheduled(state, m)),
+    };
   });
 
   type Row = (typeof rows)[number];
@@ -416,9 +424,7 @@ function TermView() {
                 width: '1.4fr',
                 strong: true,
                 render: (r: Row) => (
-                  <span
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-3)' }}
-                  >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                     <span
                       style={{
                         width: 3,
@@ -447,8 +453,8 @@ function TermView() {
                 label: 'When',
                 width: '1.4fr',
                 render: (r: Row) =>
-                  r.first ? (
-                    `${format(toDate(r.first.date), 'EEEE')} · ${timeRange(r.first)}`
+                  r.usual ? (
+                    `${format(toDate(r.usual.date), 'EEEE')} · ${timeRange(r.usual)}`
                   ) : (
                     <span style={{ color: 'var(--text-faint)' }}>—</span>
                   ),
