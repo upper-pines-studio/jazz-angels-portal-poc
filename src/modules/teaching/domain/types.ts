@@ -1,4 +1,4 @@
-import type { ProgramId } from '../../../core';
+import type { Archivable, ProgramId } from '../../../core';
 
 /**
  * The teaching module's nouns: a term, the ensembles that meet inside it, the
@@ -30,8 +30,13 @@ export interface Term {
   meetingsPlanned: number;
 }
 
-/** A standing group: the same students, the same place, the same hour each week. */
-export interface Ensemble {
+/**
+ * A standing group: the same students, the same place, the same hour each week.
+ * Archived (decision 0002) when it stops meeting: its classes on and after the
+ * archive date leave the week grid, and Add class and the pickers stop
+ * offering it. Its past classes, roll calls and attendance stay.
+ */
+export interface Ensemble extends Archivable {
   id: string;
   name: string;
   programId: ProgramId;
@@ -61,7 +66,14 @@ export interface ClassMeeting {
   notes?: string;
 }
 
-export interface Student {
+/**
+ * A student. `status` is where they are with Jazz Angels (enrolled, on the
+ * waitlist, or alumni who finished). Archived (decision 0002) is separate: a
+ * student who left, or was entered by mistake, is archived whatever their
+ * status, leaves the roster, the roll call and the counts, and keeps their
+ * past attendance.
+ */
+export interface Student extends Archivable {
   id: string;
   name: string;
   instrument: string;
@@ -123,4 +135,16 @@ export interface TeachingActions {
   updateStudent(id: string, patch: Partial<Student>): void;
   /** Add many students in one change, as a CSV import does. Returns how many were added. */
   importStudents(inputs: Omit<Student, 'id'>[]): number;
+  /**
+   * Archive a student: off the roster, the roll call and the counts. Their
+   * status and ensemble stay as they were; their past attendance stays too.
+   */
+  archiveStudent(id: string): void;
+  restoreStudent(id: string): void;
+  /**
+   * Archive an ensemble: its classes from today on leave the week grid. Its
+   * students are not touched; nothing cascades.
+   */
+  archiveEnsemble(id: string): void;
+  restoreEnsemble(id: string): void;
 }

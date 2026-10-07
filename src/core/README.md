@@ -54,9 +54,9 @@ actions.grants.transition(id, 'submitted', { date: today });
 action that records who did something (an activity row, an approval, an
 upload, a transaction's status) credits `ctx.user.id`, never a fixed person.
 `StoreProvider` takes the signed-in staff id as `userId` (App passes the
-login's `staffId`); if that id names nobody in the staff list it renders
-nothing and calls `onUnknownUser`, and App signs the person out with the
-refusal message.
+login's `staffId`); if that id names nobody in the staff list, or someone
+archived, it renders nothing and calls `onUnknownUser('no-staff' | 'archived')`,
+and App signs the person out with that refusal message.
 
 **Routing.** An action's type is `<sliceId>/<name>`, so `grants/toggle-task`
 only ever reaches the grants reducer. A slice that was not addressed keeps its
@@ -139,12 +139,13 @@ carry it. Unset means the seed's day, `SEED_TODAY`; "Use the real date" stores
 | `store.tsx` | `StoreProvider` (its `onRefused` shows a refused action's reason, its `onSaveFailed` a change that could not be saved, its `repository` defaults to localStorage), `useStore`, `useCan`, `coreSlice`, `guardActions` (wraps every slice's actions in its `rules`), `refusalMessage`, `newId`, `resolveToday`, `savedStaff()` (the staff list as saved, which sign-in reads before the store mounts). |
 | `demo.ts` | `isDemo()` (the `VITE_DEMO` switch), `DEMO_TODAY_KEY` and the demo-date preference helpers. |
 | `roles.ts` | `ROLES`, `ROLE_LABELS` (the words the screens use: Admin, Director, Office manager, Bookkeeper, Teacher, Office assistant, Read-only), `isRole`. |
+| `archive.ts` | Decision 0002 in one place: `Archivable` (`archivedAt`, `archivedById`), `isArchived`, `archivedBy(record, date)` (archived on or before a day), `activeOnly`, `archivedOnly`, `withArchived(rows, include)` (current first, archived after), `pickable(rows, keepId)` (current, plus the one already chosen), `archiveFields(user, today)`, `restoreFields()`, `normaliseArchived` (every slice's `normalise` runs the seven record types through it). |
 | `permissions.ts` | Decision 0001's table as data (`PERMISSION_TABLE`, same rows and columns as the decision file), `can(role, subject, need, own)` the one check, `cell`, `isOwnOnly`, `meets` / `meetsAny`, `mayChangeStaff` (only an Admin makes or changes an Admin). |
 | `repository.ts` | `localRepository`, the `Repository` on localStorage, one key per slice; `FAIL_SAVES_KEY`, the development switch that makes every save fail; export / `readImport` / `freshState`, each given the demo mode (`fresh` picks `seed` or `empty`); `loadPreference` / `savePreference` for a per-browser setting such as the collapsed rail or the demo date. With `auth.ts`, the only file that may touch localStorage (lint-enforced). |
 | `auth.ts` | Sign-in against SHA-256 credential hashes (no plaintext passwords in source); the session key. Exported as `auth`. |
 | `format.ts` | `money`, `dateShort`, `dateLong`, `dateRange`, `relativeDays`, `daysUntil`, `initials`. |
 | `seed.ts` | `makeCoreSeed()`: the ten staff (one per demo login, plus the teaching artists), the six programs, one district with two schools, the studio, the settings. `makeCoreEmpty()`: a new office, with the six programs pre-loaded, the seven staff records the logins need (`loginStaff()`), no partners or venues, the default settings. `STUDIO_VENUE_ID` and `PARAMOUNT_MS_VENUE_ID` are exported for module seeds. |
-| `derive.ts` | `fiscalYear`, `staffById`, `programById`, `programName`, `organizationById`, `venueById`, `venueName`, `venuesForOrganization`, `placeLabel`, `addressLine`. |
+| `derive.ts` | `fiscalYear`, `staffById` (archived people too, so history names them), `programById`, `programName`, `organizationById`, `venueById`, `venueName`, `venuesForOrganization(state, id, includeArchived?)`, `placeLabel`, `addressLine`. |
 | `auth.ts` | The sign-in check: SHA-256 of `username:password` via Web Crypto, checked against a small table of hashes, no plaintext in source. A login is a username and a `staffId`; its name and role come from that staff record, and a login whose record is missing is refused. The session (who, and when) lives in localStorage under `ja-portal:session:v1`. |
 
 **Conventions.** Money is whole dollars as an integer. Dates are ISO
@@ -170,6 +171,9 @@ manages both on the Partners screen (`src/app/screens/partners/`).
 | `updateVenue(id, patch)` | Patches a venue. Ensembles point at it by id, so a rename shows everywhere. |
 | `updateSettings(patch)` | Patches the settings: the fiscal year, the module switches. |
 | `setModuleEnabled(id, on)` | Turns a module on or off. Its data stays. |
+| `archiveStaff(id)` / `restoreStaff(id)` | Archives a person (they cannot sign in and leave the staff list and pickers; their work still names them) or restores them. Same rule as editing them (`mayChangeStaff`); nobody archives themself. |
+| `archiveOrganization(id)` / `restoreOrganization(id)` | Archives a partner or restores it. Its venues are not touched. Needs Partners: Edit. |
+| `archiveVenue(id)` / `restoreVenue(id)` | Archives a venue or restores it. Classes that met there keep it. Needs Partners: Edit. |
 | `resetDemo()` | Reseeds every slice, one apply per slice. Demo only: with the demo off it changes nothing and says so. |
 | `setDemoToday(iso)` | Moves the demo date, or `undefined` for the clock. A browser preference, not data. Demo only. |
 | `importJson(text)` | Replaces every slice from an exported file, one apply per slice. Throws on an unreadable file. |
@@ -181,13 +185,18 @@ See `src/modules/README.md` for how to add a module.
 
 `AuthUser` (`{ username, staffId }`), `Credential`, `SESSION_KEY`, `USERS`,
 `hashCredential(username, password)`, `verify(username, password, users?)`,
-`staffFor(user, staff)`, `checkSignIn(username, password, staff, users?)` (resolves to
-`{ ok: true, user, member }` or `{ ok: false, reason: 'mismatch' | 'no-staff' }`, and writes no
-session), `currentUser(users?)`, `startSession(user)`, `endSession()`.
+`staffFor(user, staff)`, `staffRefusal(user, staff)` (`'no-staff'`, `'archived'` or null),
+`checkSignIn(username, password, staff, users?)` (resolves to `{ ok: true, user, member }` or
+`{ ok: false, reason: 'mismatch' | 'no-staff' | 'archived' }`, and writes no session),
+`currentUser(users?)`, `startSession(user)`, `endSession()`. A saved session whose person is
+archived is turned away the same way, and so is the signed-in person if an import archives them
+(`StoreProvider`'s `onUnknownUser` gets the reason).
 
 **Loading an older save.** `coreSlice.normalise` moves a saved person's old free-text `role`
 (their job title) to `title`, gives them the role of the seeded person with the same id (else
 Teacher if they teach, else Read-only), and adds any person a login belongs to that the save
 lacks, so every login still resolves; with the demo on it adds back every seeded person, and the
-seeded partners and venues to a save from before places existed. It drops a `demoToday` an older
+seeded partners and venues to a save from before places existed. A person who is there but
+archived stays archived: only a missing record is added back. Archive fields that are not strings
+are dropped (`normaliseArchived`). It drops a `demoToday` an older
 save carries in its settings.

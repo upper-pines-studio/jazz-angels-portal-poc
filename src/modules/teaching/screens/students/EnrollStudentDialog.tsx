@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
 import { useToast } from '../../../../app/ToastHost';
-import { placeLabel, useStore } from '../../../../core';
+import { activeOnly, placeLabel, useStore } from '../../../../core';
 import type { ProgramId } from '../../../../core';
 import { ensembleById } from '../../domain';
 
@@ -43,7 +43,7 @@ export default function EnrollStudentDialog({
   const valid = !nameError && !instrumentError && !guardianError;
 
   // The ensembles that belong to the chosen program, plus the waitlist.
-  const ensembles = state.teaching.ensembles.filter(e => e.programId === programId);
+  const ensembles = activeOnly(state.teaching.ensembles).filter(e => e.programId === programId);
   const chosen = ensembles.some(e => e.id === ensembleId) ? ensembleId : WAITLIST;
 
   const submit = () => {

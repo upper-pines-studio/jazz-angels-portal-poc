@@ -1,4 +1,5 @@
 import type { ActionRule, AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
+import { archiveFields, normaliseArchived, restoreFields } from '../../../core/archive';
 import { can } from '../../../core/permissions';
 import { makeCoreSeed } from '../../../core/seed';
 import { acceptableSuggestions, backupCarry, splitByPercent } from './money';
@@ -467,10 +468,24 @@ export interface GrantsActions {
   /** Create a funder. Returns the new funder id. */
   addFunder(input: Omit<Funder, 'id'>): string;
   updateFunder(id: string, patch: Partial<Funder>): void;
+  /**
+   * Archive a funder (decision 0002): off the Funders list and the Add grant
+   * picker. Its grants stay as they are; nothing cascades.
+   */
+  archiveFunder(id: string): void;
+  restoreFunder(id: string): void;
 
   /** Create a grant plus its checklist, document register and "Grant added" activity. */
   addGrant(input: NewGrantInput): string;
   updateGrant(id: string, patch: Partial<Grant>): void;
+  /**
+   * Archive a grant (decision 0002) and log "Archived": it leaves the pipeline,
+   * the deadlines, the reminders and the spending screens, and stays in the
+   * funder's history, the All view of Budget vs. actual and the activity log.
+   */
+  archiveGrant(id: string): void;
+  /** Put an archived grant back where it was, and log "Restored". */
+  restoreGrant(id: string): void;
   /** Move a grant to a new phase, record the dates it implies, and log activity. */
   transition(grantId: string, to: Phase, payload?: TransitionPayload): void;
 
@@ -610,6 +625,12 @@ function createActions(
     updateFunder(id, patch) {
       update('funders', id, patch);
     },
+    archiveFunder(id) {
+      update('funders', id, archiveFields(user, today));
+    },
+    restoreFunder(id) {
+      update('funders', id, restoreFields());
+    },
 
     addGrant(input) {
       const createdAt = today;
@@ -652,6 +673,33 @@ function createActions(
     },
     updateGrant(id, patch) {
       update('grants', id, patch);
+    },
+    archiveGrant(id) {
+      // The grant and its activity row are one change: saved together or not at all.
+      send({
+        type: 'batch',
+        actions: [
+          { type: 'update', key: 'grants', id, patch: archiveFields(user, today) },
+          {
+            type: 'insert',
+            key: 'activity',
+            item: { id: newId('act'), grantId: id, at: now(), whoId, text: 'Archived' },
+          },
+        ],
+      });
+    },
+    restoreGrant(id) {
+      send({
+        type: 'batch',
+        actions: [
+          { type: 'update', key: 'grants', id, patch: restoreFields() },
+          {
+            type: 'insert',
+            key: 'activity',
+            item: { id: newId('act'), grantId: id, at: now(), whoId, text: 'Restored' },
+          },
+        ],
+      });
     },
     transition(grantId, to, payload = {}) {
       send({
@@ -979,6 +1027,14 @@ function fileSubject(expenseId: string | undefined) {
 const fileRule: ActionRule<[string, ...unknown[]]> = (user, state, id) =>
   can(user.role, fileSubject(state.grants.files.find(f => f.id === id)?.expenseId), 'edit');
 
+/** Why a budget line with expenses on it is not removed. */
+export const LINE_IN_USE_REFUSAL =
+  'This line has expenses on it. Move them to another line first, then remove it.';
+
+/** Why a received payment is not deleted. */
+export const PAYMENT_RECEIVED_REFUSAL =
+  'A payment that has arrived stays on the record. Clear its received date first if it was entered by mistake.';
+
 /**
  * What each action needs. The rows are the table's: "Grants: pipeline,
  * checklist, deadlines" (`grants`), "Award, budget, reports" (`award`),
@@ -987,7 +1043,12 @@ const fileRule: ActionRule<[string, ...unknown[]]> = (user, state, id) =>
 const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
   addFunder: 'grants',
   updateFunder: 'grants',
+  // Whoever may edit a grant or a funder may archive and restore it (decision 0002).
+  archiveFunder: 'grants',
+  restoreFunder: 'grants',
   addGrant: 'grants',
+  archiveGrant: 'grants',
+  restoreGrant: 'grants',
   // The amount awarded is the award's; the rest of a grant's record is the pipeline's.
   updateGrant: (user, _state, _id, patch) =>
     can(user.role, 'grants', 'edit') &&
@@ -1005,12 +1066,23 @@ const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
 
   addPayment: 'award',
   updatePayment: 'award',
-  deletePayment: 'award',
+  // A payment that has arrived is money on the record (decision 0002): it is not
+  // removed. One entered by mistake has its received date cleared first.
+  deletePayment: (user, state, id) => {
+    if (!can(user.role, 'award', 'edit')) return false;
+    return state.grants.payments.find(p => p.id === id)?.receivedDate
+      ? PAYMENT_RECEIVED_REFUSAL
+      : true;
+  },
   markPaymentReceived: 'award',
 
   addBudgetLine: 'award',
   updateBudgetLine: 'award',
-  deleteBudgetLine: 'award',
+  // A line with expenses on it is money (decision 0002): they move first (moveExpenses).
+  deleteBudgetLine: (user, state, id) => {
+    if (!can(user.role, 'award', 'edit')) return false;
+    return state.grants.expenses.some(e => e.budgetLineId === id) ? LINE_IN_USE_REFUSAL : true;
+  },
   moveExpenses: 'award',
 
   addExpense: 'award',
@@ -1076,8 +1148,9 @@ export function describeChange(action: GrantsAction): string | undefined {
   switch (action.type) {
     case 'batch':
       return action.actions[0] && describeChange(action.actions[0]);
-    case 'insert':
     case 'update':
+      return 'archivedAt' in action.patch ? 'the archive change' : ROW_WORDS[action.key];
+    case 'insert':
     case 'remove':
       return ROW_WORDS[action.key];
     case 'add-grant':
@@ -1131,7 +1204,12 @@ export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
     if (!candidate.quickbooks || !candidate.reminderDefaults) return undefined;
     const state = candidate as unknown as GrantsState;
     const staff = makeCoreSeed().staff;
-    return { ...state, activity: state.activity.map(row => creditActivity(row, staff)) };
+    return {
+      ...state,
+      funders: state.funders.map(normaliseArchived),
+      grants: state.grants.map(normaliseArchived),
+      activity: state.activity.map(row => creditActivity(row, staff)),
+    };
   },
 };
 

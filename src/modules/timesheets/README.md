@@ -57,7 +57,7 @@ dashboard attention row.
 | `logHours(input)` | Adds a draft entry, rounded to the nearest quarter hour. Returns the id. |
 | `submitEntry(id)` | Draft → submitted. A submitted or approved entry is left alone. |
 | `approveEntry(id)` | Marks it approved and stamps the signed-in person and today. |
-| `deleteEntry(id)` | Removes it. |
+| `deleteEntry(id)` | Removes it. No screen offers it yet; decision 0002 keeps it for drafts entered by mistake. |
 
 ## Public API
 

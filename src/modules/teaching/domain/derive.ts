@@ -1,5 +1,13 @@
 import { addDays } from 'date-fns';
-import { can, toDate, toISO } from '../../../core';
+import {
+  activeOnly,
+  archivedBy,
+  can,
+  isArchived,
+  toDate,
+  toISO,
+  withArchived,
+} from '../../../core';
 import type { PortalState, ProgramId, SignedInUser } from '../../../core';
 import type {
   AttendanceRecord,
@@ -67,36 +75,74 @@ function byClock(a: ClassMeeting, b: ClassMeeting): number {
   return a.date.localeCompare(b.date) || a.start.localeCompare(b.start);
 }
 
+/**
+ * Whether a meeting is on the schedule: every meeting is, except one of an
+ * archived ensemble on or after the day it was archived (decision 0002). The
+ * ones before stay, with their roll calls.
+ */
+export function isScheduled(state: PortalState, meeting: ClassMeeting): boolean {
+  return !archivedBy(ensembleById(state, meeting.ensembleId), meeting.date);
+}
+
+/** The meetings still on the schedule. */
+function scheduled(state: PortalState): ClassMeeting[] {
+  return state.teaching.meetings.filter(m => isScheduled(state, m));
+}
+
 /** Every meeting in the Sunday-to-Saturday week beginning `weekStartISO`. */
 export function meetingsForWeek(state: PortalState, weekStartISO: string): ClassMeeting[] {
   const end = toISO(addDays(toDate(weekStartISO), 6));
-  return state.teaching.meetings.filter(m => m.date >= weekStartISO && m.date <= end).sort(byClock);
+  return scheduled(state)
+    .filter(m => m.date >= weekStartISO && m.date <= end)
+    .sort(byClock);
 }
 
 /** Today's classes, earliest first. */
 export function todaysMeetings(state: PortalState, today: string): ClassMeeting[] {
-  return state.teaching.meetings.filter(m => m.date === today).sort(byClock);
+  return scheduled(state)
+    .filter(m => m.date === today)
+    .sort(byClock);
 }
 
 /** The next class after `today`, for the empty state on a day with none. */
 export function nextMeeting(state: PortalState, today: string): ClassMeeting | undefined {
-  return state.teaching.meetings.filter(m => m.date > today).sort(byClock)[0];
+  return scheduled(state)
+    .filter(m => m.date > today)
+    .sort(byClock)[0];
 }
 
-/** The enrolled students of one ensemble, by name. */
+/** The enrolled students of one ensemble, by name. An archived student is not on it. */
 export function rosterForEnsemble(state: PortalState, ensembleId: string): Student[] {
   return state.teaching.students
-    .filter(s => s.status === 'enrolled' && s.ensembleId === ensembleId)
+    .filter(s => s.status === 'enrolled' && !isArchived(s) && s.ensembleId === ensembleId)
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Who a roll call lists. An open one is the ensemble's roster today. A
+ * submitted one is the record: the roster, plus anyone with a mark at it who
+ * has since left the roster or been archived, so past attendance still shows.
+ */
+export function rollCallStudents(state: PortalState, meeting: ClassMeeting): Student[] {
+  const roster = rosterForEnsemble(state, meeting.ensembleId);
+  if (!meeting.rollSubmittedAt) return roster;
+  const listed = new Set(roster.map(s => s.id));
+  const marked = attendanceForMeeting(state, meeting.id)
+    .filter(a => !listed.has(a.studentId))
+    .map(a => studentById(state, a.studentId))
+    .filter((s): s is Student => !!s);
+  return [...roster, ...marked].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function attendanceForMeeting(state: PortalState, meetingId: string): AttendanceRecord[] {
   return state.teaching.attendance.filter(a => a.meetingId === meetingId);
 }
 
-/** Meetings that have happened with no roll submitted, oldest first. */
+/** Meetings on the schedule that have happened with no roll submitted, oldest first. */
 export function unsubmittedRollCalls(state: PortalState, today: string): ClassMeeting[] {
-  return state.teaching.meetings.filter(m => !m.rollSubmittedAt && m.date <= today).sort(byClock);
+  return scheduled(state)
+    .filter(m => !m.rollSubmittedAt && m.date <= today)
+    .sort(byClock);
 }
 
 // --- Attendance -------------------------------------------------------------
@@ -269,17 +315,29 @@ export function recentAttendance(
   return { rate: term.attendanceRate, footnote: previous.name };
 }
 
-/** How many students are on the roster, for the whole studio or one program. */
+/** How many students are on the roster, for the whole studio or one program. Archived ones are not. */
 export function enrolledCount(state: PortalState, programId?: ProgramId): number {
-  return state.teaching.students.filter(
+  return activeOnly(state.teaching.students).filter(
     s => s.status === 'enrolled' && (!programId || s.programId === programId),
   ).length;
 }
 
-/** How many students sit in one ensemble. */
+/** How many current students sit in one ensemble. */
 export function ensembleCount(state: PortalState, ensembleId: string): number {
-  return state.teaching.students.filter(s => s.status === 'enrolled' && s.ensembleId === ensembleId)
-    .length;
+  return rosterForEnsemble(state, ensembleId).length;
+}
+
+/** How many current students are waiting for a place. */
+export function waitlistCount(state: PortalState): number {
+  return activeOnly(state.teaching.students).filter(s => s.status === 'waitlist').length;
+}
+
+/**
+ * The ensembles a list or a picker shows: the current ones, then, with
+ * `includeArchived`, the archived ones after them.
+ */
+export function ensemblesList(state: PortalState, includeArchived = false): Ensemble[] {
+  return withArchived(state.teaching.ensembles, includeArchived);
 }
 
 /**
@@ -291,7 +349,7 @@ export function ensembleOptions(
   state: PortalState,
   programId?: ProgramId,
 ): Array<{ id: string; name: string }> {
-  return state.teaching.ensembles
+  return activeOnly(state.teaching.ensembles)
     .filter(e => !programId || e.programId === programId)
     .map(e => ({ id: e.id, name: e.name }));
 }
@@ -309,11 +367,11 @@ export interface VenueClass {
 }
 
 /**
- * The ensembles that meet at one venue, for the Partners screens in `app/`.
- * Read through `src/modules/teaching/index.ts`; core itself never asks.
+ * The current ensembles that meet at one venue, for the Partners screens in
+ * `app/`. Read through `src/modules/teaching/index.ts`; core itself never asks.
  */
 export function classesAtVenue(state: PortalState, venueId: string, today: string): VenueClass[] {
-  return state.teaching.ensembles
+  return activeOnly(state.teaching.ensembles)
     .filter(e => e.venueId === venueId)
     .map(e => {
       const meetings = state.teaching.meetings
@@ -413,13 +471,18 @@ export type RosterStudent = Omit<Student, 'guardianName' | 'guardianPhone'> & {
 };
 
 /**
- * The students this person may see, by name: everyone for the office, a
+ * The students this person may see, by name, archived ones only with
+ * `includeArchived` (after the current ones): everyone for the office, a
  * teacher's own classes for a teacher, nobody for a role that sees counts or
  * nothing. Guardian name and phone are left off the record, not just hidden,
  * for anyone who may not see them, so they never reach the screen.
  */
-export function rosterFor(state: PortalState, user: SignedInUser): RosterStudent[] {
-  return state.teaching.students
+export function rosterFor(
+  state: PortalState,
+  user: SignedInUser,
+  includeArchived = false,
+): RosterStudent[] {
+  return withArchived(state.teaching.students, includeArchived)
     .filter(s => maySeeStudent(state, user, s))
     .map(s => {
       if (maySeeGuardian(state, user, s)) return s;

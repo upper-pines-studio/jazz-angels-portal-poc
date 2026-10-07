@@ -11,6 +11,8 @@ const inputAttrs = (attrs: Record<string, string>) => attrs as unknown as InputP
 const REFUSALS: Record<SignInRefusal, string> = {
   mismatch: 'That username and password don’t match.',
   'no-staff': 'This sign-in isn’t linked to anyone on the staff list. Ask the office to add you.',
+  archived:
+    'This sign-in belongs to someone who is no longer on the staff. Ask an admin if that is wrong.',
 };
 
 export default function Login() {

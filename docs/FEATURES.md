@@ -26,13 +26,14 @@ Shared by every module. Owned by `core/` and `app/`.
 
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
-| Sign in: one demo login per role; each belongs to a staff record, whose role it carries; a login with no staff record is refused | (gate) | Mocked: hashes checked in the browser, no server | `app/screens/Login.tsx`, `app/AuthGate.tsx` | `core/auth.ts`: `USERS`, `checkSignIn`; `core/roles.ts` |
+| Sign in: one demo login per role; each belongs to a staff record, whose role it carries; a login with no staff record is refused, and so is one whose record is archived (a saved session too) | (gate) | Mocked: hashes checked in the browser, no server | `app/screens/Login.tsx`, `app/AuthGate.tsx` | `core/auth.ts`: `USERS`, `checkSignIn`, `staffRefusal`; `core/roles.ts` |
+| Archive and restore (decision 0002): grants, funders, staff, students, partners, venues and classes. Each list hides archived records and has a "Show archived (n)" switch; an archived record's page shows who archived it and when, with Restore; the confirmation says what hides and what stays | (all seven lists) | Built; controls proposed in #20, not final until reviewed | `app/components/archive.tsx` (`ShowArchivedSwitch`, `ArchivedName`, `ArchiveButton`, `ArchiveDialog`, `ArchivedNotice`, `useArchivedParam`) | `core/archive.ts`; `archive*`/`restore*` actions in `core/store.tsx`, `grants/domain/slice.ts`, `teaching/domain/slice.ts` |
 | Permissions: what each role may see and do (decision 0001), one check behind the rail, the routes, the buttons and the store; a refused route shows a no-access screen at its own URL; a refused write is a no-op with a toast | (all) | Built in the browser; the database enforces it once there is one (#22) | `app/screens/NoAccess.tsx`, `app/access.ts`, `app/App.tsx` (`Guarded`) | `core/permissions.ts`: `PERMISSION_TABLE`, `can`; `core/store.tsx`: `guardActions`, `useCan`; each slice's `rules` |
 | Credit for a change: activity, approvals, uploads and transaction status name the signed-in person | (all) | Built | `grant/ActivityTab.tsx`, rail footer in `app/Shell.tsx` | `core/module.ts`: `SliceContext.user`; `core/store.tsx` |
 | Shell: rail, top bar, page header; the top bar says "Saving…" while a save takes a moment and "Couldn't save" with Try again after a failure | (all) | Built | `app/Shell.tsx` (`SaveState`), `app/responsive.css` | rail is read from each manifest's `nav`, leaving out what the role may not open, and a section with nothing left; `core/store.tsx` (`useStore().saving`) |
 | Dashboard | `/` | Built | `app/screens/Dashboard.tsx` | composed from each manifest's `dashboard` |
-| Partners: organizations and venues | `/partners`, `/partners/organizations/:id`, `/partners/venues/:id` | Built | `app/screens/partners/` | `core/store.tsx`, `core/derive.ts` |
-| Settings: staff (title, role, teaches), modules, programs, fiscal year, export, import; with the demo on, the demo date and Reset demo data | `/settings` | Built | `app/screens/Settings.tsx` | `core/store.tsx` (`setDemoToday`, `resetDemo`), `core/repository.ts`, `core/demo.ts` |
+| Partners: organizations and venues; archive and restore on each page, Show archived on each list (local state) | `/partners`, `/partners/organizations/:id`, `/partners/venues/:id` | Built | `app/screens/partners/` | `core/store.tsx` (`archiveOrganization`, `archiveVenue`), `core/derive.ts` (`venuesForOrganization`) |
+| Settings: staff (title, role, teaches, archive and restore, Show archived in local state), modules, programs, fiscal year, export, import; with the demo on, the demo date and Reset demo data | `/settings` | Built | `app/screens/Settings.tsx` | `core/store.tsx` (`archiveStaff`, `restoreStaff`, `setDemoToday`, `resetDemo`), `core/repository.ts`, `core/demo.ts` |
 | Storage, and the demo switch: a build with `VITE_DEMO` on starts from the sample data, off starts every slice empty (decision 0004). The demo date is a browser preference, never exported. Every change goes through the `Repository` interface: one `load` per module, one `apply` per change, both async; a change shows at once and a failed apply rolls its slice back with a toast saying what was not saved (decision 0003). In `npm run dev`, the `ja-portal:fail-saves` preference makes every save fail | | Mocked: localStorage behind the `Repository` interface, one key per module | | `core/persistence.ts` (`Repository`), `core/repository.ts` (`localRepository`, `fresh`, `FAIL_SAVES_KEY`), `core/live.ts` (the per-slice queue and rollback), `core/demo.ts` (`isDemo`), each slice's `seed`, `empty` and `describe`, `netlify.toml` |
 | Docked side panel; one with unsaved edits asks "Discard your changes?" before it closes or the page swaps it | | Built | `app/components/SidePanel.tsx` (`dirty`, `usePanelGuard`) | |
 | Toasts | | Built | `app/ToastHost.tsx` | |
@@ -46,15 +47,15 @@ Module folder `modules/grants/`. Wiring in `grants/manifest.tsx`.
 
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
-| All grants: table, filters, views | `/grants` | Built | `grants/screens/Grants.tsx` | `derive.ts`: `grantsByView` |
+| All grants: table, filters, views; archived grants hidden unless Show archived | `/grants`, `?archived=1` | Built | `grants/screens/Grants.tsx` | `derive.ts`: `grantsByView` (`includeArchived`) |
 | Add grant: three-step dialog | `/grants?add=1` | Built | `grants/screens/grants/AddGrantDialog.tsx` | `slice.ts`: `addGrant`; `templates.ts` |
-| Grant detail frame: header, tabs, right column | `/grants/:id` | Built | `grants/screens/GrantDetail.tsx` | tab list depends on `isPostAward` |
+| Grant detail frame: header, tabs, right column; Archive in the header, the archived banner with Restore, an archived funder named in the subtitle | `/grants/:id` | Built | `grants/screens/GrantDetail.tsx` | tab list depends on `isPostAward`; `slice.ts`: `archiveGrant`, `restoreGrant` |
 | Phase stepper and phase changes | `/grants/:id` | Built | `grant/PhaseStepper.tsx`, `grant/TransitionDialog.tsx` | `phases.ts`; `slice.ts`: `transition` |
 | Checklist tab | `?tab=checklist` | Built | `grant/ChecklistTab.tsx` | `slice.ts`: task actions; `derive.ts`: `checklistProgress` |
 | Activity tab | `?tab=activity` | Built | `grant/ActivityTab.tsx` | `derive.ts`: `grantActivity`; `slice.ts`: `addNote` |
-| Key dates, funder and details cards | right column | Built | `grant/SideCards.tsx` | `slice.ts`: `updateGrant` |
+| Key dates, funder and details cards; the funder card says when the funder is archived | right column | Built | `grant/SideCards.tsx` | `slice.ts`: `updateGrant` |
 | Deadlines: list and calendar | `/deadlines`, `?view=calendar` | Built | `grants/screens/Deadlines.tsx`, `deadlines/CalendarMonth.tsx` | `derive.ts`: `deadlines`; `names.ts`: `funderShortName` |
-| Funders | `/funders`, `/funders/:id` | Built | `grants/screens/Funders.tsx`, `FunderDetail.tsx` | `derive.ts`: `funderTotals`, `grantsByFunder` |
+| Funders; archive and restore on the funder page, Show archived on the list; a funder's grant history keeps its archived grants | `/funders`, `?archived=1`, `/funders/:id` | Built | `grants/screens/Funders.tsx`, `FunderDetail.tsx` | `derive.ts`: `fundersList`, `funderTotals`, `grantsByFunder`; `slice.ts`: `archiveFunder`, `restoreFunder` |
 | Playbook: checklist templates | `/playbook` | Built | `grants/screens/Playbook.tsx` | `templates.ts`; `slice.ts`: template actions |
 | Dashboard pipeline card | `/` | Built | `grants/screens/PipelinePanel.tsx` | `derive.ts`: `pipelineCounts` |
 
@@ -68,7 +69,7 @@ seed reproduces are in `design/saas/`.
 
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
-| Award tab: award record, payment schedule, terms | `/grants/:id` (default tab) | Built | `grant/AwardTab.tsx`, `grant/AwardDialogs.tsx` | `slice.ts`: `updateGrant`, payment actions, term actions |
+| Award tab: award record, payment schedule, terms; a payment that has arrived is not deleted | `/grants/:id` (default tab) | Built | `grant/AwardTab.tsx`, `grant/AwardDialogs.tsx` | `slice.ts`: `updateGrant`, payment actions (`PAYMENT_RECEIVED_REFUSAL`), term actions |
 | Award letter card: preview, open, download, replace | right column of Award | Mocked: file contents are drawn, not stored | `grant/AwardTab.tsx` (`AwardAside`), `money/files.tsx` | `money.ts`: `awardLetter`, `grantFiles` |
 | Budget tab: lines mapped to QuickBooks accounts and a class; Remove line moves a line's expenses to another line on the grant, then removes it | `?tab=budget`, `&line=<id>`, `&edit=<id>` | Built | `grant/BudgetTab.tsx`, `grant/BudgetLineEditor.tsx`, `grant/BudgetAccountPicker.tsx` | `money.ts`: `lineMatched`, `accountUsedBy`, `isMapped`, `moveTargets`; `slice.ts`: budget line actions, `moveExpenses` |
 | Expenses tab: list, filter, backup index download | `?tab=expenses`, `&backup=missing` | Built | `grant/ExpensesTab.tsx`, `grant/expenseList.ts` | `money.ts`: `grantExpenses`, `backupSummary` |
@@ -83,7 +84,7 @@ seed reproduces are in `design/saas/`.
 | Transactions: tabs, filters, suggestions, accept, undo | `/transactions`, `?tab=`, `?grant=`, `?line=`, `?q=`, `?account=`, `?period=`, `?page=` | Mocked: QuickBooks feed is seed data | `money/Transactions.tsx`, `money/TransactionRow.tsx`, `money/TransactionMenu.tsx` | `money.ts`: `suggestionFor`, `acceptableSuggestions`, `transactionCounts`, `eligibleLines`, `backupCarry`, `backupMoves`, `transactionSnapshot`; `slice.ts`: `assignTransaction`, `markNotGrantFunded`, `acceptSuggestions`, `restoreTransactions`; `names.ts`: `funderShortName` |
 | Split a transaction across grants, save as a rule; an edited split asks before it closes or another transaction opens | `/transactions?tx=<id>` | Built | `money/SplitPanel.tsx`, `money/Transactions.tsx` (`usePanelGuard`) | `money.ts`: `usualShares`, `splitByPercent`; `slice.ts`: `assignTransaction`, `saveSplitRule`; `names.ts`: `funderShortName` |
 | Sync with QuickBooks | button on Transactions and Settings | Mocked: moves `incoming` into `transactions`, once | | `slice.ts`: `syncQuickBooks` |
-| Budget vs. actual: table, warnings, export, print | `/budget`, `?period=fy\|all\|fy-prev`, `?grant=<id>` | Built | `money/BudgetVsActual.tsx`, `money/bva.ts`, `money/bva.css` (print rules) | `money.ts`: `linePaces`, `grantPace`, `lineNeedsAttention`, `trackedGrantsInFy`; `names.ts`: `funderShortName` |
+| Budget vs. actual: table, warnings, export, print; this year leaves archived grants out, All and last fiscal year keep them | `/budget`, `?period=fy\|all\|fy-prev`, `?grant=<id>` | Built | `money/BudgetVsActual.tsx`, `money/bva.ts` (`grantsForPeriod`), `money/bva.css` (print rules) | `money.ts`: `linePaces`, `grantPace`, `lineNeedsAttention`, `trackedGrants` (`includeArchived`), `trackedGrantsInFy`; `names.ts`: `funderShortName` |
 | Spend-down: charts, figures, advice | `/spend-down`, `?show=`, `#<grantId>` | Built | `money/SpendDown.tsx`, `money/SpendChart.tsx`, `money/spend.ts` (`whatToDo`) | `money.ts`: `grantPace`, `spendSeries`, `paceDriver` |
 | Dashboard money card | `/` | Built | `money/MoneyPanel.tsx` | `money.ts`: `grantPace`, `transactionCounts`, `expensesMissingBackup`; `names.ts`: `funderShortName` |
 | Dashboard attention rows for money | `/` | Built | `grants/manifest.tsx` (`moneyAttention`) | `money.ts`: `offPaceGrants` |
@@ -115,9 +116,9 @@ Module folder `modules/teaching/`. Spec in `docs/PLATFORM.md` section 2.2.
 
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
-| Schedule: week grid and term view, add class | `/schedule` | Built | `teaching/screens/Schedule.tsx`, `schedule/AddClassDialog.tsx` | `teaching/domain/derive.ts`, `slice.ts` |
-| Roll call; when a save fails every mark and the notes stay on screen with "Couldn't save. Your marks are still here." and a Try again that sends them again | `/roll/:meetingId` | Built | `teaching/screens/RollCall.tsx` | `teaching/domain/slice.ts`, `useStore().whenSaved` |
-| Students: roster, waitlist, enroll | `/students` | Built | `teaching/screens/Students.tsx`, `students/EnrollStudentDialog.tsx` | `teaching/domain/derive.ts` |
+| Schedule: week grid and term view, add class; archive and restore an ensemble from the term view's Ensembles card (Show archived as `?archived=1`); an archived ensemble's classes leave the week grid from its archive date | `/schedule`, `?view=term&archived=1` | Built | `teaching/screens/Schedule.tsx`, `schedule/AddClassDialog.tsx` | `teaching/domain/derive.ts` (`isScheduled`, `ensemblesList`), `slice.ts` (`archiveEnsemble`, `restoreEnsemble`) |
+| Roll call; when a save fails every mark and the notes stay on screen with "Couldn't save. Your marks are still here." and a Try again that sends them again; an archived student is off an open roll, and a submitted one lists everyone marked at it | `/roll/:meetingId` | Built | `teaching/screens/RollCall.tsx` | `teaching/domain/slice.ts`, `derive.ts` (`rollCallStudents`), `useStore().whenSaved` |
+| Students: roster, waitlist, enroll; archive and restore from the student card, Show archived on the roster | `/students`, `?archived=1` | Built | `teaching/screens/Students.tsx`, `students/EnrollStudentDialog.tsx` | `teaching/domain/derive.ts` (`rosterFor` with `includeArchived`), `slice.ts` (`archiveStudent`, `restoreStudent`) |
 | Import students from a CSV: blank template, preview with each row's problems, closest match or waitlist or skip, add all at once | `/students` (Import) | Built; layout proposed in #14, not final until reviewed | `teaching/screens/students/ImportStudentsDialog.tsx`, `students/import.css` | `teaching/domain/import.ts`: `parseStudentsCsv`, `studentsToImport`, `studentsCsvTemplate`, `readCsv`, `writeCsv`; `slice.ts`: `importStudents` |
 | Dashboard today's classes card | `/` | Built | `teaching/screens/TodayPanel.tsx` | `teaching/manifest.tsx` |
 
@@ -127,7 +128,7 @@ Module folder `modules/timesheets/`. Spec in `docs/PLATFORM.md` section 2.3.
 
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
-| Timesheets: hours by week, approvals, log hours | `/timesheets` | Built | `timesheets/screens/Timesheets.tsx`, `LogHoursDialog.tsx` | `timesheets/domain/derive.ts`, `slice.ts` |
+| Timesheets: hours by week, approvals, log hours; an archived teacher's hours and approvals still count and name them | `/timesheets` | Built | `timesheets/screens/Timesheets.tsx`, `LogHoursDialog.tsx` | `timesheets/domain/derive.ts`, `slice.ts` |
 
 ## Known gaps
 
@@ -151,4 +152,6 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 | Screens have only smoke tests (`npm run test:e2e`): sign in, add a grant, assign a transaction, take roll, log hours and approve hours, and every route with no data (`empty-states.spec.ts`). Submitting hours has no control on the Timesheets screen, so it is not tested; every other screen and flow has no automated test. | `e2e/`, `modules/*/screens/` |
 | No screen adds a session (term) or an ensemble, so an office starting empty cannot put a class on the schedule: Add class needs an ensemble, and the Schedule says so. | `teaching/screens/Schedule.tsx`, `teaching/domain/slice.ts` |
 | Programs cannot be added or edited in the portal. A new office (demo off) starts with the six Jazz Angels programs pre-loaded, so the grant and student dialogs have programs to offer; with none, Settings says so. | `app/screens/Settings.tsx`, `core/seed.ts` (`makeCoreEmpty`) |
+| The archive controls (the Show archived switch, the Archive button and its confirmation, the banner with Restore) have no mockup; #20 proposed them and they are not final until reviewed. There is no bulk archive, and archiving a funder logs no activity row, since activity belongs to a grant. | `app/components/archive.tsx` |
+| `deleteEntry` removes an hours entry whatever its status; no screen offers it yet. When one does, it should offer drafts only (an approved entry is money). `deleteReport` removes a submitted report too; the Reports tab offers it on any report. | `timesheets/domain/slice.ts`, `grant/ReportsTab.tsx` |
 | The staff list is never empty. With the demo off a new office starts with the seven staff records the sign-in logins belong to (the only way in until real accounts, #22), and loading a saved core slice adds back any of them it lacks; with the demo on it adds back all ten seeded people. Settings' "Only you so far" state shows only once real accounts replace the demo logins. | `core/seed.ts` (`loginStaff`), `core/store.tsx` (`normalise`), `app/screens/Settings.tsx` |

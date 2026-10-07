@@ -1,4 +1,5 @@
 import { addDays, addYears } from 'date-fns';
+import { withArchived } from './archive';
 import { toDate, toISO } from './format';
 import type {
   Address,
@@ -29,6 +30,10 @@ export function fiscalYear(dateISO: string, startMonth: number): FiscalYear {
   };
 }
 
+/**
+ * Anyone by id, archived or not: a past approval, an activity row or a class
+ * lead still names whoever it was (decision 0002).
+ */
 export function staffById(state: PortalState, id: string | undefined): StaffMember | undefined {
   return id ? state.core.staff.find(s => s.id === id) : undefined;
 }
@@ -58,9 +63,19 @@ export function venueName(state: PortalState, id: string): string {
   return venueById(state, id)?.name ?? id;
 }
 
-/** Every venue that belongs to one organization: a district's schools. */
-export function venuesForOrganization(state: PortalState, organizationId: string): Venue[] {
-  return state.core.venues.filter(v => v.organizationId === organizationId);
+/**
+ * Every current venue that belongs to one organization: a district's schools.
+ * `includeArchived` adds the archived ones after them.
+ */
+export function venuesForOrganization(
+  state: PortalState,
+  organizationId: string,
+  includeArchived = false,
+): Venue[] {
+  return withArchived(
+    state.core.venues.filter(v => v.organizationId === organizationId),
+    includeArchived,
+  );
 }
 
 /**

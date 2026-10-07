@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge, Button, DataTable, Dialog, Icon, Select } from '../../../../design-system';
 import { useToast } from '../../../../app/ToastHost';
-import { programName, useCan, useStore } from '../../../../core';
+import { activeOnly, programName, useCan, useStore } from '../../../../core';
 import {
   ensembleById,
   parseStudentsCsv,
@@ -53,7 +53,9 @@ export default function ImportStudentsDialog({
 
   const context = {
     programs: state.core.programs,
-    ensembles: state.teaching.ensembles,
+    // A row is matched to a current ensemble only; every student, archived ones
+    // included, still counts as already in the portal.
+    ensembles: activeOnly(state.teaching.ensembles),
     students: state.teaching.students,
   };
 

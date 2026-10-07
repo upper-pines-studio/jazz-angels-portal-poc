@@ -3,7 +3,7 @@ import { auth, savedStaff } from '../core';
 import type { AuthUser } from '../core';
 
 /** What a sign-in that did not go through says. */
-export type SignInRefusal = 'mismatch' | 'no-staff';
+export type SignInRefusal = 'mismatch' | 'no-staff' | 'archived';
 
 export interface AuthContextValue {
   user: AuthUser | null;
@@ -20,18 +20,26 @@ export interface AuthContextValue {
 
 const AuthCtx = React.createContext<AuthContextValue | null>(null);
 
-/** The saved session, if it still belongs to someone on the staff list. */
+/**
+ * The saved session, if it still belongs to someone on the staff list who is
+ * not archived. An archived person's session is turned away like a sign-in.
+ */
 function restore(): { user: AuthUser | null; refusal: SignInRefusal | null } {
   const user = auth.currentUser();
   if (!user) return { user: null, refusal: null };
-  if (auth.staffFor(user, savedStaff())) return { user, refusal: null };
-  auth.endSession();
-  return { user: null, refusal: 'no-staff' };
+  const refused = auth.staffRefusal(user, savedStaff());
+  if (!refused) return { user, refusal: null };
+  // The session is ended in an effect, not here: React may run this twice in
+  // development, and the second run must see the same session as the first.
+  return { user: null, refusal: refused };
 }
 
 /** Holds who is signed in. Starts from the saved session so a reload stays signed in. */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initial] = React.useState(restore);
+  React.useEffect(() => {
+    if (initial.refusal) auth.endSession();
+  }, [initial]);
   const [user, setUser] = React.useState<AuthUser | null>(initial.user);
   const [refusal, setRefusal] = React.useState<SignInRefusal | null>(initial.refusal);
 

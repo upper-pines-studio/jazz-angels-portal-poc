@@ -30,7 +30,7 @@ export function PipelinePanel() {
   const mayAdd = useCan()('grants', 'edit');
 
   // Eight empty bars say nothing; with no grants the card says what will fill it.
-  if (state.grants.grants.length === 0) {
+  if (buckets.every(b => b.count === 0)) {
     return (
       <Card title="Pipeline" padding="0">
         <EmptyState

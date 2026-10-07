@@ -1,4 +1,5 @@
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
+import { isArchived } from '../../../core/archive';
 import { fiscalYear } from '../../../core/derive';
 import { dateLong, money } from '../../../core/format';
 import type { PortalState } from '../../../core/types';
@@ -34,18 +35,30 @@ import type {
 // Which grants have money to track
 // ---------------------------------------------------------------------------
 
-/** Awarded, active or reporting, with an award on record. Closed grants are history. */
-export function isTracked(grant: Grant): boolean {
+/** Awarded, active or reporting, with an award on record, archived or not. */
+function hasOpenAward(grant: Grant): boolean {
   return (
     (grant.phase === 'awarded' || grant.phase === 'active' || grant.phase === 'reporting') &&
     typeof grant.amountAwarded === 'number'
   );
 }
 
-/** Tracked grants, the ones still spending first, then by end date. */
-export function trackedGrants(state: PortalState): Grant[] {
+/**
+ * Awarded, active or reporting, with an award on record, and not archived.
+ * Closed grants are history, and so is an archived one (decision 0002).
+ */
+export function isTracked(grant: Grant): boolean {
+  return hasOpenAward(grant) && !isArchived(grant);
+}
+
+/**
+ * Tracked grants, the ones still spending first, then by end date.
+ * `includeArchived` adds archived grants that had an open award, for the
+ * history views of Budget vs. actual.
+ */
+export function trackedGrants(state: PortalState, includeArchived = false): Grant[] {
   return state.grants.grants
-    .filter(isTracked)
+    .filter(g => (includeArchived ? hasOpenAward(g) : isTracked(g)))
     .slice()
     .sort(
       (a, b) =>
@@ -500,12 +513,18 @@ export function transactionSnapshot(
   };
 }
 
-/** Lines a transaction dated `date` could be charged to: open grants whose period covers the day. */
+/**
+ * Lines a transaction dated `date` could be charged to: open grants whose
+ * period covers the day. An archived grant takes no new spending.
+ */
 export function eligibleLines(state: PortalState, date: string): BudgetLine[] {
   const open = new Set(
     state.grants.grants
       .filter(
-        g => (g.phase === 'awarded' || g.phase === 'active') && typeof g.amountAwarded === 'number',
+        g =>
+          (g.phase === 'awarded' || g.phase === 'active') &&
+          typeof g.amountAwarded === 'number' &&
+          !isArchived(g),
       )
       .filter(
         g =>
@@ -532,7 +551,10 @@ const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
  */
 export function suggestionFor(state: PortalState, tx: Transaction): Suggestion {
   const rule = state.grants.splitRules.find(r => r.payee === tx.payee);
-  if (rule && rule.parts.every(p => lineById(state, p.budgetLineId)))
+  // A rule that names an archived grant is not proposed: that grant takes no new spending.
+  const archivedGrant = (grantId: string) =>
+    isArchived(state.grants.grants.find(g => g.id === grantId));
+  if (rule && rule.parts.every(p => lineById(state, p.budgetLineId) && !archivedGrant(p.grantId)))
     return { kind: 'split', rule };
 
   let candidates = eligibleLines(state, tx.date).filter(l =>
@@ -733,11 +755,11 @@ export function isReportOpen(report: Report): boolean {
   return !report.submittedDate && report.status !== 'submitted' && report.status !== 'accepted';
 }
 
-/** Reports still owed on grants that are not finished, soonest first. */
+/** Reports still owed on grants that are not finished or archived, soonest first. */
 export function reportsOwed(state: PortalState): Report[] {
   const live = new Set(
     state.grants.grants
-      .filter(g => !['closed', 'declined', 'withdrawn'].includes(g.phase))
+      .filter(g => !['closed', 'declined', 'withdrawn'].includes(g.phase) && !isArchived(g))
       .map(g => g.id),
   );
   return state.grants.reports

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
 import { useToast } from '../../../../app/ToastHost';
-import { dateLong, useStore, venueById } from '../../../../core';
+import { activeOnly, dateLong, pickable, useStore, venueById } from '../../../../core';
 import { ensembleById, timeLabel } from '../../domain';
 
 /**
@@ -21,7 +21,9 @@ export default function AddClassDialog({
   const { state, actions, today } = useStore();
   const toast = useToast();
 
-  const first = state.teaching.ensembles[0];
+  // An archived ensemble is not offered: its classes have stopped.
+  const ensembles = activeOnly(state.teaching.ensembles);
+  const first = ensembles[0];
   const [ensembleId, setEnsembleId] = React.useState(first?.id ?? '');
   const [date, setDate] = React.useState(defaultDate || today);
   const [start, setStart] = React.useState('16:00');
@@ -31,7 +33,7 @@ export default function AddClassDialog({
   const [showErrors, setShowErrors] = React.useState(false);
 
   const ensemble = ensembleById(state, ensembleId);
-  const venueId = place?.venueId ?? ensemble?.venueId ?? state.core.venues[0]?.id ?? '';
+  const venueId = place?.venueId ?? ensemble?.venueId ?? activeOnly(state.core.venues)[0]?.id ?? '';
   const room = place?.room ?? ensemble?.room ?? '';
   const venue = venueById(state, venueId);
 
@@ -79,7 +81,7 @@ export default function AddClassDialog({
               setEnsembleId(e.target.value);
               setPlace(null);
             }}
-            options={state.teaching.ensembles.map(en => ({ value: en.id, label: en.name }))}
+            options={ensembles.map(en => ({ value: en.id, label: en.name }))}
             style={{ width: '100%' }}
           />
         </Field>
@@ -120,7 +122,10 @@ export default function AddClassDialog({
           <Select
             value={venueId}
             onChange={e => setPlace({ venueId: e.target.value, room: '' })}
-            options={state.core.venues.map(v => ({ value: v.id, label: v.name }))}
+            options={pickable(state.core.venues, venueId).map(v => ({
+              value: v.id,
+              label: v.name,
+            }))}
             style={{ width: '100%' }}
           />
         </Field>

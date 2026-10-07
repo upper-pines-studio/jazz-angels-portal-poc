@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { Button } from '../../../../design-system';
-import { dateShort, daysUntil, useCan, useStore } from '../../../../core';
+import { dateShort, daysUntil, isArchived, useCan, useStore } from '../../../../core';
 import {
   REMINDER_OFFSETS,
   dayBefore,
@@ -147,10 +147,10 @@ export function ReminderPanel({
     });
   };
 
-  // Staff, the grant owner first.
-  const staff = [...state.core.staff].sort(
-    (a, b) => Number(b.id === grant?.ownerId) - Number(a.id === grant?.ownerId),
-  );
+  // Staff, the grant owner first. Someone archived is offered only while they are on the list.
+  const staff = state.core.staff
+    .filter(s => !isArchived(s) || draft.recipientIds.includes(s.id))
+    .sort((a, b) => Number(b.id === grant?.ownerId) - Number(a.id === grant?.ownerId));
 
   // "Discard your changes?" replaces these while the panel asks; SidePanel shows it.
   const footer = !mayEdit

@@ -6,6 +6,11 @@ import { OwnerAvatar } from '../../../app/components/badges';
 import AddGrantDialog from './grants/AddGrantDialog';
 import { TableScroll } from '../../../app/components/TableScroll';
 import {
+  ArchivedName,
+  ShowArchivedSwitch,
+  useArchivedParam,
+} from '../../../app/components/archive';
+import {
   Card,
   DataTable,
   Tabs,
@@ -15,7 +20,15 @@ import {
   Icon,
   EmptyState,
 } from '../../../design-system';
-import { useStore, useCan, programName, money, dateShort } from '../../../core';
+import {
+  activeOnly,
+  isArchived,
+  useStore,
+  useCan,
+  programName,
+  money,
+  dateShort,
+} from '../../../core';
 import {
   grantsByView,
   nextDeadline,
@@ -58,6 +71,8 @@ export default function Grants() {
   const [program, setProgram] = React.useState('all');
   const [phase, setPhase] = React.useState<string>(params.get('phase') ?? 'all');
   const [adding, setAdding] = React.useState(mayEdit && params.get('add') === '1');
+  // ?archived=1 lists the archived grants of the view after the current ones.
+  const [showArchived, setShowArchived] = useArchivedParam();
 
   // ?phase= preselects the filter, ?add=1 opens the dialog; both are one-shot.
   React.useEffect(() => {
@@ -77,7 +92,7 @@ export default function Grants() {
 
   const fy = fyTotals(state, today);
   const activeCount = grantsByView(state, 'active').length;
-  const pipeline = state.grants.grants
+  const pipeline = activeOnly(state.grants.grants)
     .filter(g => PRE_AWARD_PHASES.includes(g.phase))
     .reduce((sum, g) => sum + (g.amountRequested ?? 0), 0);
 
@@ -103,7 +118,8 @@ export default function Grants() {
   }));
 
   const needle = q.trim().toLowerCase();
-  const rows = grantsByView(state, view)
+  const archivedInView = grantsByView(state, view, true).length - grantsByView(state, view).length;
+  const rows = grantsByView(state, view, showArchived)
     .filter(g => owner === 'all' || g.ownerId === owner)
     .filter(g => program === 'all' || g.program === program)
     .filter(g => phase === 'all' || g.phase === phase)
@@ -114,6 +130,9 @@ export default function Grants() {
     })
     .map(g => ({ grant: g, deadline: nextDeadline(state, g.id, today) }))
     .sort((a, b) => {
+      // Archived grants come after the current ones.
+      const archived = Number(isArchived(a.grant)) - Number(isArchived(b.grant));
+      if (archived) return archived;
       if (!a.deadline && !b.deadline) return a.grant.title.localeCompare(b.grant.title);
       if (!a.deadline) return 1;
       if (!b.deadline) return -1;
@@ -130,7 +149,7 @@ export default function Grants() {
         case 'funder':
           return funderById(state, r.grant.funderId)?.name ?? '—';
         case 'title':
-          return r.grant.title;
+          return <ArchivedName name={r.grant.title} record={r.grant} />;
         case 'program': {
           const name = programName(state, r.grant.program);
           return (
@@ -222,6 +241,11 @@ export default function Grants() {
               style={{ width: '100%' }}
             />
           </div>
+          <ShowArchivedSwitch
+            count={archivedInView}
+            checked={showArchived}
+            onChange={setShowArchived}
+          />
         </div>
         {rows.length === 0 ? (
           <EmptyState

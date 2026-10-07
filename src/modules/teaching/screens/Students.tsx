@@ -16,7 +16,25 @@ import {
 import { usePageHeader } from '../../../app/Shell';
 import { Eyebrow, KV } from '../../../app/components/badges';
 import { TableScroll } from '../../../app/components/TableScroll';
-import { cell, placeLabel, programName, useCan, useStore } from '../../../core';
+import { useToast } from '../../../app/ToastHost';
+import {
+  ArchiveButton,
+  ArchiveDialog,
+  ArchivedName,
+  ArchivedNotice,
+  ShowArchivedSwitch,
+  useArchivedParam,
+} from '../../../app/components/archive';
+import {
+  activeOnly,
+  cell,
+  isArchived,
+  pickable,
+  placeLabel,
+  programName,
+  useCan,
+  useStore,
+} from '../../../core';
 import type { ProgramId } from '../../../core';
 import {
   attendanceRateForStudent,
@@ -27,6 +45,7 @@ import {
   percent,
   rosterFor,
   termForDate,
+  waitlistCount,
 } from '../domain';
 import type { Mark, RosterStudent } from '../domain';
 import { MarkDots, TONE_COLOR } from './parts';
@@ -57,11 +76,15 @@ function Roster() {
   // already left them off every record this person may not see them on.
   const showGuardian = allowed('guardian-contacts');
   const ownOnly = cell(user.role, 'students') === 'Own classes';
-  const students = rosterFor(state, user);
+  // ?archived=1 lists the archived students of the tab after the current ones.
+  const [showArchived, setShowArchived] = useArchivedParam();
+  const students = rosterFor(state, user, showArchived);
+  // Archived students are never counted: the numbers are the roster as it stands.
+  const current = students.filter(s => !isArchived(s));
   const enrolledIn = (programId?: ProgramId) =>
-    students.filter(s => s.status === 'enrolled' && (!programId || s.programId === programId))
+    current.filter(s => s.status === 'enrolled' && (!programId || s.programId === programId))
       .length;
-  const waiting = students.filter(s => s.status === 'waitlist').length;
+  const waiting = current.filter(s => s.status === 'waitlist').length;
 
   const [tab, setTab] = React.useState<string>(ALL);
   const [q, setQ] = React.useState('');
@@ -102,7 +125,7 @@ function Roster() {
 
   /** Tabs: every student, then each program with somebody in it, then the waitlist. */
   const programsWithStudents = state.core.programs.filter(p =>
-    students.some(s => s.status === 'enrolled' && s.programId === p.id),
+    current.some(s => s.status === 'enrolled' && s.programId === p.id),
   );
   const tabs = [
     { id: ALL, label: ownOnly ? 'Your students' : 'All students', count: enrolledIn() },
@@ -114,9 +137,9 @@ function Roster() {
     // A teacher's classes have no waitlist: a waiting student is in no class yet.
     ...(ownOnly ? [] : [{ id: WAITLIST, label: 'Waitlist', count: waiting }]),
   ];
-  const ensembles = ownOnly
-    ? state.teaching.ensembles.filter(e => leadsEnsemble(state, user, e.id))
-    : state.teaching.ensembles;
+  const ensembles = activeOnly(state.teaching.ensembles).filter(
+    e => !ownOnly || leadsEnsemble(state, user, e.id),
+  );
 
   const inTab = (s: RosterStudent) =>
     tab === WAITLIST
@@ -124,6 +147,7 @@ function Roster() {
       : s.status === 'enrolled' && (tab === ALL || s.programId === tab);
 
   const needle = q.trim().toLowerCase();
+  const archivedInTab = rosterFor(state, user, true).filter(s => isArchived(s) && inTab(s)).length;
   const rows = students
     .filter(inTab)
     .filter(s => ensembleFilter === ALL || s.ensembleId === ensembleFilter)
@@ -134,7 +158,7 @@ function Roster() {
         s.instrument.toLowerCase().includes(needle) ||
         !!s.guardianName?.toLowerCase().includes(needle),
     )
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => Number(isArchived(a)) - Number(isArchived(b)) || a.name.localeCompare(b.name));
 
   const selected = students.find(s => s.id === selectedId) ?? rows[0];
 
@@ -194,6 +218,11 @@ function Roster() {
                 style={{ width: '100%' }}
               />
             </div>
+            <ShowArchivedSwitch
+              count={archivedInTab}
+              checked={showArchived}
+              onChange={setShowArchived}
+            />
           </div>
 
           {rows.length === 0 ? (
@@ -285,10 +314,17 @@ function Roster() {
                     key: 'status',
                     label: 'Status',
                     width: '110px',
+                    // Archived is not a status: an archived student keeps theirs, and the
+                    // Archived badge sits under it.
                     render: (s: RosterStudent) => (
-                      <Badge tone={STATUS_TONE[s.status]} dot>
-                        {STATUS_LABEL[s.status]}
-                      </Badge>
+                      <ArchivedName
+                        record={s}
+                        name={
+                          <Badge tone={STATUS_TONE[s.status]} dot>
+                            {STATUS_LABEL[s.status]}
+                          </Badge>
+                        }
+                      />
                     ),
                   },
                 ]}
@@ -336,6 +372,9 @@ const WAITLIST_OPTION = '__waitlist__';
 
 function StudentCard({ student, mayEdit }: { student: RosterStudent; mayEdit: boolean }) {
   const { state, today, actions } = useStore();
+  const toast = useToast();
+  const [archiving, setArchiving] = React.useState(false);
+  const archived = isArchived(student);
   const ensemble = ensembleById(state, student.ensembleId);
   const term = termForDate(state, today);
 
@@ -352,7 +391,9 @@ function StudentCard({ student, mayEdit }: { student: RosterStudent; mayEdit: bo
     .slice(-5)
     .map(a => a.mark);
 
-  const ensembles = state.teaching.ensembles.filter(e => e.programId === student.programId);
+  const ensembles = pickable(state.teaching.ensembles, student.ensembleId).filter(
+    e => e.programId === student.programId,
+  );
 
   const move = (next: string) => {
     if (next === WAITLIST_OPTION) {
@@ -364,6 +405,22 @@ function StudentCard({ student, mayEdit }: { student: RosterStudent; mayEdit: bo
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <ArchivedNotice
+        record={student}
+        detail="Off the roster, the roll call and the counts. Their attendance is all here."
+        onRestore={
+          mayEdit
+            ? () => {
+                actions.teaching.restoreStudent(student.id);
+                toast({
+                  tone: 'success',
+                  title: 'Student restored',
+                  message: `${student.name} is back on the roster.`,
+                });
+              }
+            : undefined
+        }
+      />
       <Card padding="var(--space-5)">
         <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
           <Avatar name={student.name} size={56} />
@@ -417,9 +474,31 @@ function StudentCard({ student, mayEdit }: { student: RosterStudent; mayEdit: bo
             <MarkDots marks={recent} />
           </div>
         </div>
+
+        {mayEdit && !archived && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-5)' }}>
+            <ArchiveButton onClick={() => setArchiving(true)} />
+          </div>
+        )}
       </Card>
 
-      {mayEdit && (
+      {archiving && mayEdit && (
+        <ArchiveDialog
+          title={`Archive ${student.name}?`}
+          message="They leave the roster, the roll call and the counts. Their past attendance stays, and so does their status. You can restore them."
+          onConfirm={() => {
+            actions.teaching.archiveStudent(student.id);
+            toast({
+              tone: 'success',
+              title: 'Student archived',
+              message: `${student.name} is off the roster. Restore them from Show archived.`,
+            });
+          }}
+          onClose={() => setArchiving(false)}
+        />
+      )}
+
+      {mayEdit && !archived && (
         <Card
           title="Placement"
           subtitle="Moving a student takes effect on the next roll call"
@@ -455,7 +534,7 @@ function StudentCard({ student, mayEdit }: { student: RosterStudent; mayEdit: bo
  */
 function StudentCounts() {
   const { state } = useStore();
-  const waiting = state.teaching.students.filter(s => s.status === 'waitlist').length;
+  const waiting = waitlistCount(state);
 
   usePageHeader({
     title: 'Students',
@@ -465,7 +544,7 @@ function StudentCounts() {
   const programs = state.core.programs
     .map(p => ({ id: p.id, name: p.name, enrolled: enrolledCount(state, p.id) }))
     .filter(p => p.enrolled > 0);
-  const ensembles = state.teaching.ensembles.map(e => ({
+  const ensembles = activeOnly(state.teaching.ensembles).map(e => ({
     id: e.id,
     name: e.name,
     program: programName(state, e.programId),

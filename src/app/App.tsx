@@ -19,7 +19,13 @@ import VenueDetail from './screens/partners/VenueDetail';
 const SLICES = MODULES.map(m => m.slice);
 
 /** The store, with a refused change and a change that could not be saved shown as toasts. */
-function Store({ userId, onUnknownUser }: { userId: string; onUnknownUser: () => void }) {
+function Store({
+  userId,
+  onUnknownUser,
+}: {
+  userId: string;
+  onUnknownUser: (reason: 'no-staff' | 'archived') => void;
+}) {
   const toast = useToast();
   const refused = React.useCallback(
     (message: string) => toast({ tone: 'warning', title: message }),
@@ -84,7 +90,7 @@ function Frame() {
 
 function Gate() {
   const { user, signOut } = useAuth();
-  const refuse = React.useCallback(() => signOut('no-staff'), [signOut]);
+  const refuse = React.useCallback((reason: 'no-staff' | 'archived') => signOut(reason), [signOut]);
   if (!user) return <Login />;
   return (
     <ToastHost>

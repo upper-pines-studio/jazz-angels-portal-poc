@@ -1,4 +1,5 @@
 import React from 'react';
+import { activeOnly } from '../../core';
 import type { AttentionItem, ModuleManifest, PortalState, StatSpec } from '../../core';
 import {
   ensembleById,
@@ -18,7 +19,7 @@ import Students from './screens/Students';
 
 function stats(state: PortalState, today: string): StatSpec[] {
   const term = termForDate(state, today);
-  const ensembles = state.teaching.ensembles.length;
+  const ensembles = activeOnly(state.teaching.ensembles).length;
 
   const enrolled: StatSpec = {
     id: 'teaching-enrolled',

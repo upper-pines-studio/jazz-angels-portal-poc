@@ -121,15 +121,19 @@ function closedWithAward(state: PortalState): Grant[] {
 /** Whether any tracked grant touches last fiscal year, so the option is worth showing. */
 export function hasPreviousFy(state: PortalState, today: string): boolean {
   const prev = previousFy(today, state.core.settings.fiscalYearStartMonth);
-  return trackedGrants(state).some(g => touches(g, prev.start, prev.end));
+  return trackedGrants(state, true).some(g => touches(g, prev.start, prev.end));
 }
 
-/** The grants a period shows. */
+/**
+ * The grants a period shows. This fiscal year is the everyday view, so it
+ * leaves archived grants out; All and last fiscal year are history and keep
+ * them (decision 0002).
+ */
 export function grantsForPeriod(state: PortalState, today: string, period: BvaPeriod): Grant[] {
   if (period === 'fy') return trackedGrantsInFy(state, today);
-  if (period === 'all') return [...trackedGrants(state), ...closedWithAward(state)];
+  if (period === 'all') return [...trackedGrants(state, true), ...closedWithAward(state)];
   const prev = previousFy(today, state.core.settings.fiscalYearStartMonth);
-  return [...trackedGrants(state), ...closedWithAward(state)].filter(g =>
+  return [...trackedGrants(state, true), ...closedWithAward(state)].filter(g =>
     touches(g, prev.start, prev.end),
   );
 }

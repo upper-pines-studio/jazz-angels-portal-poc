@@ -1,3 +1,4 @@
+import type { Archivable } from '../../../core/archive';
 import type { FiscalYear, ProgramId } from '../../../core/types';
 
 export type { ProgramId };
@@ -29,7 +30,11 @@ export type FunderType = 'foundation' | 'government' | 'corporate' | 'individual
 
 export type Restriction = 'restricted' | 'unrestricted';
 
-export interface Funder {
+/**
+ * Archived (decision 0002) when the office no longer applies to them: off the
+ * Funders list and the Add grant picker. Their grants are not touched.
+ */
+export interface Funder extends Archivable {
   id: string;
   name: string;
   type: FunderType;
@@ -59,7 +64,12 @@ export interface GrantDates {
 /** The date fields a checklist item can be anchored to. */
 export type DateAnchor = keyof GrantDates;
 
-export interface Grant {
+/**
+ * Archived (decision 0002) when it is no longer current: off the pipeline, the
+ * deadlines, the reminders, the dashboard and the spending screens, and still
+ * in its funder's history, Budget vs. actual's All view and the activity log.
+ */
+export interface Grant extends Archivable {
   id: string;
   funderId: string;
   /** "Arts Education Grant 2026" */

@@ -7,11 +7,13 @@
  *
  * A login is only a username and the staff record it belongs to (decision
  * 0001). The name and the role come from that record, so Settings is the one
- * place they change. A login whose staff record is missing is refused.
+ * place they change. A login whose staff record is missing is refused, and so
+ * is one whose record is archived (decision 0002).
  *
  * The session is one localStorage key holding who signed in and when.
  */
 
+import { isArchived } from './archive';
 import type { StaffMember } from './types';
 
 export interface AuthUser {
@@ -127,8 +129,27 @@ export function staffFor(user: AuthUser, staff: readonly StaffMember[]): StaffMe
 
 export type SignInResult =
   | { ok: true; user: AuthUser; member: StaffMember }
-  /** `mismatch`: wrong username or password. `no-staff`: right, but nobody to be. */
-  | { ok: false; reason: 'mismatch' | 'no-staff' };
+  /**
+   * `mismatch`: wrong username or password. `no-staff`: right, but nobody to
+   * be. `archived`: right, but that person is no longer on the staff.
+   */
+  | { ok: false; reason: SignInReason };
+
+export type SignInReason = 'mismatch' | 'no-staff' | 'archived';
+
+/**
+ * Whether a saved session, or a sign-in that passed its password, may go on
+ * as this staff list stands: null when it may, else why not.
+ */
+export function staffRefusal(
+  user: AuthUser,
+  staff: readonly StaffMember[],
+): 'no-staff' | 'archived' | null {
+  const member = staffFor(user, staff);
+  if (!member) return 'no-staff';
+  if (isArchived(member)) return 'archived';
+  return null;
+}
 
 /**
  * The whole sign-in check: the password, then the staff record. Writes no
@@ -142,9 +163,9 @@ export async function checkSignIn(
 ): Promise<SignInResult> {
   const user = await verify(username, password, users);
   if (!user) return { ok: false, reason: 'mismatch' };
-  const member = staffFor(user, staff);
-  if (!member) return { ok: false, reason: 'no-staff' };
-  return { ok: true, user, member };
+  const refused = staffRefusal(user, staff);
+  if (refused) return { ok: false, reason: refused };
+  return { ok: true, user, member: staffFor(user, staff)! };
 }
 
 /** Whoever the stored session names, or null when there is none worth trusting. */
