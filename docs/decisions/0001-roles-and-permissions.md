@@ -43,7 +43,9 @@ director's role and gets a teacher's view of their own classes on top.
 - Student personal data is the most protected thing in the portal. The students are minors, so
   guardian names and phone numbers reach only the people who need them.
 - An archived person cannot sign in, and everything they did stays attributed to them
-  (see [0002](0002-archive-not-delete.md)).
+  (see [0002](0002-archive-not-delete.md)). Done (#20): `checkSignIn` refuses them as
+  `archived`, a saved session is turned away the same way, and archiving a person needs the
+  same permission as editing them (`mayChangeStaff`), never on your own record.
 - Every change records who made it. Done (#16): every action is credited to the signed-in person,
   passed to each module's actions as `SliceContext.user`; the activity log stores their staff id
   and shows their name as it is now.

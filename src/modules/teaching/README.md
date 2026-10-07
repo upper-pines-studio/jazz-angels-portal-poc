@@ -22,9 +22,16 @@ actions.teaching.setMark(meetingId, studentId, 'present');
 | Noun | What it is |
 | --- | --- |
 | `Term` | A session: eight weeks the office plans and reports on. |
-| `Ensemble` | A standing group: same students, same place, same hour each week. `venueId` is a core `Venue`; `room` is the space inside it. |
+| `Ensemble` | A standing group: same students, same place, same hour each week. `venueId` is a core `Venue`; `room` is the space inside it. Archived when it stops meeting: its classes on and after `archivedAt` leave the schedule (`isScheduled`); the ones before stay, roll calls and all. |
 | `ClassMeeting` | One class on one date. `rollSubmittedAt` set means roll is closed. |
 | `Student` | On a roster, on the waitlist, or an alum. `ensembleId` is unset while waiting. |
+
+**Archived is not alumni.** `status` says where a student is with Jazz Angels: enrolled, on the
+waitlist, or alumni who finished their years here. Archived (decision 0002) is a separate pair of
+fields, `archivedAt` and `archivedById`: a student who left mid-term, or was entered twice, is
+archived whatever their status. Archiving leaves `status` and `ensembleId` as they were; the
+student leaves the roster, the roll call and every count, and their past attendance stays in the
+rates and the grant figures. Restoring brings them back as they were.
 | `AttendanceRecord` | One mark, `present` / `late` / `absent`, for one student at one meeting. |
 
 Dates are ISO `YYYY-MM-DD`; times are 24-hour `HH:MM` and are read back through
@@ -42,8 +49,18 @@ up** — that is the one rule every rate in here follows.
 | `enrollStudent(input)` | Adds a student to a roster or the waitlist. Returns the new id. |
 | `updateStudent(id, patch)` | Patches a student, their placement included. |
 | `importStudents(inputs)` | Adds many students in one change, as the CSV import does. Returns how many. |
+| `archiveStudent(id)` / `restoreStudent(id)` | Archives a student (off the roster, the roll call and the counts; status untouched) or restores them. Needs Students: Edit. |
+| `archiveEnsemble(id)` / `restoreEnsemble(id)` | Archives an ensemble from today (its classes from then on leave the schedule; its students stay placed) or restores it. Needs Schedule: Edit. |
 
 ## Derived data
+
+`meetingsForWeek`, `todaysMeetings`, `nextMeeting` and `unsubmittedRollCalls` leave out an
+archived ensemble's classes from its archive date (`isScheduled`); `rosterForEnsemble`,
+`enrolledCount`, `ensembleCount`, `waitlistCount` and `rosterFor` (unless `includeArchived`) leave
+out archived students; `ensembleOptions`, `classesAtVenue` and `ensemblesList` (unless
+`includeArchived`) leave out archived ensembles. `rollCallStudents(state, meeting)` is an open
+roll's roster, or for a submitted roll everyone marked at it. The attendance figures read every
+mark, archived or not.
 
 `meetingsForWeek`, `todaysMeetings`, `nextMeeting`, `rosterForEnsemble`,
 `attendanceForMeeting`, `markCounts`, `meetingRate`, `attendanceRateForStudent`,

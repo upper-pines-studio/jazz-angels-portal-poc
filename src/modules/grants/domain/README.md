@@ -58,15 +58,17 @@ Add/update actions that create something return its new id.
 |---|---|
 | `addFunder(input)` | Creates a funder. Returns the id. |
 | `updateFunder(id, patch)` | Patches a funder. |
+| `archiveFunder(id)` / `restoreFunder(id)` | Archives a funder (off the Funders list and the Add grant picker; its grants untouched) or restores it. Needs the pipeline row. |
+| `archiveGrant(id)` / `restoreGrant(id)` | Archives a grant, or restores it, and logs "Archived" / "Restored" in the same change. Needs the pipeline row. |
 | `addGrant(input: NewGrantInput)` | Creates the grant, its checklist from the chosen template, the standard document register, and a "Grant added" activity row. Returns the grant id. |
 | `updateGrant(id, patch)` | Patches a grant, `dates` included (pass the whole `dates` object). |
 | `transition(grantId, to, payload?)` | Moves the phase, writes the dates that phase implies, logs activity. `payload: { date?, amountAwarded?, periodStart?, periodEnd?, reason? }`. |
 | `addTask(input)` / `updateTask(id, patch)` / `deleteTask(id)` | Checklist rows. |
 | `toggleTask(id)` | Flips `done` and stamps/clears `doneAt`. |
 | `addDocument(input)` / `updateDocument(id, patch)` / `deleteDocument(id)` | Document register. `updatedAt` is stamped for you. |
-| `addPayment(input)` / `updatePayment(id, patch)` | Installments from the funder. |
+| `addPayment(input)` / `updatePayment(id, patch)` / `deletePayment(id)` | Installments from the funder. A payment that has arrived is not deleted (`PAYMENT_RECEIVED_REFUSAL`); clear its received date first if it was a mistake. |
 | `markPaymentReceived(id, date)` | Stamps `receivedDate` and logs activity. |
-| `addBudgetLine(input)` / `updateBudgetLine(id, patch)` / `deleteBudgetLine(id)` | Award allocation. |
+| `addBudgetLine(input)` / `updateBudgetLine(id, patch)` / `deleteBudgetLine(id)` | Award allocation. A line with expenses on it is not removed (`LINE_IN_USE_REFUSAL`); `moveExpenses` first. |
 | `moveExpenses(fromLineId, toLineId)` | Moves every expense on a line to another line of the same grant in one change, changing only `budgetLineId`, and logs one activity row. Returns `false`, changing nothing, for a missing line or a line on another grant. Remove line calls it, then `deleteBudgetLine`. |
 | `addExpense(input)` / `deleteExpense(id)` | Spend against a budget line. |
 | `addReport(input)` / `updateReport(id, patch)` | Reports owed to the funder. |
@@ -110,8 +112,15 @@ All pure, all take `state` first, none of them are stored.
 | `grantMoney(state, grantId)` | `{ awarded, received, expectedRemaining, spent, remaining, plannedTotal, byLine: [{ line, spent }] }`. `remaining = awarded − spent`. |
 | `fyTotals(state, today)` | `core`'s `fiscalYear(today, …)` plus `{ requested, awarded, received, spent }` for the current FY. |
 | `pipelineCounts(state)` | `[{ phase, count, requested, awarded }]` — the eight stepper phases then `declined`, `withdrawn`. |
-| `grantsByView(state, view)` | `view` is `'active' \| 'pre-award' \| 'post-award' \| 'closed' \| 'all'`. |
+| `grantsByView(state, view, includeArchived?)` | `view` is `'active' \| 'pre-award' \| 'post-award' \| 'closed' \| 'all'`. Archived grants only with `includeArchived`, after the current ones. |
 | `checklistProgress(state, grantId)` | `{ done, total }` for the "8 of 12 done" bar. |
+
+**Archived grants (decision 0002).** `deadlines`, `pipelineCounts`, `fyTotals`, `grantsByView`,
+and on the money side `isTracked` (so `trackedGrants`, `trackedGrantsInFy`, `offPaceGrants`,
+`expensesMissingBackup`), `eligibleLines`, `reportsOwed` and so `nextReminder` leave archived grants
+out. History keeps them: `grantById`, `grantsByFunder`, `funderTotals` ("awarded all time"),
+`grantActivity`, `grantMoney`, and `trackedGrants(state, true)`, which Budget vs. actual's All and
+last-year views read. `fundersList(state, includeArchived?)` is the Funders list.
 
 Lookup helpers, because every screen needs them: `grantById`, `funderById`,
 `grantsByFunder`, `grantsForProgram`, `funderTotals`, `grantActivity` (newest
