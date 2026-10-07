@@ -4,14 +4,10 @@
  * so the folds follow the tab's own width (container queries), not the screen.
  */
 
-.ja-award {
-  container-type: inline-size;
-}
+.ja-award { container-type: inline-size; }
 
 /* The record at the head of the tab. */
-.ja-award-head {
-  padding: 2px var(--space-6) var(--space-4);
-}
+.ja-award-head { padding: 2px var(--space-6) var(--space-4); }
 
 /* Eight facts in a ruled grid: four across, two on a narrow column. */
 .ja-award-facts {
@@ -27,10 +23,7 @@
   padding-left: var(--space-5);
   border-left: var(--border-width) solid var(--border-subtle);
 }
-.ja-award-facts > div:nth-child(4n + 1) {
-  padding-left: 0;
-  border-left: 0;
-}
+.ja-award-facts > div:nth-child(4n + 1) { padding-left: 0; border-left: 0; }
 .ja-award-fact__value {
   font: var(--weight-regular) var(--text-sm)/1.4 var(--font-sans);
   color: var(--text-strong);
@@ -38,9 +31,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ja-award-fact__value--mono {
-  font: var(--weight-medium) var(--text-sm)/1.4 var(--font-mono);
-}
+.ja-award-fact__value--mono { font: var(--weight-medium) var(--text-sm)/1.4 var(--font-mono); }
 .ja-award-fact__amount {
   font: var(--weight-semibold) var(--text-2xl)/1 var(--font-display);
   letter-spacing: var(--tracking-display);
@@ -48,20 +39,10 @@
 }
 
 @container (max-width: 700px) {
-  .ja-award-facts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .ja-award-facts > div:nth-child(4n + 1) {
-    padding-left: var(--space-5);
-    border-left: var(--border-width) solid var(--border-subtle);
-  }
-  .ja-award-facts > div:nth-child(odd) {
-    padding-left: 0;
-    border-left: 0;
-  }
-  .ja-award-fact__value {
-    white-space: normal;
-  }
+  .ja-award-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ja-award-facts > div:nth-child(4n + 1) { padding-left: var(--space-5); border-left: var(--border-width) solid var(--border-subtle); }
+  .ja-award-facts > div:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .ja-award-fact__value { white-space: normal; }
 }
 
 /* A section band with a quiet note beside the title; wraps on a narrow column. */
@@ -85,12 +66,8 @@
   font-size: var(--text-xs);
   color: var(--text-muted);
 }
-.ja-award-band__note + .ja-award-band__action {
-  margin-left: 0;
-}
-.ja-award-band__action {
-  margin-left: auto;
-}
+.ja-award-band__note + .ja-award-band__action { margin-left: 0; }
+.ja-award-band__action { margin-left: auto; }
 
 /* "p. 2": opens the award letter at that page. */
 .ja-page-link {
@@ -102,25 +79,14 @@
   color: var(--text-link);
   white-space: nowrap;
 }
-.ja-page-link:hover {
-  color: var(--text-link-hover);
-  text-decoration: underline;
-}
-.ja-page-link:focus-visible,
-.ja-text-button:focus-visible,
-.ja-term__main:focus-visible {
+.ja-page-link:hover { color: var(--text-link-hover); text-decoration: underline; }
+.ja-page-link:focus-visible, .ja-text-button:focus-visible, .ja-term__main:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
   border-radius: var(--radius-xs);
 }
-.ja-page-link--none {
-  cursor: default;
-  color: var(--text-faint);
-}
-.ja-page-link--none:hover {
-  color: var(--text-faint);
-  text-decoration: none;
-}
+.ja-page-link--none { cursor: default; color: var(--text-faint); }
+.ja-page-link--none:hover { color: var(--text-faint); text-decoration: none; }
 
 /* A table cell's text that is also the way into the row's dialog. */
 .ja-text-button {
@@ -147,12 +113,8 @@
   border-top: var(--border-width) solid var(--border-subtle);
   transition: background-color var(--duration-fast) var(--ease-standard);
 }
-.ja-term:first-child {
-  border-top: 0;
-}
-.ja-term:hover {
-  background: var(--blue-50);
-}
+.ja-term:first-child { border-top: 0; }
+.ja-term:hover { background: var(--blue-50); }
 .ja-term__main {
   display: grid;
   grid-template-columns: 136px minmax(0, 1fr);
@@ -164,28 +126,11 @@
   cursor: pointer;
   min-width: 0;
 }
-.ja-term__label {
-  font: var(--weight-medium) var(--text-xs)/1.5 var(--font-sans);
-  color: var(--text-strong);
-}
-.ja-term__text {
-  font: var(--type-body-sm);
-  font-size: var(--text-xs);
-  line-height: 1.5;
-  color: var(--text-body);
-}
-.ja-term__side {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding-top: 1px;
-  min-height: 20px;
-}
+.ja-term__label { font: var(--weight-medium) var(--text-xs)/1.5 var(--font-sans); color: var(--text-strong); }
+.ja-term__text { font: var(--type-body-sm); font-size: var(--text-xs); line-height: 1.5; color: var(--text-body); }
+.ja-term__side { display: flex; align-items: center; gap: var(--space-3); padding-top: 1px; min-height: 20px; }
 @container (max-width: 520px) {
-  .ja-term__main {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2px;
-  }
+  .ja-term__main { grid-template-columns: minmax(0, 1fr); gap: 2px; }
 }
 
 /* The award letter card: the page on a sunken stage, then the file. */
@@ -213,28 +158,17 @@
   gap: var(--space-2);
   padding: var(--space-3) var(--space-6) var(--space-4);
 }
-.ja-letter-actions__replace {
-  margin-left: auto;
-}
-.ja-letter {
-  container-type: inline-size;
-}
+.ja-letter-actions__replace { margin-left: auto; }
+.ja-letter { container-type: inline-size; }
 @container (max-width: 280px) {
-  .ja-letter-actions__replace {
-    margin-left: 0;
-  }
+  .ja-letter-actions__replace { margin-left: 0; }
 }
 .ja-file-name {
   font: var(--weight-semibold) var(--text-sm)/1.4 var(--font-sans);
   color: var(--text-strong);
   overflow-wrap: anywhere;
 }
-.ja-file-meta {
-  font: var(--type-body-sm);
-  font-size: var(--text-xs);
-  line-height: 1.5;
-  color: var(--text-muted);
-}
+.ja-file-meta { font: var(--type-body-sm); font-size: var(--text-xs); line-height: 1.5; color: var(--text-muted); }
 .ja-file-row {
   display: flex;
   align-items: flex-start;
@@ -242,22 +176,10 @@
   padding: var(--space-3) var(--space-6);
   border-top: var(--border-width) solid var(--border-subtle);
 }
-.ja-file-row__text {
-  flex: 1;
-  min-width: 0;
-}
+.ja-file-row__text { flex: 1; min-width: 0; }
 .ja-file-row__text .ja-file-name,
-.ja-file-row__text .ja-file-meta {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow-wrap: normal;
-}
-.ja-file-row__buttons {
-  display: flex;
-  gap: var(--space-1);
-  flex: 0 0 auto;
-}
+.ja-file-row__text .ja-file-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+.ja-file-row__buttons { display: flex; gap: var(--space-1); flex: 0 0 auto; }
 .ja-letter-foot {
   display: flex;
   gap: var(--space-3);
@@ -279,29 +201,10 @@
   padding: var(--space-3) var(--space-6);
   border-top: var(--border-width) solid var(--border-subtle);
 }
-.ja-stored__thumb {
-  width: 40px;
-  border: 0;
-  padding: 0;
-  background: none;
-  cursor: zoom-in;
-}
-.ja-stored__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.ja-docs {
-  container-type: inline-size;
-}
+.ja-stored__thumb { width: 40px; border: 0; padding: 0; background: none; cursor: zoom-in; }
+.ja-stored__actions { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; justify-content: flex-end; }
+.ja-docs { container-type: inline-size; }
 @container (max-width: 560px) {
-  .ja-stored {
-    grid-template-columns: 40px minmax(0, 1fr);
-  }
-  .ja-stored__actions {
-    grid-column: 2;
-    justify-content: flex-start;
-  }
+  .ja-stored { grid-template-columns: 40px minmax(0, 1fr); }
+  .ja-stored__actions { grid-column: 2; justify-content: flex-start; }
 }

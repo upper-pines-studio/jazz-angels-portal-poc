@@ -24,62 +24,17 @@
   gap: 2.6cqw;
   font: 400 3.2cqw/1.35 var(--font-sans);
 }
-.ja-paper__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 4cqw;
-  margin-bottom: 3cqw;
-}
-.ja-paper__mark {
-  display: flex;
-  align-items: center;
-  gap: 2cqw;
-  font: 700 2.9cqw/1.15 var(--font-display);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.ja-paper__mark i {
-  display: block;
-  width: 6cqw;
-  height: 6cqw;
-  background: var(--neutral-800);
-  border-radius: 1px;
-  flex: 0 0 auto;
-}
-.ja-paper__rule {
-  height: 1.1cqw;
-  border-radius: 1px;
-  background: var(--neutral-200);
-}
-.ja-paper__rule--short {
-  width: 45%;
-}
-.ja-paper__rule--mid {
-  width: 72%;
-}
-.ja-paper__strong {
-  font-weight: 700;
-}
-.ja-paper__mono {
-  font-family: var(--font-mono);
-}
-.ja-paper__row {
-  display: flex;
-  justify-content: space-between;
-  gap: 3cqw;
-}
-.ja-paper__total {
-  border-top: 0.4cqw solid var(--neutral-800);
-  padding-top: 2cqw;
-  margin-top: auto;
-  font-weight: 700;
-}
-.ja-paper__sign {
-  font: italic 600 5.6cqw/1 var(--font-display);
-  color: var(--blue-700);
-  margin-top: 1cqw;
-}
+.ja-paper__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 4cqw; margin-bottom: 3cqw; }
+.ja-paper__mark { display: flex; align-items: center; gap: 2cqw; font: 700 2.9cqw/1.15 var(--font-display); letter-spacing: 0.12em; text-transform: uppercase; }
+.ja-paper__mark i { display: block; width: 6cqw; height: 6cqw; background: var(--neutral-800); border-radius: 1px; flex: 0 0 auto; }
+.ja-paper__rule { height: 1.1cqw; border-radius: 1px; background: var(--neutral-200); }
+.ja-paper__rule--short { width: 45%; }
+.ja-paper__rule--mid { width: 72%; }
+.ja-paper__strong { font-weight: 700; }
+.ja-paper__mono { font-family: var(--font-mono); }
+.ja-paper__row { display: flex; justify-content: space-between; gap: 3cqw; }
+.ja-paper__total { border-top: 0.4cqw solid var(--neutral-800); padding-top: 2cqw; margin-top: auto; font-weight: 700; }
+.ja-paper__sign { font: italic 600 5.6cqw/1 var(--font-display); color: var(--blue-700); margin-top: 1cqw; }
 
 .ja-paper__format {
   position: absolute;
@@ -92,22 +47,12 @@
   font: 600 max(9px, 3.4cqw)/1.3 var(--font-mono);
   text-transform: uppercase;
 }
-.ja-paper__format[data-format='pdf'] {
-  background: var(--danger-500);
-}
+.ja-paper__format[data-format="pdf"] { background: var(--danger-500); }
 
-.ja-paper img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+.ja-paper img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
 /* A receipt is a narrow slip on a warm table, photographed. */
-.ja-paper--photo {
-  background: var(--neutral-100);
-}
+.ja-paper--photo { background: var(--neutral-100); }
 .ja-paper--photo .ja-paper__sheet {
   inset: 7% 16%;
   padding: 6cqw 5cqw;
@@ -132,14 +77,8 @@
   transition: var(--transition-control);
 }
 .ja-file-drop:hover,
-.ja-file-drop.is-over {
-  border-color: var(--blue-400);
-  background: var(--blue-50);
-}
-.ja-file-drop:focus-visible {
-  outline: 0;
-  box-shadow: var(--focus-ring);
-}
+.ja-file-drop.is-over { border-color: var(--blue-400); background: var(--blue-50); }
+.ja-file-drop:focus-visible { outline: 0; box-shadow: var(--focus-ring); }
 .ja-file-drop__icon {
   flex: 0 0 auto;
   display: inline-flex;
@@ -167,11 +106,7 @@
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
 }
-.ja-file-viewer__stage .ja-paper {
-  width: min(100%, 380px);
-}
+.ja-file-viewer__stage .ja-paper { width: min(100%, 380px); }
 @media (max-width: 640px) {
-  .ja-file-viewer {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  .ja-file-viewer { grid-template-columns: minmax(0, 1fr); }
 }
