@@ -225,7 +225,7 @@ function assignedTransaction(expense: Expense, line: BudgetLine, n: number): Tra
   };
 }
 
-/** Fourteen transactions are waiting. Eight of them have a proposal. */
+/** Fourteen transactions are waiting. Nine of them have a proposal. */
 const TO_ASSIGN: Transaction[] = [
   {
     id: 'tx-new-1',
@@ -736,7 +736,20 @@ const REMINDER_DEFAULTS: ReminderDefaults = {
   sendHour: 8,
 };
 
-const SPLIT_RULES: SplitRule[] = [];
+/**
+ * The office has saved one rule: the studio rent is three quarters Herb Alpert,
+ * a quarter Long Beach, so its split panel opens at 75/25 (`usualShares`).
+ */
+const SPLIT_RULES: SplitRule[] = [
+  {
+    id: 'rule-signal-hill-rent',
+    payee: 'Signal Hill Properties',
+    parts: [
+      { grantId: HA, budgetLineId: 'bl-ha-venue', percent: 75 },
+      { grantId: LBCF, budgetLineId: 'bl-lbcf-venue', percent: 25 },
+    ],
+  },
+];
 
 /** Which page of the award letter promises each seeded installment. */
 export const PAYMENT_PAGES: Record<string, number> = {

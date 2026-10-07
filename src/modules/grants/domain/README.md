@@ -262,7 +262,9 @@ the next `syncQuickBooks()`, and nothing is ever written back.
   of the line's `accountCodes` and, if QuickBooks gave it a class, the class is
   the line's `classId`. `suggestionFor(state, tx)` returns the one line that
   fits, a saved split rule, "not grant-funded" for a payee set aside before, or
-  a hint saying why it cannot choose.
+  a hint saying why it cannot choose. `usualShares(state, tx, candidates)` gives
+  the shares a split starts from: the payee's rule, else its last assigned
+  transaction's shares on those candidates, else even, with its `source`.
 - **Pacing is straight-line.** `grantPace` and `linePaces` compare the share of
   the money used with the share of the period gone and carry today's daily rate
   forward: `runsOutOn`, `projectedUnspent`, `perMonthNeeded`. A grant is off
