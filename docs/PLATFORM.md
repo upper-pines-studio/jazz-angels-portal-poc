@@ -248,7 +248,10 @@ for its period and "attendance trend" has history.
   instrument, ensemble, guardian, attendance % this term, status Badge), search and ensemble
   filter, "Enroll" (Dialog: name, instrument, guardian, program, ensemble). Right: the selected
   student's card (contact, ensemble, attendance this term, last 5 marks as dots). Empty state:
-  "No students in this view yet. Enroll a student to add them to the roster."
+  "No students in this view yet. Enroll a student to add them to the roster." "Import" (Dialog)
+  brings a term's roster in from a CSV: choose a file or download the blank template, check a
+  preview of every row with its problems, take the closest program or ensemble, leave a student
+  on the waitlist or skip the row, then add them all at once.
 
 **Dashboard contribution:** stats *Enrolled* (blue; footnote "Fall session · 8 ensembles") and
 *Attendance* (teal; average this term, footnote "last 4 weeks"); attention: past meetings with

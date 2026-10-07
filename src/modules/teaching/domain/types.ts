@@ -121,4 +121,6 @@ export interface TeachingActions {
   /** Add a student to the roster or the waitlist. Returns the new student id. */
   enrollStudent(input: Omit<Student, 'id'>): string;
   updateStudent(id: string, patch: Partial<Student>): void;
+  /** Add many students in one change, as a CSV import does. Returns how many were added. */
+  importStudents(inputs: Omit<Student, 'id'>[]): number;
 }

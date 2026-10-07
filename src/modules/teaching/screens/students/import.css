@@ -1,0 +1,73 @@
+/*
+ * Import students: the file picker and the preview table inside the dialog.
+ * The picker is the same dashed field the grants receipts use.
+ */
+
+.ja-import-drop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-5);
+  border: var(--border-width) dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--neutral-25);
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.ja-import-drop:hover,
+.ja-import-drop.is-over {
+  border-color: var(--blue-400);
+  background: var(--blue-50);
+}
+.ja-import-drop:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+.ja-import-drop__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--blue-50);
+  color: var(--blue-500);
+}
+
+/* The preview scrolls inside the dialog so the footer stays in view. */
+.ja-import-preview {
+  max-height: 46vh;
+  overflow: auto;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.ja-import-problems {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--type-body-sm);
+  font-size: var(--text-2xs);
+  color: var(--text-body);
+}
+.ja-import-problems li + li {
+  margin-top: var(--space-1);
+}
+.ja-import-problems li {
+  position: relative;
+  padding-left: var(--space-3);
+}
+/* The gold of an "attention" state, as a dot before each problem. */
+.ja-import-problems li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold-500);
+}

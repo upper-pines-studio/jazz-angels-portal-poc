@@ -31,6 +31,7 @@ import {
 import type { Mark, RosterStudent } from '../domain';
 import { MarkDots, TONE_COLOR } from './parts';
 import EnrollStudentDialog from './students/EnrollStudentDialog';
+import ImportStudentsDialog from './students/ImportStudentsDialog';
 
 const ALL = 'all';
 const WAITLIST = 'waitlist';
@@ -67,6 +68,7 @@ function Roster() {
   const [ensembleFilter, setEnsembleFilter] = React.useState(ALL);
   const [selectedId, setSelectedId] = React.useState<string | undefined>();
   const [enrolling, setEnrolling] = React.useState(false);
+  const [importing, setImporting] = React.useState(false);
 
   const term = termForDate(state, today);
   const window = term ? { from: term.start, to: term.end } : undefined;
@@ -77,14 +79,24 @@ function Roster() {
       ? `${enrolledIn()} in your classes`
       : `${enrolledIn()} enrolled · ${waiting} waiting`,
     actions: mayEdit ? (
-      <Button
-        variant="primary"
-        size="sm"
-        iconLeft={<Icon name="user-plus" size={15} />}
-        onClick={() => setEnrolling(true)}
-      >
-        Enroll student
-      </Button>
+      <div className="ja-actions">
+        <Button
+          variant="secondary"
+          size="sm"
+          iconLeft={<Icon name="upload" size={15} />}
+          onClick={() => setImporting(true)}
+        >
+          Import
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          iconLeft={<Icon name="user-plus" size={15} />}
+          onClick={() => setEnrolling(true)}
+        >
+          Enroll student
+        </Button>
+      </div>
     ) : undefined,
   });
 
@@ -311,6 +323,7 @@ function Roster() {
           onEnrolled={setSelectedId}
         />
       )}
+      {importing && mayEdit && <ImportStudentsDialog open onClose={() => setImporting(false)} />}
     </>
   );
 }
