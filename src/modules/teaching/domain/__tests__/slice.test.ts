@@ -320,3 +320,133 @@ describe('own classes', () => {
     expect(h.refused).toHaveLength(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// The generic actions (#19)
+// ---------------------------------------------------------------------------
+
+/** The harness, keeping every action the slice dispatched. */
+function recording() {
+  let teaching: TeachingState = makeSeed();
+  const sent: AnyAction[] = [];
+  let n = 0;
+  const actions = teachingSlice.createActions(
+    action => {
+      sent.push(action);
+      teaching = teachingSlice.reducer(teaching, action);
+    },
+    () => ({ teaching }) as unknown as PortalState,
+    {
+      today: SEED_TODAY,
+      newId: (prefix: string) => `${prefix}-${(n += 1)}`,
+      user: { id: 's-barry', name: 'Barry Cogert', role: 'director' },
+    },
+  );
+  return { actions, sent, state: () => teaching };
+}
+
+describe('the generic actions', () => {
+  it('send every change as insert, update, remove or a batch of them', () => {
+    const h = recording();
+    const student = h.state().students.find(s => s.ensembleId === 'e-combo-b')!;
+    h.actions.setMark(COMBO_B, student.id, 'late');
+    h.actions.setMark(COMBO_B, student.id, 'absent');
+    h.actions.submitRollCall(COMBO_B, 'Notes');
+    h.actions.reopenRollCall(COMBO_B);
+    h.actions.addMeeting({
+      ensembleId: 'e-combo-a',
+      date: '2026-09-12',
+      start: '15:00',
+      end: '16:00',
+      venueId: 'v-studio',
+      room: 'Studio 1',
+    });
+    const id = h.actions.enrollStudent({
+      name: 'Nina Okoye',
+      instrument: 'Trumpet',
+      yearsIn: 1,
+      guardianName: 'Ada Okoye',
+      programId: 'studio-sessions',
+      status: 'waitlist',
+    });
+    h.actions.updateStudent(id, { status: 'enrolled' });
+
+    expect(h.sent.map(a => `${a.type} ${a.key ?? ''}`.trim())).toEqual([
+      'teaching/insert attendance',
+      'teaching/update attendance',
+      'teaching/batch',
+      'teaching/update meetings',
+      'teaching/insert meetings',
+      'teaching/insert students',
+      'teaching/update students',
+    ]);
+  });
+
+  it('closes a roll call as one change: the present marks and the meeting together', () => {
+    const h = recording();
+    const roster = rosterForEnsemble(
+      { teaching: h.state() } as unknown as PortalState,
+      'e-combo-b',
+    );
+    h.actions.setMark(COMBO_B, roster[0].id, 'absent');
+    h.actions.submitRollCall(COMBO_B, 'Traded fours.');
+
+    const batch = h.sent.at(-1)!;
+    expect(batch.type).toBe('teaching/batch');
+    const parts = batch.actions as AnyAction[];
+    expect(parts.filter(p => p.type === 'insert')).toHaveLength(roster.length - 1);
+    expect(parts.at(-1)).toMatchObject({ type: 'update', key: 'meetings', id: COMBO_B });
+    expect(teachingSlice.describe!(batch)).toBe('the roll call');
+  });
+
+  it('sends nothing for a mark that is already so, or on a closed roll', () => {
+    const h = recording();
+    const student = h.state().students.find(s => s.ensembleId === 'e-combo-b')!;
+    h.actions.setMark(COMBO_B, student.id, 'late');
+    h.actions.setMark(COMBO_B, student.id, 'late');
+    h.actions.submitRollCall(COMBO_B);
+    h.actions.setMark(COMBO_B, student.id, 'absent');
+    h.actions.importStudents([]);
+    expect(h.sent.map(a => a.type)).toEqual(['teaching/insert', 'teaching/batch']);
+  });
+
+  it('imports a list of students as one change', () => {
+    const h = recording();
+    const before = h.state().students.length;
+    const row = {
+      instrument: 'Piano',
+      yearsIn: 1,
+      guardianName: 'A. Parent',
+      programId: 'studio-sessions' as const,
+      status: 'enrolled' as const,
+    };
+    expect(
+      h.actions.importStudents([
+        { ...row, name: 'One' },
+        { ...row, name: 'Two' },
+      ]),
+    ).toBe(2);
+    expect(h.sent).toHaveLength(1);
+    expect(h.state().students).toHaveLength(before + 2);
+    expect(teachingSlice.describe!(h.sent[0])).toBe('the imported students');
+  });
+
+  it('keeps one row when the same insert arrives twice', () => {
+    const h = recording();
+    const student = h.state().students.find(s => s.ensembleId === 'e-combo-b')!;
+    h.actions.setMark(COMBO_B, student.id, 'late');
+    const again = teachingSlice.reducer(h.state(), h.sent[0]);
+    expect(again).toBe(h.state());
+  });
+
+  it('names each change plainly', () => {
+    const h = recording();
+    const student = h.state().students.find(s => s.ensembleId === 'e-combo-b')!;
+    h.actions.setMark(COMBO_B, student.id, 'late');
+    h.actions.updateStudent(student.id, { yearsIn: 2 });
+    expect(h.sent.map(a => teachingSlice.describe!(a))).toEqual([
+      'the roll call mark',
+      'the student',
+    ]);
+  });
+});
