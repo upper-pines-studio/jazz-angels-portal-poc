@@ -15,7 +15,7 @@ import {
 import { money, useCan, useStore } from '../../../../core';
 import { usePageHeader } from '../../../../app/Shell';
 import { useToast } from '../../../../app/ToastHost';
-import { WithPanel } from '../../../../app/components/SidePanel';
+import { WithPanel, usePanelGuard } from '../../../../app/components/SidePanel';
 import {
   acceptableSuggestions,
   accountLabel,
@@ -115,6 +115,7 @@ export default function Transactions() {
   const [syncing, setSyncing] = React.useState(false);
   const [changing, setChanging] = React.useState<Set<string>>(() => new Set());
   const [draft, setDraft] = React.useState<DraftSummary | undefined>();
+  const { guard, panel: panelGuard } = usePanelGuard();
   /** A send-back waiting on its confirm, because it would delete backup. */
   const [sendingBack, setSendingBack] = React.useState<TransactionSnapshot | undefined>();
   const timer = React.useRef<number | undefined>();
@@ -302,7 +303,10 @@ export default function Transactions() {
       `${tx.payee}, ${money(tx.amount)} is waiting on the To assign tab again.${backup ? ' Its backup was removed.' : ''}`,
     );
 
-  const open = (tx: Transaction) => patch({ tx: tx.id });
+  // A split with unsaved edits stays open until the person decides.
+  const open = (tx: Transaction) => {
+    if (tx.id !== panelTx?.id) guard(() => patch({ tx: tx.id }));
+  };
   const close = React.useCallback(() => {
     setDraft(undefined);
     patch({ tx: undefined });
@@ -396,6 +400,7 @@ export default function Transactions() {
       key={panelTx.id}
       tx={panelTx}
       onClose={close}
+      guard={panelGuard}
       onDraft={setDraft}
       onSave={(tx, parts, note) => {
         assign(tx, parts, note);

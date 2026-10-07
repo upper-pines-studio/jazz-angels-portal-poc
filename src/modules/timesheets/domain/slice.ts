@@ -23,49 +23,51 @@ declare module '../../../core/types' {
 // Reducer
 // ---------------------------------------------------------------------------
 
+/**
+ * Every change the timesheets slice makes: an entry added, changed or taken
+ * away. Which changes are allowed (only a draft is submitted, an approval
+ * stands) is decided in `createActions`, which reads the state first, so one
+ * repository `apply` covers every module.
+ */
 export type TimesheetsAction =
-  | { type: 'log'; entry: TimeEntry }
-  | { type: 'submit'; id: string }
-  | { type: 'approve'; id: string; by: string; at: string }
-  | { type: 'delete'; id: string };
-
-function patch(
-  state: TimesheetsState,
-  id: string,
-  change: (entry: TimeEntry) => TimeEntry | undefined,
-): TimesheetsState {
-  const entry = state.entries.find(e => e.id === id);
-  if (!entry) return state;
-  const next = change(entry);
-  if (!next) return state;
-  return { ...state, entries: state.entries.map(e => (e.id === id ? next : e)) };
-}
+  | { type: 'insert'; key: 'entries'; item: TimeEntry }
+  | { type: 'update'; key: 'entries'; id: string; patch: Partial<TimeEntry> }
+  | { type: 'remove'; key: 'entries'; id: string }
+  | { type: 'batch'; actions: TimesheetsAction[] };
 
 /** The module's own reducer. The store only ever reaches it through the slice. */
 export function reducer(state: TimesheetsState, action: TimesheetsAction): TimesheetsState {
+  const rows = state.entries;
   switch (action.type) {
-    case 'log':
-      return { ...state, entries: [...state.entries, action.entry] };
+    case 'batch':
+      return action.actions.reduce(reducer, state);
 
-    case 'submit':
-      // Only a draft can be handed over; a submitted or approved entry stands.
-      return patch(state, action.id, entry =>
-        entry.status === 'draft' ? { ...entry, status: 'submitted' } : undefined,
-      );
+    case 'insert':
+      // Sent twice (a retry), it is still one entry.
+      if (rows.some(e => e.id === action.item.id)) return state;
+      return { ...state, entries: [...rows, action.item] };
 
-    case 'approve':
-      return patch(state, action.id, entry =>
-        entry.status === 'approved'
-          ? undefined
-          : { ...entry, status: 'approved', approvedBy: action.by, approvedAt: action.at },
-      );
+    case 'update':
+      if (!rows.some(e => e.id === action.id)) return state;
+      return {
+        ...state,
+        entries: rows.map(e => (e.id === action.id ? { ...e, ...action.patch } : e)),
+      };
 
-    case 'delete':
-      return { ...state, entries: state.entries.filter(e => e.id !== action.id) };
+    case 'remove':
+      if (!rows.some(e => e.id === action.id)) return state;
+      return { ...state, entries: rows.filter(e => e.id !== action.id) };
 
     default:
       return state;
   }
+}
+
+/** A change in plain words, for "Couldn't save …". */
+export function describeChange(action: TimesheetsAction): string | undefined {
+  if (action.type === 'batch') return action.actions[0] && describeChange(action.actions[0]);
+  if (action.type === 'update' && action.patch.status === 'approved') return 'the approval';
+  return 'the hours';
 }
 
 // ---------------------------------------------------------------------------
@@ -79,20 +81,22 @@ export function toQuarterHours(hours: number): number {
 
 function createActions(
   dispatch: (action: AnyAction) => void,
-  _getState: () => PortalState,
+  getState: () => PortalState,
   ctx: SliceContext,
 ): TimesheetsActions {
   const { today, newId, user } = ctx;
   /** Every action leaves this module namespaced, so the store can route it. */
   const send = (action: TimesheetsAction) =>
     dispatch({ ...action, type: `timesheets/${action.type}` });
+  const entryOf = (id: string) => getState().timesheets.entries.find(e => e.id === id);
 
   return {
     logHours(input) {
       const id = newId('te');
       send({
-        type: 'log',
-        entry: {
+        type: 'insert',
+        key: 'entries',
+        item: {
           id,
           staffId: input.staffId,
           date: input.date,
@@ -106,13 +110,22 @@ function createActions(
       return id;
     },
     submitEntry(id) {
-      send({ type: 'submit', id });
+      // Only a draft can be handed over; a submitted or approved entry stands.
+      if (entryOf(id)?.status !== 'draft') return;
+      send({ type: 'update', key: 'entries', id, patch: { status: 'submitted' } });
     },
     approveEntry(id) {
-      send({ type: 'approve', id, by: user.id, at: today });
+      const entry = entryOf(id);
+      if (!entry || entry.status === 'approved') return;
+      send({
+        type: 'update',
+        key: 'entries',
+        id,
+        patch: { status: 'approved', approvedBy: user.id, approvedAt: today },
+      });
     },
     deleteEntry(id) {
-      send({ type: 'delete', id });
+      send({ type: 'remove', key: 'entries', id });
     },
   };
 }
@@ -135,6 +148,13 @@ export const timesheetsSlice: ModuleSlice<TimesheetsState, TimesheetsActions> = 
     } as TimesheetsAction);
   },
   createActions,
+  describe(action) {
+    if (!action.type.startsWith('timesheets/')) return undefined;
+    return describeChange({
+      ...action,
+      type: action.type.slice('timesheets/'.length),
+    } as TimesheetsAction);
+  },
   rules: {
     // Everyone logs their own hours and nobody else's (decision 0001).
     logHours: (user, _state, input) => mayLogFor(user, input.staffId),

@@ -43,7 +43,7 @@ export default function RollCall() {
   const { meetingId = '' } = useParams();
   const nav = useNavigate();
   const toast = useToast();
-  const { state, today, actions } = useStore();
+  const { state, today, actions, whenSaved } = useStore();
 
   const meeting = meetingById(state, meetingId);
   const ensemble = ensembleById(state, meeting?.ensembleId);
@@ -51,17 +51,30 @@ export default function RollCall() {
   const roster = meeting ? rosterForEnsemble(state, meeting.ensembleId) : [];
   const records = meeting ? attendanceForMeeting(state, meeting.id) : [];
   const submitted = Boolean(meeting?.rollSubmittedAt);
-  // An open roll call counts the unmarked as present; a submitted one counts what was written down.
-  const marks = rollMarks(roster, records);
-  const counts = submitted ? markCounts(records) : rollCounts(marks);
 
   const [notes, setNotes] = React.useState(meeting?.notes ?? '');
+  /**
+   * The marks tapped on this screen, kept here as well as sent to the store,
+   * so a save that fails (and is rolled back in the store) leaves them on
+   * screen for Try again to send from (decision 0003).
+   */
+  const [tapped, setTapped] = React.useState<Map<string, Mark>>(() => new Map());
+  /** What the last failed save was: the marks alone, or the whole submit. */
+  const [failed, setFailed] = React.useState<'marks' | 'submit'>();
+  const [sending, setSending] = React.useState(false);
   const [showNotesFor, setShowNotesFor] = React.useState(meetingId);
   if (showNotesFor !== meetingId) {
-    // A different meeting: start its notes from what is stored.
+    // A different meeting: start its notes and marks from what is stored.
     setShowNotesFor(meetingId);
     setNotes(meeting?.notes ?? '');
+    setTapped(new Map());
+    setFailed(undefined);
   }
+
+  // An open roll call counts the unmarked as present; a submitted one counts what was written down.
+  // A mark tapped here counts too, saved or waiting on Try again.
+  const marks = new Map([...rollMarks(roster, records), ...tapped]);
+  const counts = submitted ? markCounts(records) : rollCounts(marks);
 
   usePageHeader({
     title: ensemble?.name ?? 'Roll call',
@@ -101,17 +114,45 @@ export default function RollCall() {
   const markFor = (studentId: string): Mark | undefined =>
     submitted ? records.find(r => r.studentId === studentId)?.mark : marks.get(studentId);
 
-  // Tapping Late or Absent a second time puts the student back to present.
-  const toggle = (studentId: string, next: Mark) =>
-    actions.teaching.setMark(meeting.id, studentId, markFor(studentId) === next ? 'present' : next);
+  /** Send every mark tapped here; the store skips one that is already saved. */
+  const sendMarks = () => {
+    for (const [studentId, mark] of tapped) actions.teaching.setMark(meeting.id, studentId, mark);
+  };
 
-  const submit = () => {
+  // Tapping Late or Absent a second time puts the student back to present.
+  const toggle = (studentId: string, option: Mark) => {
+    const next = markFor(studentId) === option ? 'present' : option;
+    setTapped(m => new Map(m).set(studentId, next));
+    actions.teaching.setMark(meeting.id, studentId, next);
+    void whenSaved().then(ok => {
+      if (!ok) setFailed(f => f ?? 'marks');
+    });
+  };
+
+  const submit = async () => {
+    setFailed(undefined);
+    setSending(true);
+    // A mark that did not save goes again first, so the submit does not write that student down as present.
+    sendMarks();
     actions.teaching.submitRollCall(meeting.id, notes.trim() || undefined);
+    const ok = await whenSaved();
+    setSending(false);
+    if (!ok) {
+      setFailed('submit');
+      return;
+    }
     toast({
       title: 'Roll call submitted',
       message: `${ensemble.name} · ${counts.present} present · ${counts.late} late · ${counts.absent} absent`,
     });
     nav('/schedule');
+  };
+
+  const tryAgain = async () => {
+    if (failed === 'submit') return submit();
+    setFailed(undefined);
+    sendMarks();
+    if (!(await whenSaved())) setFailed('marks');
   };
 
   const trend = ensembleTrend(state, ensemble.id, today);
@@ -274,11 +315,31 @@ export default function RollCall() {
                     style={{ width: '100%' }}
                   />
                 </Field>
+                {failed && (
+                  <div
+                    role="alert"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--space-3)',
+                      padding: 'var(--space-3) var(--space-4)',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'var(--danger-50)',
+                      font: 'var(--type-body-sm)',
+                      color: 'var(--danger-600)',
+                    }}
+                  >
+                    <span style={{ flex: 1 }}>Couldn't save. Your marks are still here.</span>
+                    <Button variant="secondary" size="sm" disabled={sending} onClick={tryAgain}>
+                      Try again
+                    </Button>
+                  </div>
+                )}
                 <Button
                   variant="primary"
                   fullWidth
                   iconLeft={<Icon name="check" size={16} />}
-                  disabled={roster.length === 0}
+                  disabled={roster.length === 0 || sending}
                   onClick={submit}
                 >
                   Submit roll call

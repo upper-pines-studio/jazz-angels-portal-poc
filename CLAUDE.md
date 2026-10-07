@@ -14,6 +14,7 @@ per module.
 - `npm run test:e2e` — Playwright smoke tests in `e2e/`, headless; starts the dev server on `PORT` (`PORT=5207 npm run test:e2e`) with the demo on. Needs `npx playwright install chromium` once. The sign-in spec reads `DEMO_<ROLE>_USERNAME`/`DEMO_<ROLE>_PASSWORD` (from `.env.local`) and skips a role whose password is unset
 - `npm run lint` — ESLint over `src/` (the module boundaries, localStorage only in core, no bare `new Date()` in screens), then `prettier --check`
 - `npm run format` — Prettier over the TypeScript in `src/` and the root config files; run it before `npm run lint`
+- Failing saves on purpose (`npm run dev` only): `localStorage.setItem('ja-portal:fail-saves', '1')` in devtools makes every save fail, to see the rollback and Roll call's Try again; remove the key to save again
 - Stop hook (`.claude/settings.json` → `.claude/hooks/check.sh`) — runs `npm run typecheck` and `npm run lint` when an agent stops; a failure is shown to the agent to fix before it finishes
 
 ## Where things are

@@ -1,9 +1,12 @@
-import type { ModuleSlice } from './module';
+import type { AnyAction, ModuleSlice } from './module';
+import type { Repository } from './persistence';
 import type { PortalState } from './types';
 
 /**
- * The only module that talks to storage. Screens never touch localStorage —
- * swap this file for a Supabase client later and nothing above it changes.
+ * The only module that talks to storage, and the first implementation of the
+ * `Repository` interface in persistence.ts: `localRepository`, on localStorage.
+ * Screens never touch localStorage; a backend replaces `localRepository` and
+ * nothing above the store changes.
  *
  * One key per slice, so a module can be added without rewriting what is
  * already saved: `ja-portal:grants:v1`, `ja-portal:teaching:v1`, …
@@ -52,28 +55,58 @@ export function fresh(slice: PortalSlice, today: string, demo: boolean): unknown
   return demo ? slice.seed(today) : slice.empty();
 }
 
-/** Read one slice, falling back to a fresh one when nothing readable is stored. */
-export function loadSlice(slice: PortalSlice, today: string, demo: boolean): unknown {
+/** One slice as stored and accepted by its `normalise`, or undefined when nothing readable is. */
+function readSlice(slice: PortalSlice, demo: boolean): unknown | undefined {
   const ls = storage();
-  if (!ls) return fresh(slice, today, demo);
+  if (!ls) return undefined;
   try {
     const raw = ls.getItem(storageKey(slice.id));
-    if (!raw) return fresh(slice, today, demo);
-    return accept(slice, JSON.parse(raw), demo) ?? fresh(slice, today, demo);
+    if (!raw) return undefined;
+    return accept(slice, JSON.parse(raw), demo);
   } catch {
-    return fresh(slice, today, demo);
+    return undefined;
+  }
+}
+
+/** Read one slice, falling back to a fresh one when nothing readable is stored. */
+export function loadSlice(slice: PortalSlice, today: string, demo: boolean): unknown {
+  return readSlice(slice, demo) ?? fresh(slice, today, demo);
+}
+
+/**
+ * Write one slice. Throws when storage is unavailable or full, so the store can
+ * say the change was not saved.
+ */
+export function writeSlice(sliceId: string, data: unknown): void {
+  const ls = storage();
+  if (!ls) throw new Error('This browser is not letting the portal save anything.');
+  try {
+    ls.setItem(storageKey(sliceId), JSON.stringify(data));
+  } catch {
+    throw new Error('This browser has no room left to save the portal.');
   }
 }
 
 /** Write one slice. Silently does nothing when storage is unavailable or full. */
 export function saveSlice(sliceId: string, data: unknown): void {
-  const ls = storage();
-  if (!ls) return;
   try {
-    ls.setItem(storageKey(sliceId), JSON.stringify(data));
+    writeSlice(sliceId, data);
   } catch {
-    // Quota or private mode — the POC keeps working from memory.
+    // Quota or private mode: the caller did not ask to know.
   }
+}
+
+/**
+ * A development switch: with this preference set to `1`, every save fails, so
+ * the failure path (the rollback, the toast, Roll call's Try again) can be seen
+ * in the browser. Set it in devtools with
+ * `localStorage.setItem('ja-portal:fail-saves', '1')`; remove it to save again.
+ * Read only in `npm run dev`; a production build ignores it.
+ */
+export const FAIL_SAVES_KEY = 'ja-portal:fail-saves';
+
+function failingOnPurpose(): boolean {
+  return import.meta.env.DEV && loadPreference(FAIL_SAVES_KEY) === '1';
 }
 
 /**
@@ -114,6 +147,34 @@ export function saveState(slices: PortalSlice[], state: PortalState): void {
   for (const slice of slices) saveSlice(slice.id, bag[slice.id]);
 }
 
+/**
+ * The Repository on localStorage. `load` reads one slice's key (and writes a
+ * fresh slice there when nothing readable is stored); `apply` writes
+ * the slice's new state whole, so it has no need to read the action (a backend
+ * will). Both answer at once, but as promises, like a backend.
+ */
+export const localRepository: Repository = {
+  load(slice, today, demo) {
+    const stored = readSlice(slice, demo);
+    if (stored !== undefined) return Promise.resolve(stored);
+    // A slice that starts fresh is kept as it started, so a later demo date
+    // does not reseed it under the slices that point into it.
+    const start = fresh(slice, today, demo);
+    saveSlice(slice.id, start);
+    return Promise.resolve(start);
+  },
+  apply(sliceId: string, _action: AnyAction, next: unknown) {
+    try {
+      if (failingOnPurpose())
+        throw new Error(`Saving is switched off in this browser (${FAIL_SAVES_KEY}).`);
+      writeSlice(sliceId, next);
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  },
+};
+
 function envelope(slices: PortalSlice[], state: PortalState): Envelope {
   const bag = state as unknown as Record<string, unknown>;
   const out: Record<string, unknown> = {};
@@ -127,12 +188,13 @@ export function exportJson(slices: PortalSlice[], state: PortalState): string {
 }
 
 /**
- * Parse an exported file back into state and save it. A file written before a
- * module existed is fine: any slice it does not carry starts fresh instead,
- * the demo data in a demo build and empty otherwise. Throws with a readable
- * message on garbage.
+ * Parse an exported file back into state. A file written before a module
+ * existed is fine: any slice it does not carry starts fresh instead, the demo
+ * data in a demo build and empty otherwise. Throws with a readable message on
+ * garbage. Nothing is written here: the store applies the result, one slice
+ * at a time, like any other change.
  */
-export function importJson(
+export function readImport(
   slices: PortalSlice[],
   text: string,
   today: string,
@@ -168,21 +230,18 @@ export function importJson(
     throw new Error('That file is missing portal data, so it was not imported.');
   }
 
-  const next = state as unknown as PortalState;
-  saveState(slices, next);
-  return next;
+  return state as unknown as PortalState;
 }
 
 /**
- * Throw everything away and start every slice again: from the demo data in a
- * demo build, empty otherwise. Settings offers it only in a demo build.
+ * Every slice started again: from the demo data in a demo build, empty
+ * otherwise. Settings offers the reset only in a demo build. Like
+ * `readImport`, it writes nothing; the store applies it.
  */
-export function reset(slices: PortalSlice[], today: string, demo: boolean): PortalState {
+export function freshState(slices: PortalSlice[], today: string, demo: boolean): PortalState {
   const state: Record<string, unknown> = {};
   for (const slice of slices) state[slice.id] = fresh(slice, today, demo);
-  const next = state as unknown as PortalState;
-  saveState(slices, next);
-  return next;
+  return state as unknown as PortalState;
 }
 
 /** Remove the saved slices without starting them again (used by tests). */

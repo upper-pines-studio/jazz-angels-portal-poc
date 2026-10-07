@@ -239,6 +239,24 @@ describe('the slice', () => {
     expect(grantsSlice.normalise?.({ grants: [] })).toBeUndefined();
     expect(grantsSlice.normalise?.(makeSeed())).toBeTruthy();
   });
+
+  it('names a change plainly for a save that fails', () => {
+    const name = (action: AnyAction) => grantsSlice.describe!(action);
+    expect(name({ type: 'grants/insert', key: 'grants', item: {} })).toBe('the grant');
+    expect(name({ type: 'grants/update', key: 'budgetLines', id: 'x', patch: {} })).toBe(
+      'the budget line',
+    );
+    expect(name({ type: 'grants/assign-transaction', id: 'x' })).toBe('the transaction');
+    expect(name({ type: 'grants/save-reminder-plan' })).toBe('the reminders');
+    expect(
+      name({
+        type: 'grants/batch',
+        actions: [{ type: 'remove', key: 'expenses', id: 'x' }],
+      }),
+    ).toBe('the expense');
+    // Not a grants change: the store falls back to "that change".
+    expect(name({ type: 'teaching/insert', key: 'grants', item: {} })).toBeUndefined();
+  });
 });
 
 describe('credit for a change', () => {

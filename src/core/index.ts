@@ -29,3 +29,5 @@ export { storageKey } from './repository';
 // Namespaced like the repository: `auth.verify`, `auth.currentUser`, …
 export * as auth from './auth';
 export type { AuthUser } from './auth';
+export type { Repository } from './persistence';
+export type { Saving, SaveStatus } from './live';

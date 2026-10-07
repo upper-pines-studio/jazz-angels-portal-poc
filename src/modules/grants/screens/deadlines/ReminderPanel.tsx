@@ -14,6 +14,7 @@ import {
 } from '../../domain';
 import type { ReminderPlan, Report } from '../../domain';
 import { PanelSection, SidePanel } from '../../../../app/components/SidePanel';
+import type { PanelGuard } from '../../../../app/components/SidePanel';
 import { OwnerAvatar } from '../../../../app/components/badges';
 import { useToast } from '../../../../app/ToastHost';
 import { LinkButton } from '../money/shared';
@@ -34,8 +35,18 @@ const longDay = (iso: string) => format(parseISO(iso), 'EEEE, MMM d');
  * One report's reminder emails: which days, to whom, whether to keep going
  * after the due date, and the email itself. Edits a draft; nothing changes
  * until "Save reminders". Give it `key={report.id}` so a new report starts fresh.
+ * With unsaved edits it asks before it closes, and, given the page's `guard`,
+ * before the page swaps it for another report.
  */
-export function ReminderPanel({ report, onClose }: { report: Report; onClose: () => void }) {
+export function ReminderPanel({
+  report,
+  onClose,
+  guard,
+}: {
+  report: Report;
+  onClose: () => void;
+  guard?: PanelGuard;
+}) {
   const { state, today, user, actions } = useStore();
   // Reminder plans are deadlines: a grants record. A View role reads the plan as saved.
   const mayEdit = useCan()('grants', 'edit');
@@ -50,11 +61,9 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
     recipientIds: [...saved.recipientIds],
     keepReminding: saved.keepReminding,
   }));
-  const [confirmClose, setConfirmClose] = React.useState(false);
 
   const dirty = !samePlan(draft, saved);
   const noOne = draft.recipientIds.length === 0;
-  const requestClose = () => (dirty ? setConfirmClose(true) : onClose());
 
   const due = report.dueDate;
   // The draft's schedule, by the same rule as the saved one.
@@ -111,7 +120,6 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
       recipientIds: draft.recipientIds,
       keepReminding: draft.keepReminding,
     });
-    setConfirmClose(false);
     toast({
       tone: 'success',
       title: 'Reminders saved',
@@ -124,7 +132,6 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
   const useDefaults = () => {
     actions.grants.resetReminderPlan(report.id);
     setDraft(defaultPlanFor(state, report));
-    setConfirmClose(false);
     toast({
       tone: 'success',
       title: 'Back on the defaults',
@@ -145,38 +152,31 @@ export function ReminderPanel({ report, onClose }: { report: Report; onClose: ()
     (a, b) => Number(b.id === grant?.ownerId) - Number(a.id === grant?.ownerId),
   );
 
-  const footer = !mayEdit ? undefined : confirmClose ? (
-    <>
-      <span className="ja-rm-note" style={{ marginRight: 'auto', color: 'var(--text-strong)' }}>
-        Discard your changes?
-      </span>
-      <Button variant="secondary" size="sm" onClick={() => setConfirmClose(false)}>
-        Keep editing
-      </Button>
-      <Button variant="danger" size="sm" onClick={onClose}>
-        Discard
-      </Button>
-    </>
-  ) : (
-    <>
-      <span className="ja-rm-note" style={{ marginRight: 'auto', fontSize: 'var(--text-2xs)' }}>
-        Only this report changes
-      </span>
-      <Button variant="secondary" size="sm" onClick={requestClose}>
-        Cancel
-      </Button>
-      <Button variant="primary" size="sm" disabled={!dirty || noOne} onClick={save}>
-        Save reminders
-      </Button>
-    </>
-  );
+  // "Discard your changes?" replaces these while the panel asks; SidePanel shows it.
+  const footer = !mayEdit
+    ? undefined
+    : (requestClose: () => void) => (
+        <>
+          <span className="ja-rm-note" style={{ marginRight: 'auto', fontSize: 'var(--text-2xs)' }}>
+            Only this report changes
+          </span>
+          <Button variant="secondary" size="sm" onClick={requestClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" size="sm" disabled={!dirty || noOne} onClick={save}>
+            Save reminders
+          </Button>
+        </>
+      );
 
   return (
     <SidePanel
       eyebrow="Reminders"
       title={ctx.title}
       subtitle={`Due ${format(parseISO(due), 'EEEE, MMM d, yyyy')} · ${daysLeft < 0 ? `${-daysLeft} ${daysLeft === -1 ? 'day' : 'days'} overdue, ` : ''}${status}`}
-      onClose={requestClose}
+      onClose={onClose}
+      dirty={mayEdit && dirty}
+      guard={guard}
       footer={footer}
     >
       <div

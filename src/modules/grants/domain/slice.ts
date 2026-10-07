@@ -1053,6 +1053,58 @@ const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
   duplicateTemplate: 'grants',
 };
 
+/** What each collection's rows are called, for "Couldn't save …". */
+const ROW_WORDS: Record<CollectionKey, string> = {
+  funders: 'the funder',
+  grants: 'the grant',
+  tasks: 'the task',
+  documents: 'the document',
+  payments: 'the payment',
+  budgetLines: 'the budget line',
+  expenses: 'the expense',
+  reports: 'the report',
+  activity: 'the note',
+  templates: 'the checklist template',
+  transactions: 'the transaction',
+  splitRules: 'the split rule',
+  files: 'the file',
+  terms: 'the award term',
+};
+
+/** A change in plain words, for "Couldn't save …". */
+export function describeChange(action: GrantsAction): string | undefined {
+  switch (action.type) {
+    case 'batch':
+      return action.actions[0] && describeChange(action.actions[0]);
+    case 'insert':
+    case 'update':
+    case 'remove':
+      return ROW_WORDS[action.key];
+    case 'add-grant':
+    case 'transition':
+      return 'the grant';
+    case 'toggle-task':
+      return 'the task';
+    case 'duplicate-template':
+      return 'the checklist template';
+    case 'assign-transaction':
+    case 'set-transaction-status':
+    case 'restore-transactions':
+      return 'the transaction';
+    case 'move-expenses':
+      return 'the moved expenses';
+    case 'sync':
+    case 'set-quickbooks':
+      return 'the QuickBooks settings';
+    case 'save-reminder-plan':
+    case 'reset-reminder-plan':
+      return 'the reminders';
+    case 'set-reminder-defaults':
+      return 'the reminder defaults';
+  }
+  return undefined;
+}
+
 export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
   id: 'grants',
   seed: () => makeSeed(),
@@ -1063,6 +1115,13 @@ export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
   },
   createActions,
   rules,
+  describe(action) {
+    if (!action.type.startsWith('grants/')) return undefined;
+    return describeChange({
+      ...action,
+      type: action.type.slice('grants/'.length),
+    } as GrantsAction);
+  },
   normalise(raw) {
     if (!raw || typeof raw !== 'object') return undefined;
     const candidate = raw as Record<string, unknown>;

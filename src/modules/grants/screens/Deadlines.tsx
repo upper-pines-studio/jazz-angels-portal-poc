@@ -15,7 +15,7 @@ import { usePageHeader } from '../../../app/Shell';
 import { DeadlineKindBadge, DeadlineStatusBadge } from './badges';
 import { OwnerAvatar } from '../../../app/components/badges';
 import { TableScroll } from '../../../app/components/TableScroll';
-import { WithPanel } from '../../../app/components/SidePanel';
+import { WithPanel, usePanelGuard } from '../../../app/components/SidePanel';
 import { CalendarMonth } from './deadlines/CalendarMonth';
 import { DEADLINE_KINDS, KIND_LABELS } from './deadlines/helpers';
 import { ReportsOwedCard, ReportsOwedEmpty } from './deadlines/ReportsOwedCard';
@@ -69,6 +69,8 @@ export default function Deadlines() {
       : ALL;
   const reportId = params.get('report');
   const [month, setMonth] = React.useState(() => startOfMonth(toDate(today)));
+  // A report's reminders with unsaved edits stay open until the person decides.
+  const { guard, panel: panelGuard } = usePanelGuard();
 
   usePageHeader({
     title: 'Deadlines',
@@ -85,14 +87,26 @@ export default function Deadlines() {
     ) : undefined,
   });
 
-  /** Change some query params, keep the rest. `null` removes one. */
+  /**
+   * Change some query params, keep the rest. `null` removes one. A change that
+   * closes or swaps the open report waits on its panel's Discard when the
+   * panel has unsaved edits; until then the URL, and the panel, stay as they are.
+   */
   const patch = (next: Record<string, string | null>) => {
-    const q = new URLSearchParams(params);
-    for (const [k, v] of Object.entries(next)) {
-      if (v === null) q.delete(k);
-      else q.set(k, v);
-    }
-    setParams(q, { replace: true });
+    const go = () =>
+      setParams(
+        prev => {
+          const q = new URLSearchParams(prev);
+          for (const [k, v] of Object.entries(next)) {
+            if (v === null) q.delete(k);
+            else q.set(k, v);
+          }
+          return q;
+        },
+        { replace: true },
+      );
+    if ('report' in next && next.report !== reportId) guard(go);
+    else go();
   };
   const setView = (next: string) => patch({ view: next === 'calendar' ? 'calendar' : null });
   const setOwner = (next: string) => patch({ owner: next === ALL ? null : next });
@@ -122,7 +136,12 @@ export default function Deadlines() {
   const panelReport = reportId ? state.grants.reports.find(r => r.id === reportId) : undefined;
   const panel =
     panelReport && isReportOpen(panelReport) ? (
-      <ReminderPanel key={panelReport.id} report={panelReport} onClose={closeReport} />
+      <ReminderPanel
+        key={panelReport.id}
+        report={panelReport}
+        onClose={closeReport}
+        guard={panelGuard}
+      />
     ) : undefined;
 
   const openGrant = (d: Deadline) => nav(`/grants/${d.grantId}`);

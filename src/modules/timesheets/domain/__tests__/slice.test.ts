@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { AnyAction } from '../../../../core/module';
 import { makeCoreSeed } from '../../../../core/seed';
 import { guardActions } from '../../../../core/store';
 import type { PortalState, Role, SignedInUser } from '../../../../core/types';
@@ -44,53 +45,57 @@ describe('seed', () => {
   });
 });
 
+/** The slice's own actions over a seeded state, keeping every action they dispatched. */
+function harness(user: SignedInUser = { id: 's-denise', name: 'Denise', role: 'admin' }) {
+  let state = makeSeed();
+  const sent: AnyAction[] = [];
+  const actions = timesheetsSlice.createActions(
+    a => {
+      sent.push(a);
+      state = timesheetsSlice.reducer(state, a);
+    },
+    () => portal(state),
+    { today, newId: prefix => `${prefix}-new`, user },
+  );
+  return { actions, sent, state: () => state };
+}
+
 describe('approveEntry', () => {
   it('stamps the approver and today, and clears it from the queue', () => {
+    const h = harness();
     const entry = submitted();
-    const next = reducer(makeSeed(), {
-      type: 'approve',
-      id: entry.id,
-      by: 's-denise',
-      at: today,
-    });
-    const approved = next.entries.find(e => e.id === entry.id)!;
+    h.actions.approveEntry(entry.id);
+    const approved = h.state().entries.find(e => e.id === entry.id)!;
 
     expect(approved.status).toBe('approved');
     expect(approved.approvedBy).toBe('s-denise');
     expect(approved.approvedAt).toBe(today);
-    expect(awaitingApproval(portal(next))).toHaveLength(1);
+    expect(awaitingApproval(portal(h.state()))).toHaveLength(1);
   });
 
   it('leaves an already approved entry alone', () => {
-    const state = makeSeed();
-    const already = state.entries.find(e => e.status === 'approved')!;
-    const next = reducer(state, { type: 'approve', id: already.id, by: 's-denise', at: today });
-    expect(next).toBe(state);
+    const h = harness();
+    const already = h.state().entries.find(e => e.status === 'approved')!;
+    const before = h.state();
+    h.actions.approveEntry(already.id);
+    expect(h.state()).toBe(before);
+    expect(h.sent).toEqual([]);
   });
 
   it('ignores an id that is not there', () => {
-    const state = makeSeed();
-    expect(reducer(state, { type: 'approve', id: 'nope', by: 's-barry', at: today })).toBe(state);
+    const h = harness();
+    const before = h.state();
+    h.actions.approveEntry('nope');
+    expect(h.state()).toBe(before);
   });
 });
 
 describe('approveEntry from the actions', () => {
   it('credits the approval to the signed-in person', () => {
-    let state = makeSeed();
-    const actions = timesheetsSlice.createActions(
-      a => {
-        state = timesheetsSlice.reducer(state, a);
-      },
-      () => portal(state),
-      {
-        today,
-        newId: prefix => `${prefix}-1`,
-        user: { id: 's-walt', name: 'Walt Brennan', role: 'bookkeeper' },
-      },
-    );
+    const h = harness({ id: 's-walt', name: 'Walt Brennan', role: 'bookkeeper' });
     const entry = submitted();
-    actions.approveEntry(entry.id);
-    expect(state.entries.find(e => e.id === entry.id)).toMatchObject({
+    h.actions.approveEntry(entry.id);
+    expect(h.state().entries.find(e => e.id === entry.id)).toMatchObject({
       status: 'approved',
       approvedBy: 's-walt',
       approvedAt: today,
@@ -100,35 +105,35 @@ describe('approveEntry from the actions', () => {
 
 describe('submitEntry', () => {
   it('moves a draft into the queue and stops there', () => {
-    const state = makeSeed();
-    const draft = state.entries.find(e => e.status === 'draft')!;
-    const next = reducer(state, { type: 'submit', id: draft.id });
+    const h = harness();
+    const draft = h.state().entries.find(e => e.status === 'draft')!;
+    h.actions.submitEntry(draft.id);
 
-    expect(next.entries.find(e => e.id === draft.id)!.status).toBe('submitted');
-    expect(awaitingApproval(portal(next))).toHaveLength(3);
+    expect(h.state().entries.find(e => e.id === draft.id)!.status).toBe('submitted');
+    expect(awaitingApproval(portal(h.state()))).toHaveLength(3);
     // Submitting again changes nothing.
-    expect(reducer(next, { type: 'submit', id: draft.id })).toBe(next);
+    const next = h.state();
+    h.actions.submitEntry(draft.id);
+    expect(h.state()).toBe(next);
+    expect(h.sent).toHaveLength(1);
   });
 });
 
 describe('logHours and deleteEntry', () => {
   it('adds a draft in quarter hours and takes it away again', () => {
-    const entry: TimeEntry = {
-      id: 'te-new',
+    const h = harness({ id: 's-devon', name: 'Devon Price', role: 'teacher' });
+    const id = h.actions.logHours({
       staffId: 's-devon',
       date: today,
       programId: 'in-school',
       activity: 'Paramount MS, in-school band',
-      hours: toQuarterHours(1.3),
-      status: 'draft',
-    };
-    const added = reducer(makeSeed(), { type: 'log', entry });
+      hours: 1.3,
+    });
 
-    expect(added.entries).toHaveLength(makeSeed().entries.length + 1);
-    expect(added.entries.at(-1)!.hours).toBe(1.25);
-    expect(reducer(added, { type: 'delete', id: 'te-new' }).entries).toHaveLength(
-      makeSeed().entries.length,
-    );
+    expect(h.state().entries).toHaveLength(makeSeed().entries.length + 1);
+    expect(h.state().entries.at(-1)).toMatchObject({ id, hours: 1.25, status: 'draft' });
+    h.actions.deleteEntry(id);
+    expect(h.state().entries).toHaveLength(makeSeed().entries.length);
   });
 
   it('never rounds an entry down to nothing', () => {
@@ -138,17 +143,78 @@ describe('logHours and deleteEntry', () => {
   });
 });
 
+describe('the generic actions', () => {
+  it('send every change as insert, update or remove on the entries', () => {
+    const h = harness({ id: 's-devon', name: 'Devon Price', role: 'teacher' });
+    const id = h.actions.logHours({
+      staffId: 's-devon',
+      date: today,
+      programId: 'in-school',
+      activity: 'Sectional',
+      hours: 1,
+    });
+    h.actions.submitEntry(id);
+    h.actions.approveEntry(submitted().id);
+    h.actions.deleteEntry(id);
+    expect(h.sent.map(a => `${a.type} ${a.key}`)).toEqual([
+      'timesheets/insert entries',
+      'timesheets/update entries',
+      'timesheets/update entries',
+      'timesheets/remove entries',
+    ]);
+    expect(h.sent.map(a => timesheetsSlice.describe!(a))).toEqual([
+      'the hours',
+      'the hours',
+      'the approval',
+      'the hours',
+    ]);
+  });
+
+  it('keeps one entry when the same insert arrives twice', () => {
+    const h = harness();
+    h.actions.logHours({
+      staffId: 's-denise',
+      date: today,
+      programId: 'in-school',
+      activity: 'Sectional',
+      hours: 1,
+    });
+    const once = h.state();
+    expect(timesheetsSlice.reducer(once, h.sent[0])).toBe(once);
+  });
+
+  it('applies a batch in order', () => {
+    const entry = submitted();
+    const next = reducer(makeSeed(), {
+      type: 'batch',
+      actions: [
+        { type: 'update', key: 'entries', id: entry.id, patch: { hours: 2 } },
+        { type: 'remove', key: 'entries', id: entry.id },
+      ],
+    });
+    expect(next.entries.some(e => e.id === entry.id)).toBe(false);
+  });
+});
+
 describe('the slice', () => {
   it('only answers to its own namespace', () => {
     const state = makeSeed();
     const entry = submitted();
-    expect(timesheetsSlice.reducer(state, { type: 'grants/approve', id: entry.id })).toBe(state);
+    const patch = { status: 'approved' };
+    expect(
+      timesheetsSlice.reducer(state, {
+        type: 'grants/update',
+        key: 'entries',
+        id: entry.id,
+        patch,
+      }),
+    ).toBe(state);
 
     const next = timesheetsSlice.reducer(state, {
-      type: 'timesheets/approve',
+      type: 'timesheets/update',
+      key: 'entries',
       id: entry.id,
-      by: 's-denise',
-      at: today,
+      patch,
     });
     expect(next.entries.find(e => e.id === entry.id)!.status).toBe('approved');
   });

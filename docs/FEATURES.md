@@ -29,12 +29,12 @@ Shared by every module. Owned by `core/` and `app/`.
 | Sign in: one demo login per role; each belongs to a staff record, whose role it carries; a login with no staff record is refused | (gate) | Mocked: hashes checked in the browser, no server | `app/screens/Login.tsx`, `app/AuthGate.tsx` | `core/auth.ts`: `USERS`, `checkSignIn`; `core/roles.ts` |
 | Permissions: what each role may see and do (decision 0001), one check behind the rail, the routes, the buttons and the store; a refused route shows a no-access screen at its own URL; a refused write is a no-op with a toast | (all) | Built in the browser; the database enforces it once there is one (#22) | `app/screens/NoAccess.tsx`, `app/access.ts`, `app/App.tsx` (`Guarded`) | `core/permissions.ts`: `PERMISSION_TABLE`, `can`; `core/store.tsx`: `guardActions`, `useCan`; each slice's `rules` |
 | Credit for a change: activity, approvals, uploads and transaction status name the signed-in person | (all) | Built | `grant/ActivityTab.tsx`, rail footer in `app/Shell.tsx` | `core/module.ts`: `SliceContext.user`; `core/store.tsx` |
-| Shell: rail, top bar, page header | (all) | Built | `app/Shell.tsx`, `app/responsive.css` | rail is read from each manifest's `nav`, leaving out what the role may not open, and a section with nothing left |
+| Shell: rail, top bar, page header; the top bar says "Saving…" while a save takes a moment and "Couldn't save" with Try again after a failure | (all) | Built | `app/Shell.tsx` (`SaveState`), `app/responsive.css` | rail is read from each manifest's `nav`, leaving out what the role may not open, and a section with nothing left; `core/store.tsx` (`useStore().saving`) |
 | Dashboard | `/` | Built | `app/screens/Dashboard.tsx` | composed from each manifest's `dashboard` |
 | Partners: organizations and venues | `/partners`, `/partners/organizations/:id`, `/partners/venues/:id` | Built | `app/screens/partners/` | `core/store.tsx`, `core/derive.ts` |
 | Settings: staff (title, role, teaches), modules, programs, fiscal year, export, import; with the demo on, the demo date and Reset demo data | `/settings` | Built | `app/screens/Settings.tsx` | `core/store.tsx` (`setDemoToday`, `resetDemo`), `core/repository.ts`, `core/demo.ts` |
-| Storage, and the demo switch: a build with `VITE_DEMO` on starts from the sample data, off starts every slice empty (decision 0004). The demo date is a browser preference, never exported | | Mocked: localStorage, one key per module | | `core/repository.ts` (`fresh`), `core/demo.ts` (`isDemo`), each slice's `seed` and `empty`, `netlify.toml` |
-| Docked side panel | | Built | `app/components/SidePanel.tsx` | |
+| Storage, and the demo switch: a build with `VITE_DEMO` on starts from the sample data, off starts every slice empty (decision 0004). The demo date is a browser preference, never exported. Every change goes through the `Repository` interface: one `load` per module, one `apply` per change, both async; a change shows at once and a failed apply rolls its slice back with a toast saying what was not saved (decision 0003). In `npm run dev`, the `ja-portal:fail-saves` preference makes every save fail | | Mocked: localStorage behind the `Repository` interface, one key per module | | `core/persistence.ts` (`Repository`), `core/repository.ts` (`localRepository`, `fresh`, `FAIL_SAVES_KEY`), `core/live.ts` (the per-slice queue and rollback), `core/demo.ts` (`isDemo`), each slice's `seed`, `empty` and `describe`, `netlify.toml` |
+| Docked side panel; one with unsaved edits asks "Discard your changes?" before it closes or the page swaps it | | Built | `app/components/SidePanel.tsx` (`dirty`, `usePanelGuard`) | |
 | Toasts | | Built | `app/ToastHost.tsx` | |
 | Lint and formatting: module boundaries, storage, `new Date()` in screens | (`npm run lint`) | Built | | `eslint.config.js`, `prettier.config.js` (repo root) |
 
@@ -81,7 +81,7 @@ seed reproduces are in `design/saas/`.
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
 | Transactions: tabs, filters, suggestions, accept, undo | `/transactions`, `?tab=`, `?grant=`, `?line=`, `?q=`, `?account=`, `?period=`, `?page=` | Mocked: QuickBooks feed is seed data | `money/Transactions.tsx`, `money/TransactionRow.tsx`, `money/TransactionMenu.tsx` | `money.ts`: `suggestionFor`, `acceptableSuggestions`, `transactionCounts`, `eligibleLines`, `backupCarry`, `backupMoves`, `transactionSnapshot`; `slice.ts`: `assignTransaction`, `markNotGrantFunded`, `acceptSuggestions`, `restoreTransactions`; `names.ts`: `funderShortName` |
-| Split a transaction across grants, save as a rule | `/transactions?tx=<id>` | Built | `money/SplitPanel.tsx` | `money.ts`: `usualShares`, `splitByPercent`; `slice.ts`: `assignTransaction`, `saveSplitRule`; `names.ts`: `funderShortName` |
+| Split a transaction across grants, save as a rule; an edited split asks before it closes or another transaction opens | `/transactions?tx=<id>` | Built | `money/SplitPanel.tsx`, `money/Transactions.tsx` (`usePanelGuard`) | `money.ts`: `usualShares`, `splitByPercent`; `slice.ts`: `assignTransaction`, `saveSplitRule`; `names.ts`: `funderShortName` |
 | Sync with QuickBooks | button on Transactions and Settings | Mocked: moves `incoming` into `transactions`, once | | `slice.ts`: `syncQuickBooks` |
 | Budget vs. actual: table, warnings, export, print | `/budget`, `?period=fy\|all\|fy-prev`, `?grant=<id>` | Built | `money/BudgetVsActual.tsx`, `money/bva.ts`, `money/bva.css` (print rules) | `money.ts`: `linePaces`, `grantPace`, `lineNeedsAttention`, `trackedGrantsInFy`; `names.ts`: `funderShortName` |
 | Spend-down: charts, figures, advice | `/spend-down`, `?show=`, `#<grantId>` | Built | `money/SpendDown.tsx`, `money/SpendChart.tsx`, `money/spend.ts` (`whatToDo`) | `money.ts`: `grantPace`, `spendSeries`, `paceDriver` |
@@ -93,7 +93,7 @@ seed reproduces are in `design/saas/`.
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
 | Reports owed card | `/deadlines?kind=report` | Built | `deadlines/ReportsOwedCard.tsx` | `money.ts`: `reportsOwed`, `nextReminder`, `reminderSchedule`; `names.ts`: `funderShortName` |
-| Reminders panel: schedule, recipients, email preview | `/deadlines?kind=report&report=<id>` | Mocked: emails are previewed, never sent | `deadlines/ReminderPanel.tsx`, `deadlines/ReminderParts.tsx` | `money.ts`: `reminderPlanFor`, `planSchedule` (the draft), `reminderSchedule`; `slice.ts`: `saveReminderPlan`, `resetReminderPlan`; `names.ts`: `funderShortName` |
+| Reminders panel: schedule, recipients, email preview; with unsaved edits it asks before it closes, and choosing another report leaves it open with its edits until Discard or Keep editing | `/deadlines?kind=report&report=<id>` | Mocked: emails are previewed, never sent | `deadlines/ReminderPanel.tsx`, `deadlines/ReminderParts.tsx`, `Deadlines.tsx` (`usePanelGuard`) | `money.ts`: `reminderPlanFor`, `planSchedule` (the draft), `reminderSchedule`; `slice.ts`: `saveReminderPlan`, `resetReminderPlan`; `names.ts`: `funderShortName` |
 | Default reminders | Deadlines and Settings | Built | `deadlines/ReminderDefaults.tsx`, `settings/RemindersCard.tsx` | `slice.ts`: `updateReminderDefaults` |
 | QuickBooks connection card | `/settings` | Mocked: connect is a stand-in dialog | `settings/QuickBooksCard.tsx` | `slice.ts`: `setQuickBooksConnected`, `syncQuickBooks` |
 
@@ -116,7 +116,7 @@ Module folder `modules/teaching/`. Spec in `docs/PLATFORM.md` section 2.2.
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
 | Schedule: week grid and term view, add class | `/schedule` | Built | `teaching/screens/Schedule.tsx`, `schedule/AddClassDialog.tsx` | `teaching/domain/derive.ts`, `slice.ts` |
-| Roll call | `/roll/:meetingId` | Built | `teaching/screens/RollCall.tsx` | `teaching/domain/slice.ts` |
+| Roll call; when a save fails every mark and the notes stay on screen with "Couldn't save. Your marks are still here." and a Try again that sends them again | `/roll/:meetingId` | Built | `teaching/screens/RollCall.tsx` | `teaching/domain/slice.ts`, `useStore().whenSaved` |
 | Students: roster, waitlist, enroll | `/students` | Built | `teaching/screens/Students.tsx`, `students/EnrollStudentDialog.tsx` | `teaching/domain/derive.ts` |
 | Import students from a CSV: blank template, preview with each row's problems, closest match or waitlist or skip, add all at once | `/students` (Import) | Built; layout proposed in #14, not final until reviewed | `teaching/screens/students/ImportStudentsDialog.tsx`, `students/import.css` | `teaching/domain/import.ts`: `parseStudentsCsv`, `studentsToImport`, `studentsCsvTemplate`, `readCsv`, `writeCsv`; `slice.ts`: `importStudents` |
 | Dashboard today's classes card | `/` | Built | `teaching/screens/TodayPanel.tsx` | `teaching/manifest.tsx` |
@@ -135,7 +135,7 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 
 | Gap | Where |
 | --- | --- |
-| No backend. Everything is localStorage; sign-in is a hash check in the browser. | `core/repository.ts`, `core/auth.ts` |
+| No backend. Everything is localStorage behind the `Repository` interface; sign-in is a hash check in the browser. | `core/repository.ts`, `core/auth.ts` |
 | Permissions are checked in the browser only; anyone with the dev tools can change their role. Row-level security comes with the backend (#22). | `core/permissions.ts` |
 | Rail badges count for everyone: a teacher sees the office's "awaiting approval" count on Timesheets, Read-only the roll calls due on Schedule. | `timesheets/manifest.tsx`, `teaching/manifest.tsx` (`badge`) |
 | QuickBooks is simulated. No real connection, and a sync brings new transactions only once. | `grants/domain/seed-money.ts` (`INCOMING`), `slice.ts` (`sync`) |
@@ -143,7 +143,7 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 | File contents are not stored. A file added in a session is lost on reload; a seeded file is a drawn page. | `grants/screens/money/files.tsx` |
 | "Download all backup" produces a spreadsheet index, not a zip of the files. | `grants/screens/grant/ExpensesTab.tsx` |
 | Reminder emails are never sent. | `grants/screens/deadlines/ReminderPanel.tsx` |
-| Choosing another report while the reminders panel has unsaved edits discards them without asking. | `grants/screens/Deadlines.tsx` |
+| Leaving the page (a rail link, the browser's back) while a docked panel has unsaved edits discards them without asking; only closing the panel and choosing another record ask. | `app/components/SidePanel.tsx` |
 | "Start from the usual five categories" reads its categories and accounts from the demo data. | `grant/BudgetTab.tsx`, `grants/domain/seed-money.ts` (`CATEGORY_ACCOUNTS`) |
 | The award letter card says the terms feed the budget and the spend-down warnings; only Spend-down's "What to do" reads them, and only the terms labelled "Unspent funds" and "Budget changes". | `grant/AwardTab.tsx`, `money/spend.ts` (`whatToDo`) |
 | The dashboard's "expenses missing a receipt" link counts every grant but opens only the first one's Expenses tab. | `money/MoneyPanel.tsx`, `grants/manifest.tsx` |

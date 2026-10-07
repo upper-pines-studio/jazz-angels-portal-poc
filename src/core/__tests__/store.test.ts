@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ModuleSlice } from '../module';
+import { createLiveStore } from '../live';
+import type { AnyAction, ModuleSlice } from '../module';
+import type { Repository } from '../persistence';
 import * as repository from '../repository';
 import type { PortalSlice } from '../repository';
 import { venuesForOrganization } from '../derive';
 import { SEED_TODAY } from '../seed';
-import { coreSlice, makeReducer, newId, resolveToday } from '../store';
+import { coreSlice, describeChange, makeReducer, newId, resolveToday } from '../store';
 import type { PortalState, SignedInUser } from '../types';
 
 const BARRY: SignedInUser = { id: 's-barry', name: 'Barry Cogert', role: 'director' };
@@ -281,5 +283,190 @@ describe('the core slice', () => {
       settings: {},
     });
     expect(filled!.staff[0]).toMatchObject({ title: 'Office Administrator', role: 'bookkeeper' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Saving through the repository (#19)
+// ---------------------------------------------------------------------------
+
+/**
+ * A repository that answers when the test says so: each apply waits in
+ * `pending` until `succeed()` or `fail()` settles the oldest one.
+ */
+function fakeRepository() {
+  const pending: Array<{
+    sliceId: string;
+    action: AnyAction;
+    next: unknown;
+    resolve: () => void;
+    reject: (e: Error) => void;
+  }> = [];
+  const saved: Record<string, unknown> = {};
+  const repo: Repository = {
+    load: slice => Promise.resolve(slice.seed('2026-09-13')),
+    apply: (sliceId, action, next) =>
+      new Promise((resolve, reject) => pending.push({ sliceId, action, next, resolve, reject })),
+  };
+  const flush = () => new Promise(r => setTimeout(r, 0));
+  return {
+    repo,
+    pending,
+    saved,
+    async succeed() {
+      const p = pending.shift()!;
+      saved[p.sliceId] = p.next;
+      p.resolve();
+      await flush();
+    },
+    async fail() {
+      pending.shift()!.reject(new Error('The server said no.'));
+      await flush();
+    },
+  };
+}
+
+const DESCRIBED = [{ ...counter, describe: () => 'the count' }, notes] as unknown as PortalSlice[];
+
+function live(repo: Repository, failures: string[] = []) {
+  return createLiveStore({
+    initial: repository.loadState(SLICES, '2026-09-13', true),
+    reducer: makeReducer(SLICES),
+    repository: repo,
+    describe: (sliceId, action) => describeChange(DESCRIBED, sliceId, action),
+    onSaveFailed: message => failures.push(message),
+  });
+}
+
+describe('saving through the repository', () => {
+  it('loads each slice with one call per slice', async () => {
+    const fake = fakeRepository();
+    const loaded = await Promise.all(SLICES.map(s => fake.repo.load(s, '2026-09-13', true)));
+    expect(loaded).toEqual([{ count: 0 }, { notes: [] }]);
+  });
+
+  it('shows a change at once and applies it with the slice it made', async () => {
+    const fake = fakeRepository();
+    const store = live(fake.repo);
+    store.dispatch({ type: 'counter/bump' });
+
+    expect(asTest(store.getState()).counter.count).toBe(1);
+    expect(store.getSaving().status).toBe('saving');
+    expect(fake.pending.map(p => [p.sliceId, p.action.type, p.next])).toEqual([
+      ['counter', 'counter/bump', { count: 1 }],
+    ]);
+
+    await fake.succeed();
+    expect(store.getSaving()).toEqual({ status: 'idle' });
+    expect(fake.saved.counter).toEqual({ count: 1 });
+  });
+
+  it('rolls the slice back and says what was not saved when the apply fails', async () => {
+    const fake = fakeRepository();
+    const failures: string[] = [];
+    const store = live(fake.repo, failures);
+    store.dispatch({ type: 'notes/add', text: 'kept' });
+    await fake.succeed();
+    store.dispatch({ type: 'counter/bump' });
+    store.dispatch({ type: 'notes/add', text: 'also kept' });
+
+    await fake.fail(); // the bump
+    expect(asTest(store.getState()).counter.count).toBe(0);
+    expect(failures).toEqual(["Couldn't save the count"]);
+    expect(store.getSaving().status).toBe('error');
+    expect(store.getSaving().error).toBe("Couldn't save the count");
+
+    // The other slice is not touched by the rollback.
+    expect(asTest(store.getState()).notes.notes).toEqual(['kept', 'also kept']);
+    await fake.succeed();
+    expect(asTest(store.getState()).notes.notes).toEqual(['kept', 'also kept']);
+  });
+
+  it('applies one change at a time per slice and drops what was queued behind a failure', async () => {
+    const fake = fakeRepository();
+    const store = live(fake.repo);
+    store.dispatch({ type: 'counter/bump' });
+    store.dispatch({ type: 'counter/bump' });
+    store.dispatch({ type: 'counter/bump' });
+    expect(asTest(store.getState()).counter.count).toBe(3);
+    // Only the first is in flight; the next waits for it.
+    expect(fake.pending).toHaveLength(1);
+
+    await fake.succeed();
+    expect(fake.pending.map(p => p.next)).toEqual([{ count: 2 }]);
+    await fake.fail();
+    // Back to the last saved state; the third bump went with the second.
+    expect(asTest(store.getState()).counter.count).toBe(1);
+    expect(fake.pending).toHaveLength(0);
+    expect(fake.saved.counter).toEqual({ count: 1 });
+  });
+
+  it('clears the failure on the next success', async () => {
+    const fake = fakeRepository();
+    const store = live(fake.repo);
+    store.dispatch({ type: 'counter/bump' });
+    await fake.fail();
+    expect(store.getSaving().status).toBe('error');
+
+    store.dispatch({ type: 'notes/add', text: 'fine' });
+    expect(store.getSaving().status).toBe('error');
+    await fake.succeed();
+    expect(store.getSaving()).toEqual({ status: 'idle' });
+  });
+
+  it('sends what failed again on retry', async () => {
+    const fake = fakeRepository();
+    const store = live(fake.repo);
+    store.dispatch({ type: 'counter/bump' });
+    store.dispatch({ type: 'counter/bump' });
+    await fake.fail();
+    expect(asTest(store.getState()).counter.count).toBe(0);
+
+    store.getSaving().retry!();
+    expect(asTest(store.getState()).counter.count).toBe(2);
+    expect(store.getSaving().status).toBe('saving');
+    await fake.succeed();
+    await fake.succeed();
+    expect(fake.saved.counter).toEqual({ count: 2 });
+    expect(store.getSaving()).toEqual({ status: 'idle' });
+  });
+
+  it('tells a screen waiting on the save whether it went through', async () => {
+    const fake = fakeRepository();
+    const store = live(fake.repo);
+    expect(await store.whenSaved()).toBe(true);
+
+    store.dispatch({ type: 'counter/bump' });
+    const first = store.whenSaved();
+    await fake.succeed();
+    expect(await first).toBe(true);
+
+    store.dispatch({ type: 'counter/bump' });
+    const second = store.whenSaved();
+    await fake.fail();
+    expect(await second).toBe(false);
+  });
+
+  it('applies an import or a reset once per slice, and names it when it fails', async () => {
+    const fake = fakeRepository();
+    const failures: string[] = [];
+    const store = live(fake.repo, failures);
+    store.dispatch({
+      type: 'portal/replace',
+      state: { counter: { count: 9 }, notes: { notes: ['imported'] } },
+    });
+    expect(fake.pending.map(p => p.sliceId)).toEqual(['counter', 'notes']);
+    await fake.succeed();
+    await fake.fail();
+    expect(failures).toEqual(["Couldn't save the new data"]);
+    expect(asTest(store.getState())).toEqual({ counter: { count: 9 }, notes: { notes: [] } });
+  });
+
+  it('applies nothing for a change that changes nothing', () => {
+    const fake = fakeRepository();
+    const store = live(fake.repo);
+    store.dispatch({ type: 'teaching/roll' });
+    expect(fake.pending).toHaveLength(0);
+    expect(store.getSaving().status).toBe('idle');
   });
 });

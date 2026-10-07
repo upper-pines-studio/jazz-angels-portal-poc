@@ -6,10 +6,10 @@ import type {
   AttendanceRecord,
   ClassMeeting,
   Ensemble,
-  Mark,
   Student,
   TeachingActions,
   TeachingState,
+  Term,
 } from './types';
 
 /**
@@ -31,97 +31,104 @@ declare module '../../../core/types' {
 // Reducer
 // ---------------------------------------------------------------------------
 
-export type TeachingAction =
-  | { type: 'add-meeting'; meeting: ClassMeeting }
-  | { type: 'set-mark'; recordId: string; meetingId: string; studentId: string; mark: Mark }
-  | { type: 'submit-roll-call'; meetingId: string; at: string; notes?: string }
-  | { type: 'reopen-roll-call'; meetingId: string }
-  | { type: 'enroll-student'; student: Student }
-  | { type: 'update-student'; id: string; patch: Partial<Student> }
-  | { type: 'import-students'; students: Student[] };
-
-function withId<T extends { id: string }>(rows: T[], id: string, patch: Partial<T>): T[] {
-  return rows.map(row => (row.id === id ? { ...row, ...patch } : row));
+/** The rows each collection holds, so `insert` and `update` stay typed per key. */
+interface Collections {
+  terms: Term;
+  ensembles: Ensemble;
+  meetings: ClassMeeting;
+  students: Student;
+  attendance: AttendanceRecord;
 }
+
+type CollectionKey = keyof Collections;
+
+type InsertAction = {
+  [K in CollectionKey]: { type: 'insert'; key: K; item: Collections[K] };
+}[CollectionKey];
+
+type UpdateAction = {
+  [K in CollectionKey]: { type: 'update'; key: K; id: string; patch: Partial<Collections[K]> };
+}[CollectionKey];
+
+/**
+ * Every change the teaching slice makes: a row added, changed or taken away,
+ * or several of those as one change. The rules (a submitted roll is closed,
+ * the unmarked go down as present) live in `createActions`, which reads the
+ * state and sends the rows that follow from it, so one repository `apply`
+ * covers every module.
+ */
+export type TeachingAction =
+  | InsertAction
+  | UpdateAction
+  | { type: 'remove'; key: CollectionKey; id: string }
+  | { type: 'batch'; actions: TeachingAction[] };
+
+type Row = { id: string };
 
 /** The module's own reducer. The store only ever reaches it through the slice. */
 export function reducer(state: TeachingState, action: TeachingAction): TeachingState {
   switch (action.type) {
-    case 'add-meeting':
-      return { ...state, meetings: [...state.meetings, action.meeting] };
+    case 'batch':
+      return action.actions.reduce(reducer, state);
 
-    case 'set-mark': {
-      const meeting = state.meetings.find(m => m.id === action.meetingId);
-      // A submitted roll call is the record. Reopen it before changing a mark.
-      if (!meeting || meeting.rollSubmittedAt) return state;
-
-      const existing = state.attendance.find(
-        a => a.meetingId === action.meetingId && a.studentId === action.studentId,
-      );
-      if (existing) {
-        if (existing.mark === action.mark) return state;
-        return {
-          ...state,
-          attendance: withId(state.attendance, existing.id, { mark: action.mark }),
-        };
-      }
-      const record: AttendanceRecord = {
-        id: action.recordId,
-        meetingId: action.meetingId,
-        studentId: action.studentId,
-        mark: action.mark,
-      };
-      return { ...state, attendance: [...state.attendance, record] };
+    case 'insert': {
+      const rows = state[action.key] as Row[];
+      // Sent twice (a retry), it is still one row.
+      if (rows.some(row => row.id === action.item.id)) return state;
+      return { ...state, [action.key]: [...rows, action.item] };
     }
 
-    case 'submit-roll-call': {
-      const meeting = state.meetings.find(m => m.id === action.meetingId);
-      if (!meeting) return state;
-      // Everyone starts present: whoever on the roster was not marked late or
-      // absent is written down as present.
-      const marked = new Set(
-        state.attendance.filter(a => a.meetingId === meeting.id).map(a => a.studentId),
-      );
-      const present: AttendanceRecord[] = state.students
-        .filter(
-          s => s.status === 'enrolled' && s.ensembleId === meeting.ensembleId && !marked.has(s.id),
-        )
-        .map(s => ({
-          id: `att-${meeting.id}-${s.id}`,
-          meetingId: meeting.id,
-          studentId: s.id,
-          mark: 'present',
-        }));
+    case 'update': {
+      const rows = state[action.key] as Row[];
+      if (!rows.some(row => row.id === action.id)) return state;
       return {
         ...state,
-        attendance: present.length ? [...state.attendance, ...present] : state.attendance,
-        meetings: withId(state.meetings, meeting.id, {
-          rollSubmittedAt: action.at,
-          notes: action.notes ?? meeting.notes,
-        }),
+        [action.key]: rows.map(row => (row.id === action.id ? { ...row, ...action.patch } : row)),
       };
     }
 
-    case 'reopen-roll-call': {
-      const meeting = state.meetings.find(m => m.id === action.meetingId);
-      if (!meeting?.rollSubmittedAt) return state;
-      const { rollSubmittedAt: _closed, ...open } = meeting;
-      return { ...state, meetings: state.meetings.map(m => (m.id === meeting.id ? open : m)) };
+    case 'remove': {
+      const rows = state[action.key] as Row[];
+      if (!rows.some(row => row.id === action.id)) return state;
+      return { ...state, [action.key]: rows.filter(row => row.id !== action.id) };
     }
-
-    case 'enroll-student':
-      return { ...state, students: [...state.students, action.student] };
-
-    case 'update-student':
-      return { ...state, students: withId(state.students, action.id, action.patch) };
-
-    case 'import-students':
-      if (action.students.length === 0) return state;
-      return { ...state, students: [...state.students, ...action.students] };
 
     default:
       return state;
   }
+}
+
+/** A change in plain words, for "Couldn't save …". */
+export function describeChange(action: TeachingAction): string | undefined {
+  switch (action.type) {
+    case 'batch': {
+      const closesRoll = action.actions.some(
+        a => a.type === 'update' && a.key === 'meetings' && 'rollSubmittedAt' in a.patch,
+      );
+      if (closesRoll) return 'the roll call';
+      if (action.actions.length > 1 && action.actions.every(a => a.type === 'insert'))
+        return action.actions[0].key === 'students' ? 'the imported students' : undefined;
+      return action.actions[0] && describeChange(action.actions[0]);
+    }
+    case 'insert':
+    case 'update':
+    case 'remove':
+      switch (action.key) {
+        case 'attendance':
+          return 'the roll call mark';
+        case 'meetings':
+          return action.type === 'update' && 'rollSubmittedAt' in action.patch
+            ? 'the roll call'
+            : 'the class';
+        case 'students':
+          return 'the student';
+        case 'ensembles':
+          return 'the ensemble';
+        case 'terms':
+          return 'the term';
+      }
+  }
+  return undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -130,39 +137,89 @@ export function reducer(state: TeachingState, action: TeachingAction): TeachingS
 
 function createActions(
   dispatch: (action: AnyAction) => void,
-  _getState: () => { teaching: TeachingState },
+  getState: () => { teaching: TeachingState },
   ctx: SliceContext,
 ): TeachingActions {
   const { newId } = ctx;
   /** Every action leaves this module namespaced, so the store can route it. */
   const send = (action: TeachingAction) => dispatch({ ...action, type: `teaching/${action.type}` });
+  const insert = <K extends CollectionKey>(key: K, item: Collections[K]): TeachingAction =>
+    ({ type: 'insert', key, item }) as TeachingAction;
+  const update = <K extends CollectionKey>(
+    key: K,
+    id: string,
+    patch: Partial<Collections[K]>,
+  ): TeachingAction => ({ type: 'update', key, id, patch }) as TeachingAction;
+  const meetingOf = (id: string) => getState().teaching.meetings.find(m => m.id === id);
 
   return {
     addMeeting(input) {
       const id = newId('m');
-      send({ type: 'add-meeting', meeting: { ...input, id } });
+      send(insert('meetings', { ...input, id }));
       return id;
     },
     setMark(meetingId, studentId, mark) {
-      send({ type: 'set-mark', recordId: newId('att'), meetingId, studentId, mark });
+      const meeting = meetingOf(meetingId);
+      // A submitted roll call is the record. Reopen it before changing a mark.
+      if (!meeting || meeting.rollSubmittedAt) return;
+      const existing = getState().teaching.attendance.find(
+        a => a.meetingId === meetingId && a.studentId === studentId,
+      );
+      if (existing) {
+        if (existing.mark !== mark) send(update('attendance', existing.id, { mark }));
+        return;
+      }
+      send(insert('attendance', { id: newId('att'), meetingId, studentId, mark }));
     },
     submitRollCall(meetingId, notes) {
-      send({ type: 'submit-roll-call', meetingId, at: new Date().toISOString(), notes });
+      const meeting = meetingOf(meetingId);
+      if (!meeting) return;
+      const { attendance, students } = getState().teaching;
+      // Everyone starts present: whoever on the roster was not marked late or
+      // absent is written down as present.
+      const marked = new Set(
+        attendance.filter(a => a.meetingId === meeting.id).map(a => a.studentId),
+      );
+      const present = students
+        .filter(
+          s => s.status === 'enrolled' && s.ensembleId === meeting.ensembleId && !marked.has(s.id),
+        )
+        .map(s =>
+          insert('attendance', {
+            id: `att-${meeting.id}-${s.id}`,
+            meetingId: meeting.id,
+            studentId: s.id,
+            mark: 'present',
+          }),
+        );
+      // The marks and the closed roll are one change: saved together or not at all.
+      send({
+        type: 'batch',
+        actions: [
+          ...present,
+          update('meetings', meeting.id, {
+            rollSubmittedAt: new Date().toISOString(),
+            notes: notes ?? meeting.notes,
+          }),
+        ],
+      });
     },
     reopenRollCall(meetingId) {
-      send({ type: 'reopen-roll-call', meetingId });
+      if (!meetingOf(meetingId)?.rollSubmittedAt) return;
+      send(update('meetings', meetingId, { rollSubmittedAt: undefined }));
     },
     enrollStudent(input) {
       const id = newId('st');
-      send({ type: 'enroll-student', student: { ...input, id } });
+      send(insert('students', { ...input, id }));
       return id;
     },
     updateStudent(id, patch) {
-      send({ type: 'update-student', id, patch });
+      send(update('students', id, patch));
     },
     importStudents(inputs) {
+      if (inputs.length === 0) return 0;
       const students = inputs.map(input => ({ ...input, id: newId('st') }));
-      send({ type: 'import-students', students });
+      send({ type: 'batch', actions: students.map(s => insert('students', s)) });
       return students.length;
     },
   };
@@ -204,6 +261,13 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     } as TeachingAction);
   },
   createActions,
+  describe(action) {
+    if (!action.type.startsWith('teaching/')) return undefined;
+    return describeChange({
+      ...action,
+      type: action.type.slice('teaching/'.length),
+    } as TeachingAction);
+  },
   rules: {
     addMeeting: 'schedule',
     // A teacher takes roll for the classes they lead; the office for any class.

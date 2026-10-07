@@ -12,7 +12,11 @@ interface ToastItem {
 type ToastInput = Omit<ToastItem, 'id' | 'tone'> & { tone?: ToastTone };
 const Ctx = React.createContext<(t: ToastInput) => void>(() => {});
 
-/** `const toast = useToast(); toast({ title: 'Grant added' })` — bottom-right, auto-dismiss in 4s. Tone defaults to success. */
+/**
+ * `const toast = useToast(); toast({ title: 'Grant added' })` — bottom-right, auto-dismiss in 4s.
+ * Tone defaults to success. A danger toast, such as a change that could not be saved, stays 8s so
+ * it is not missed.
+ */
 export function useToast() {
   return React.useContext(Ctx);
 }
@@ -22,7 +26,8 @@ export function ToastHost({ children }: { children: React.ReactNode }) {
   const push = React.useCallback((t: ToastInput) => {
     const id = Date.now() + Math.random();
     setItems(xs => [...xs, { tone: 'success', ...t, id }]);
-    setTimeout(() => setItems(xs => xs.filter(x => x.id !== id)), 4000);
+    const ms = t.tone === 'danger' ? 8000 : 4000;
+    setTimeout(() => setItems(xs => xs.filter(x => x.id !== id)), ms);
   }, []);
   return (
     <Ctx.Provider value={push}>
