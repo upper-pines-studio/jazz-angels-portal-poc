@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
+import { archiveFields, isArchived, normaliseArchived, restoreFields } from './archive';
 import { DEMO_TODAY_KEY, demoTodayFrom, demoTodayToStore, isDemo } from './demo';
 import { toISO } from './format';
 import type { ActionRules, AnyAction, ModuleSlice } from './module';
@@ -94,14 +95,41 @@ function normaliseStaff(raw: Partial<StaffMember>, seeded: StaffMember[]): Staff
       : typeof raw.role === 'string' && !isRole(raw.role)
         ? raw.role
         : (seed?.title ?? '');
-  return {
+  return normaliseArchived({
     ...raw,
     id: String(raw.id ?? ''),
     name: String(raw.name ?? ''),
     title,
     role,
     teaches: raw.teaches ?? false,
-  };
+  });
+}
+
+/** Why a person may not archive this record, or true when they may. */
+function mayArchiveStaff(user: SignedInUser, state: PortalState, id: string): boolean | string {
+  if (id === user.id) return "You can't archive yourself. Ask another admin.";
+  const role = state.core.staff.find(s => s.id === id)?.role;
+  return mayChangeStaff(user.role, role, role);
+}
+
+/** A core change in plain words, for "Couldn't save …". */
+export function describeCoreChange(action: AnyAction): string | undefined {
+  const a = action as CoreAction;
+  if ('patch' in a && a.patch && 'archivedAt' in a.patch) return 'the archive change';
+  switch (a.type) {
+    case 'core/add-staff':
+    case 'core/update-staff':
+      return 'the person';
+    case 'core/add-organization':
+    case 'core/update-organization':
+      return 'the partner';
+    case 'core/add-venue':
+    case 'core/update-venue':
+      return 'the venue';
+    case 'core/update-settings':
+      return 'the settings';
+  }
+  return undefined;
 }
 
 /** The staff and settings half of `actions.core`; the store adds the data half. */
@@ -115,7 +143,9 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
   seed: () => makeCoreSeed(),
   empty: () => makeCoreEmpty(),
   reducer: coreReducer,
-  createActions(dispatch, getState) {
+  describe: describeCoreChange,
+  createActions(dispatch, getState, ctx) {
+    const archived = () => archiveFields(ctx.user, ctx.today);
     return {
       addStaff(input) {
         const id = newId('s');
@@ -141,6 +171,24 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       updateVenue(id, patch) {
         dispatch({ type: 'core/update-venue', id, patch });
       },
+      archiveStaff(id) {
+        dispatch({ type: 'core/update-staff', id, patch: archived() });
+      },
+      restoreStaff(id) {
+        dispatch({ type: 'core/update-staff', id, patch: restoreFields() });
+      },
+      archiveOrganization(id) {
+        dispatch({ type: 'core/update-organization', id, patch: archived() });
+      },
+      restoreOrganization(id) {
+        dispatch({ type: 'core/update-organization', id, patch: restoreFields() });
+      },
+      archiveVenue(id) {
+        dispatch({ type: 'core/update-venue', id, patch: archived() });
+      },
+      restoreVenue(id) {
+        dispatch({ type: 'core/update-venue', id, patch: restoreFields() });
+      },
       updateSettings(patch) {
         dispatch({ type: 'core/update-settings', patch });
       },
@@ -159,10 +207,20 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
         state.core.staff.find(s => s.id === id)?.role,
         patch.role ?? state.core.staff.find(s => s.id === id)?.role,
       ),
+    // Whoever may edit a person may archive them (decision 0002), but not themself.
+    archiveStaff: mayArchiveStaff,
+    restoreStaff: (user, state, id) => {
+      const role = state.core.staff.find(s => s.id === id)?.role;
+      return mayChangeStaff(user.role, role, role);
+    },
     addOrganization: 'partners',
     updateOrganization: 'partners',
+    archiveOrganization: 'partners',
+    restoreOrganization: 'partners',
     addVenue: 'partners',
     updateVenue: 'partners',
+    archiveVenue: 'partners',
+    restoreVenue: 'partners',
     // The fiscal year and the module switches are the system's own settings,
     // so they go with "Modules, import, export".
     updateSettings: 'modules',
@@ -179,7 +237,9 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     const staff = c.staff.map(s => normaliseStaff(s, seeded.staff));
     // Every login belongs to a staff record; a payload without that person
     // gets them back, so the login still resolves. A demo build adds back the
-    // whole seeded staff; an empty one only the people the logins need.
+    // whole seeded staff; an empty one only the people the logins need. A
+    // person who is there but archived stays archived: only a missing record
+    // is added back, never an archived one made current again.
     const required = demo ? seeded.staff : loginStaff();
     for (const s of required) if (!staff.some(x => x.id === s.id)) staff.push(s);
     // A demo payload saved before places existed gets the seeded ones, so the
@@ -188,11 +248,11 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       staff,
       programs: c.programs.map(p => ({ ...p, short: p.short ?? p.name })),
       organizations: Array.isArray(c.organizations)
-        ? c.organizations
+        ? c.organizations.map(normaliseArchived)
         : demo
           ? seeded.organizations
           : [],
-      venues: Array.isArray(c.venues) ? c.venues : demo ? seeded.venues : [],
+      venues: Array.isArray(c.venues) ? c.venues.map(normaliseArchived) : demo ? seeded.venues : [],
       settings: {
         fiscalYearStartMonth: settings.fiscalYearStartMonth ?? 7,
         enabledModules: settings.enabledModules ?? [...DEFAULT_ENABLED_MODULES],
@@ -352,9 +412,10 @@ export interface StoreProviderProps {
   userId: string;
   /**
    * Called when `userId` names nobody in the staff list (an import without
-   * them, say). Nothing below the provider renders until it is fixed.
+   * them, say: `no-staff`), or someone archived (`archived`). Nothing below
+   * the provider renders until it is fixed.
    */
-  onUnknownUser?: () => void;
+  onUnknownUser?: (reason: 'no-staff' | 'archived') => void;
   /** Called with the reason when an action is refused for the signed-in person's role. */
   onRefused?: (message: string) => void;
   /**
@@ -452,13 +513,15 @@ function LiveProvider({
   const [demoToday, setDemoTodayState] = React.useState(() => savedDemoToday(demo));
   const today = fixedToday ?? resolveToday(demoToday, clock);
 
-  const member = state.core.staff.find(s => s.id === userId);
+  const found = state.core.staff.find(s => s.id === userId);
+  // An archived person is nobody to be: an import that archives them signs them out.
+  const member = found && !isArchived(found) ? found : undefined;
   const name = member?.name ?? '';
   const role = member?.role ?? 'read-only';
   const user = useMemo<SignedInUser>(() => ({ id: userId, name, role }), [userId, name, role]);
   useEffect(() => {
-    if (!member) onUnknownUser?.();
-  }, [member, onUnknownUser]);
+    if (!member) onUnknownUser?.(found ? 'archived' : 'no-staff');
+  }, [member, found, onUnknownUser]);
 
   const refusedRef = React.useRef(onRefused);
   refusedRef.current = onRefused;

@@ -7,6 +7,8 @@
  * `YYYY-MM-DD` strings. Format only at render time (`core/format.ts`).
  */
 
+import type { Archivable } from './archive';
+
 export type ProgramId =
   | 'studio-sessions'
   | 'in-school'
@@ -22,7 +24,11 @@ export type ProgramId =
 export type Role =
   'admin' | 'director' | 'office-manager' | 'bookkeeper' | 'teacher' | 'assistant' | 'read-only';
 
-export interface StaffMember {
+/**
+ * A person on the staff. Archived (decision 0002) when they leave: they cannot
+ * sign in, drop off the pickers, and keep the credit for everything they did.
+ */
+export interface StaffMember extends Archivable {
   id: string;
   name: string;
   /** "Program Director", "Teaching Artist" — how they read on a grant or a class. */
@@ -55,7 +61,7 @@ export type OrganizationKind = 'school-district' | 'school' | 'community' | 'gov
  * city department. The relationship lives here (who to call, what was agreed);
  * the physical places belong to it as `Venue`s. A district has many schools.
  */
-export interface Organization {
+export interface Organization extends Archivable {
   id: string;
   name: string;
   kind: OrganizationKind;
@@ -82,7 +88,7 @@ export type VenueKind = 'studio' | 'school' | 'community' | 'performance' | 'oth
  * is one; each school in a district is another. A venue may belong to an
  * `Organization`; the studio and a rented hall do not.
  */
-export interface Venue {
+export interface Venue extends Archivable {
   id: string;
   /** "Paramount Middle School", "Jazz Angels Studio". */
   name: string;
@@ -130,6 +136,20 @@ export interface CoreActions {
   /** Add a place classes can meet. Returns the new id. */
   addVenue(input: Omit<Venue, 'id'>): string;
   updateVenue(id: string, patch: Partial<Venue>): void;
+  /**
+   * Archive a person (decision 0002): they leave the staff list and the
+   * pickers and cannot sign in; their past work still names them. Nobody
+   * archives themself.
+   */
+  archiveStaff(id: string): void;
+  /** Put an archived person back on the staff list; they can sign in again. */
+  restoreStaff(id: string): void;
+  /** Archive a partner. Its venues stay as they are: nothing cascades. */
+  archiveOrganization(id: string): void;
+  restoreOrganization(id: string): void;
+  /** Archive a venue. Classes that met there keep it in their history. */
+  archiveVenue(id: string): void;
+  restoreVenue(id: string): void;
   updateSettings(patch: Partial<AppSettings>): void;
   /** Turn a module on or off. Its data stays either way. */
   setModuleEnabled(id: string, on: boolean): void;
