@@ -1,8 +1,8 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Sidebar, TopBar, Icon, IconButton, Avatar, Breadcrumb } from '../design-system';
+import { Sidebar, TopBar, Icon, IconButton, Avatar, Breadcrumb, Button } from '../design-system';
 import { ROLE_LABELS, meetsAny, repository, useStore } from '../core';
-import type { PortalState, SignedInUser } from '../core';
+import type { PortalState, Saving, SignedInUser } from '../core';
 import { MODULES } from '../modules';
 import { mayOpen } from './access';
 import { useAuth } from './AuthGate';
@@ -114,10 +114,52 @@ function activeFor(items: RailItem[], pathname: string): string {
   return hit.length ? (hit[0].id as string) : '/';
 }
 
+/** How long a save may take before the top bar says "Saving…", so a quick one never flickers. */
+const SAVING_DELAY_MS = 400;
+
+/**
+ * One quiet word in the top bar: "Saving…" while a change is on its way and
+ * has taken a moment, "Couldn't save" with Try again after a failure, nothing
+ * otherwise. The design system has no spinner, so it is words.
+ */
+function SaveState({ saving }: { saving: Saving }) {
+  const [slow, setSlow] = React.useState(false);
+  React.useEffect(() => {
+    if (saving.status !== 'saving') {
+      setSlow(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setSlow(true), SAVING_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [saving.status]);
+
+  const text = { font: 'var(--type-body-sm)', whiteSpace: 'nowrap' } as const;
+  return (
+    <span
+      role="status"
+      aria-live="polite"
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}
+    >
+      {saving.status === 'error' ? (
+        <>
+          <span style={{ ...text, color: 'var(--danger-500)' }}>Couldn't save</span>
+          {saving.retry && (
+            <Button variant="link" size="sm" onClick={saving.retry}>
+              Try again
+            </Button>
+          )}
+        </>
+      ) : saving.status === 'saving' && slow ? (
+        <span style={{ ...text, color: 'var(--text-muted)' }}>Saving…</span>
+      ) : null}
+    </span>
+  );
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const nav = useNavigate();
   const loc = useLocation();
-  const { state, today, user } = useStore();
+  const { state, today, user, saving } = useStore();
   const { signOut } = useAuth();
   const [header, setHeader] = React.useState<PageHeader>({ title: '' });
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -226,7 +268,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
               title={header.title}
               subtitle={header.subtitle}
               breadcrumb={header.crumbs && <Breadcrumb items={header.crumbs} />}
-              actions={header.actions}
+              actions={
+                <>
+                  <SaveState saving={saving} />
+                  {header.actions}
+                </>
+              }
             />
           </div>
           <main className="ja-main">
