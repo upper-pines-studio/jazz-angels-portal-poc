@@ -114,7 +114,7 @@ export default function Dashboard() {
             <EmptyState
               icon={<Icon name="check" size={22} />}
               title="Nothing needs attention"
-              message="Everything due in the next 14 days is done."
+              message="Deadlines, reports, roll calls and hours waiting for approval show up here when they are overdue or due in the next 14 days."
             />
           ) : (
             <TableScroll minWidth={680}>

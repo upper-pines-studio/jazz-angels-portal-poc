@@ -20,6 +20,7 @@ import {
   bvaCsvRows,
   bvaGrants,
   bvaTotals,
+  grantsForPeriod,
   hasPreviousFy,
   howLongBefore,
   isIdle,
@@ -135,7 +136,9 @@ export default function BudgetVsActual() {
   });
 
   if (rows.length === 0) {
-    const where = period === 'all' ? 'yet' : `in ${periodLabel}`;
+    // With no grant with money in any period, "show all" would show nothing either.
+    const noneAtAll = period === 'all' || grantsForPeriod(state, today, 'all').length === 0;
+    const where = noneAtAll ? 'yet' : `in ${periodLabel}`;
     return (
       <Card padding="var(--space-6)">
         <EmptyState
@@ -143,7 +146,7 @@ export default function BudgetVsActual() {
           title={`No grants with money ${where}`}
           message="A grant shows up here once it is awarded and the award amount is recorded. Record the award on the grant, add its budget lines, and spending from QuickBooks is measured against them."
           action={
-            period === 'all' ? (
+            noneAtAll ? (
               <Button variant="primary" size="sm" onClick={() => nav('/grants')}>
                 Go to grants
               </Button>

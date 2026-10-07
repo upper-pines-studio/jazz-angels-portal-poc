@@ -177,11 +177,16 @@ export default function Transactions() {
     }, 900);
   };
 
+  // A new office: QuickBooks has never been connected, so nothing has ever arrived.
+  const neverSynced = !qb.lastSyncedAt;
+
   usePageHeader({
     title: 'Transactions',
     subtitle: qb.connected
       ? `QuickBooks Online is connected · Last synced ${syncedLabel(state, today)} · Read only, nothing is written back`
-      : `QuickBooks is not connected · Last synced ${syncedLabel(state, today)} · Nothing new arrives until it is connected again`,
+      : neverSynced
+        ? 'QuickBooks is not connected yet · Spending arrives here once it is'
+        : `QuickBooks is not connected · Last synced ${syncedLabel(state, today)} · Nothing new arrives until it is connected again`,
     actions: maySync ? (
       <Button
         variant="secondary"
@@ -418,8 +423,17 @@ export default function Transactions() {
         <div className="tx-banner" role="status">
           <Icon name="unplug" size={18} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <strong>QuickBooks is not connected.</strong> What is already here stays, and you can
-            keep assigning it. Nothing new comes in until QuickBooks is connected again.
+            {neverSynced ? (
+              <>
+                <strong>QuickBooks is not connected yet.</strong> Once it is, new spending arrives
+                here each morning, ready to assign to a grant's budget line.
+              </>
+            ) : (
+              <>
+                <strong>QuickBooks is not connected.</strong> What is already here stays, and you
+                can keep assigning it. Nothing new comes in until QuickBooks is connected again.
+              </>
+            )}
           </div>
           {mayConnect && (
             <Button variant="secondary" size="sm" onClick={() => nav('/settings')}>
@@ -517,6 +531,7 @@ export default function Transactions() {
               onSync={maySync ? sync : undefined}
               onSettings={mayConnect ? () => nav('/settings') : undefined}
               lastSynced={syncedLabel(state, today)}
+              anyTransactions={state.grants.transactions.length > 0}
             />
           ) : rows.length === 0 ? (
             <EmptyState
@@ -654,6 +669,7 @@ function TabEmpty({
   onSync,
   onSettings,
   lastSynced,
+  anyTransactions,
 }: {
   tab: Tab;
   connected: boolean;
@@ -662,16 +678,22 @@ function TabEmpty({
   onSync?: () => void;
   onSettings?: () => void;
   lastSynced: string;
+  /** False until QuickBooks has sent anything at all. */
+  anyTransactions: boolean;
 }) {
   if (tab === 'to-assign') {
     return (
       <EmptyState
-        icon={<Icon name="circle-check" size={22} />}
-        title={EMPTY_TAB[tab].title}
+        icon={<Icon name={anyTransactions ? 'circle-check' : 'inbox'} size={22} />}
+        title={anyTransactions ? EMPTY_TAB[tab].title : 'Nothing from QuickBooks yet'}
         message={
-          connected
-            ? `Every transaction is on a budget line or set aside. New spending shows up here after the next sync; the last one was ${lastSynced}.`
-            : 'Every transaction is on a budget line or set aside. Connect QuickBooks in Settings to bring in new spending.'
+          !anyTransactions
+            ? connected
+              ? "Spending from QuickBooks shows up here after a sync, ready to assign to a grant's budget line."
+              : "Spending from QuickBooks shows up here, ready to assign to a grant's budget line. Connect QuickBooks in Settings to bring it in."
+            : connected
+              ? `Every transaction is on a budget line or set aside. New spending shows up here after the next sync; the last one was ${lastSynced}.`
+              : 'Every transaction is on a budget line or set aside. Connect QuickBooks in Settings to bring in new spending.'
         }
         action={
           connected

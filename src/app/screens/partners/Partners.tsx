@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePageHeader } from '../../Shell';
 import { TableScroll } from '../../components/TableScroll';
-import { Button, Card, DataTable, Icon } from '../../../design-system';
+import { Button, Card, DataTable, EmptyState, Icon } from '../../../design-system';
 import {
   addressLine,
   organizationById,
@@ -42,7 +42,10 @@ export default function Partners() {
 
   usePageHeader({
     title: 'Partners',
-    subtitle: `${organizations.length} ${organizations.length === 1 ? 'organization' : 'organizations'} · ${venues.length} venues`,
+    subtitle:
+      organizations.length + venues.length === 0
+        ? 'No organizations or venues yet'
+        : `${organizations.length} ${organizations.length === 1 ? 'organization' : 'organizations'} · ${venues.length} ${venues.length === 1 ? 'venue' : 'venues'}`,
     actions: mayEdit ? (
       <>
         <Button
@@ -72,43 +75,66 @@ export default function Partners() {
         subtitle="Where classes and performances happen: the studio, each school, a hall."
         padding="0"
       >
-        <TableScroll minWidth={720}>
-          <DataTable
-            rows={venues}
-            onRowClick={(row: Venue) => nav(`/partners/venues/${row.id}`)}
-            columns={[
-              { key: 'name', label: 'Name', strong: true, width: '1.4fr' },
-              {
-                key: 'kind',
-                label: 'Kind',
-                width: '1fr',
-                render: (row: Venue) => kindLabel(VENUE_KINDS, row.kind),
-              },
-              {
-                key: 'organization',
-                label: 'Organization',
-                width: '1.4fr',
-                render: (row: Venue) =>
-                  organizationById(state, row.organizationId)?.name ?? <Dash />,
-              },
-              {
-                key: 'address',
-                label: 'Address',
-                width: '1.6fr',
-                wrap: true,
-                render: (row: Venue) => addressLine(row.address) || <Dash />,
-              },
-              {
-                key: 'contact',
-                label: 'On-site contact',
-                width: '1.4fr',
-                wrap: true,
-                render: (row: Venue) => contactLine(row) || <Dash />,
-              },
-            ]}
-            emptyLabel="No venues yet. Add the studio and every school you teach at."
+        {venues.length === 0 ? (
+          <EmptyState
+            icon={<Icon name="map-pin" size={22} />}
+            title="No venues yet"
+            message={
+              mayEdit
+                ? 'The studio, each school and every hall where a class meets show up here. Add a venue for each one, so the schedule knows where to send people.'
+                : 'The studio, each school and every hall where a class meets show up here once someone adds them.'
+            }
+            action={
+              mayEdit && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  iconLeft={<Icon name="plus" size={15} />}
+                  onClick={() => setAdding('venue')}
+                >
+                  Add venue
+                </Button>
+              )
+            }
           />
-        </TableScroll>
+        ) : (
+          <TableScroll minWidth={720}>
+            <DataTable
+              rows={venues}
+              onRowClick={(row: Venue) => nav(`/partners/venues/${row.id}`)}
+              columns={[
+                { key: 'name', label: 'Name', strong: true, width: '1.4fr' },
+                {
+                  key: 'kind',
+                  label: 'Kind',
+                  width: '1fr',
+                  render: (row: Venue) => kindLabel(VENUE_KINDS, row.kind),
+                },
+                {
+                  key: 'organization',
+                  label: 'Organization',
+                  width: '1.4fr',
+                  render: (row: Venue) =>
+                    organizationById(state, row.organizationId)?.name ?? <Dash />,
+                },
+                {
+                  key: 'address',
+                  label: 'Address',
+                  width: '1.6fr',
+                  wrap: true,
+                  render: (row: Venue) => addressLine(row.address) || <Dash />,
+                },
+                {
+                  key: 'contact',
+                  label: 'On-site contact',
+                  width: '1.4fr',
+                  wrap: true,
+                  render: (row: Venue) => contactLine(row) || <Dash />,
+                },
+              ]}
+            />
+          </TableScroll>
+        )}
       </Card>
 
       <Card
@@ -116,43 +142,66 @@ export default function Partners() {
         subtitle="The partners behind the venues: a district and its schools, a community centre."
         padding="0"
       >
-        <TableScroll minWidth={640}>
-          <DataTable
-            rows={organizations}
-            onRowClick={(row: Organization) => nav(`/partners/organizations/${row.id}`)}
-            columns={[
-              { key: 'name', label: 'Name', strong: true, width: '1.6fr' },
-              {
-                key: 'kind',
-                label: 'Kind',
-                width: '1fr',
-                render: (row: Organization) => kindLabel(ORGANIZATION_KINDS, row.kind),
-              },
-              {
-                key: 'contact',
-                label: 'Contact',
-                width: '1.6fr',
-                wrap: true,
-                render: (row: Organization) => contactLine(row) || <Dash />,
-              },
-              {
-                key: 'venues',
-                label: 'Venues',
-                width: '1.4fr',
-                wrap: true,
-                render: (row: Organization) => {
-                  const names = venuesForOrganization(state, row.id).map(v => v.name);
-                  return names.length ? (
-                    names.join(', ')
-                  ) : (
-                    <span style={{ color: 'var(--text-faint)' }}>None yet</span>
-                  );
-                },
-              },
-            ]}
-            emptyLabel="No organizations yet. Add the districts and partners you work with."
+        {organizations.length === 0 ? (
+          <EmptyState
+            icon={<Icon name="building-2" size={22} />}
+            title="No organizations yet"
+            message={
+              mayEdit
+                ? 'The districts, schools and community partners you work with show up here, with who to call at each. Add an organization, then add its venues.'
+                : 'The districts, schools and community partners you work with show up here once someone adds them.'
+            }
+            action={
+              mayEdit && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  iconLeft={<Icon name="plus" size={15} />}
+                  onClick={() => setAdding('organization')}
+                >
+                  Add organization
+                </Button>
+              )
+            }
           />
-        </TableScroll>
+        ) : (
+          <TableScroll minWidth={640}>
+            <DataTable
+              rows={organizations}
+              onRowClick={(row: Organization) => nav(`/partners/organizations/${row.id}`)}
+              columns={[
+                { key: 'name', label: 'Name', strong: true, width: '1.6fr' },
+                {
+                  key: 'kind',
+                  label: 'Kind',
+                  width: '1fr',
+                  render: (row: Organization) => kindLabel(ORGANIZATION_KINDS, row.kind),
+                },
+                {
+                  key: 'contact',
+                  label: 'Contact',
+                  width: '1.6fr',
+                  wrap: true,
+                  render: (row: Organization) => contactLine(row) || <Dash />,
+                },
+                {
+                  key: 'venues',
+                  label: 'Venues',
+                  width: '1.4fr',
+                  wrap: true,
+                  render: (row: Organization) => {
+                    const names = venuesForOrganization(state, row.id).map(v => v.name);
+                    return names.length ? (
+                      names.join(', ')
+                    ) : (
+                      <span style={{ color: 'var(--text-faint)' }}>None yet</span>
+                    );
+                  },
+                },
+              ]}
+            />
+          </TableScroll>
+        )}
       </Card>
 
       {adding === 'organization' && mayEdit && (

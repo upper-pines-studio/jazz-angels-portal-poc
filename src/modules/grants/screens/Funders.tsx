@@ -6,6 +6,7 @@ import { TableScroll } from '../../../app/components/TableScroll';
 import {
   Card,
   DataTable,
+  EmptyState,
   Badge,
   Button,
   Icon,
@@ -130,22 +131,27 @@ export default function Funders() {
 
   usePageHeader({
     title: 'Funders',
-    subtitle: `${state.grants.funders.length} funders · ${money(allAwarded)} awarded all time`,
+    subtitle:
+      state.grants.funders.length === 0
+        ? 'No funders yet'
+        : `${state.grants.funders.length} ${state.grants.funders.length === 1 ? 'funder' : 'funders'} · ${money(allAwarded)} awarded all time`,
     actions: mayEdit ? (
       <Button
         variant="primary"
         size="sm"
         iconLeft={<Icon name="plus" size={15} />}
-        onClick={() => {
-          setDraft(EMPTY_FUNDER);
-          setShowErrors(false);
-          setAdding(true);
-        }}
+        onClick={startAdding}
       >
         Add funder
       </Button>
     ) : undefined,
   });
+
+  function startAdding() {
+    setDraft(EMPTY_FUNDER);
+    setShowErrors(false);
+    setAdding(true);
+  }
 
   function lastActivity(funderId: string): string | undefined {
     const ids = new Set(grantsByFunder(state, funderId).map(g => g.id));
@@ -172,71 +178,90 @@ export default function Funders() {
   return (
     <>
       <Card padding="0">
-        <TableScroll minWidth={780}>
-          <DataTable
-            onRowClick={(r: Row) => nav(`/funders/${r.id}`)}
-            rows={rows}
-            emptyLabel={
+        {rows.length === 0 ? (
+          <EmptyState
+            icon={<Icon name="building-2" size={22} />}
+            title="No funders yet"
+            message={
               mayEdit
-                ? 'No funders yet. Add one to start tracking their grants.'
-                : 'No funders yet.'
+                ? 'Every foundation, agency and company we apply to shows up here, with its contact and what it has awarded. Add a funder, or add a grant and its funder comes with it.'
+                : 'Every foundation, agency and company we apply to shows up here once someone adds it.'
             }
-            columns={[
-              {
-                key: 'name',
-                label: 'Name',
-                width: '1.8fr',
-                strong: true,
-                wrap: true,
-                render: (r: Row) => r.funder.name,
-              },
-              {
-                key: 'type',
-                label: 'Type',
-                width: '130px',
-                render: (r: Row) => <Badge tone="neutral">{capitalise(r.funder.type)}</Badge>,
-              },
-              {
-                key: 'contact',
-                label: 'Contact',
-                width: '1.4fr',
-                render: (r: Row) =>
-                  r.funder.contactName ?? <span style={{ color: 'var(--text-faint)' }}>—</span>,
-              },
-              {
-                key: 'grants',
-                label: 'Grants',
-                width: '80px',
-                align: 'right',
-                mono: true,
-                render: (r: Row) => r.totals.grants,
-              },
-              {
-                key: 'awarded',
-                label: 'Total awarded',
-                width: '130px',
-                align: 'right',
-                mono: true,
-                render: (r: Row) => money(r.totals.awarded),
-              },
-              {
-                key: 'last',
-                label: 'Last activity',
-                width: '120px',
-                render: (r: Row) => (
-                  <span
-                    style={{
-                      font: 'var(--type-numeric)',
-                      color: r.last ? 'var(--text-body)' : 'var(--text-faint)',
-                    }}
-                  >
-                    {r.last ? dateShort(r.last) : '—'}
-                  </span>
-                ),
-              },
-            ]}
+            action={
+              mayEdit && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  iconLeft={<Icon name="plus" size={15} />}
+                  onClick={startAdding}
+                >
+                  Add funder
+                </Button>
+              )
+            }
           />
-        </TableScroll>
+        ) : (
+          <TableScroll minWidth={780}>
+            <DataTable
+              onRowClick={(r: Row) => nav(`/funders/${r.id}`)}
+              rows={rows}
+              columns={[
+                {
+                  key: 'name',
+                  label: 'Name',
+                  width: '1.8fr',
+                  strong: true,
+                  wrap: true,
+                  render: (r: Row) => r.funder.name,
+                },
+                {
+                  key: 'type',
+                  label: 'Type',
+                  width: '130px',
+                  render: (r: Row) => <Badge tone="neutral">{capitalise(r.funder.type)}</Badge>,
+                },
+                {
+                  key: 'contact',
+                  label: 'Contact',
+                  width: '1.4fr',
+                  render: (r: Row) =>
+                    r.funder.contactName ?? <span style={{ color: 'var(--text-faint)' }}>—</span>,
+                },
+                {
+                  key: 'grants',
+                  label: 'Grants',
+                  width: '80px',
+                  align: 'right',
+                  mono: true,
+                  render: (r: Row) => r.totals.grants,
+                },
+                {
+                  key: 'awarded',
+                  label: 'Total awarded',
+                  width: '130px',
+                  align: 'right',
+                  mono: true,
+                  render: (r: Row) => money(r.totals.awarded),
+                },
+                {
+                  key: 'last',
+                  label: 'Last activity',
+                  width: '120px',
+                  render: (r: Row) => (
+                    <span
+                      style={{
+                        font: 'var(--type-numeric)',
+                        color: r.last ? 'var(--text-body)' : 'var(--text-faint)',
+                      }}
+                    >
+                      {r.last ? dateShort(r.last) : '—'}
+                    </span>
+                  ),
+                },
+              ]}
+            />
+          </TableScroll>
+        )}
       </Card>
       {adding && mayEdit && (
         <Dialog

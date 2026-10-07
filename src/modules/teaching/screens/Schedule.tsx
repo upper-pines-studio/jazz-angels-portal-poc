@@ -47,7 +47,9 @@ const DAYS = [0, 1, 2, 3, 4];
 export default function Schedule() {
   const nav = useNavigate();
   const { state, today } = useStore();
-  const mayAdd = useCan()('schedule', 'edit');
+  const ensembles = state.teaching.ensembles.length;
+  // A class belongs to an ensemble, so with none there is nothing to add a class to.
+  const mayAdd = useCan()('schedule', 'edit') && ensembles > 0;
   const [params, setParams] = useSearchParams();
   const view = params.get('view') === 'term' ? 'term' : 'week';
 
@@ -59,9 +61,14 @@ export default function Schedule() {
 
   usePageHeader({
     title: 'Schedule',
-    subtitle: term
-      ? `${term.name}${week ? ` · week ${week} of ${term.meetingsPlanned}` : ''} · ${state.teaching.ensembles.length} ensembles`
-      : `${state.teaching.ensembles.length} ensembles`,
+    subtitle: [
+      term && `${term.name}${week ? ` · week ${week} of ${term.meetingsPlanned}` : ''}`,
+      ensembles === 0
+        ? 'No ensembles yet'
+        : `${ensembles} ${ensembles === 1 ? 'ensemble' : 'ensembles'}`,
+    ]
+      .filter(Boolean)
+      .join(' · '),
     actions: mayAdd ? (
       <Button
         variant="primary"
@@ -177,7 +184,13 @@ function WeekGrid({
         {term && week && <Badge tone="blue">{`${term.name} · week ${week}`}</Badge>}
       </div>
 
-      {slots.length === 0 ? (
+      {slots.length === 0 && state.teaching.ensembles.length === 0 ? (
+        <EmptyState
+          icon={<Icon name="calendar" size={22} />}
+          title="No ensembles yet"
+          message="Each ensemble's classes show up here as a week grid, with the roll call for each one. Adding an ensemble is not built yet, so a class cannot be put on the schedule until it is."
+        />
+      ) : slots.length === 0 ? (
         <EmptyState
           icon={<Icon name="calendar" size={22} />}
           title="No classes this week"
@@ -302,7 +315,7 @@ function TermView() {
         <EmptyState
           icon={<Icon name="calendar" size={22} />}
           title="No session scheduled"
-          message="The weeks of a session show up here once one is on the calendar."
+          message="The weeks of a session show up here, each Sunday marked once its roll call is in. Adding a session is not built yet."
         />
       </Card>
     );

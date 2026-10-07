@@ -8,6 +8,7 @@ import {
   Icon,
   Input,
   Select,
+  EmptyState,
 } from '../../../../design-system';
 import { dateShort, useCan, useStore } from '../../../../core';
 import type { DocumentKind, DocumentStatus, Grant, GrantDocument } from '../../domain';
@@ -86,61 +87,80 @@ export function DocumentsTab({ grant }: { grant: Grant }) {
 
       <SectionBand title="Application register" />
 
-      <TableScroll minWidth={620}>
-        <DataTable
-          columns={[
-            { key: 'name', label: 'Name', strong: true, width: '1.6fr' },
-            {
-              key: 'kind',
-              label: 'Kind',
-              width: '130px',
-              render: (r: GrantDocument) => <Badge tone="neutral">{KIND_LABEL[r.kind]}</Badge>,
-            },
-            {
-              key: 'status',
-              label: 'Status',
-              width: '120px',
-              render: (r: GrantDocument) => (
-                <Badge tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Badge>
-              ),
-            },
-            {
-              key: 'updatedAt',
-              label: 'Updated',
-              width: '90px',
-              mono: true,
-              render: (r: GrantDocument) => dateShort(r.updatedAt),
-            },
-            {
-              key: 'url',
-              label: '',
-              width: '32px',
-              render: (r: GrantDocument) =>
-                r.url ? (
-                  <a
-                    href={r.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    title="Open the file"
-                    onClick={e => e.stopPropagation()}
-                    style={{ display: 'inline-flex', color: 'var(--text-muted)' }}
-                  >
-                    <Icon name="external-link" size={15} />
-                  </a>
-                ) : null,
-            },
-          ]}
-          rows={rows}
-          onRowClick={mayEdit ? (r: GrantDocument) => setEditing(r) : undefined}
-          emptyLabel={
+      {rows.length === 0 ? (
+        <EmptyState
+          style={{ padding: 'var(--space-6)' }}
+          title="No documents listed yet"
+          message={
             mayEdit
-              ? 'No documents listed yet. Add the first one below.'
-              : 'No documents listed yet.'
+              ? 'The narrative, budget, IRS letter and the rest of what an application needs show up here, each with its status and a link to where it lives. Add the first document.'
+              : 'The narrative, budget, IRS letter and the rest of what an application needs show up here, each with its status, once someone lists them.'
+          }
+          action={
+            mayEdit && (
+              <Button
+                variant="secondary"
+                size="sm"
+                iconLeft={<Icon name="plus" size={15} />}
+                onClick={() => setAdding(true)}
+              >
+                Add document
+              </Button>
+            )
           }
         />
-      </TableScroll>
+      ) : (
+        <TableScroll minWidth={620}>
+          <DataTable
+            columns={[
+              { key: 'name', label: 'Name', strong: true, width: '1.6fr' },
+              {
+                key: 'kind',
+                label: 'Kind',
+                width: '130px',
+                render: (r: GrantDocument) => <Badge tone="neutral">{KIND_LABEL[r.kind]}</Badge>,
+              },
+              {
+                key: 'status',
+                label: 'Status',
+                width: '120px',
+                render: (r: GrantDocument) => (
+                  <Badge tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Badge>
+                ),
+              },
+              {
+                key: 'updatedAt',
+                label: 'Updated',
+                width: '90px',
+                mono: true,
+                render: (r: GrantDocument) => dateShort(r.updatedAt),
+              },
+              {
+                key: 'url',
+                label: '',
+                width: '32px',
+                render: (r: GrantDocument) =>
+                  r.url ? (
+                    <a
+                      href={r.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Open the file"
+                      onClick={e => e.stopPropagation()}
+                      style={{ display: 'inline-flex', color: 'var(--text-muted)' }}
+                    >
+                      <Icon name="external-link" size={15} />
+                    </a>
+                  ) : null,
+              },
+            ]}
+            rows={rows}
+            onRowClick={mayEdit ? (r: GrantDocument) => setEditing(r) : undefined}
+          />
+        </TableScroll>
+      )}
 
-      {mayEdit && (
+      {mayEdit && rows.length > 0 && (
         <FooterBand>
           <AddButton label="Add document" onClick={() => setAdding(true)} />
         </FooterBand>

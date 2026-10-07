@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   Dialog,
+  EmptyState,
   Field,
   Icon,
   Input,
@@ -135,298 +136,329 @@ export default function Playbook() {
         it.
       </p>
 
-      <div className="ja-split ja-split--nav" style={{ gap: 'var(--space-5)' }}>
+      {templates.length === 0 ? (
         <Card padding="0">
-          {templates.map((t, i) => {
-            const on = t.id === selected?.id;
-            return (
-              <div
-                key={t.id}
-                onClick={() => select(t.id)}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 2,
-                  cursor: 'pointer',
-                  padding: 'var(--space-4) var(--space-5)',
-                  background: on ? 'var(--blue-50)' : 'var(--neutral-0)',
-                  borderBottom:
-                    i === templates.length - 1
-                      ? 'none'
-                      : 'var(--border-width) solid var(--border-subtle)',
-                }}
-              >
-                <span
-                  style={{
-                    font: 'var(--type-label)',
-                    fontWeight: on ? ('var(--weight-semibold)' as any) : undefined,
-                    color: on ? 'var(--text-strong)' : 'var(--text-body)',
-                  }}
-                >
-                  {t.name}
-                </span>
-                <span style={{ ...MONO_SM, color: on ? 'var(--text-muted)' : 'var(--text-faint)' }}>
-                  {steps(t.items.length)}
-                </span>
-              </div>
-            );
-          })}
-        </Card>
-
-        {selected && (
-          <Card
-            padding="0"
-            title={selected.name}
-            subtitle={selected.id === DEFAULT_TEMPLATE_ID ? 'Default for new grants' : undefined}
+          <EmptyState
+            icon={<Icon name="book-open" size={22} />}
+            title="No checklists yet"
+            message={
+              mayEdit
+                ? 'The steps a grant goes through, from first look to final report, show up here as a checklist. Add a template and every new grant can copy it.'
+                : 'The steps a grant goes through, from first look to final report, show up here once someone writes the first checklist.'
+            }
             action={
               mayEdit && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-3)',
-                    flex: '0 0 auto',
-                    flexWrap: 'wrap',
+                <Button
+                  variant="primary"
+                  size="sm"
+                  iconLeft={<Icon name="plus" size={15} />}
+                  onClick={() => {
+                    setNewName('');
+                    setAdding(true);
                   }}
                 >
-                  {confirmDelete ? (
-                    <>
-                      <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
-                        Delete this template?
-                      </span>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          actions.grants.deleteTemplate(selected.id);
-                          setConfirmDelete(false);
-                          const next = templates.find(t => t.id !== selected.id);
-                          if (next) select(next.id);
-                          toast({
-                            tone: 'success',
-                            title: 'Template deleted',
-                            message: selected.name,
-                          });
-                        }}
-                      >
-                        Yes, delete
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
-                        Keep it
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          const id = actions.grants.duplicateTemplate(selected.id);
-                          select(id);
-                          toast({
-                            tone: 'success',
-                            title: 'Template duplicated',
-                            message: `Copy of ${selected.name}`,
-                          });
-                        }}
-                      >
-                        Duplicate
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={selected.id === DEFAULT_TEMPLATE_ID}
-                        style={{
-                          color:
-                            selected.id === DEFAULT_TEMPLATE_ID ? undefined : 'var(--danger-500)',
-                        }}
-                        onClick={() => setConfirmDelete(true)}
-                      >
-                        Delete
-                      </Button>
-                    </>
-                  )}
-                </div>
+                  New template
+                </Button>
               )
             }
-          >
-            {used.map(phase => {
-              const items = selected.items.filter(i => i.phase === phase);
+          />
+        </Card>
+      ) : (
+        <div className="ja-split ja-split--nav" style={{ gap: 'var(--space-5)' }}>
+          <Card padding="0">
+            {templates.map((t, i) => {
+              const on = t.id === selected?.id;
               return (
-                <div key={phase}>
+                <div
+                  key={t.id}
+                  onClick={() => select(t.id)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    cursor: 'pointer',
+                    padding: 'var(--space-4) var(--space-5)',
+                    background: on ? 'var(--blue-50)' : 'var(--neutral-0)',
+                    borderBottom:
+                      i === templates.length - 1
+                        ? 'none'
+                        : 'var(--border-width) solid var(--border-subtle)',
+                  }}
+                >
+                  <span
+                    style={{
+                      font: 'var(--type-label)',
+                      fontWeight: on ? ('var(--weight-semibold)' as any) : undefined,
+                      color: on ? 'var(--text-strong)' : 'var(--text-body)',
+                    }}
+                  >
+                    {t.name}
+                  </span>
+                  <span
+                    style={{ ...MONO_SM, color: on ? 'var(--text-muted)' : 'var(--text-faint)' }}
+                  >
+                    {steps(t.items.length)}
+                  </span>
+                </div>
+              );
+            })}
+          </Card>
+
+          {selected && (
+            <Card
+              padding="0"
+              title={selected.name}
+              subtitle={selected.id === DEFAULT_TEMPLATE_ID ? 'Default for new grants' : undefined}
+              action={
+                mayEdit && (
                   <div
                     style={{
-                      height: 40,
                       display: 'flex',
                       alignItems: 'center',
                       gap: 'var(--space-3)',
-                      padding: '0 var(--space-5)',
-                      background: 'var(--surface-sunken)',
-                      borderTop: 'var(--border-width) solid var(--border-subtle)',
-                      borderBottom: 'var(--border-width) solid var(--border-subtle)',
+                      flex: '0 0 auto',
+                      flexWrap: 'wrap',
                     }}
                   >
-                    <PhaseBadge phase={phase} />
-                    <span style={{ ...MONO_SM, fontSize: 12 }}>{steps(items.length)}</span>
+                    {confirmDelete ? (
+                      <>
+                        <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
+                          Delete this template?
+                        </span>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            actions.grants.deleteTemplate(selected.id);
+                            setConfirmDelete(false);
+                            const next = templates.find(t => t.id !== selected.id);
+                            if (next) select(next.id);
+                            toast({
+                              tone: 'success',
+                              title: 'Template deleted',
+                              message: selected.name,
+                            });
+                          }}
+                        >
+                          Yes, delete
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                          Keep it
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            const id = actions.grants.duplicateTemplate(selected.id);
+                            select(id);
+                            toast({
+                              tone: 'success',
+                              title: 'Template duplicated',
+                              message: `Copy of ${selected.name}`,
+                            });
+                          }}
+                        >
+                          Duplicate
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={selected.id === DEFAULT_TEMPLATE_ID}
+                          style={{
+                            color:
+                              selected.id === DEFAULT_TEMPLATE_ID ? undefined : 'var(--danger-500)',
+                          }}
+                          onClick={() => setConfirmDelete(true)}
+                        >
+                          Delete
+                        </Button>
+                      </>
+                    )}
                   </div>
-                  {items.map(item => (
+                )
+              }
+            >
+              {used.map(phase => {
+                const items = selected.items.filter(i => i.phase === phase);
+                return (
+                  <div key={phase}>
                     <div
-                      key={item.id}
-                      className="ja-playbook-row"
                       style={{
-                        background: 'var(--neutral-0)',
+                        height: 40,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-3)',
+                        padding: '0 var(--space-5)',
+                        background: 'var(--surface-sunken)',
+                        borderTop: 'var(--border-width) solid var(--border-subtle)',
                         borderBottom: 'var(--border-width) solid var(--border-subtle)',
                       }}
                     >
-                      {mayEdit && (
+                      <PhaseBadge phase={phase} />
+                      <span style={{ ...MONO_SM, fontSize: 12 }}>{steps(items.length)}</span>
+                    </div>
+                    {items.map(item => (
+                      <div
+                        key={item.id}
+                        className="ja-playbook-row"
+                        style={{
+                          background: 'var(--neutral-0)',
+                          borderBottom: 'var(--border-width) solid var(--border-subtle)',
+                        }}
+                      >
+                        {mayEdit && (
+                          <span
+                            className="ja-playbook-row__grip"
+                            style={{ color: 'var(--neutral-300)', display: 'flex' }}
+                          >
+                            <Icon name="grip-vertical" size={14} />
+                          </span>
+                        )}
+                        {mayEdit && editingId === item.id ? (
+                          <TitleEditor
+                            className="ja-playbook-row__title"
+                            value={draft}
+                            onChange={setDraft}
+                            onSave={() => saveTitle(item)}
+                            onCancel={() => setEditingId(null)}
+                          />
+                        ) : (
+                          <span
+                            className="ja-playbook-row__title"
+                            onClick={
+                              mayEdit
+                                ? () => {
+                                    setDraft(item.title);
+                                    setEditingId(item.id);
+                                  }
+                                : undefined
+                            }
+                            title={mayEdit ? 'Rename this step' : undefined}
+                            style={{
+                              font: 'var(--type-body-sm)',
+                              color: 'var(--text-body)',
+                              cursor: mayEdit ? 'text' : undefined,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {item.title}
+                          </span>
+                        )}
                         <span
-                          className="ja-playbook-row__grip"
-                          style={{ color: 'var(--neutral-300)', display: 'flex' }}
-                        >
-                          <Icon name="grip-vertical" size={14} />
-                        </span>
-                      )}
-                      {mayEdit && editingId === item.id ? (
-                        <TitleEditor
-                          className="ja-playbook-row__title"
-                          value={draft}
-                          onChange={setDraft}
-                          onSave={() => saveTitle(item)}
-                          onCancel={() => setEditingId(null)}
-                        />
-                      ) : (
-                        <span
-                          className="ja-playbook-row__title"
-                          onClick={
-                            mayEdit
-                              ? () => {
-                                  setDraft(item.title);
-                                  setEditingId(item.id);
-                                }
-                              : undefined
-                          }
-                          title={mayEdit ? 'Rename this step' : undefined}
+                          className="ja-playbook-row__timing"
+                          onClick={mayEdit ? () => setTimingItem(item) : undefined}
+                          title={mayEdit ? 'Change when this step is due' : undefined}
                           style={{
-                            font: 'var(--type-body-sm)',
-                            color: 'var(--text-body)',
-                            cursor: mayEdit ? 'text' : undefined,
+                            ...MONO_SM,
+                            cursor: mayEdit ? 'pointer' : undefined,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {item.title}
+                          {timingLabel(item)}
                         </span>
-                      )}
-                      <span
-                        className="ja-playbook-row__timing"
-                        onClick={mayEdit ? () => setTimingItem(item) : undefined}
-                        title={mayEdit ? 'Change when this step is due' : undefined}
+                        {mayEdit && (
+                          <button
+                            className="ja-playbook-row__remove"
+                            onClick={() => removeItem(item)}
+                            aria-label={`Remove ${item.title}`}
+                            style={{
+                              border: 0,
+                              background: 'none',
+                              cursor: 'pointer',
+                              color: 'var(--neutral-300)',
+                              font: '16px/1 var(--font-sans)',
+                              padding: 0,
+                            }}
+                          >
+                            &times;
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {mayEdit && (
+                      <div
                         style={{
-                          ...MONO_SM,
-                          cursor: mayEdit ? 'pointer' : undefined,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          display: 'flex',
+                          alignItems: 'center',
+                          minHeight: 34,
+                          padding: '0 var(--space-4)',
+                          borderBottom: 'var(--border-width) solid var(--border-subtle)',
+                          background: 'var(--neutral-0)',
                         }}
                       >
-                        {timingLabel(item)}
-                      </span>
-                      {mayEdit && (
-                        <button
-                          className="ja-playbook-row__remove"
-                          onClick={() => removeItem(item)}
-                          aria-label={`Remove ${item.title}`}
-                          style={{
-                            border: 0,
-                            background: 'none',
-                            cursor: 'pointer',
-                            color: 'var(--neutral-300)',
-                            font: '16px/1 var(--font-sans)',
-                            padding: 0,
-                          }}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          iconLeft={<Icon name="plus" size={15} />}
+                          onClick={() => addStep(phase)}
                         >
-                          &times;
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  {mayEdit && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        minHeight: 34,
-                        padding: '0 var(--space-4)',
-                        borderBottom: 'var(--border-width) solid var(--border-subtle)',
-                        background: 'var(--neutral-0)',
-                      }}
-                    >
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        iconLeft={<Icon name="plus" size={15} />}
-                        onClick={() => addStep(phase)}
-                      >
-                        Add step to {PHASES[phase].label}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                          Add step to {PHASES[phase].label}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
-            {selected.items.length === 0 && (
-              <div
-                style={{
-                  padding: 'var(--space-6) var(--space-5)',
-                  font: 'var(--type-body-sm)',
-                  color: 'var(--text-muted)',
-                }}
-              >
-                {mayEdit
-                  ? 'No steps yet. Pick a phase below and add the first one.'
-                  : 'No steps yet.'}
-              </div>
-            )}
-
-            {mayEdit && unused.length > 0 && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-3)',
-                  flexWrap: 'wrap',
-                  padding: 'var(--space-3) var(--space-5)',
-                  background: 'var(--surface-sunken)',
-                  borderTop: 'var(--border-width) solid var(--border-subtle)',
-                }}
-              >
-                <span
+              {selected.items.length === 0 && (
+                <div
                   style={{
-                    font: 'var(--weight-regular) 13px/1.5 var(--font-sans)',
+                    padding: 'var(--space-6) var(--space-5)',
+                    font: 'var(--type-body-sm)',
                     color: 'var(--text-muted)',
                   }}
                 >
-                  Add a step to another phase…
-                </span>
-                <div style={{ flex: '1 1 220px', maxWidth: 320 }}>
-                  <Select
-                    value=""
-                    options={[
-                      { value: '', label: 'Choose a phase' },
-                      ...unused.map(p => ({ value: p, label: PHASES[p].label })),
-                    ]}
-                    onChange={e => {
-                      if (e.target.value) addStep(e.target.value as Phase);
-                    }}
-                  />
+                  {mayEdit
+                    ? 'No steps yet. Pick a phase below and add the first one.'
+                    : 'No steps yet.'}
                 </div>
-              </div>
-            )}
-          </Card>
-        )}
-      </div>
+              )}
+
+              {mayEdit && unused.length > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-3)',
+                    flexWrap: 'wrap',
+                    padding: 'var(--space-3) var(--space-5)',
+                    background: 'var(--surface-sunken)',
+                    borderTop: 'var(--border-width) solid var(--border-subtle)',
+                  }}
+                >
+                  <span
+                    style={{
+                      font: 'var(--weight-regular) 13px/1.5 var(--font-sans)',
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    Add a step to another phase…
+                  </span>
+                  <div style={{ flex: '1 1 220px', maxWidth: 320 }}>
+                    <Select
+                      value=""
+                      options={[
+                        { value: '', label: 'Choose a phase' },
+                        ...unused.map(p => ({ value: p, label: PHASES[p].label })),
+                      ]}
+                      onChange={e => {
+                        if (e.target.value) addStep(e.target.value as Phase);
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+        </div>
+      )}
 
       {adding && mayEdit && (
         <Dialog

@@ -467,27 +467,42 @@ function StudentCounts() {
         title="Enrolled by ensemble"
         subtitle="Counts only. Names and contacts stay with the office."
       >
-        <TableScroll minWidth={560}>
-          <DataTable
-            rows={ensembles}
-            columns={[
-              { key: 'name', label: 'Ensemble', width: '1.4fr', strong: true },
-              { key: 'program', label: 'Program', width: '1.4fr' },
-              { key: 'place', label: 'Where', width: '1.4fr' },
-              { key: 'enrolled', label: 'Enrolled', width: '100px', mono: true, align: 'right' },
-            ]}
-            emptyLabel="No ensembles yet."
+        {ensembles.length === 0 ? (
+          <EmptyState
+            icon={<Icon name="users" size={22} />}
+            title="No ensembles yet"
+            message="How many students each ensemble has shows up here once the office sets up the term's ensembles and enrolls students."
           />
-        </TableScroll>
+        ) : (
+          <TableScroll minWidth={560}>
+            <DataTable
+              rows={ensembles}
+              columns={[
+                { key: 'name', label: 'Ensemble', width: '1.4fr', strong: true },
+                { key: 'program', label: 'Program', width: '1.4fr' },
+                { key: 'place', label: 'Where', width: '1.4fr' },
+                { key: 'enrolled', label: 'Enrolled', width: '100px', mono: true, align: 'right' },
+              ]}
+            />
+          </TableScroll>
+        )}
       </Card>
       <Card padding="0" title="By program">
-        <DataTable
-          rows={[...programs, { id: 'waitlist', name: 'Waitlist', enrolled: waiting }]}
-          columns={[
-            { key: 'name', label: 'Program', strong: true },
-            { key: 'enrolled', label: 'Students', width: '100px', mono: true, align: 'right' },
-          ]}
-        />
+        {programs.length === 0 && waiting === 0 ? (
+          <EmptyState
+            style={{ padding: 'var(--space-6) var(--space-5)' }}
+            title="No students yet"
+            message="Each program's student count shows up here once students are enrolled."
+          />
+        ) : (
+          <DataTable
+            rows={[...programs, { id: 'waitlist', name: 'Waitlist', enrolled: waiting }]}
+            columns={[
+              { key: 'name', label: 'Program', strong: true },
+              { key: 'enrolled', label: 'Students', width: '100px', mono: true, align: 'right' },
+            ]}
+          />
+        )}
       </Card>
     </div>
   );

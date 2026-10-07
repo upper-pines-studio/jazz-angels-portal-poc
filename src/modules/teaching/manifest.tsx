@@ -26,7 +26,7 @@ function stats(state: PortalState, today: string): StatSpec[] {
     value: String(enrolledCount(state)),
     accent: 'var(--blue-500)',
     href: '/students',
-    footnote: `${term?.name ?? 'No session scheduled'} · ${ensembles} ${ensembles === 1 ? 'ensemble' : 'ensembles'}`,
+    footnote: `${term?.name ?? 'No session scheduled'} · ${ensembles === 0 ? 'no ensembles yet' : `${ensembles} ${ensembles === 1 ? 'ensemble' : 'ensembles'}`}`,
   };
 
   // Week 1 of a session has one roll call in it, so the figure comes from the

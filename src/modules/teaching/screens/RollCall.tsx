@@ -135,7 +135,7 @@ export default function RollCall() {
           <EmptyState
             icon={<Icon name="users" size={22} />}
             title="Nobody on this roster yet"
-            message="No students in this view yet. Enroll a student to add them to the roster."
+            message={`The students in ${ensemble.name} show up here to mark present, late or absent. Enroll them on the Students screen first.`}
             action={
               <Button variant="secondary" size="sm" onClick={() => nav('/students')}>
                 Open the roster
@@ -290,7 +290,11 @@ export default function RollCall() {
 
         <Card
           title="Attendance trend"
-          subtitle={`${ensemble.name} · last ${trend.length === 1 ? 'class' : `${trend.length} classes`}`}
+          subtitle={
+            trend.length === 0
+              ? `${ensemble.name} · no classes yet`
+              : `${ensemble.name} · last ${trend.length === 1 ? 'class' : `${trend.length} classes`}`
+          }
           padding="var(--space-5)"
         >
           {trend.length === 0 ? (

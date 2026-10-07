@@ -29,7 +29,9 @@ function stats(state: PortalState, today: string): StatSpec[] {
       href: '/timesheets',
       // Everyone's hours: for the roles that approve them.
       requires: APPROVE,
-      footnote: `Across ${teachers} ${teachers === 1 ? 'teacher' : 'teachers'}`,
+      footnote: teachers
+        ? `Across ${teachers} ${teachers === 1 ? 'teacher' : 'teachers'}`
+        : 'Nothing logged this month',
     },
   ];
 }

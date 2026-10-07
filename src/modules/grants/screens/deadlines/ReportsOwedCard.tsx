@@ -230,10 +230,22 @@ export function ReportsOwedCard({
 export function ReportsOwedEmpty({
   filtered,
   onClear,
+  anyReports = true,
 }: {
   filtered: boolean;
   onClear: () => void;
+  /** False before any grant has a report, when "every report is in" would not be true. */
+  anyReports?: boolean;
 }) {
+  if (!anyReports) {
+    return (
+      <EmptyState
+        icon={<Icon name="file-check" size={22} />}
+        title="No reports yet"
+        message="The reports funders ask for show up here with their due dates and reminders. Add them on an awarded grant's Reports tab."
+      />
+    );
+  }
   return filtered ? (
     <EmptyState
       icon={<Icon name="file-check" size={22} />}
