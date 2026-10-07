@@ -1,7 +1,7 @@
 import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import type { PortalState } from '../../../core/types';
 import { OWN_HOURS_REFUSAL, mayApprove, mayLogFor } from './derive';
-import { makeSeed } from './seed';
+import { makeEmpty, makeSeed } from './seed';
 import type { TimeEntry, TimeEntryStatus, TimesheetsActions, TimesheetsState } from './types';
 
 /**
@@ -126,6 +126,7 @@ const STATUSES: TimeEntryStatus[] = ['draft', 'submitted', 'approved'];
 export const timesheetsSlice: ModuleSlice<TimesheetsState, TimesheetsActions> = {
   id: 'timesheets',
   seed: () => makeSeed(),
+  empty: () => makeEmpty(),
   reducer(state, action) {
     if (!action.type.startsWith('timesheets/')) return state;
     return reducer(state, {

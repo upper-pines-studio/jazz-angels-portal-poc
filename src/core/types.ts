@@ -103,11 +103,6 @@ export interface AppSettings {
   fiscalYearStartMonth: number;
   /** Module ids the office has switched on. */
   enabledModules: string[];
-  /**
-   * The day the portal treats as today, so the demo story reads the way it was
-   * written. Unset means the real clock.
-   */
-  demoToday?: string;
 }
 
 export interface CoreState {
@@ -138,8 +133,16 @@ export interface CoreActions {
   updateSettings(patch: Partial<AppSettings>): void;
   /** Turn a module on or off. Its data stays either way. */
   setModuleEnabled(id: string, on: boolean): void;
-  /** Throw the working data away and reload the demo data for every slice. */
+  /**
+   * Throw the working data away and reload the demo data for every slice.
+   * Only in a demo build; otherwise it changes nothing and says so.
+   */
   resetDemo(): void;
+  /**
+   * Move the demo date, or pass undefined for the real clock. A preference of
+   * this browser, never part of the data; only in a demo build.
+   */
+  setDemoToday(iso: string | undefined): void;
   /** Replace every slice from an exported file. Throws on an unreadable file. */
   importJson(text: string): void;
   /** The whole portal as pretty JSON, for the download button. */

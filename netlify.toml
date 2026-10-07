@@ -2,6 +2,12 @@
   command = "npm run build"
   publish = "dist"
 
+# The published site is the demo: it starts from the Jazz Angels sample data, with the demo
+# date and Reset demo data in Settings. Without this a production build starts empty
+# (decision 0004). See src/core/demo.ts.
+[build.environment]
+  VITE_DEMO = "1"
+
 # Single-page app: every route is served by index.html and handled by react-router.
 [[redirects]]
   from = "/*"

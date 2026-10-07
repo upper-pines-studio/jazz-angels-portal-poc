@@ -49,7 +49,13 @@ export type ActionRules<A> = 0 extends 1 & A
 export interface ModuleSlice<S, A> {
   /** Storage key and state key, e.g. 'grants'. */
   id: string;
+  /** The demo data. A demo build starts from it, and the tests use it. */
   seed(today: string): S;
+  /**
+   * What a new office starts with when the demo is off (decision 0004): empty
+   * collections and default settings.
+   */
+  empty(): S;
   reducer(state: S, action: AnyAction): S;
   createActions(dispatch: Dispatch, getState: () => PortalState, ctx: SliceContext): A;
   /**
@@ -57,8 +63,12 @@ export interface ModuleSlice<S, A> {
    * refuses with a toast when the signed-in person's role may not (decision 0001).
    */
   rules: ActionRules<A>;
-  /** Optional: validate and fill a loaded payload. Return undefined to reject it. */
-  normalise?(raw: unknown): S | undefined;
+  /**
+   * Optional: validate and fill a loaded payload. Return undefined to reject it.
+   * `demo` says whether this is a demo build, for a slice that fills a gap
+   * from its seed; unset counts as off.
+   */
+  normalise?(raw: unknown, demo?: boolean): S | undefined;
 }
 
 /**

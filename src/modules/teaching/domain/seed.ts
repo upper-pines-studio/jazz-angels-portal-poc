@@ -468,3 +468,8 @@ export function makeSeed(): TeachingState {
     attendance: [...spring.attendance, ...fall.attendance],
   };
 }
+
+/** What a new office starts with when the demo is off (decision 0004): nothing yet. */
+export function makeEmpty(): TeachingState {
+  return { terms: [], ensembles: [], meetings: [], students: [], attendance: [] };
+}

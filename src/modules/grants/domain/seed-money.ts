@@ -816,3 +816,27 @@ export function makeMoneySeed(lines: BudgetLine[], expenses: Expense[]): MoneySe
     expenses: linked,
   };
 }
+
+/**
+ * The money side as a new office starts it (decision 0004): QuickBooks not
+ * connected, nothing synced, the default reminder schedule with nobody extra.
+ */
+export function makeMoneyEmpty(): MoneySeed {
+  return {
+    quickbooks: { connected: false, company: '', lastSyncedAt: '' },
+    accounts: [],
+    classes: [],
+    transactions: [],
+    incoming: [],
+    splitRules: [],
+    files: [],
+    terms: [],
+    reminderPlans: [],
+    reminderDefaults: {
+      ...REMINDER_DEFAULTS,
+      offsets: [...REMINDER_DEFAULTS.offsets],
+      alsoNotifyIds: [],
+    },
+    expenses: [],
+  };
+}

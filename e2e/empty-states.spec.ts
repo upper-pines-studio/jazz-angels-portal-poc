@@ -1,8 +1,9 @@
 // Every route as a new office sees it on day one (decision 0004: the portal starts empty).
-// Each slice is stored empty before the app loads, so nothing is seeded, and Gwen (Admin, who
-// sees every screen) opens each route in turn. A route passes when it shows an empty state, logs
-// no error and prints no NaN or "undefined". The core slice still adds the seeded staff records,
-// so every login keeps resolving (src/core/store.tsx, `normalise`).
+// The dev server runs with the demo on, so each slice is stored empty before the app loads and
+// nothing is seeded; Gwen (Admin, who sees every screen) opens each route in turn. A route passes
+// when it shows an empty state, logs no error and prints no NaN or "undefined". The core slice
+// still adds the seeded staff records, so every login keeps resolving (src/core/store.tsx,
+// `normalise`); the demo date is the seed's day, a browser preference (src/core/demo.ts).
 import { expect, test } from '@playwright/test';
 
 const SESSION_KEY = 'ja-portal:session:v1';
@@ -17,7 +18,6 @@ const EMPTY: Record<string, unknown> = {
     settings: {
       fiscalYearStartMonth: 7,
       enabledModules: ['grants', 'teaching', 'timesheets'],
-      demoToday: '2026-09-13',
     },
   },
   grants: {

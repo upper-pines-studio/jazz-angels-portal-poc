@@ -238,6 +238,10 @@ are seeded by `src/core/seed.ts`. Seeded activity rows name their person by
 staff id (`whoId`); a new row is credited to whoever is signed in
 (`SliceContext.user`), and `activityWho` gives the name to show.
 
+`makeEmpty()` is what a new office starts with when the demo is off
+(decision 0004): every collection empty, QuickBooks not connected, no checklist
+templates, the default reminder schedule. See `src/core/demo.ts`.
+
 Funder contact names, emails and phone numbers are invented for the demo —
 plausible-looking, but none of them is a real person or address.
 

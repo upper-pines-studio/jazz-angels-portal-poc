@@ -3,7 +3,7 @@ import { can } from '../../../core/permissions';
 import { makeCoreSeed } from '../../../core/seed';
 import { acceptableSuggestions, backupCarry, splitByPercent } from './money';
 import { availableTransitions, isPostAward } from './phases';
-import { makeSeed } from './seed';
+import { makeEmpty, makeSeed } from './seed';
 import { instantiateDocumentRegister, instantiateTemplate } from './templates';
 import type { PortalState, Role } from '../../../core/types';
 import type {
@@ -1056,6 +1056,7 @@ const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
 export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
   id: 'grants',
   seed: () => makeSeed(),
+  empty: () => makeEmpty(),
   reducer(state, action) {
     if (!action.type.startsWith('grants/')) return state;
     return reducer(state, { ...action, type: action.type.slice('grants/'.length) } as GrantsAction);

@@ -1,7 +1,7 @@
 import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import { PARAMOUNT_MS_VENUE_ID, STUDIO_VENUE_ID } from '../../../core';
 import { mayTakeRoll } from './derive';
-import { makeSeed } from './seed';
+import { makeEmpty, makeSeed } from './seed';
 import type {
   AttendanceRecord,
   ClassMeeting,
@@ -185,6 +185,7 @@ function withVenue<T extends { venueId?: string; room: string }>(row: T): T {
 export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
   id: 'teaching',
   seed: () => makeSeed(),
+  empty: () => makeEmpty(),
   reducer(state, action) {
     if (!action.type.startsWith('teaching/')) return state;
     return reducer(state, {
