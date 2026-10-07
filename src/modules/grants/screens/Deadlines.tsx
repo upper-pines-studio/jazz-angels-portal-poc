@@ -340,13 +340,45 @@ export default function Deadlines() {
             onGone={id => {
               if (id === reportId) closeReport();
             }}
-            empty={<ReportsOwedEmpty filtered={owner !== ALL} onClear={() => setOwner(ALL)} />}
+            empty={
+              <ReportsOwedEmpty
+                filtered={owner !== ALL}
+                onClear={() => setOwner(ALL)}
+                anyReports={state.grants.reports.length > 0}
+              />
+            }
           />
           <ReminderDefaultsCard />
         </>
       )}
 
-      {!showReportsCard && rows.length === 0 && (
+      {!showReportsCard && all.length === 0 && (
+        <Card padding="0">
+          <EmptyState
+            icon={<Icon name="calendar-days" size={22} />}
+            title="No deadlines yet"
+            message={
+              mayAddGrant
+                ? 'LOI and application due dates, reports and the end of each grant period show up here, soonest first. Add a grant with its dates to see them.'
+                : 'LOI and application due dates, reports and the end of each grant period show up here, soonest first, once grants are added.'
+            }
+            action={
+              mayAddGrant && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  iconLeft={<Icon name="plus" size={15} />}
+                  onClick={() => nav('/grants?add=1')}
+                >
+                  Add grant
+                </Button>
+              )
+            }
+          />
+        </Card>
+      )}
+
+      {!showReportsCard && all.length > 0 && rows.length === 0 && (
         <Card padding="0">
           <EmptyState
             icon={<Icon name="calendar-days" size={22} />}

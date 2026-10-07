@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Card, Icon } from '../../../../design-system';
+import { Button, Card, EmptyState, Icon } from '../../../../design-system';
 import { useCan, useStore } from '../../../../core';
 import {
   expensesMissingBackup,
@@ -19,7 +19,24 @@ export function MoneyPanel() {
   const { state, today } = useStore();
   const allowed = useCan();
   const rows = pacedGrants(state, today);
-  if (rows.length === 0) return null;
+
+  if (rows.length === 0) {
+    return (
+      <Card title="Money" padding="0">
+        <EmptyState
+          style={{ padding: 'var(--space-6) var(--space-5)' }}
+          icon={<Icon name="gauge" size={22} />}
+          title="No grants with money yet"
+          message="Once a grant is awarded, with an amount and a grant period, its spending against the period shows up here."
+          action={
+            <Button variant="secondary" size="sm" onClick={() => nav('/grants')}>
+              Open grants
+            </Button>
+          }
+        />
+      </Card>
+    );
+  }
 
   // The two to-dos are offered only to someone who may do them.
   const toAssign = allowed('transactions', 'edit') ? transactionCounts(state)['to-assign'] : 0;

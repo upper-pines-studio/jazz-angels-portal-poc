@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card } from '../../../design-system';
-import { useStore } from '../../../core';
+import { Button, Card, EmptyState, Icon } from '../../../design-system';
+import { useCan, useStore } from '../../../core';
 import { PHASES, pipelineCounts } from '../domain';
 import type { Phase, PhaseTone } from '../domain';
 import { PhaseBadge } from './badges';
@@ -27,6 +27,32 @@ export function PipelinePanel() {
   const stepper = buckets.slice(0, 8);
   const peak = Math.max(1, ...stepper.map(b => b.count));
   const countFor = (phase: Phase) => buckets.find(b => b.phase === phase)?.count ?? 0;
+  const mayAdd = useCan()('grants', 'edit');
+
+  // Eight empty bars say nothing; with no grants the card says what will fill it.
+  if (state.grants.grants.length === 0) {
+    return (
+      <Card title="Pipeline" padding="0">
+        <EmptyState
+          style={{ padding: 'var(--space-6) var(--space-5)' }}
+          icon={<Icon name="landmark" size={22} />}
+          title="No grants yet"
+          message={
+            mayAdd
+              ? 'Each grant shows up here by phase, from prospect to closed. Add a grant to start the pipeline.'
+              : 'Each grant shows up here by phase, from prospect to closed, once one is added.'
+          }
+          action={
+            mayAdd && (
+              <Button variant="secondary" size="sm" onClick={() => nav('/grants?add=1')}>
+                Add grant
+              </Button>
+            )
+          }
+        />
+      </Card>
+    );
+  }
 
   return (
     <Card title="Pipeline" padding="var(--space-4) var(--space-5)">

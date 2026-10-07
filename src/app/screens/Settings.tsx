@@ -6,6 +6,7 @@ import {
   Card,
   DataTable,
   Dialog,
+  EmptyState,
   Field,
   Icon,
   Input,
@@ -77,6 +78,8 @@ export default function Settings() {
   const fy = fiscalYear(today, state.core.settings.fiscalYearStartMonth);
   const enabled = state.core.settings.enabledModules;
   const demoToday = state.core.settings.demoToday;
+  // A new office: nobody on the staff list but the person signed in.
+  const onlyYou = state.core.staff.every(s => s.id === user.id);
 
   function setDemoToday(iso: string | undefined) {
     actions.core.updateSettings({ demoToday: iso });
@@ -217,27 +220,49 @@ export default function Settings() {
                     ) : null,
                 },
               ]}
-              emptyLabel="No one yet. Add the people who work here."
             />
           </TableScroll>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              minHeight: 44,
-              padding: '0 var(--space-4)',
-              background: 'var(--surface-sunken)',
-            }}
-          >
-            <Button
-              variant="ghost"
-              size="sm"
-              iconLeft={<Icon name="plus" size={15} />}
-              onClick={() => setPerson({ name: '', title: '', role: 'read-only', teaches: false })}
+          {onlyYou && (
+            <EmptyState
+              icon={<Icon name="users" size={22} />}
+              title="Only you so far"
+              message="Everyone who owns a grant, leads a class or logs hours shows up here. Add each person before they sign in: a sign-in only works for someone with a staff record, and their role here is what they may see and do."
+              action={
+                <Button
+                  variant="primary"
+                  size="sm"
+                  iconLeft={<Icon name="plus" size={15} />}
+                  onClick={() =>
+                    setPerson({ name: '', title: '', role: 'read-only', teaches: false })
+                  }
+                >
+                  Add person
+                </Button>
+              }
+            />
+          )}
+          {!onlyYou && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                minHeight: 44,
+                padding: '0 var(--space-4)',
+                background: 'var(--surface-sunken)',
+              }}
             >
-              Add person
-            </Button>
-          </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                iconLeft={<Icon name="plus" size={15} />}
+                onClick={() =>
+                  setPerson({ name: '', title: '', role: 'read-only', teaches: false })
+                }
+              >
+                Add person
+              </Button>
+            </div>
+          )}
         </Card>
       )}
 
@@ -292,10 +317,19 @@ export default function Settings() {
           style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}
         >
           <p style={{ ...MUTED_SM, margin: 0, flex: 1, minWidth: 240 }}>
-            {state.core.organizations.length}{' '}
-            {state.core.organizations.length === 1 ? 'organization' : 'organizations'} and{' '}
-            {state.core.venues.length} venues. They live on their own screen, since the schedule
-            points at them.
+            {state.core.organizations.length + state.core.venues.length === 0 ? (
+              <>
+                No organizations or venues yet. Add them on the Partners screen, so the schedule
+                knows where each class meets.
+              </>
+            ) : (
+              <>
+                {state.core.organizations.length}{' '}
+                {state.core.organizations.length === 1 ? 'organization' : 'organizations'} and{' '}
+                {state.core.venues.length} {state.core.venues.length === 1 ? 'venue' : 'venues'}.
+                They live on their own screen, since the schedule points at them.
+              </>
+            )}
           </p>
           <Button variant="secondary" size="sm" onClick={() => nav('/partners')}>
             Open Partners
@@ -304,15 +338,25 @@ export default function Settings() {
       </Card>
 
       <Card title="Programs" subtitle="What the money and the classes are for.">
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          {state.core.programs.map(p => (
-            <Tag key={p.id}>{p.name}</Tag>
-          ))}
-        </div>
-        <p style={{ ...MUTED_SM, margin: 'var(--space-4) 0 0' }}>
-          Programs come from the Jazz Angels site. Editing them is out of scope for this proof of
-          concept.
-        </p>
+        {state.core.programs.length === 0 ? (
+          <EmptyState
+            style={{ padding: 'var(--space-4) var(--space-6)' }}
+            title="No programs yet"
+            message="Studio sessions, in-school classes and the other programs a grant or a class belongs to show up here. They come from the Jazz Angels site; adding them in the portal is not built yet."
+          />
+        ) : (
+          <>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+              {state.core.programs.map(p => (
+                <Tag key={p.id}>{p.name}</Tag>
+              ))}
+            </div>
+            <p style={{ ...MUTED_SM, margin: 'var(--space-4) 0 0' }}>
+              Programs come from the Jazz Angels site. Editing them is out of scope for this proof
+              of concept.
+            </p>
+          </>
+        )}
       </Card>
 
       <Card title="Fiscal year" subtitle="Where the year starts for every total on the dashboard.">

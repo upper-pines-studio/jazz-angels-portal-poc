@@ -4,6 +4,7 @@ import {
   Button,
   Checkbox,
   Dialog,
+  EmptyState,
   Field,
   Icon,
   Input,
@@ -34,49 +35,60 @@ export function ChecklistTab({ grant }: { grant: Grant }) {
 
   return (
     <div>
-      <div
-        style={{
-          padding: 'var(--space-3) var(--space-6)',
-          borderBottom: 'var(--border-width) solid var(--border-subtle)',
-        }}
-      >
+      {groups.length === 0 ? (
+        <EmptyState
+          icon={<Icon name="list-checks" size={22} />}
+          title="No tasks yet"
+          message={
+            mayEdit
+              ? 'The steps for this grant show up here, grouped by phase, with who does each one and by when. Add the first task.'
+              : 'The steps for this grant show up here, grouped by phase, once someone adds them.'
+          }
+          action={
+            mayEdit && (
+              <Button
+                variant="primary"
+                size="sm"
+                iconLeft={<Icon name="plus" size={15} />}
+                onClick={() => setAdding(true)}
+              >
+                Add task
+              </Button>
+            )
+          }
+        />
+      ) : (
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: 'var(--space-3)',
-            font: 'var(--type-body-sm)',
-            color: 'var(--text-body)',
-            marginBottom: 'var(--space-2)',
+            padding: 'var(--space-3) var(--space-6)',
+            borderBottom: 'var(--border-width) solid var(--border-subtle)',
           }}
         >
-          <span>Tasks</span>
-          <span
+          <div
             style={{
-              font: 'var(--weight-medium) var(--text-xs)/1.3 var(--font-mono)',
-              color: 'var(--text-strong)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 'var(--space-3)',
+              font: 'var(--type-body-sm)',
+              color: 'var(--text-body)',
+              marginBottom: 'var(--space-2)',
             }}
           >
-            {progress.done} of {progress.total} done
-          </span>
-        </div>
-        <ProgressBar
-          value={progress.done}
-          max={Math.max(progress.total, 1)}
-          color="var(--teal-500)"
-        />
-      </div>
-
-      {groups.length === 0 && (
-        <div
-          style={{
-            padding: 'var(--space-8) var(--space-6)',
-            textAlign: 'center',
-            font: 'var(--type-body-sm)',
-            color: 'var(--text-muted)',
-          }}
-        >
-          {mayEdit ? 'No tasks yet. Add the first one below.' : 'No tasks yet.'}
+            <span>Tasks</span>
+            <span
+              style={{
+                font: 'var(--weight-medium) var(--text-xs)/1.3 var(--font-mono)',
+                color: 'var(--text-strong)',
+              }}
+            >
+              {progress.done} of {progress.total} done
+            </span>
+          </div>
+          <ProgressBar
+            value={progress.done}
+            max={Math.max(progress.total, 1)}
+            color="var(--teal-500)"
+          />
         </div>
       )}
 
@@ -89,7 +101,7 @@ export function ChecklistTab({ grant }: { grant: Grant }) {
         </React.Fragment>
       ))}
 
-      {mayEdit && (
+      {mayEdit && groups.length > 0 && (
         <FooterBand>
           <AddButton label="Add task" onClick={() => setAdding(true)} />
         </FooterBand>

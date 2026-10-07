@@ -25,7 +25,9 @@ import { VENUE_KINDS, VenueDialog, kindLabel } from './dialogs';
 export default function VenueDetail() {
   const { id = '' } = useParams();
   const { state, today } = useStore();
-  const mayEdit = useCan()('partners', 'edit');
+  const allowed = useCan();
+  const mayEdit = allowed('partners', 'edit');
+  const mayOpenSchedule = allowed('schedule', 'open');
   const nav = useNavigate();
   const [editing, setEditing] = React.useState(false);
 
@@ -112,17 +114,29 @@ export default function VenueDetail() {
         <Card
           title="Classes here"
           subtitle={
-            teachingOn
+            teachingOn && classes.length > 0
               ? `${classes.length} ${classes.length === 1 ? 'ensemble meets' : 'ensembles meet'} at ${venue.name}`
               : undefined
           }
           padding="0"
         >
-          {teachingOn ? (
+          {teachingOn && classes.length === 0 ? (
+            <EmptyState
+              icon={<Icon name="calendar" size={22} />}
+              title="No classes here yet"
+              message={`Each ensemble that meets at ${venue.name} shows up here, with its day, room and lead. Add a class on the Schedule and pick this venue.`}
+              action={
+                mayOpenSchedule && (
+                  <Button variant="secondary" size="sm" onClick={() => nav('/schedule')}>
+                    Open the schedule
+                  </Button>
+                )
+              }
+            />
+          ) : teachingOn ? (
             <TableScroll minWidth={680}>
               <DataTable
                 rows={classes.map(c => ({ id: c.ensembleId, ...c }))}
-                emptyLabel="No classes meet here yet. Add one from the Schedule."
                 columns={[
                   { key: 'name', label: 'Ensemble', strong: true, width: '1.3fr' },
                   {

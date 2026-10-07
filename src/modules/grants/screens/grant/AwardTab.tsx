@@ -1,6 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Card, DataTable, Icon, IconButton } from '../../../../design-system';
+import {
+  Badge,
+  Button,
+  Card,
+  DataTable,
+  EmptyState,
+  Icon,
+  IconButton,
+} from '../../../../design-system';
 import {
   dateLong,
   dateRange,
@@ -289,75 +297,82 @@ export function AwardTab({ grant }: { grant: Grant }) {
         note={receivedNote}
         action={mayEdit && <AddButton label="Add payment" onClick={() => setAddingPayment(true)} />}
       />
-      <TableScroll minWidth={620}>
-        <DataTable
-          columns={[
-            {
-              key: 'label',
-              label: 'Installment',
-              strong: true,
-              width: '1.2fr',
-              render: (r: Payment) =>
-                mayEdit ? (
-                  <button
-                    type="button"
-                    className="ja-text-button"
-                    title="Edit this payment"
-                    onClick={e => {
-                      e.stopPropagation();
-                      setEditingPayment(r);
-                    }}
-                  >
-                    {r.label}
-                  </button>
-                ) : (
-                  r.label
-                ),
-            },
-            {
-              key: 'expectedDate',
-              label: 'Expected',
-              width: '112px',
-              mono: true,
-              render: (r: Payment) => (
-                <span
-                  style={{
-                    fontSize: 'var(--text-xs)',
-                    color:
-                      !r.receivedDate && r.expectedDate < today ? 'var(--danger-500)' : undefined,
-                  }}
-                >
-                  {dateLong(r.expectedDate)}
-                </span>
-              ),
-            },
-            {
-              key: 'amount',
-              label: 'Amount',
-              width: '88px',
-              mono: true,
-              align: 'right',
-              render: (r: Payment) => money(r.amount),
-            },
-            { key: 'status', label: 'Status', width: 'minmax(210px, 1.5fr)', render: status },
-            {
-              key: 'source',
-              label: 'Source',
-              width: '52px',
-              render: (r: Payment) => (
-                <PageLink page={r.sourcePage} letter={letter} onOpen={openLetter} />
-              ),
-            },
-          ]}
-          rows={payments}
-          onRowClick={mayEdit ? (r: Payment) => setEditingPayment(r) : undefined}
-          emptyLabel={
+      {payments.length === 0 ? (
+        <EmptyState
+          style={{ padding: 'var(--space-6)' }}
+          title="No payments scheduled yet"
+          message={
             mayEdit
-              ? 'No installments yet. Add each payment the award letter promises, then mark it received when it arrives.'
-              : 'No installments yet.'
+              ? 'Each installment the award letter promises shows up here with its expected date. Add each payment, then mark it received when it arrives.'
+              : 'Each installment the award letter promises shows up here with its expected date, once someone adds it.'
           }
         />
-      </TableScroll>
+      ) : (
+        <TableScroll minWidth={620}>
+          <DataTable
+            columns={[
+              {
+                key: 'label',
+                label: 'Installment',
+                strong: true,
+                width: '1.2fr',
+                render: (r: Payment) =>
+                  mayEdit ? (
+                    <button
+                      type="button"
+                      className="ja-text-button"
+                      title="Edit this payment"
+                      onClick={e => {
+                        e.stopPropagation();
+                        setEditingPayment(r);
+                      }}
+                    >
+                      {r.label}
+                    </button>
+                  ) : (
+                    r.label
+                  ),
+              },
+              {
+                key: 'expectedDate',
+                label: 'Expected',
+                width: '112px',
+                mono: true,
+                render: (r: Payment) => (
+                  <span
+                    style={{
+                      fontSize: 'var(--text-xs)',
+                      color:
+                        !r.receivedDate && r.expectedDate < today ? 'var(--danger-500)' : undefined,
+                    }}
+                  >
+                    {dateLong(r.expectedDate)}
+                  </span>
+                ),
+              },
+              {
+                key: 'amount',
+                label: 'Amount',
+                width: '88px',
+                mono: true,
+                align: 'right',
+                render: (r: Payment) => money(r.amount),
+              },
+              { key: 'status', label: 'Status', width: 'minmax(210px, 1.5fr)', render: status },
+              {
+                key: 'source',
+                label: 'Source',
+                width: '52px',
+                render: (r: Payment) => (
+                  <PageLink page={r.sourcePage} letter={letter} onOpen={openLetter} />
+                ),
+              },
+            ]}
+            rows={payments}
+            onRowClick={mayEdit ? (r: Payment) => setEditingPayment(r) : undefined}
+          />
+        </TableScroll>
+      )}
       {payments.length > 0 && awarded !== undefined && scheduled !== awarded && (
         <p
           style={{

@@ -79,7 +79,9 @@ function stats(state: PortalState, today: string): StatSpec[] {
       value: money(inPipeline),
       accent: 'var(--blue-500)',
       href: '/grants?view=pre-award',
-      footnote: `${preAward.length} ${preAward.length === 1 ? 'application' : 'applications'} · ${dueThisMonth} due this month`,
+      footnote: preAward.length
+        ? `${preAward.length} ${preAward.length === 1 ? 'application' : 'applications'} · ${dueThisMonth} due this month`
+        : 'No applications yet',
     },
   ];
 }

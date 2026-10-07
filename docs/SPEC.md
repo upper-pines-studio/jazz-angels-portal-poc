@@ -563,8 +563,8 @@ The award as the letter states it. Three bands:
   opens the award letter at that page; plain text when no letter is stored). Row click edits. The
   payment dialog: installment, expected, amount, award letter page, received date; Delete when
   editing. When the schedule does not add up to the award: "The schedule adds up to $X, $Y less than
-  the award." Empty: "No installments yet. Add each payment the award letter promises, then mark it
-  received when it arrives."
+  the award." Empty: "No payments scheduled yet. Each installment the award letter promises shows
+  up here with its expected date. Add each payment, then mark it received when it arrives."
 - **Terms and restrictions**, with "Add term". Each term: label, the wording, the page link, and a
   delete with an inline confirm. Click a term to edit it. Empty: "No terms yet. Add each condition in
   the award letter, with the page it is on, so the budget and the spend-down warnings can point back
@@ -652,7 +652,8 @@ What the funder is owed and when, and who gets reminded.
   stops its reminders. It does not change the grant's phase.
 - "Add report": kind, due date, status, and the submitted date when the status is Submitted or
   Accepted. A new report follows the reminder defaults. Editing moves its reminders with the due date.
-- Empty: "No reports scheduled yet. Add the ones the award letter asks for."
+- Empty: "No reports scheduled yet. The interim and final reports the funder asks for show up here,
+  with their due dates and reminders. Add the ones the award letter asks for." with "Add report".
 - **Program numbers** card, under the tab, once the grant is post-award and has a period start:
   meetings held, students served and attendance from Teaching, and teaching hours from Timesheets,
   from the period start to today (or the period end, if earlier). A general operating grant counts
@@ -669,7 +670,8 @@ Two lists:
   pre-award: "…such as the final proposal or a letter from the funder…".
 - **Application register**: the DataTable of what each application needs (name, kind, status Badge,
   updated, link icon), "Add document", row click edits (with Delete). Its rows link out to Drive or
-  Dropbox; it does not hold files. Empty: "No documents listed yet. Add the first one below."
+  Dropbox; it does not hold files. Empty: "No documents listed yet. The narrative, budget, IRS letter
+  and the rest of what an application needs show up here…" with "Add document".
 
 ### 4.11 Transactions  `/transactions`
 What QuickBooks sent, and where each one belongs. The bookkeeper works the To assign tab down to
@@ -700,9 +702,12 @@ nothing each week.
   - **Not grant-funded**: "Set aside · Denise, Sep 8"; a menu: Assign to a grant, Send back to assign.
 - Each change shows a toast with Undo (4.9).
 - Disconnected: a banner "QuickBooks is not connected. What is already here stays…" with Open Settings.
+  Never connected (no sync yet): "QuickBooks is not connected yet. Once it is, new spending arrives
+  here each morning…".
 - Empty tab: To assign, "Everything from QuickBooks has a home" with Sync now (or Open Settings when
   disconnected); Assigned, "Nothing assigned yet"; Not grant-funded, "Nothing set aside yet"; All,
-  "No transactions yet". Filters that match nothing: "No transactions match" with Clear filters.
+  "No transactions yet". Before QuickBooks has sent anything, To assign says "Nothing from QuickBooks
+  yet" instead. Filters that match nothing: "No transactions match" with Clear filters.
 
 #### 4.11.1 Split panel  `/transactions?tx=<transactionId>`
 Docked on the right (`SidePanel`). Title: payee and amount; under it date, memo, account, and "From
@@ -748,7 +753,8 @@ Every grant with money and each budget line, spent against an even pace.
   runs out around Nov 8, 2026, nearly eight months before the grant ends." with View transactions.
 - A grant with no lines: "No budget lines yet. Add them to see which parts of the award are
   spending fast or slow." with "Add budget lines".
-- Empty: "No grants with money in FY27" with "Show all grants with money" (or "Go to grants" on All).
+- Empty: "No grants with money in FY27" with "Show all grants with money"; on All, or when no grant
+  has money in any period, "No grants with money yet" with "Go to grants".
 
 ### 4.13 Spend-down  `/spend-down`
 Whether each grant's money will be fully spent by its end date at today's rate.
@@ -797,7 +803,8 @@ panel (only while the report is open).
 - Under it, **Default reminders**: the default chips, "to the grant owner and Denise Moreno", and
   **Edit defaults**.
 - Empty: "No reports owed. Every report is in…"; with an owner filter, "No reports owed for this
-  owner" with "Show every owner".
+  owner" with "Show every owner"; before any grant has a report, "No reports yet. The reports funders
+  ask for show up here…".
 
 #### 4.14.1 Reminders panel  `/deadlines?kind=report&report=<reportId>`
 Docked on the right. Eyebrow "Reminders", title "Final report, LA County", subtitle "Due Wednesday,

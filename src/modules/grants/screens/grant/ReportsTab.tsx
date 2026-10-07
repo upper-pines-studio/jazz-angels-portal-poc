@@ -86,189 +86,208 @@ export function ReportsTab({ grant }: { grant: Grant }) {
 
   return (
     <div>
-      <TableScroll minWidth={640}>
-        <DataTable
-          columns={[
-            {
-              key: 'kind',
-              label: 'Kind',
-              width: '76px',
-              render: (r: Report) => (
-                <Badge tone={r.kind === 'final' ? 'gold' : 'neutral'}>{kindWord(r)}</Badge>
-              ),
-            },
-            {
-              key: 'dueDate',
-              label: 'Due',
-              width: '116px',
-              render: (r: Report) => {
-                const open = isReportOpen(r);
-                const urgency = reportUrgency(r, today);
-                return (
-                  <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ font: 'var(--type-numeric)', color: 'var(--text-strong)' }}>
-                      {dateShort(r.dueDate)}
-                    </span>
-                    <span
-                      style={{
-                        font: 'var(--weight-regular) var(--text-2xs)/1.3 var(--font-sans)',
-                        color: !open
-                          ? 'var(--text-muted)'
-                          : urgency === 'overdue'
-                            ? 'var(--danger-500)'
-                            : urgency === 'due-soon'
-                              ? 'var(--gold-600)'
-                              : 'var(--text-muted)',
-                      }}
-                    >
-                      {open
-                        ? dueDaysText(r.dueDate, today, true)
-                        : r.submittedDate
-                          ? `Submitted ${dateShort(r.submittedDate)}`
-                          : 'Submitted'}
-                    </span>
-                  </span>
-                );
+      {rows.length === 0 ? (
+        <EmptyState
+          icon={<Icon name="file-text" size={22} />}
+          title="No reports scheduled yet"
+          message={
+            mayEdit
+              ? 'The interim and final reports the funder asks for show up here, with their due dates and reminders. Add the ones the award letter asks for.'
+              : 'The interim and final reports the funder asks for show up here, with their due dates and reminders, once someone adds them.'
+          }
+          action={
+            mayEdit && (
+              <Button
+                variant="primary"
+                size="sm"
+                iconLeft={<Icon name="plus" size={15} />}
+                onClick={() => setAdding(true)}
+              >
+                Add report
+              </Button>
+            )
+          }
+        />
+      ) : (
+        <TableScroll minWidth={640}>
+          <DataTable
+            columns={[
+              {
+                key: 'kind',
+                label: 'Kind',
+                width: '76px',
+                render: (r: Report) => (
+                  <Badge tone={r.kind === 'final' ? 'gold' : 'neutral'}>{kindWord(r)}</Badge>
+                ),
               },
-            },
-            {
-              key: 'status',
-              label: 'Status',
-              width: '112px',
-              render: (r: Report) => (
-                <span
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: 4,
-                  }}
-                >
-                  <Badge tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Badge>
-                  {mayEdit && isReportOpen(r) && (
-                    <LinkButton
-                      onClick={e => {
-                        e.stopPropagation();
-                        markSubmitted(r);
-                      }}
-                    >
-                      Mark submitted
-                    </LinkButton>
-                  )}
-                </span>
-              ),
-            },
-            {
-              key: 'reminders',
-              label: 'Reminders',
-              width: '1fr',
-              wrap: true,
-              render: (r: Report) => {
-                if (mayEdit && deleting === r.id) {
+              {
+                key: 'dueDate',
+                label: 'Due',
+                width: '116px',
+                render: (r: Report) => {
+                  const open = isReportOpen(r);
+                  const urgency = reportUrgency(r, today);
                   return (
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ font: 'var(--type-numeric)', color: 'var(--text-strong)' }}>
+                        {dateShort(r.dueDate)}
+                      </span>
+                      <span
+                        style={{
+                          font: 'var(--weight-regular) var(--text-2xs)/1.3 var(--font-sans)',
+                          color: !open
+                            ? 'var(--text-muted)'
+                            : urgency === 'overdue'
+                              ? 'var(--danger-500)'
+                              : urgency === 'due-soon'
+                                ? 'var(--gold-600)'
+                                : 'var(--text-muted)',
+                        }}
+                      >
+                        {open
+                          ? dueDaysText(r.dueDate, today, true)
+                          : r.submittedDate
+                            ? `Submitted ${dateShort(r.submittedDate)}`
+                            : 'Submitted'}
+                      </span>
+                    </span>
+                  );
+                },
+              },
+              {
+                key: 'status',
+                label: 'Status',
+                width: '112px',
+                render: (r: Report) => (
+                  <span
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      gap: 4,
+                    }}
+                  >
+                    <Badge tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Badge>
+                    {mayEdit && isReportOpen(r) && (
+                      <LinkButton
+                        onClick={e => {
+                          e.stopPropagation();
+                          markSubmitted(r);
+                        }}
+                      >
+                        Mark submitted
+                      </LinkButton>
+                    )}
+                  </span>
+                ),
+              },
+              {
+                key: 'reminders',
+                label: 'Reminders',
+                width: '1fr',
+                wrap: true,
+                render: (r: Report) => {
+                  if (mayEdit && deleting === r.id) {
+                    return (
+                      <span
+                        style={{
+                          font: 'var(--type-body-sm)',
+                          fontSize: 'var(--text-xs)',
+                          color: 'var(--text-strong)',
+                        }}
+                      >
+                        Delete this report and its reminders?
+                      </span>
+                    );
+                  }
+                  return isReportOpen(r) ? (
+                    <ReportReminders report={r} />
+                  ) : (
                     <span
                       style={{
                         font: 'var(--type-body-sm)',
                         fontSize: 'var(--text-xs)',
-                        color: 'var(--text-strong)',
+                        color: 'var(--text-muted)',
                       }}
                     >
-                      Delete this report and its reminders?
+                      Reminders stopped
                     </span>
                   );
-                }
-                return isReportOpen(r) ? (
-                  <ReportReminders report={r} />
-                ) : (
-                  <span
-                    style={{
-                      font: 'var(--type-body-sm)',
-                      fontSize: 'var(--text-xs)',
-                      color: 'var(--text-muted)',
-                    }}
-                  >
-                    Reminders stopped
-                  </span>
-                );
+                },
               },
-            },
-            {
-              key: 'actions',
-              label: '',
-              width: '120px',
-              align: 'right',
-              render: (r: Report) =>
-                mayEdit && deleting === r.id ? (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-end',
-                      gap: 'var(--space-2)',
-                    }}
-                  >
-                    <Button variant="danger" size="sm" onClick={() => remove(r)}>
-                      Delete
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleting(null)}>
-                      Keep
-                    </Button>
-                  </span>
-                ) : (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-end',
-                      gap: 4,
-                    }}
-                  >
-                    {isReportOpen(r) && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        iconLeft={<Icon name="bell" size={13} />}
-                        onClick={() => nav(`/deadlines?kind=report&report=${r.id}`)}
-                      >
-                        Reminders
+              {
+                key: 'actions',
+                label: '',
+                width: '120px',
+                align: 'right',
+                render: (r: Report) =>
+                  mayEdit && deleting === r.id ? (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-end',
+                        gap: 'var(--space-2)',
+                      }}
+                    >
+                      <Button variant="danger" size="sm" onClick={() => remove(r)}>
+                        Delete
                       </Button>
-                    )}
-                    {mayEdit && (
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 'var(--space-2)',
-                        }}
-                      >
-                        <IconButton
-                          label={`Edit the ${label(r).toLowerCase()}`}
-                          variant="ghost"
+                      <Button variant="ghost" size="sm" onClick={() => setDeleting(null)}>
+                        Keep
+                      </Button>
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-end',
+                        gap: 4,
+                      }}
+                    >
+                      {isReportOpen(r) && (
+                        <Button
+                          variant="secondary"
                           size="sm"
-                          onClick={() => setEditing(r)}
+                          iconLeft={<Icon name="bell" size={13} />}
+                          onClick={() => nav(`/deadlines?kind=report&report=${r.id}`)}
                         >
-                          <Icon name="pencil" size={14} />
-                        </IconButton>
-                        <DeleteX
-                          label={`Delete the ${label(r).toLowerCase()}`}
-                          onClick={() => setDeleting(r.id)}
-                        />
-                      </span>
-                    )}
-                  </span>
-                ),
-            },
-          ]}
-          rows={rows}
-          emptyLabel={
-            mayEdit
-              ? 'No reports scheduled yet. Add the ones the award letter asks for.'
-              : 'No reports scheduled yet.'
-          }
-        />
-      </TableScroll>
+                          Reminders
+                        </Button>
+                      )}
+                      {mayEdit && (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 'var(--space-2)',
+                          }}
+                        >
+                          <IconButton
+                            label={`Edit the ${label(r).toLowerCase()}`}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditing(r)}
+                          >
+                            <Icon name="pencil" size={14} />
+                          </IconButton>
+                          <DeleteX
+                            label={`Delete the ${label(r).toLowerCase()}`}
+                            onClick={() => setDeleting(r.id)}
+                          />
+                        </span>
+                      )}
+                    </span>
+                  ),
+              },
+            ]}
+            rows={rows}
+          />
+        </TableScroll>
+      )}
 
-      {mayEdit && (
+      {mayEdit && rows.length > 0 && (
         <FooterBand>
           <AddButton label="Add report" onClick={() => setAdding(true)} />
         </FooterBand>

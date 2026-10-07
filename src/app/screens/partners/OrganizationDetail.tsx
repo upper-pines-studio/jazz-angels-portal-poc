@@ -113,37 +113,60 @@ export default function OrganizationDetail() {
           subtitle={`${venues.length} ${venues.length === 1 ? 'place' : 'places'} under ${organization.name}`}
           padding="0"
         >
-          <TableScroll minWidth={600}>
-            <DataTable
-              rows={venues}
-              onRowClick={(row: Venue) => nav(`/partners/venues/${row.id}`)}
-              emptyLabel="No venues yet. Add each school or site where a class meets."
-              columns={[
-                { key: 'name', label: 'Name', strong: true, width: '1.4fr' },
-                {
-                  key: 'kind',
-                  label: 'Kind',
-                  width: '1fr',
-                  render: (row: Venue) => kindLabel(VENUE_KINDS, row.kind),
-                },
-                {
-                  key: 'address',
-                  label: 'Address',
-                  width: '1.6fr',
-                  wrap: true,
-                  render: (row: Venue) => addressLine(row.address) || '—',
-                },
-                {
-                  key: 'contact',
-                  label: 'On-site contact',
-                  width: '1.4fr',
-                  wrap: true,
-                  render: (row: Venue) => contactLine(row) || '—',
-                },
-              ]}
+          {venues.length === 0 ? (
+            <EmptyState
+              icon={<Icon name="map-pin" size={22} />}
+              title="No venues yet"
+              message={
+                mayEdit
+                  ? `Each school or site where ${organization.name} hosts a class shows up here. Add a venue for each one.`
+                  : `Each school or site where ${organization.name} hosts a class shows up here once someone adds it.`
+              }
+              action={
+                mayEdit && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    iconLeft={<Icon name="plus" size={15} />}
+                    onClick={() => setAddingVenue(true)}
+                  >
+                    Add venue
+                  </Button>
+                )
+              }
             />
-          </TableScroll>
-          {mayEdit && (
+          ) : (
+            <TableScroll minWidth={600}>
+              <DataTable
+                rows={venues}
+                onRowClick={(row: Venue) => nav(`/partners/venues/${row.id}`)}
+                columns={[
+                  { key: 'name', label: 'Name', strong: true, width: '1.4fr' },
+                  {
+                    key: 'kind',
+                    label: 'Kind',
+                    width: '1fr',
+                    render: (row: Venue) => kindLabel(VENUE_KINDS, row.kind),
+                  },
+                  {
+                    key: 'address',
+                    label: 'Address',
+                    width: '1.6fr',
+                    wrap: true,
+                    render: (row: Venue) => addressLine(row.address) || '—',
+                  },
+                  {
+                    key: 'contact',
+                    label: 'On-site contact',
+                    width: '1.4fr',
+                    wrap: true,
+                    render: (row: Venue) => contactLine(row) || '—',
+                  },
+                ]}
+              />
+            </TableScroll>
+          )}
+          {mayEdit && venues.length > 0 && (
             <div
               style={{
                 display: 'flex',
