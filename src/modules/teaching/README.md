@@ -25,6 +25,7 @@ actions.teaching.setMark(meetingId, studentId, 'present');
 | `Ensemble` | A standing group: same students, same place, same hour each week. `venueId` is a core `Venue`; `room` is the space inside it. Archived when it stops meeting: its classes on and after `archivedAt` leave the schedule (`isScheduled`); the ones before stay, roll calls and all. |
 | `ClassMeeting` | One class on one date. `rollSubmittedAt` set means roll is closed. |
 | `Student` | On a roster, on the waitlist, or an alum. `ensembleId` is unset while waiting. |
+| `AttendanceRecord` | One mark, `present` / `late` / `absent`, for one student at one meeting. |
 
 **Archived is not alumni.** `status` says where a student is with Jazz Angels: enrolled, on the
 waitlist, or alumni who finished their years here. Archived (decision 0002) is a separate pair of
@@ -32,7 +33,6 @@ fields, `archivedAt` and `archivedById`: a student who left mid-term, or was ent
 archived whatever their status. Archiving leaves `status` and `ensembleId` as they were; the
 student leaves the roster, the roll call and every count, and their past attendance stays in the
 rates and the grant figures. Restoring brings them back as they were.
-| `AttendanceRecord` | One mark, `present` / `late` / `absent`, for one student at one meeting. |
 
 Dates are ISO `YYYY-MM-DD`; times are 24-hour `HH:MM` and are read back through
 `timeLabel('16:00') === '4:00pm'`. **Present and late both count as turning

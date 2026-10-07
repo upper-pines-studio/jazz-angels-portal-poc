@@ -91,6 +91,8 @@ export default function Settings() {
   const staffRows = withArchived(state.core.staff, showArchived);
   const partnerCount = activeOnly(state.core.organizations).length;
   const venueCount = activeOnly(state.core.venues).length;
+  const archivedPlaces =
+    state.core.organizations.length + state.core.venues.length - partnerCount - venueCount;
 
   function archivePerson(row: StaffMember) {
     actions.core.archiveStaff(row.id);
@@ -386,7 +388,7 @@ export default function Settings() {
           style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}
         >
           <p style={{ ...MUTED_SM, margin: 0, flex: 1, minWidth: 240 }}>
-            {partnerCount + venueCount === 0 ? (
+            {state.core.organizations.length + state.core.venues.length === 0 ? (
               <>
                 No organizations or venues yet. Add them on the Partners screen, so the schedule
                 knows where each class meets.
@@ -394,8 +396,9 @@ export default function Settings() {
             ) : (
               <>
                 {partnerCount} {partnerCount === 1 ? 'organization' : 'organizations'} and{' '}
-                {venueCount} {venueCount === 1 ? 'venue' : 'venues'}. They live on their own screen,
-                since the schedule points at them.
+                {venueCount} {venueCount === 1 ? 'venue' : 'venues'}
+                {archivedPlaces > 0 && `, and ${archivedPlaces} archived`}. They live on their own
+                screen, since the schedule points at them.
               </>
             )}
           </p>

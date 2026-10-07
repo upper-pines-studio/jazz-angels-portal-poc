@@ -56,7 +56,9 @@ export default function Partners() {
     title: 'Partners',
     subtitle:
       currentOrgs + currentVenues === 0
-        ? 'No organizations or venues yet'
+        ? state.core.organizations.length + state.core.venues.length > 0
+          ? 'No current organizations or venues'
+          : 'No organizations or venues yet'
         : `${currentOrgs} ${currentOrgs === 1 ? 'organization' : 'organizations'} · ${currentVenues} ${currentVenues === 1 ? 'venue' : 'venues'}`,
     actions: mayEdit ? (
       <>
@@ -97,11 +99,13 @@ export default function Partners() {
         {venues.length === 0 ? (
           <EmptyState
             icon={<Icon name="map-pin" size={22} />}
-            title="No venues yet"
+            title={state.core.venues.length > 0 ? 'Every venue is archived' : 'No venues yet'}
             message={
-              mayEdit
-                ? 'The studio, each school and every hall where a class meets show up here. Add a venue for each one, so the schedule knows where to send people.'
-                : 'The studio, each school and every hall where a class meets show up here once someone adds them.'
+              state.core.venues.length > 0
+                ? 'Show archived lists them, and each one can be restored from its page.'
+                : mayEdit
+                  ? 'The studio, each school and every hall where a class meets show up here. Add a venue for each one, so the schedule knows where to send people.'
+                  : 'The studio, each school and every hall where a class meets show up here once someone adds them.'
             }
             action={
               mayEdit && (
@@ -177,11 +181,17 @@ export default function Partners() {
         {organizations.length === 0 ? (
           <EmptyState
             icon={<Icon name="building-2" size={22} />}
-            title="No organizations yet"
+            title={
+              state.core.organizations.length > 0
+                ? 'Every organization is archived'
+                : 'No organizations yet'
+            }
             message={
-              mayEdit
-                ? 'The districts, schools and community partners you work with show up here, with who to call at each. Add an organization, then add its venues.'
-                : 'The districts, schools and community partners you work with show up here once someone adds them.'
+              state.core.organizations.length > 0
+                ? 'Show archived lists them, and each one can be restored from its page.'
+                : mayEdit
+                  ? 'The districts, schools and community partners you work with show up here, with who to call at each. Add an organization, then add its venues.'
+                  : 'The districts, schools and community partners you work with show up here once someone adds them.'
             }
             action={
               mayEdit && (

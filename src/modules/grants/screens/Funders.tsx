@@ -143,7 +143,9 @@ export default function Funders() {
     title: 'Funders',
     subtitle:
       current === 0
-        ? 'No funders yet'
+        ? archivedCount > 0
+          ? `No current funders · ${archivedCount} archived`
+          : 'No funders yet'
         : `${current} ${current === 1 ? 'funder' : 'funders'} · ${money(allAwarded)} awarded all time`,
     actions: mayEdit ? (
       <Button
@@ -206,11 +208,13 @@ export default function Funders() {
         {rows.length === 0 ? (
           <EmptyState
             icon={<Icon name="building-2" size={22} />}
-            title="No funders yet"
+            title={archivedCount > 0 ? 'Every funder is archived' : 'No funders yet'}
             message={
-              mayEdit
-                ? 'Every foundation, agency and company we apply to shows up here, with its contact and what it has awarded. Add a funder, or add a grant and its funder comes with it.'
-                : 'Every foundation, agency and company we apply to shows up here once someone adds it.'
+              archivedCount > 0
+                ? 'Show archived lists them, and each one can be restored from its page.'
+                : mayEdit
+                  ? 'Every foundation, agency and company we apply to shows up here, with its contact and what it has awarded. Add a funder, or add a grant and its funder comes with it.'
+                  : 'Every foundation, agency and company we apply to shows up here once someone adds it.'
             }
             action={
               mayEdit && (
