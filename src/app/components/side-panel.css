@@ -53,6 +53,13 @@
   border-top: var(--border-width) solid var(--border-default);
 }
 
+/* "Discard your changes?" in the footer, in place of the panel's own buttons. */
+.ja-side-panel__ask {
+  margin-right: auto;
+  font: var(--weight-regular) var(--text-xs)/1.5 var(--font-sans);
+  color: var(--text-strong);
+}
+
 /* A titled block inside the panel body, ruled off from the one above. */
 .ja-side-panel__section { padding: var(--space-5) var(--space-6); }
 .ja-side-panel__section + .ja-side-panel__section { border-top: var(--border-width) solid var(--border-subtle); }

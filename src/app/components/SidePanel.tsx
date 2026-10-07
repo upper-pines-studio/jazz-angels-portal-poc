@@ -1,5 +1,5 @@
 import React from 'react';
-import { Icon, IconButton } from '../../design-system';
+import { Button, Icon, IconButton } from '../../design-system';
 import { Eyebrow } from './badges';
 import './side-panel.css';
 
@@ -26,6 +26,66 @@ export function WithPanel({
   );
 }
 
+/**
+ * What a page hands its docked panel so that opening another record, or
+ * anything else that would replace the panel, waits while the panel holds
+ * unsaved changes. Made by `usePanelGuard`.
+ */
+export interface PanelGuard {
+  /** The panel says whether it has unsaved changes. */
+  setDirty(dirty: boolean): void;
+  /** The page wants the panel gone or swapped, and is waiting on the answer. */
+  pending: boolean;
+  /** Throw the changes away and do what the page asked. */
+  discard(): void;
+  /** Stay on the panel as it is. */
+  keep(): void;
+}
+
+/**
+ * For a page with a docked panel that edits a draft (the reminders, a split).
+ * Wrap anything that would close or swap the panel in `guard`: it runs at once
+ * when the panel is clean, and waits for Discard when it is not. Pass `panel`
+ * to the panel, which hands it to `SidePanel`. Until the person decides, the
+ * page leaves the panel as it is: the record it shows does not change.
+ *
+ *   const { guard, panel } = usePanelGuard();
+ *   const open = (id: string) => guard(() => setParams({ report: id }));
+ *   <ReminderPanel key={id} guard={panel} … />
+ */
+export function usePanelGuard(): { guard: (go: () => void) => void; panel: PanelGuard } {
+  const dirty = React.useRef(false);
+  const [waiting, setWaiting] = React.useState<{ go: () => void }>();
+
+  const guard = React.useCallback((go: () => void) => {
+    if (dirty.current) setWaiting({ go });
+    else go();
+  }, []);
+  // Stable, so the panel's effects that report it do not re-run when a swap starts waiting.
+  const setDirty = React.useCallback((next: boolean) => {
+    dirty.current = next;
+    if (!next) setWaiting(undefined);
+  }, []);
+
+  const panel = React.useMemo<PanelGuard>(
+    () => ({
+      setDirty,
+      pending: !!waiting,
+      discard() {
+        dirty.current = false;
+        setWaiting(undefined);
+        waiting?.go();
+      },
+      keep() {
+        setWaiting(undefined);
+      },
+    }),
+    [waiting, setDirty],
+  );
+
+  return { guard, panel };
+}
+
 export interface SidePanelProps {
   /** Small caps line over the title: "Split across grants". */
   eyebrow?: React.ReactNode;
@@ -33,8 +93,20 @@ export interface SidePanelProps {
   /** Sits right of the title, in the display face: an amount. */
   titleAside?: React.ReactNode;
   subtitle?: React.ReactNode;
-  /** Buttons, right-aligned on the sunken band at the foot. */
-  footer?: React.ReactNode;
+  /**
+   * Buttons, right-aligned on the sunken band at the foot. A function is given
+   * the panel's own close, which asks first when the panel is `dirty`: use it
+   * for a Cancel button.
+   */
+  footer?: React.ReactNode | ((close: () => void) => React.ReactNode);
+  /**
+   * The panel holds changes that are not saved. Closing it (the X, Escape, a
+   * Cancel given `close`) then asks "Discard your changes?" in the footer
+   * before it calls `onClose`.
+   */
+  dirty?: boolean;
+  /** From the page's `usePanelGuard`, so the page asks before it swaps the panel. */
+  guard?: PanelGuard;
   onClose: () => void;
   children: React.ReactNode;
 }
@@ -46,10 +118,38 @@ export function SidePanel({
   titleAside,
   subtitle,
   footer,
+  dirty = false,
+  guard,
   onClose,
   children,
 }: SidePanelProps) {
   const ref = React.useRef<HTMLElement | null>(null);
+  const [closing, setClosing] = React.useState(false);
+
+  // Tell the page whether a swap has to ask; a panel that goes away is clean.
+  const setDirty = guard?.setDirty;
+  React.useEffect(() => {
+    setDirty?.(dirty);
+  }, [dirty, setDirty]);
+  React.useEffect(() => () => setDirty?.(false), [setDirty]);
+  React.useEffect(() => {
+    if (!dirty) setClosing(false);
+  }, [dirty]);
+
+  const requestClose = React.useCallback(
+    () => (dirty ? setClosing(true) : onClose()),
+    [dirty, onClose],
+  );
+  const asking = dirty && (closing || !!guard?.pending);
+  const keep = () => {
+    setClosing(false);
+    guard?.keep();
+  };
+  const discard = () => {
+    setClosing(false);
+    if (guard?.pending) guard.discard();
+    else onClose();
+  };
 
   // The panel is as tall as the scrolling area it sits in, whatever the top bar's height.
   React.useLayoutEffect(() => {
@@ -69,11 +169,27 @@ export function SidePanel({
       if (e.key !== 'Escape') return;
       // A dialog or a menu open over the panel gets the key first.
       if (document.querySelector('[data-ja-menu], .ja-main div[style*="z-index: 50"]')) return;
-      onClose();
+      requestClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [requestClose]);
+
+  const foot = asking ? (
+    <>
+      <span className="ja-side-panel__ask">Discard your changes?</span>
+      <Button variant="secondary" size="sm" onClick={keep}>
+        Keep editing
+      </Button>
+      <Button variant="danger" size="sm" onClick={discard}>
+        Discard
+      </Button>
+    </>
+  ) : typeof footer === 'function' ? (
+    footer(requestClose)
+  ) : (
+    footer
+  );
 
   return (
     <aside
@@ -114,7 +230,7 @@ export function SidePanel({
             </div>
           </div>
           <span style={{ flex: '0 0 auto', margin: '-6px -8px 0 0' }}>
-            <IconButton label="Close" variant="ghost" size="sm" onClick={onClose}>
+            <IconButton label="Close" variant="ghost" size="sm" onClick={requestClose}>
               <Icon name="x" size={16} />
             </IconButton>
           </span>
@@ -133,7 +249,7 @@ export function SidePanel({
         )}
       </div>
       <div className="ja-side-panel__body">{children}</div>
-      {footer && <div className="ja-side-panel__foot">{footer}</div>}
+      {foot && <div className="ja-side-panel__foot">{foot}</div>}
     </aside>
   );
 }

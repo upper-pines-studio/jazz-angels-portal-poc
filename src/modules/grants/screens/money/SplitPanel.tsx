@@ -3,6 +3,7 @@ import { Button, Icon, IconButton, Input, Select } from '../../../../design-syst
 import { dateShort, money, useStore } from '../../../../core';
 import type { PortalState } from '../../../../core';
 import { SidePanel } from '../../../../app/components/SidePanel';
+import type { PanelGuard } from '../../../../app/components/SidePanel';
 import {
   accountName,
   backupMoves,
@@ -90,18 +91,27 @@ function proposal(state: PortalState, tx: Transaction): Part[] {
   return [makePart(total, '', '', total)];
 }
 
+/** What a draft would save, to tell an edited one from the one the panel opened with. */
+function signature(parts: Part[], rule: boolean): string {
+  return JSON.stringify([parts.map(p => [p.grantId, p.lineId, p.amount]), rule]);
+}
+
 /**
  * The split editor docked on the right of Transactions: one card per part,
- * a bar showing each part's share, and a check that the parts add up.
+ * a bar showing each part's share, and a check that the parts add up. Once
+ * edited it asks before it closes, and, given the page's `guard`, before the
+ * page swaps it for another transaction.
  */
 export function SplitPanel({
   tx,
   onClose,
   onDraft,
   onSave,
+  guard,
 }: {
   tx: Transaction;
   onClose: () => void;
+  guard?: PanelGuard;
   onDraft: (draft: DraftSummary | undefined) => void;
   /** Assign the parts; the page shows the toast with its Undo. */
   onSave: (tx: Transaction, parts: Allocation[], note?: string) => void;
@@ -111,6 +121,8 @@ export function SplitPanel({
   const [parts, setParts] = React.useState<Part[]>(() => proposal(state, tx));
   const existingRule = state.grants.splitRules.find(r => r.payee === tx.payee);
   const [rule, setRule] = React.useState(!!existingRule);
+  const [opened] = React.useState(() => signature(parts, rule));
+  const dirty = signature(parts, rule) !== opened;
 
   React.useEffect(() => {
     onDraft({
@@ -292,6 +304,8 @@ export function SplitPanel({
       title={tx.payee}
       titleAside={money(total)}
       onClose={onClose}
+      dirty={dirty}
+      guard={guard}
       subtitle={
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span>
@@ -305,16 +319,16 @@ export function SplitPanel({
           </span>
         </div>
       }
-      footer={
+      footer={requestClose => (
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={requestClose}>
             Cancel
           </Button>
           <Button variant="primary" disabled={!canSave} onClick={save}>
             {split ? 'Save split' : 'Assign'}
           </Button>
         </>
-      }
+      )}
     >
       <div className="tx-split">
         <div>

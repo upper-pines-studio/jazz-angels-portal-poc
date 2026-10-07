@@ -16,13 +16,23 @@
   padding: 0 var(--space-5);
 }
 
-.ja-playbook-row__grip { grid-area: grip; }
-.ja-playbook-row__title { grid-area: title; }
-.ja-playbook-row__timing { grid-area: timing; }
-.ja-playbook-row__remove { grid-area: remove; }
+.ja-playbook-row__grip {
+  grid-area: grip;
+}
+.ja-playbook-row__title {
+  grid-area: title;
+}
+.ja-playbook-row__timing {
+  grid-area: timing;
+}
+.ja-playbook-row__remove {
+  grid-area: remove;
+}
 
 @media (max-width: 900px) {
-  .ja-playbook-row { grid-template-columns: 28px minmax(0, 1fr) 200px 32px; }
+  .ja-playbook-row {
+    grid-template-columns: 28px minmax(0, 1fr) 200px 32px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -34,5 +44,7 @@
     row-gap: 2px;
     padding: var(--space-2) var(--space-4);
   }
-  .ja-playbook-row__grip { align-self: center; }
+  .ja-playbook-row__grip {
+    align-self: center;
+  }
 }
