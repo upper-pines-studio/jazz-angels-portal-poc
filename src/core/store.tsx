@@ -1,17 +1,14 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useReducer,
-  type ReactNode,
-} from 'react';
+import React, { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { DEMO_TODAY_KEY, demoTodayFrom, demoTodayToStore, isDemo } from './demo';
 import { toISO } from './format';
 import type { ActionRules, AnyAction, ModuleSlice } from './module';
 import { can, mayChangeStaff } from './permissions';
 import type { Need, Subject } from './permissions';
+import { REPLACE, createLiveStore } from './live';
+import type { Saving } from './live';
+import type { Repository } from './persistence';
 import * as repository from './repository';
+import { localRepository } from './repository';
 import type { PortalSlice } from './repository';
 import { ROLE_LABELS, isRole } from './roles';
 import { DEFAULT_ENABLED_MODULES, loginStaff, makeCoreEmpty, makeCoreSeed } from './seed';
@@ -259,13 +256,13 @@ export const NO_DEMO = 'The demo data is not part of this portal.';
 
 /** Replace every slice at once (reset, import). */
 interface ReplaceAction extends AnyAction {
-  type: 'portal/replace';
+  type: typeof REPLACE;
 }
 
 /** One reducer per slice, routed by the `<sliceId>/` prefix on the action type. */
 export function makeReducer(slices: PortalSlice[]) {
   return function reducer(state: PortalState, action: AnyAction): PortalState {
-    if (action.type === 'portal/replace') {
+    if (action.type === REPLACE) {
       return (action as ReplaceAction).state as PortalState;
     }
     const sliceId = action.type.split('/')[0];
@@ -277,6 +274,19 @@ export function makeReducer(slices: PortalSlice[]) {
     if (next === bag[sliceId]) return state;
     return { ...bag, [sliceId]: next } as unknown as PortalState;
   };
+}
+
+/**
+ * The words for a change that was not saved, from the slice that made it.
+ * An import or a reset touches every slice, so it is named for what it was.
+ */
+export function describeChange(
+  slices: PortalSlice[],
+  sliceId: string,
+  action: AnyAction,
+): string | undefined {
+  if (action.type === REPLACE) return 'the new data';
+  return slices.find(s => s.id === sliceId)?.describe?.(action);
 }
 
 /**
@@ -297,7 +307,8 @@ export function savedDemoToday(demo: boolean): string | undefined {
 
 /**
  * The staff as saved in this browser, or as a fresh portal starts when nothing
- * is saved. The sign-in check reads it before the store mounts.
+ * is saved. The sign-in check reads it before the store mounts, so it reads
+ * localStorage directly rather than through the Repository.
  */
 export function savedStaff(demo: boolean = isDemo()): StaffMember[] {
   return (repository.loadSlice(coreSlice as PortalSlice, '', demo) as CoreState).staff;
@@ -314,6 +325,13 @@ export interface StoreValue {
   demo: boolean;
   /** The demo date in use, or undefined when today is the clock. Always undefined outside a demo. */
   demoToday: string | undefined;
+  /** Whether a change is being saved, or the last one could not be. The shell shows it. */
+  saving: Saving;
+  /**
+   * Resolves once every change made so far is saved: true, or false when one
+   * failed and was rolled back. Roll call waits on it before leaving the page.
+   */
+  whenSaved(): Promise<boolean>;
 }
 
 const StoreContext = createContext<StoreValue | undefined>(undefined);
@@ -328,6 +346,8 @@ export interface StoreProviderProps {
   today?: string;
   /** Whether to start from the demo data. Defaults to `isDemo()`; tests pass it. */
   demo?: boolean;
+  /** Where the data lives. Defaults to localStorage; tests pass one that fails on demand. */
+  repository?: Repository;
   /** The signed-in person's staff id. Every action is credited to them. */
   userId: string;
   /**
@@ -337,25 +357,96 @@ export interface StoreProviderProps {
   onUnknownUser?: () => void;
   /** Called with the reason when an action is refused for the signed-in person's role. */
   onRefused?: (message: string) => void;
+  /**
+   * Called when a change could not be saved and was rolled back, with the
+   * sentence to show: "Couldn't save the roll call mark".
+   */
+  onSaveFailed?: (message: string) => void;
   children: ReactNode;
 }
 
-export function StoreProvider({
-  slices,
+/**
+ * Loads every slice through the repository, one `load` per slice, then hands
+ * the state to the live store. Nothing below it renders until the load is in.
+ */
+export function StoreProvider(props: StoreProviderProps) {
+  const { slices, today: fixedToday, demo = isDemo(), repository: repo = localRepository } = props;
+  const clock = useMemo(() => fixedToday ?? toISO(new Date()), [fixedToday]);
+  const all = useMemo<PortalSlice[]>(() => [coreSlice as PortalSlice, ...(slices ?? [])], [slices]);
+  const [loaded, setLoaded] = React.useState<{ all: PortalSlice[]; state: PortalState }>();
+  const [loadFailed, setLoadFailed] = React.useState(false);
+
+  useEffect(() => {
+    let current = true;
+    Promise.all(all.map(slice => repo.load(slice, clock, demo))).then(
+      values => {
+        if (!current) return;
+        const state: Record<string, unknown> = {};
+        all.forEach((slice, i) => (state[slice.id] = values[i]));
+        setLoaded({ all, state: state as unknown as PortalState });
+      },
+      () => {
+        if (current) setLoadFailed(true);
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, [all, clock, demo, repo]);
+
+  if (loadFailed)
+    return (
+      <p role="alert" style={{ padding: 'var(--space-7)', font: 'var(--type-body)' }}>
+        The portal could not load its data. Reload the page to try again.
+      </p>
+    );
+  if (!loaded || loaded.all !== all) return null;
+  return (
+    <LiveProvider
+      {...props}
+      all={all}
+      initial={loaded.state}
+      clock={clock}
+      demo={demo}
+      repo={repo}
+    />
+  );
+}
+
+interface LiveProviderProps extends StoreProviderProps {
+  all: PortalSlice[];
+  initial: PortalState;
+  clock: string;
+  demo: boolean;
+  repo: Repository;
+}
+
+function LiveProvider({
+  all,
+  initial,
+  clock,
+  repo,
   today: fixedToday,
-  demo = isDemo(),
+  demo,
   userId,
   onUnknownUser,
   onRefused,
+  onSaveFailed,
   children,
-}: StoreProviderProps) {
-  const clock = useMemo(() => fixedToday ?? toISO(new Date()), [fixedToday]);
-  const all = useMemo<PortalSlice[]>(() => [coreSlice as PortalSlice, ...(slices ?? [])], [slices]);
-
-  const reducer = useMemo(() => makeReducer(all), [all]);
-  const [state, dispatch] = useReducer(reducer, undefined, () =>
-    repository.loadState(all, clock, demo),
+}: LiveProviderProps) {
+  const failedRef = React.useRef(onSaveFailed);
+  failedRef.current = onSaveFailed;
+  const [live] = React.useState(() =>
+    createLiveStore({
+      initial,
+      reducer: makeReducer(all),
+      repository: repo,
+      describe: (sliceId, action) => describeChange(all, sliceId, action),
+      onSaveFailed: message => failedRef.current?.(message),
+    }),
   );
+  const state = React.useSyncExternalStore(live.subscribe, live.getState);
+  const saving = React.useSyncExternalStore(live.subscribe, live.getSaving);
 
   // Held here so Settings can move the demo day and every screen follows.
   const [demoToday, setDemoTodayState] = React.useState(() => savedDemoToday(demo));
@@ -369,27 +460,16 @@ export function StoreProvider({
     if (!member) onUnknownUser?.();
   }, [member, onUnknownUser]);
 
-  // `state` is read by exportJson and by actions that need the latest value.
-  const stateRef = React.useRef(state);
-  stateRef.current = state;
   const refusedRef = React.useRef(onRefused);
   refusedRef.current = onRefused;
 
-  // The repository is the only writer, and only the slices that changed are written.
-  const savedRef = React.useRef<Record<string, unknown> | null>(null);
-  useEffect(() => {
-    const bag = state as unknown as Record<string, unknown>;
-    const saved = savedRef.current;
-    for (const slice of all) {
-      if (!saved || saved[slice.id] !== bag[slice.id])
-        repository.saveSlice(slice.id, bag[slice.id]);
-    }
-    savedRef.current = { ...bag };
-  }, [state, all]);
-
+  // Every change goes through the live store: on screen at once, then one
+  // `repository.apply` per slice it touched, rolled back if that fails.
   const actions = useMemo<PortalActions>(() => {
     const ctx = { today, newId, user };
-    const getState = () => stateRef.current;
+    const dispatch = live.dispatch;
+    // The live store's state, so an action sees the one dispatched just before it.
+    const getState = live.getState;
     const refuse = (message: string) => refusedRef.current?.(message);
     const bag: Record<string, unknown> = {};
     for (const slice of all) {
@@ -397,10 +477,7 @@ export function StoreProvider({
       bag[slice.id] = guardActions(raw, slice.rules, getState, user, refuse);
     }
 
-    const replace = (next: PortalState) => {
-      savedRef.current = { ...(next as unknown as Record<string, unknown>) };
-      dispatch({ type: 'portal/replace', state: next });
-    };
+    const replace = (next: PortalState) => dispatch({ type: REPLACE, state: next });
 
     const data = guardActions<
       Pick<CoreActions, 'resetDemo' | 'setDemoToday' | 'importJson' | 'exportJson'>
@@ -409,7 +486,7 @@ export function StoreProvider({
         resetDemo() {
           // Settings offers it only in a demo build; anywhere else it changes nothing.
           if (!demo) return refuse(NO_DEMO);
-          replace(repository.reset(all, today, demo));
+          replace(repository.freshState(all, today, demo));
         },
         setDemoToday(iso) {
           if (!demo) return refuse(NO_DEMO);
@@ -417,10 +494,10 @@ export function StoreProvider({
           setDemoTodayState(iso);
         },
         importJson(text: string) {
-          replace(repository.importJson(all, text, today, demo));
+          replace(repository.readImport(all, text, today, demo));
         },
         exportJson() {
-          return repository.exportJson(all, stateRef.current);
+          return repository.exportJson(all, live.getState());
         },
       },
       {
@@ -436,11 +513,20 @@ export function StoreProvider({
     bag.core = { ...(bag.core as CoreDataActions), ...data } satisfies CoreActions;
 
     return bag as unknown as PortalActions;
-  }, [all, today, user, demo]);
+  }, [all, today, user, demo, live]);
 
   const value = useMemo<StoreValue>(
-    () => ({ state, today, user, actions, demo, demoToday: demo ? demoToday : undefined }),
-    [state, today, user, actions, demo, demoToday],
+    () => ({
+      state,
+      today,
+      user,
+      actions,
+      demo,
+      demoToday: demo ? demoToday : undefined,
+      saving,
+      whenSaved: live.whenSaved,
+    }),
+    [state, today, user, actions, demo, demoToday, saving, live],
   );
 
   return <StoreContext.Provider value={value}>{member ? children : null}</StoreContext.Provider>;

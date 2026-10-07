@@ -18,11 +18,16 @@ import VenueDetail from './screens/partners/VenueDetail';
 /** Every registered module's slice, in registry order. Core is added by the store. */
 const SLICES = MODULES.map(m => m.slice);
 
-/** The store, with a refused change shown as a toast. */
+/** The store, with a refused change and a change that could not be saved shown as toasts. */
 function Store({ userId, onUnknownUser }: { userId: string; onUnknownUser: () => void }) {
   const toast = useToast();
   const refused = React.useCallback(
     (message: string) => toast({ tone: 'warning', title: message }),
+    [toast],
+  );
+  const notSaved = React.useCallback(
+    (message: string) =>
+      toast({ tone: 'danger', title: message, message: 'Check the connection and try again.' }),
     [toast],
   );
   return (
@@ -31,6 +36,7 @@ function Store({ userId, onUnknownUser }: { userId: string; onUnknownUser: () =>
       userId={userId}
       onUnknownUser={onUnknownUser}
       onRefused={refused}
+      onSaveFailed={notSaved}
     >
       <Frame />
     </StoreProvider>
