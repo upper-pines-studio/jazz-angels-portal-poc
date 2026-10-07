@@ -39,8 +39,18 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     setMark: (user, state, meetingId) => mayTakeRoll(state, user, meetingId),
   },
   normalise(raw) { /* validate a loaded payload, or return undefined */ },
+  // The change in plain words, for "Couldn't save the roll call mark".
+  describe(action) { /* 'the roll call mark', or undefined for "that change" */ },
 };
 ```
+
+The reducer handles generic changes only: `insert`, `update` and `remove` on a
+collection, and `batch` for several as one change (closing a roll call is the
+present marks and the closed meeting together). The rules that decide what
+follows from an action (a submitted roll is closed, only a draft is submitted)
+live in `createActions`, which reads the state first. Each change is one
+`repository.apply`, so a backend writes rows from it without knowing the
+module. Grants, teaching and timesheets all work this way.
 
 **2. The manifest.** In `manifest.tsx`, name the module, its rail section, its
 routes and what it puts on the dashboard:
