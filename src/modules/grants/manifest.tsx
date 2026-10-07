@@ -1,5 +1,5 @@
 import React from 'react';
-import { money } from '../../core';
+import { activeOnly, money } from '../../core';
 import type { AttentionItem, ModuleManifest, PortalState, Requirement, StatSpec } from '../../core';
 import {
   aboutMoney,
@@ -44,7 +44,8 @@ function needsAttention(state: PortalState, today: string) {
 function stats(state: PortalState, today: string): StatSpec[] {
   const fy = fyTotals(state, today);
 
-  const won = state.grants.grants.filter(
+  const current = activeOnly(state.grants.grants);
+  const won = current.filter(
     g =>
       g.dates.decided &&
       g.dates.decided >= fy.start &&
@@ -55,7 +56,7 @@ function stats(state: PortalState, today: string): StatSpec[] {
     .map(g => funderShortName(funderById(state, g.funderId)?.name, true))
     .join(', ');
 
-  const preAward = state.grants.grants.filter(g => isPreAward(g.phase));
+  const preAward = current.filter(g => isPreAward(g.phase));
   const inPipeline = preAward.reduce((sum, g) => sum + (g.amountRequested ?? 0), 0);
   const thisMonth = today.slice(0, 7);
   const dueThisMonth = preAward.filter(g =>

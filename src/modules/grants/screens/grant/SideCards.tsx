@@ -14,6 +14,7 @@ import {
   dateLong,
   dateRange,
   money,
+  pickable,
   programName,
   staffById,
   useCan,
@@ -222,6 +223,8 @@ function FunderCard({ grant }: { grant: Grant }) {
         </div>
         <div>
           <Badge tone="neutral">{FUNDER_TYPE[funder.type] ?? funder.type}</Badge>
+          {/* Nothing cascades: the grant stays as it is, and says so. */}
+          {funder.archivedAt && <Badge tone="neutral">Archived</Badge>}
         </div>
         {contact && (
           <div
@@ -402,7 +405,10 @@ function DetailsDialog({ grant, onClose }: { grant: Grant; onClose: () => void }
             <Select
               value={ownerId}
               onChange={e => setOwnerId(e.target.value)}
-              options={state.core.staff.map(s => ({ value: s.id, label: s.name }))}
+              options={pickable(state.core.staff, grant.ownerId).map(s => ({
+                value: s.id,
+                label: s.name,
+              }))}
             />
           </Field>
           <Field label="Amount requested">

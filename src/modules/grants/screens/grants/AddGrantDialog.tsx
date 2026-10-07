@@ -12,7 +12,15 @@ import {
   Switch,
   Checkbox,
 } from '../../../../design-system';
-import { useStore, staffById, dateShort, plainNumber, toDate, toISO } from '../../../../core';
+import {
+  activeOnly,
+  useStore,
+  staffById,
+  dateShort,
+  plainNumber,
+  toDate,
+  toISO,
+} from '../../../../core';
 import {
   instantiateTemplate,
   DEFAULT_TEMPLATE_ID,
@@ -68,7 +76,7 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
     state.core.programs[0]?.id ?? 'general-operating',
   );
   const [restriction, setRestriction] = React.useState<Restriction>('restricted');
-  const [ownerId, setOwnerId] = React.useState(state.core.staff[0]?.id ?? '');
+  const [ownerId, setOwnerId] = React.useState(activeOnly(state.core.staff)[0]?.id ?? '');
   const [started, setStarted] = React.useState(false);
 
   const [amount, setAmount] = React.useState('');
@@ -215,7 +223,8 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
               onChange={e => setFunderId(e.target.value)}
               options={[
                 { value: '', label: 'Pick a funder…' },
-                ...state.grants.funders.map(f => ({ value: f.id, label: f.name })),
+                // An archived funder is not offered for a new grant.
+                ...activeOnly(state.grants.funders).map(f => ({ value: f.id, label: f.name })),
                 { value: NEW_FUNDER, label: 'New funder…' },
               ]}
             />
@@ -278,7 +287,7 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
             <Select
               value={ownerId}
               onChange={e => setOwnerId(e.target.value)}
-              options={state.core.staff.map(s => ({ value: s.id, label: s.name }))}
+              options={activeOnly(state.core.staff).map(s => ({ value: s.id, label: s.name }))}
             />
           </Field>
           <Field label="Restriction" style={{ gridColumn: '1/-1' }}>

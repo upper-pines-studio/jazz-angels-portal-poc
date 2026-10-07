@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Card, Dialog, Field, Input, Select } from '../../../../design-system';
-import { useCan, useStore } from '../../../../core';
+import { isArchived, useCan, useStore } from '../../../../core';
 import { REMINDER_OFFSETS, hourLabel, offsetChip, offsetLabel } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
 import { OwnerAvatar } from '../../../../app/components/badges';
@@ -103,19 +103,21 @@ export function ReminderDefaultsDialog({ onClose }: { onClose: () => void }) {
 
         <Field label="Who else gets the email" hint="The grant owner always gets it.">
           <div>
-            {state.core.staff.map(s => (
-              <CheckRow
-                key={s.id}
-                checked={also.includes(s.id)}
-                onChange={on => setAlso(list => toggle(list, s.id, on))}
-                after={<span className="ja-rm-check__role">{s.title}</span>}
-              >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                  <OwnerAvatar staffId={s.id} size={24} />
-                  {s.name}
-                </span>
-              </CheckRow>
-            ))}
+            {state.core.staff
+              .filter(s => !isArchived(s) || also.includes(s.id))
+              .map(s => (
+                <CheckRow
+                  key={s.id}
+                  checked={also.includes(s.id)}
+                  onChange={on => setAlso(list => toggle(list, s.id, on))}
+                  after={<span className="ja-rm-check__role">{s.title}</span>}
+                >
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                    <OwnerAvatar staffId={s.id} size={24} />
+                    {s.name}
+                  </span>
+                </CheckRow>
+              ))}
           </div>
         </Field>
 

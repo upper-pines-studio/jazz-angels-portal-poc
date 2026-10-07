@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Card } from '../../../../design-system';
-import { dateShort, useCan, useStore } from '../../../../core';
+import { activeOnly, dateShort, useCan, useStore } from '../../../../core';
 import {
   firstNames,
   hourLabel,
@@ -39,7 +39,7 @@ export function RemindersCard() {
     .map(p => state.grants.reports.find(r => r.id === p.reportId))
     .filter(
       (r): r is NonNullable<typeof r> =>
-        !!r && isReportOpen(r) && !!state.grants.grants.find(g => g.id === r.grantId),
+        !!r && isReportOpen(r) && activeOnly(state.grants.grants).some(g => g.id === r.grantId),
     )
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 

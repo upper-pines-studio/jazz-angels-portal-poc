@@ -4,6 +4,11 @@ import { usePageHeader } from '../../../app/Shell';
 import { useToast } from '../../../app/ToastHost';
 import { TableScroll } from '../../../app/components/TableScroll';
 import {
+  ArchivedName,
+  ShowArchivedSwitch,
+  useArchivedParam,
+} from '../../../app/components/archive';
+import {
   Card,
   DataTable,
   EmptyState,
@@ -16,8 +21,8 @@ import {
   Select,
   Textarea,
 } from '../../../design-system';
-import { useStore, useCan, money, dateShort } from '../../../core';
-import { funderTotals, grantsByFunder } from '../domain';
+import { activeOnly, archivedOnly, useStore, useCan, money, dateShort } from '../../../core';
+import { funderTotals, fundersList, grantsByFunder } from '../domain';
 import type { Funder, FunderType } from '../domain';
 
 export const FUNDER_TYPES: Array<{ value: FunderType; label: string }> = [
@@ -126,15 +131,20 @@ export default function Funders() {
   const [draft, setDraft] = React.useState<FunderDraft>(EMPTY_FUNDER);
   const [showErrors, setShowErrors] = React.useState(false);
   const { actions } = useStore();
+  // ?archived=1 lists the archived funders after the current ones.
+  const [showArchived, setShowArchived] = useArchivedParam();
 
+  // Awarded all time is history, so archived grants count in it.
   const allAwarded = state.grants.grants.reduce((sum, g) => sum + (g.amountAwarded ?? 0), 0);
+  const current = activeOnly(state.grants.funders).length;
+  const archivedCount = archivedOnly(state.grants.funders).length;
 
   usePageHeader({
     title: 'Funders',
     subtitle:
-      state.grants.funders.length === 0
+      current === 0
         ? 'No funders yet'
-        : `${state.grants.funders.length} ${state.grants.funders.length === 1 ? 'funder' : 'funders'} · ${money(allAwarded)} awarded all time`,
+        : `${current} ${current === 1 ? 'funder' : 'funders'} · ${money(allAwarded)} awarded all time`,
     actions: mayEdit ? (
       <Button
         variant="primary"
@@ -159,7 +169,7 @@ export default function Funders() {
     return dates.length ? dates.slice().sort().reverse()[0].slice(0, 10) : undefined;
   }
 
-  const rows = state.grants.funders.map(f => {
+  const rows = fundersList(state, showArchived).map(f => {
     const totals = funderTotals(state, f.id);
     return { id: f.id, funder: f, totals, last: lastActivity(f.id) };
   });
@@ -178,6 +188,21 @@ export default function Funders() {
   return (
     <>
       <Card padding="0">
+        {archivedCount > 0 && (
+          <div
+            className="ja-filter-bar"
+            style={{
+              padding: 'var(--space-3) var(--space-5)',
+              borderBottom: 'var(--border-width) solid var(--border-subtle)',
+            }}
+          >
+            <ShowArchivedSwitch
+              count={archivedCount}
+              checked={showArchived}
+              onChange={setShowArchived}
+            />
+          </div>
+        )}
         {rows.length === 0 ? (
           <EmptyState
             icon={<Icon name="building-2" size={22} />}
@@ -212,7 +237,7 @@ export default function Funders() {
                   width: '1.8fr',
                   strong: true,
                   wrap: true,
-                  render: (r: Row) => r.funder.name,
+                  render: (r: Row) => <ArchivedName name={r.funder.name} record={r.funder} />,
                 },
                 {
                   key: 'type',

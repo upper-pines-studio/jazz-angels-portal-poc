@@ -1,8 +1,10 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { usePageHeader } from '../../../app/Shell';
+import { useToast } from '../../../app/ToastHost';
+import { ArchiveButton, ArchiveDialog, ArchivedNotice } from '../../../app/components/archive';
 import { Button, Card, EmptyState, Icon, Tabs } from '../../../design-system';
-import { programName, staffById, useStore } from '../../../core';
+import { isArchived, programName, staffById, useCan, useStore } from '../../../core';
 import {
   availableTransitions,
   funderById,
@@ -33,24 +35,31 @@ const QUICKBOOKS_TABS = ['budget', 'expenses'];
 export default function GrantDetail() {
   const { id = '' } = useParams();
   const nav = useNavigate();
-  const { state, user } = useStore();
+  const { state, user, actions } = useStore();
+  const mayEdit = useCan()('grants', 'edit');
+  const toast = useToast();
   const [params, setParams] = useSearchParams();
   const [pending, setPending] = React.useState<Transition | null>(null);
+  const [archiving, setArchiving] = React.useState(false);
 
   const grant = grantById(state, id);
   const funder = grant ? funderById(state, grant.funderId) : undefined;
   const owner = grant ? staffById(state, grant.ownerId) : undefined;
+  const archived = isArchived(grant);
   // Only the moves this role may make, as the store asks: recording an award
-  // also needs the award row.
-  const transitions = grant
-    ? availableTransitions(grant).filter(t => mayMoveTo(user.role, t.to))
-    : [];
+  // also needs the award row. An archived grant is restored before it moves.
+  const transitions =
+    grant && !archived ? availableTransitions(grant).filter(t => mayMoveTo(user.role, t.to)) : [];
 
   usePageHeader(
     grant
       ? {
           title: grant.title,
-          subtitle: [funder?.name, programName(state, grant.program), owner?.name]
+          subtitle: [
+            funder && (isArchived(funder) ? `${funder.name} (archived funder)` : funder.name),
+            programName(state, grant.program),
+            owner?.name,
+          ]
             .filter(Boolean)
             .join(' · '),
           crumbs: [{ label: 'Grants', href: '/grants' }, { label: funder?.name ?? 'Grant' }],
@@ -75,6 +84,7 @@ export default function GrantDetail() {
                     {t.label}
                   </Button>
                 ))}
+              {mayEdit && !archived && <ArchiveButton onClick={() => setArchiving(true)} />}
             </div>
           ),
         }
@@ -149,6 +159,23 @@ export default function GrantDetail() {
 
   return (
     <>
+      <ArchivedNotice
+        record={grant}
+        detail="It is off the pipeline, the deadlines, the reminders and the spending screens. Its history, money and activity are all here."
+        style={{ marginBottom: 'var(--space-4)' }}
+        onRestore={
+          mayEdit
+            ? () => {
+                actions.grants.restoreGrant(grant.id);
+                toast({
+                  tone: 'success',
+                  title: 'Grant restored',
+                  message: `${grant.title} is back in the pipeline.`,
+                });
+              }
+            : undefined
+        }
+      />
       <PhaseStepper grant={grant} />
 
       <div className={aside ? 'ja-split' : undefined} style={{ gap: 'var(--space-5)' }}>
@@ -178,6 +205,21 @@ export default function GrantDetail() {
         {aside}
       </div>
 
+      {archiving && mayEdit && (
+        <ArchiveDialog
+          title="Archive this grant?"
+          message="It leaves the pipeline, the deadlines and the reminders, and stays in history and reports. You can restore it."
+          onConfirm={() => {
+            actions.grants.archiveGrant(grant.id);
+            toast({
+              tone: 'success',
+              title: 'Grant archived',
+              message: `${grant.title} is off the pipeline. Restore it from this page.`,
+            });
+          }}
+          onClose={() => setArchiving(false)}
+        />
+      )}
       {pending && transitions.some(t => t.to === pending.to) && (
         <TransitionDialog grant={grant} transition={pending} onClose={() => setPending(null)} />
       )}

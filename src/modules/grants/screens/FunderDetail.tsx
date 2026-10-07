@@ -4,10 +4,16 @@ import { usePageHeader } from '../../../app/Shell';
 import { useToast } from '../../../app/ToastHost';
 import { PhaseBadge } from './badges';
 import { KV } from '../../../app/components/badges';
+import {
+  ArchiveButton,
+  ArchiveDialog,
+  ArchivedName,
+  ArchivedNotice,
+} from '../../../app/components/archive';
 import { FunderFields, capitalise, type FunderDraft } from './Funders';
 import { TableScroll } from '../../../app/components/TableScroll';
 import { Card, DataTable, Button, Icon, Dialog, EmptyState } from '../../../design-system';
-import { useStore, useCan, money } from '../../../core';
+import { isArchived, useStore, useCan, money } from '../../../core';
 import { funderById, funderTotals, grantsByFunder } from '../domain';
 import type { Grant } from '../domain';
 
@@ -22,6 +28,7 @@ export default function FunderDetail() {
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState<FunderDraft | null>(null);
   const [showErrors, setShowErrors] = React.useState(false);
+  const [archiving, setArchiving] = React.useState(false);
 
   usePageHeader({
     title: funder ? funder.name : 'Funder not found',
@@ -31,19 +38,22 @@ export default function FunderDetail() {
     crumbs: [{ label: 'Funders', href: '/funders' }, { label: funder ? funder.name : 'Not found' }],
     actions:
       funder && mayEdit ? (
-        <Button
-          variant="secondary"
-          size="sm"
-          iconLeft={<Icon name="pencil" size={15} />}
-          onClick={() => {
-            const { id: _id, ...rest } = funder;
-            setDraft(rest);
-            setShowErrors(false);
-            setEditing(true);
-          }}
-        >
-          Edit funder
-        </Button>
+        <div className="ja-actions">
+          <Button
+            variant="secondary"
+            size="sm"
+            iconLeft={<Icon name="pencil" size={15} />}
+            onClick={() => {
+              const { id: _id, archivedAt: _at, archivedById: _by, ...rest } = funder;
+              setDraft(rest);
+              setShowErrors(false);
+              setEditing(true);
+            }}
+          >
+            Edit funder
+          </Button>
+          {!isArchived(funder) && <ArchiveButton onClick={() => setArchiving(true)} />}
+        </div>
       ) : undefined,
   });
 
@@ -79,6 +89,23 @@ export default function FunderDetail() {
 
   return (
     <>
+      <ArchivedNotice
+        record={funder}
+        detail="It is off the Funders list and the Add grant picker. Its grants are as they were."
+        style={{ marginBottom: 'var(--space-4)' }}
+        onRestore={
+          mayEdit
+            ? () => {
+                actions.grants.restoreFunder(funder.id);
+                toast({
+                  tone: 'success',
+                  title: 'Funder restored',
+                  message: `${funder.name} is back on the Funders list.`,
+                });
+              }
+            : undefined
+        }
+      />
       <div className="ja-split ja-split--aside-left">
         <Card title="Contact">
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -159,7 +186,9 @@ export default function FunderDetail() {
                       width: '2fr',
                       strong: true,
                       wrap: true,
-                      render: (r: { grant: Grant }) => r.grant.title,
+                      render: (r: { grant: Grant }) => (
+                        <ArchivedName name={r.grant.title} record={r.grant} />
+                      ),
                     },
                     {
                       key: 'year',
@@ -201,6 +230,21 @@ export default function FunderDetail() {
         </Card>
       </div>
 
+      {archiving && mayEdit && (
+        <ArchiveDialog
+          title="Archive this funder?"
+          message="It leaves the Funders list and the Add grant picker. Its grants are not archived, and its grant history stays here. You can restore it."
+          onConfirm={() => {
+            actions.grants.archiveFunder(funder.id);
+            toast({
+              tone: 'success',
+              title: 'Funder archived',
+              message: `${funder.name} is off the Funders list. Restore it from this page.`,
+            });
+          }}
+          onClose={() => setArchiving(false)}
+        />
+      )}
       {editing && draft && mayEdit && (
         <Dialog
           open

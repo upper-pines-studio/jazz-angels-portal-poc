@@ -1,3 +1,4 @@
+import { activeOnly, isArchived, withArchived } from '../../../core/archive';
 import { fiscalYear, staffById } from '../../../core/derive';
 import { daysUntil } from '../../../core/format';
 import type { PortalState, ProgramId } from '../../../core/types';
@@ -46,7 +47,8 @@ const KIND_RANK: Record<DeadlineKind, number> = {
  *
  * Sources: open tasks with a due date, reports not yet submitted, payments not
  * yet received, and the grant's own key dates. Grants in a terminal phase
- * (closed, declined, withdrawn) contribute nothing.
+ * (closed, declined, withdrawn) contribute nothing, and nor does an archived
+ * grant (decision 0002).
  *
  * Choices the spec left open:
  *  - `startBy` only counts while the grant is still a `prospect`; once work has
@@ -66,7 +68,7 @@ export function deadlines(state: PortalState, today: string): Deadline[] {
 
   for (const grant of state.grants.grants) {
     byGrant.set(grant.id, grant);
-    if (isTerminal(grant.phase)) continue;
+    if (isTerminal(grant.phase) || isArchived(grant)) continue;
 
     const idx = phaseIndex(grant.phase);
     const claimed = new Set<string>();
@@ -200,7 +202,8 @@ export function grantMoney(state: PortalState, grantId: string): GrantMoney {
 const AWARDED_PHASES: Phase[] = ['awarded', 'active', 'reporting', 'closed'];
 
 /**
- * Totals for the fiscal year containing `today`.
+ * Totals for the fiscal year containing `today`, over the grants that are not
+ * archived: the dashboard and the Grants page quote them.
  *  - requested: grants submitted inside the FY
  *  - awarded: grants decided inside the FY that we actually won
  *  - received: payments banked inside the FY
@@ -209,10 +212,12 @@ const AWARDED_PHASES: Phase[] = ['awarded', 'active', 'reporting', 'closed'];
 export function fyTotals(state: PortalState, today: string): FyTotals {
   const fy = fiscalYear(today, state.core.settings.fiscalYearStartMonth);
   const inFy = (date: string | undefined): boolean => !!date && date >= fy.start && date <= fy.end;
+  const current = activeOnly(state.grants.grants);
+  const counted = new Set(current.map(g => g.id));
 
   let requested = 0;
   let awarded = 0;
-  for (const g of state.grants.grants) {
+  for (const g of current) {
     if (inFy(g.dates.submitted)) requested += g.amountRequested ?? 0;
     if (inFy(g.dates.decided) && AWARDED_PHASES.includes(g.phase)) {
       awarded += g.amountAwarded ?? 0;
@@ -220,20 +225,21 @@ export function fyTotals(state: PortalState, today: string): FyTotals {
   }
 
   const received = state.grants.payments
-    .filter(p => inFy(p.receivedDate))
+    .filter(p => counted.has(p.grantId) && inFy(p.receivedDate))
     .reduce((sum, p) => sum + p.amount, 0);
   const spent = state.grants.expenses
-    .filter(e => inFy(e.date))
+    .filter(e => counted.has(e.grantId) && inFy(e.date))
     .reduce((sum, e) => sum + e.amount, 0);
 
   return { ...fy, requested, awarded, received, spent };
 }
 
-/** Grants per phase, with the money attached — the dashboard pipeline strip. */
+/** Grants per phase, with the money attached — the dashboard pipeline strip. Archived ones are left out. */
 export function pipelineCounts(state: PortalState): PipelineBucket[] {
   const phases: Phase[] = [...PHASE_ORDER, 'declined', 'withdrawn'];
+  const current = activeOnly(state.grants.grants);
   return phases.map(phase => {
-    const grants = state.grants.grants.filter(g => g.phase === phase);
+    const grants = current.filter(g => g.phase === phase);
     return {
       phase,
       count: grants.length,
@@ -246,22 +252,31 @@ export function pipelineCounts(state: PortalState): PipelineBucket[] {
 /**
  * The All-grants tabs (SPEC §4.2).
  * "closed" collects everything finished — closed, declined and withdrawn — so
- * that no grant is reachable only from "All".
+ * that no grant is reachable only from "All". Archived grants are left out
+ * unless `includeArchived` is set, and then come after the current ones.
  */
-export function grantsByView(state: PortalState, view: GrantView): Grant[] {
-  switch (view) {
-    case 'active':
-      return state.grants.grants.filter(g => !isTerminal(g.phase));
-    case 'pre-award':
-      return state.grants.grants.filter(g => PRE_AWARD_PHASES.includes(g.phase));
-    case 'post-award':
-      return state.grants.grants.filter(g => POST_AWARD_PHASES.includes(g.phase));
-    case 'closed':
-      return state.grants.grants.filter(g => isTerminal(g.phase));
-    case 'all':
-    default:
-      return state.grants.grants;
-  }
+export function grantsByView(
+  state: PortalState,
+  view: GrantView,
+  includeArchived = false,
+): Grant[] {
+  const grants = state.grants.grants;
+  const inView = (() => {
+    switch (view) {
+      case 'active':
+        return grants.filter(g => !isTerminal(g.phase));
+      case 'pre-award':
+        return grants.filter(g => PRE_AWARD_PHASES.includes(g.phase));
+      case 'post-award':
+        return grants.filter(g => POST_AWARD_PHASES.includes(g.phase));
+      case 'closed':
+        return grants.filter(g => isTerminal(g.phase));
+      case 'all':
+      default:
+        return grants;
+    }
+  })();
+  return withArchived(inView, includeArchived);
 }
 
 /** "8 of 12 done" on the checklist tab. */
@@ -277,6 +292,7 @@ export function checklistProgress(
 // Small lookup helpers screens need constantly
 // ---------------------------------------------------------------------------
 
+/** Archived or not: a link from history still opens it. */
 export function grantById(state: PortalState, id: string): Grant | undefined {
   return state.grants.grants.find(g => g.id === id);
 }
@@ -285,8 +301,17 @@ export function funderById(state: PortalState, id: string) {
   return state.grants.funders.find(f => f.id === id);
 }
 
+/** Every grant from this funder, archived ones included: the funder's grant history. */
 export function grantsByFunder(state: PortalState, funderId: string): Grant[] {
   return state.grants.grants.filter(g => g.funderId === funderId);
+}
+
+/**
+ * The Funders list: current funders, then the archived ones after them when
+ * `includeArchived` is set.
+ */
+export function fundersList(state: PortalState, includeArchived = false) {
+  return withArchived(state.grants.funders, includeArchived);
 }
 
 /** Every grant whose money is for this program. Part of the module's public API. */
@@ -294,7 +319,10 @@ export function grantsForProgram(state: PortalState, programId: ProgramId): Gran
   return state.grants.grants.filter(g => g.program === programId);
 }
 
-/** Total awarded across every grant from this funder. */
+/**
+ * Total awarded across every grant from this funder, archived ones included:
+ * it is the funder's history, "awarded all time".
+ */
 export function funderTotals(state: PortalState, funderId: string) {
   const grants = grantsByFunder(state, funderId);
   return {

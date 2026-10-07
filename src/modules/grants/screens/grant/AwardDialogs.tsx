@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Dialog, Field, Input, Select, Textarea } from '../../../../design-system';
-import { dateLong, money, programName, staffById, useStore } from '../../../../core';
+import { dateLong, money, pickable, programName, staffById, useStore } from '../../../../core';
 import type { ProgramId } from '../../../../core';
 import type { AwardTerm, Grant, Payment, Restriction } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
@@ -164,7 +164,10 @@ export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: ()
           <Select
             value={ownerId}
             onChange={e => setOwnerId(e.target.value)}
-            options={state.core.staff.map(s => ({ value: s.id, label: s.name }))}
+            options={pickable(state.core.staff, grant.ownerId).map(s => ({
+              value: s.id,
+              label: s.name,
+            }))}
           />
         </Field>
       </DialogFields>
@@ -216,7 +219,8 @@ export function PaymentDialog({
       width={500}
       footer={
         <>
-          {payment && onDelete && (
+          {/* A payment that has arrived is money on the record, so it is not deleted (decision 0002). */}
+          {payment && onDelete && !payment.receivedDate && (
             <Button
               variant="secondary"
               style={{ marginRight: 'auto', color: 'var(--danger-500)' }}

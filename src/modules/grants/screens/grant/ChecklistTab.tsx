@@ -11,7 +11,7 @@ import {
   ProgressBar,
   Select,
 } from '../../../../design-system';
-import { dateShort, useCan, useStore } from '../../../../core';
+import { dateShort, pickable, useCan, useStore } from '../../../../core';
 import { PHASES, PHASE_ORDER, checklistProgress } from '../../domain';
 import type { Grant, Phase, Task } from '../../domain';
 import { PhaseBadge } from '../badges';
@@ -326,7 +326,10 @@ function AddTaskDialog({
           <Select
             value={assigneeId}
             onChange={e => setAssigneeId(e.target.value)}
-            options={state.core.staff.map(s => ({ value: s.id, label: s.name }))}
+            options={pickable(state.core.staff, assigneeId).map(s => ({
+              value: s.id,
+              label: s.name,
+            }))}
           />
         </Field>
       </DialogFields>
