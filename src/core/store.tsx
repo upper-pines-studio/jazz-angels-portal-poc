@@ -6,6 +6,7 @@ import React, {
   useReducer,
   type ReactNode,
 } from 'react';
+import { DEMO_TODAY_KEY, demoTodayFrom, demoTodayToStore, isDemo } from './demo';
 import { toISO } from './format';
 import type { ActionRules, AnyAction, ModuleSlice } from './module';
 import { can, mayChangeStaff } from './permissions';
@@ -13,7 +14,7 @@ import type { Need, Subject } from './permissions';
 import * as repository from './repository';
 import type { PortalSlice } from './repository';
 import { ROLE_LABELS, isRole } from './roles';
-import { DEFAULT_ENABLED_MODULES, makeCoreSeed } from './seed';
+import { DEFAULT_ENABLED_MODULES, loginStaff, makeCoreEmpty, makeCoreSeed } from './seed';
 import type {
   AppSettings,
   CoreActions,
@@ -107,11 +108,15 @@ function normaliseStaff(raw: Partial<StaffMember>, seeded: StaffMember[]): Staff
 }
 
 /** The staff and settings half of `actions.core`; the store adds the data half. */
-type CoreDataActions = Omit<CoreActions, 'resetDemo' | 'importJson' | 'exportJson'>;
+type CoreDataActions = Omit<
+  CoreActions,
+  'resetDemo' | 'setDemoToday' | 'importJson' | 'exportJson'
+>;
 
 export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
   id: 'core',
   seed: () => makeCoreSeed(),
+  empty: () => makeCoreEmpty(),
   reducer: coreReducer,
   createActions(dispatch, getState) {
     return {
@@ -161,32 +166,39 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     updateOrganization: 'partners',
     addVenue: 'partners',
     updateVenue: 'partners',
-    // The fiscal year, the demo date and the module switches are the system's
-    // own settings, so they go with "Modules, import, export".
+    // The fiscal year and the module switches are the system's own settings,
+    // so they go with "Modules, import, export".
     updateSettings: 'modules',
     setModuleEnabled: 'modules',
   },
-  normalise(raw) {
+  normalise(raw, demo = false) {
     if (!raw || typeof raw !== 'object') return undefined;
     const c = raw as Partial<CoreState>;
     if (!Array.isArray(c.staff) || !Array.isArray(c.programs)) return undefined;
-    const settings = c.settings ?? ({} as AppSettings);
-    // A payload saved before places existed gets the seeded ones, so the
-    // teaching module's venue ids still resolve.
+    // An older save may carry `demoToday`; the demo date is a browser
+    // preference now (demo.ts), so it is dropped here.
+    const settings: Partial<CoreState['settings']> = c.settings ?? {};
     const seeded = makeCoreSeed();
     const staff = c.staff.map(s => normaliseStaff(s, seeded.staff));
-    // Every login belongs to a seeded person; a payload saved before that
-    // person existed gets them, so the login still resolves.
-    for (const s of seeded.staff) if (!staff.some(x => x.id === s.id)) staff.push(s);
+    // Every login belongs to a staff record; a payload without that person
+    // gets them back, so the login still resolves. A demo build adds back the
+    // whole seeded staff; an empty one only the people the logins need.
+    const required = demo ? seeded.staff : loginStaff();
+    for (const s of required) if (!staff.some(x => x.id === s.id)) staff.push(s);
+    // A demo payload saved before places existed gets the seeded ones, so the
+    // teaching module's venue ids still resolve.
     return {
       staff,
       programs: c.programs.map(p => ({ ...p, short: p.short ?? p.name })),
-      organizations: Array.isArray(c.organizations) ? c.organizations : seeded.organizations,
-      venues: Array.isArray(c.venues) ? c.venues : seeded.venues,
+      organizations: Array.isArray(c.organizations)
+        ? c.organizations
+        : demo
+          ? seeded.organizations
+          : [],
+      venues: Array.isArray(c.venues) ? c.venues : demo ? seeded.venues : [],
       settings: {
         fiscalYearStartMonth: settings.fiscalYearStartMonth ?? 7,
         enabledModules: settings.enabledModules ?? [...DEFAULT_ENABLED_MODULES],
-        demoToday: typeof settings.demoToday === 'string' ? settings.demoToday : undefined,
       },
     };
   },
@@ -242,6 +254,9 @@ export function guardActions<A extends object>(
 // The store
 // ---------------------------------------------------------------------------
 
+/** What a demo-only action says when it is called in a build without the demo. */
+export const NO_DEMO = 'The demo data is not part of this portal.';
+
 /** Replace every slice at once (reset, import). */
 interface ReplaceAction extends AnyAction {
   type: 'portal/replace';
@@ -265,19 +280,27 @@ export function makeReducer(slices: PortalSlice[]) {
 }
 
 /**
- * The day the portal treats as today: the demo date the office set, else the
+ * The day the portal treats as today: the demo date this browser set, else the
  * clock. Screens read it as `useStore().today`.
  */
-export function resolveToday(settings: AppSettings | undefined, clock: string): string {
-  return settings?.demoToday ?? clock;
+export function resolveToday(demoToday: string | undefined, clock: string): string {
+  return demoToday ?? clock;
 }
 
 /**
- * The staff as saved in this browser, or as seeded when nothing is saved. The
- * sign-in check reads it before the store mounts.
+ * The demo date this browser uses: the stored preference, the seed's day when
+ * none is stored, and none at all outside a demo build.
  */
-export function savedStaff(): StaffMember[] {
-  return (repository.loadSlice(coreSlice as PortalSlice, '') as CoreState).staff;
+export function savedDemoToday(demo: boolean): string | undefined {
+  return demo ? demoTodayFrom(repository.loadPreference(DEMO_TODAY_KEY)) : undefined;
+}
+
+/**
+ * The staff as saved in this browser, or as a fresh portal starts when nothing
+ * is saved. The sign-in check reads it before the store mounts.
+ */
+export function savedStaff(demo: boolean = isDemo()): StaffMember[] {
+  return (repository.loadSlice(coreSlice as PortalSlice, '', demo) as CoreState).staff;
 }
 
 export interface StoreValue {
@@ -287,6 +310,10 @@ export interface StoreValue {
   /** Who is signed in, read from their staff record so a rename shows at once. */
   user: SignedInUser;
   actions: PortalActions;
+  /** Whether this is a demo build (`isDemo()`): the sample data, the demo date, the reset. */
+  demo: boolean;
+  /** The demo date in use, or undefined when today is the clock. Always undefined outside a demo. */
+  demoToday: string | undefined;
 }
 
 const StoreContext = createContext<StoreValue | undefined>(undefined);
@@ -299,6 +326,8 @@ export interface StoreProviderProps {
   slices?: PortalSlice[];
   /** Overrides today and the demo date, for tests and screenshots. */
   today?: string;
+  /** Whether to start from the demo data. Defaults to `isDemo()`; tests pass it. */
+  demo?: boolean;
   /** The signed-in person's staff id. Every action is credited to them. */
   userId: string;
   /**
@@ -314,6 +343,7 @@ export interface StoreProviderProps {
 export function StoreProvider({
   slices,
   today: fixedToday,
+  demo = isDemo(),
   userId,
   onUnknownUser,
   onRefused,
@@ -323,10 +353,13 @@ export function StoreProvider({
   const all = useMemo<PortalSlice[]>(() => [coreSlice as PortalSlice, ...(slices ?? [])], [slices]);
 
   const reducer = useMemo(() => makeReducer(all), [all]);
-  const [state, dispatch] = useReducer(reducer, undefined, () => repository.loadState(all, clock));
+  const [state, dispatch] = useReducer(reducer, undefined, () =>
+    repository.loadState(all, clock, demo),
+  );
 
-  // Recomputed whenever the setting changes, so Settings can move the demo day.
-  const today = fixedToday ?? resolveToday(state.core.settings, clock);
+  // Held here so Settings can move the demo day and every screen follows.
+  const [demoToday, setDemoTodayState] = React.useState(() => savedDemoToday(demo));
+  const today = fixedToday ?? resolveToday(demoToday, clock);
 
   const member = state.core.staff.find(s => s.id === userId);
   const name = member?.name ?? '';
@@ -369,19 +402,33 @@ export function StoreProvider({
       dispatch({ type: 'portal/replace', state: next });
     };
 
-    const data = guardActions<Pick<CoreActions, 'resetDemo' | 'importJson' | 'exportJson'>>(
+    const data = guardActions<
+      Pick<CoreActions, 'resetDemo' | 'setDemoToday' | 'importJson' | 'exportJson'>
+    >(
       {
         resetDemo() {
-          replace(repository.reset(all, today));
+          // Settings offers it only in a demo build; anywhere else it changes nothing.
+          if (!demo) return refuse(NO_DEMO);
+          replace(repository.reset(all, today, demo));
+        },
+        setDemoToday(iso) {
+          if (!demo) return refuse(NO_DEMO);
+          repository.savePreference(DEMO_TODAY_KEY, demoTodayToStore(iso));
+          setDemoTodayState(iso);
         },
         importJson(text: string) {
-          replace(repository.importJson(all, text, today));
+          replace(repository.importJson(all, text, today, demo));
         },
         exportJson() {
           return repository.exportJson(all, stateRef.current);
         },
       },
-      { resetDemo: 'modules', importJson: 'modules', exportJson: 'modules' },
+      {
+        resetDemo: 'modules',
+        setDemoToday: 'modules',
+        importJson: 'modules',
+        exportJson: 'modules',
+      },
       getState,
       user,
       refuse,
@@ -389,11 +436,11 @@ export function StoreProvider({
     bag.core = { ...(bag.core as CoreDataActions), ...data } satisfies CoreActions;
 
     return bag as unknown as PortalActions;
-  }, [all, today, user]);
+  }, [all, today, user, demo]);
 
   const value = useMemo<StoreValue>(
-    () => ({ state, today, user, actions }),
-    [state, today, user, actions],
+    () => ({ state, today, user, actions, demo, demoToday: demo ? demoToday : undefined }),
+    [state, today, user, actions, demo, demoToday],
   );
 
   return <StoreContext.Provider value={value}>{member ? children : null}</StoreContext.Provider>;

@@ -1,4 +1,5 @@
-import type { CoreState, Organization, Program, StaffMember, Venue } from './types';
+import { USERS } from './auth';
+import type { AppSettings, CoreState, Organization, Program, StaffMember, Venue } from './types';
 
 /** The day the demo story is written around. Tests pin to this. */
 export const SEED_TODAY = '2026-09-13';
@@ -139,10 +140,36 @@ export function makeCoreSeed(): CoreState {
     programs: JSON.parse(JSON.stringify(PROGRAMS)),
     organizations: JSON.parse(JSON.stringify(ORGANIZATIONS)),
     venues: JSON.parse(JSON.stringify(VENUES)),
-    settings: {
-      fiscalYearStartMonth: 7,
-      enabledModules: [...DEFAULT_ENABLED_MODULES],
-      demoToday: SEED_TODAY,
-    },
+    settings: defaultSettings(),
+  };
+}
+
+/** The settings a new office starts with: a July fiscal year, every module on. */
+export function defaultSettings(): AppSettings {
+  return { fiscalYearStartMonth: 7, enabledModules: [...DEFAULT_ENABLED_MODULES] };
+}
+
+/**
+ * The staff records the sign-in logins in auth.ts belong to. Until the backend
+ * brings real accounts (#22) these seven logins are the only way in, so even an
+ * empty portal keeps their people.
+ */
+export function loginStaff(): StaffMember[] {
+  const ids = new Set(USERS.map(u => u.staffId));
+  return JSON.parse(JSON.stringify(STAFF.filter(s => ids.has(s.id))));
+}
+
+/**
+ * What a new office starts with when the demo is off (decision 0004): the
+ * programs as editable configuration, the people the logins need, the default
+ * settings, and no partners or venues.
+ */
+export function makeCoreEmpty(): CoreState {
+  return {
+    staff: loginStaff(),
+    programs: JSON.parse(JSON.stringify(PROGRAMS)),
+    organizations: [],
+    venues: [],
+    settings: defaultSettings(),
   };
 }

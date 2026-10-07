@@ -28,7 +28,8 @@ declare module '../../../core/types' {
 
 export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
   id: 'teaching',
-  seed: () => makeSeed(),
+  seed: () => makeSeed(),   // the demo data: `npm run dev` and the tests
+  empty: () => makeEmpty(), // a new office, demo off: empty collections, default settings
   reducer(state, action) { /* only `teaching/*` reaches here */ },
   createActions(dispatch, getState, { today, newId, user }) { /* credit `user.id` */ },
   // What each action needs: a row of decision 0001's table (edit on it), or a

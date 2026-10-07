@@ -16,8 +16,10 @@ export {
   PARAMOUNT_MS_VENUE_ID,
   SEED_TODAY,
   STUDIO_VENUE_ID,
+  makeCoreEmpty,
   makeCoreSeed,
 } from './seed';
+export { DEMO_TODAY_KEY, isDemo } from './demo';
 
 // Namespaced: screens go through `useStore().actions`, but Settings and the
 // tests need the raw storage helpers.

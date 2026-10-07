@@ -39,21 +39,29 @@ function storage(): Storage | undefined {
 }
 
 /** Run a slice's own validation, or accept any object when it has none. */
-function accept(slice: PortalSlice, raw: unknown): unknown | undefined {
-  if (slice.normalise) return slice.normalise(raw);
+function accept(slice: PortalSlice, raw: unknown, demo: boolean): unknown | undefined {
+  if (slice.normalise) return slice.normalise(raw, demo);
   return raw && typeof raw === 'object' ? raw : undefined;
 }
 
-/** Read one slice, falling back to its seed when nothing readable is stored. */
-export function loadSlice(slice: PortalSlice, today: string): unknown {
+/**
+ * Where a slice starts when nothing is stored: the demo data in a demo build,
+ * empty otherwise (decision 0004). `demo` comes from `isDemo()` in demo.ts.
+ */
+export function fresh(slice: PortalSlice, today: string, demo: boolean): unknown {
+  return demo ? slice.seed(today) : slice.empty();
+}
+
+/** Read one slice, falling back to a fresh one when nothing readable is stored. */
+export function loadSlice(slice: PortalSlice, today: string, demo: boolean): unknown {
   const ls = storage();
-  if (!ls) return slice.seed(today);
+  if (!ls) return fresh(slice, today, demo);
   try {
     const raw = ls.getItem(storageKey(slice.id));
-    if (!raw) return slice.seed(today);
-    return accept(slice, JSON.parse(raw)) ?? slice.seed(today);
+    if (!raw) return fresh(slice, today, demo);
+    return accept(slice, JSON.parse(raw), demo) ?? fresh(slice, today, demo);
   } catch {
-    return slice.seed(today);
+    return fresh(slice, today, demo);
   }
 }
 
@@ -69,7 +77,7 @@ export function saveSlice(sliceId: string, data: unknown): void {
 }
 
 /**
- * A small per-browser preference (the collapsed rail), stored under its own key
+ * A small per-browser preference (the collapsed rail, the demo date), stored under its own key
  * and outside the slices, so export, import and reset leave it alone. Null when
  * nothing is stored or storage is unavailable.
  */
@@ -94,10 +102,10 @@ export function savePreference(key: string, value: string): void {
   }
 }
 
-/** The whole portal: every registered slice, loaded or seeded. */
-export function loadState(slices: PortalSlice[], today: string): PortalState {
+/** The whole portal: every registered slice, loaded, or fresh when nothing is stored. */
+export function loadState(slices: PortalSlice[], today: string, demo: boolean): PortalState {
   const state: Record<string, unknown> = {};
-  for (const slice of slices) state[slice.id] = loadSlice(slice, today);
+  for (const slice of slices) state[slice.id] = loadSlice(slice, today, demo);
   return state as unknown as PortalState;
 }
 
@@ -120,10 +128,16 @@ export function exportJson(slices: PortalSlice[], state: PortalState): string {
 
 /**
  * Parse an exported file back into state and save it. A file written before a
- * module existed is fine: any slice it does not carry is seeded instead.
- * Throws with a readable message on garbage.
+ * module existed is fine: any slice it does not carry starts fresh instead,
+ * the demo data in a demo build and empty otherwise. Throws with a readable
+ * message on garbage.
  */
-export function importJson(slices: PortalSlice[], text: string, today: string): PortalState {
+export function importJson(
+  slices: PortalSlice[],
+  text: string,
+  today: string,
+  demo: boolean,
+): PortalState {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -142,9 +156,9 @@ export function importJson(slices: PortalSlice[], text: string, today: string): 
   const state: Record<string, unknown> = {};
   let recognised = 0;
   for (const slice of slices) {
-    const value = slice.id in bag ? accept(slice, bag[slice.id]) : undefined;
+    const value = slice.id in bag ? accept(slice, bag[slice.id], demo) : undefined;
     if (value === undefined) {
-      state[slice.id] = slice.seed(today);
+      state[slice.id] = fresh(slice, today, demo);
     } else {
       state[slice.id] = value;
       recognised += 1;
@@ -159,16 +173,19 @@ export function importJson(slices: PortalSlice[], text: string, today: string): 
   return next;
 }
 
-/** Throw everything away and start again from the demo data, every slice. */
-export function reset(slices: PortalSlice[], today: string): PortalState {
+/**
+ * Throw everything away and start every slice again: from the demo data in a
+ * demo build, empty otherwise. Settings offers it only in a demo build.
+ */
+export function reset(slices: PortalSlice[], today: string, demo: boolean): PortalState {
   const state: Record<string, unknown> = {};
-  for (const slice of slices) state[slice.id] = slice.seed(today);
-  const fresh = state as unknown as PortalState;
-  saveState(slices, fresh);
-  return fresh;
+  for (const slice of slices) state[slice.id] = fresh(slice, today, demo);
+  const next = state as unknown as PortalState;
+  saveState(slices, next);
+  return next;
 }
 
-/** Remove the saved slices without seeding (used by tests). */
+/** Remove the saved slices without starting them again (used by tests). */
 export function clear(slices: PortalSlice[]): void {
   const ls = storage();
   if (!ls) return;

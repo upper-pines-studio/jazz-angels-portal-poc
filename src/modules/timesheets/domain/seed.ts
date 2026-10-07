@@ -173,3 +173,8 @@ export function makeSeed(): TimesheetsState {
   ];
   return { entries };
 }
+
+/** What a new office starts with when the demo is off (decision 0004): no hours yet. */
+export function makeEmpty(): TimesheetsState {
+  return { entries: [] };
+}

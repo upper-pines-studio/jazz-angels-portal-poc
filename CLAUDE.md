@@ -6,10 +6,12 @@ date-fns, vitest. No backend: state lives in localStorage behind `src/core/repos
 per module.
 
 ## Commands
-- `npm run dev` — http://localhost:5181; set `PORT` to use another (`PORT=5190 npm run dev`, or `PORT=` in `.env.local`) so worktrees run side by side
-- `npm run build` — typecheck + vite build (Netlify runs this)
+- The demo switch is `VITE_DEMO` (`src/core/demo.ts`): on, the portal starts from the sample data with the demo date and Reset demo data in Settings; off, it starts empty as a new office would (decision 0004). Unset, it is on in dev and off in a production build
+- `npm run dev` — demo on, http://localhost:5181; set `PORT` to use another (`PORT=5190 npm run dev`, or `PORT=` in `.env.local`) so worktrees run side by side. `VITE_DEMO=0 npm run dev` starts empty
+- `npm run build` — typecheck + vite build, demo off (empty) unless `VITE_DEMO=1 npm run build`. Netlify runs it with `VITE_DEMO = "1"` from `netlify.toml`, so the published site is the demo
+- `npm run preview` — serves the last `dist/` build on http://localhost:4173 (`npx vite preview --port 5318` for another port), to check a production build
 - `npm test` — vitest (core and module domain layers only)
-- `npm run test:e2e` — Playwright smoke tests in `e2e/`, headless; starts the dev server on `PORT` (`PORT=5207 npm run test:e2e`). Needs `npx playwright install chromium` once. The sign-in spec reads `DEMO_<ROLE>_USERNAME`/`DEMO_<ROLE>_PASSWORD` (from `.env.local`) and skips a role whose password is unset
+- `npm run test:e2e` — Playwright smoke tests in `e2e/`, headless; starts the dev server on `PORT` (`PORT=5207 npm run test:e2e`) with the demo on. Needs `npx playwright install chromium` once. The sign-in spec reads `DEMO_<ROLE>_USERNAME`/`DEMO_<ROLE>_PASSWORD` (from `.env.local`) and skips a role whose password is unset
 - `npm run lint` — ESLint over `src/` (the module boundaries, localStorage only in core, no bare `new Date()` in screens), then `prettier --check`
 - `npm run format` — Prettier over the TypeScript in `src/` and the root config files; run it before `npm run lint`
 - Stop hook (`.claude/settings.json` → `.claude/hooks/check.sh`) — runs `npm run typecheck` and `npm run lint` when an agent stops; a failure is shown to the agent to fix before it finishes

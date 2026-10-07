@@ -61,7 +61,7 @@ interface PersonDraft {
 }
 
 export default function Settings() {
-  const { state, today, actions, user } = useStore();
+  const { state, today, actions, user, demo, demoToday } = useStore();
   const allowed = useCan();
   // Staff and roles; the system's own settings with import, export and reset (decision 0001).
   const mayStaff = allowed('staff', 'edit');
@@ -77,12 +77,11 @@ export default function Settings() {
 
   const fy = fiscalYear(today, state.core.settings.fiscalYearStartMonth);
   const enabled = state.core.settings.enabledModules;
-  const demoToday = state.core.settings.demoToday;
   // A new office: nobody on the staff list but the person signed in.
   const onlyYou = state.core.staff.every(s => s.id === user.id);
 
   function setDemoToday(iso: string | undefined) {
-    actions.core.updateSettings({ demoToday: iso });
+    actions.core.setDemoToday(iso);
     toast({
       tone: 'success',
       title: iso ? 'Demo date in use' : 'Real date in use',
@@ -421,7 +420,7 @@ export default function Settings() {
                 if (file) void importJson(file);
               }}
             />
-            {confirmReset ? (
+            {demo && confirmReset && (
               <>
                 <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
                   This replaces everything with the demo data. Reset?
@@ -445,7 +444,8 @@ export default function Settings() {
                   No, keep my data
                 </Button>
               </>
-            ) : (
+            )}
+            {demo && !confirmReset && (
               <Button
                 variant="secondary"
                 style={{ color: 'var(--danger-500)' }}
@@ -455,42 +455,44 @@ export default function Settings() {
               </Button>
             )}
           </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-4)',
-              flexWrap: 'wrap',
-              marginTop: 'var(--space-5)',
-              paddingTop: 'var(--space-4)',
-              borderTop: 'var(--border-width) solid var(--border-subtle)',
-            }}
-          >
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div
-                style={{
-                  font: 'var(--weight-semibold) var(--text-sm)/1.4 var(--font-sans)',
-                  color: 'var(--text-strong)',
-                }}
-              >
-                Today in the demo
+          {demo && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-4)',
+                flexWrap: 'wrap',
+                marginTop: 'var(--space-5)',
+                paddingTop: 'var(--space-4)',
+                borderTop: 'var(--border-width) solid var(--border-subtle)',
+              }}
+            >
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    font: 'var(--weight-semibold) var(--text-sm)/1.4 var(--font-sans)',
+                    color: 'var(--text-strong)',
+                  }}
+                >
+                  Today in the demo
+                </div>
+                <div style={MUTED_SM}>{dateLong(today)}</div>
               </div>
-              <div style={MUTED_SM}>{dateLong(today)}</div>
+              {demoToday ? (
+                <Button variant="secondary" onClick={() => setDemoToday(undefined)}>
+                  Use the real date
+                </Button>
+              ) : (
+                <Button variant="secondary" onClick={() => setDemoToday(SEED_TODAY)}>
+                  Use the demo date
+                </Button>
+              )}
             </div>
-            {demoToday ? (
-              <Button variant="secondary" onClick={() => setDemoToday(undefined)}>
-                Use the real date
-              </Button>
-            ) : (
-              <Button variant="secondary" onClick={() => setDemoToday(SEED_TODAY)}>
-                Use the demo date
-              </Button>
-            )}
-          </div>
+          )}
 
           <p style={{ ...MUTED_SM, margin: 'var(--space-4) 0 0' }}>
-            Data lives in this browser only. Export before switching computers. The demo date keeps
-            the sample story on the day it was written for.
+            Data lives in this browser only. Export before switching computers.
+            {demo && ' The demo date keeps the sample story on the day it was written for.'}
           </p>
         </Card>
       )}

@@ -24,6 +24,7 @@ interface NoteState {
 const counter: ModuleSlice<CountState, { bump(): void }> = {
   id: 'counter',
   seed: () => ({ count: 0 }),
+  empty: () => ({ count: 0 }),
   reducer: (state, action) => (action.type === 'counter/bump' ? { count: state.count + 1 } : state),
   createActions: dispatch => ({ bump: () => dispatch({ type: 'counter/bump' }) }),
   rules: { bump: () => true },
@@ -34,6 +35,7 @@ const counter: ModuleSlice<CountState, { bump(): void }> = {
 const notes: ModuleSlice<NoteState, { add(text: string): void }> = {
   id: 'notes',
   seed: () => ({ notes: [] }),
+  empty: () => ({ notes: [] }),
   reducer: (state, action) =>
     action.type === 'notes/add' ? { notes: [...state.notes, String(action.text)] } : state,
   createActions: dispatch => ({ add: text => dispatch({ type: 'notes/add', text }) }),
@@ -53,7 +55,7 @@ describe('newId', () => {
 });
 
 describe('composing slices', () => {
-  const seeded = () => repository.loadState(SLICES, '2026-09-13');
+  const seeded = () => repository.loadState(SLICES, '2026-09-13', true);
 
   it('builds one key per slice from the seeds', () => {
     expect(asTest(seeded())).toEqual({ counter: { count: 0 }, notes: { notes: [] } });
@@ -114,7 +116,6 @@ describe('the core slice', () => {
     expect(state.settings).toEqual({
       fiscalYearStartMonth: 7,
       enabledModules: ['grants', 'teaching', 'timesheets'],
-      demoToday: SEED_TODAY,
     });
   });
 
@@ -194,35 +195,44 @@ describe('the core slice', () => {
     expect(state.settings.enabledModules).toEqual(['grants', 'timesheets', 'teaching']);
   });
 
-  it('reads today from the demo date setting, and from the clock without one', () => {
+  it('reads today from the demo date, and from the clock without one', () => {
     const clock = '2027-03-04';
-    let state = seed();
-    // Seeded: the demo story's day, whatever the clock says.
-    expect(resolveToday(state.settings, clock)).toBe(SEED_TODAY);
+    expect(resolveToday(SEED_TODAY, clock)).toBe(SEED_TODAY);
+    expect(resolveToday(undefined, clock)).toBe(clock);
+  });
 
-    state = coreSlice.reducer(state, {
-      type: 'core/update-settings',
-      patch: { demoToday: undefined },
-    });
-    expect(resolveToday(state.settings, clock)).toBe(clock);
+  it('starts a new office with the programs and the login staff, nothing else', () => {
+    const empty = coreSlice.empty();
+    expect(empty.programs).toEqual(seed().programs);
+    expect(empty.staff).toHaveLength(7);
+    expect(empty.organizations).toEqual([]);
+    expect(empty.venues).toEqual([]);
+    expect(empty.settings).toEqual(seed().settings);
+    // It reads back as itself.
+    expect(coreSlice.normalise?.(empty, false)).toEqual(empty);
+  });
 
-    state = coreSlice.reducer(state, {
-      type: 'core/update-settings',
-      patch: { demoToday: SEED_TODAY },
+  it('drops a demoToday an older save carries', () => {
+    const older = { ...seed(), settings: { fiscalYearStartMonth: 7, demoToday: SEED_TODAY } };
+    expect(coreSlice.normalise?.(older, true)?.settings).toEqual({
+      fiscalYearStartMonth: 7,
+      enabledModules: ['grants', 'teaching', 'timesheets'],
     });
-    expect(resolveToday(state.settings, clock)).toBe(SEED_TODAY);
+    expect('demoToday' in (coreSlice.normalise?.(older, false)?.settings ?? {})).toBe(false);
   });
 
   it('fills teaches, short and enabledModules in from an older payload', () => {
-    const filled = coreSlice.normalise?.({
-      staff: [{ id: 's-1', name: 'Barry Cogert', role: 'Program Director' }],
-      programs: [{ id: 'in-school', name: 'In-School Program' }],
-      settings: { fiscalYearStartMonth: 7 },
-    });
+    const filled = coreSlice.normalise?.(
+      {
+        staff: [{ id: 's-1', name: 'Barry Cogert', role: 'Program Director' }],
+        programs: [{ id: 'in-school', name: 'In-School Program' }],
+        settings: { fiscalYearStartMonth: 7 },
+      },
+      true,
+    );
     expect(filled?.staff[0].teaches).toBe(false);
     expect(filled?.programs[0].short).toBe('In-School Program');
     expect(filled?.settings.enabledModules).toEqual(['grants', 'teaching', 'timesheets']);
-    expect(filled?.settings.demoToday).toBeUndefined();
     // Saved before places existed: the seeded venues come along, so venue ids resolve.
     expect(filled?.venues.map(v => v.id)).toContain('v-studio');
     expect(filled?.organizations).toHaveLength(1);

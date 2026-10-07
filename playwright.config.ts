@@ -28,7 +28,8 @@ export default defineConfig({
   webServer: {
     command: 'npm run dev',
     url: baseURL,
-    env: { PORT: String(port) },
+    // The smoke tests read the demo data, so the demo is on whatever .env.local says.
+    env: { PORT: String(port), VITE_DEMO: '1' },
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
   },

@@ -5,6 +5,7 @@ import {
   LAC_BUDGET_LINES,
   LAC_EXPENSES,
   PAYMENT_PAGES,
+  makeMoneyEmpty,
   makeMoneySeed,
   mapLine,
 } from './seed-money';
@@ -850,5 +851,24 @@ export function makeSeed(): GrantsState {
     activity: seedActivity(),
     templates,
     ...moneySeed,
+  };
+}
+
+/**
+ * What a new office starts with when the demo is off (decision 0004): no
+ * funders, grants or money, no checklist templates, the default reminders.
+ */
+export function makeEmpty(): GrantsState {
+  return {
+    funders: [],
+    grants: [],
+    tasks: [],
+    documents: [],
+    payments: [],
+    budgetLines: [],
+    reports: [],
+    activity: [],
+    templates: [],
+    ...makeMoneyEmpty(),
   };
 }
