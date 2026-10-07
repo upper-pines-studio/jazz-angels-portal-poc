@@ -109,11 +109,12 @@ export const ENTERED: Record<Phase, RegExp | undefined> = {
 
 /**
  * The grant date a brought-in grant shows under each step it passed before it
- * came into the portal. Prospect and Reporting have none, so they show no date.
+ * came into the portal: only the dates that say when it entered the phase.
+ * Prospect and Reporting have none, and the LOI and application due dates are
+ * deadlines, not the day it started the LOI or the application, so those
+ * steps show no date.
  */
 const BROUGHT_IN_DATE: Partial<Record<Phase, keyof GrantDates>> = {
-  loi: 'loiDue',
-  applying: 'applicationDue',
   submitted: 'submitted',
   awarded: 'decided',
   active: 'periodStart',
@@ -123,7 +124,8 @@ const BROUGHT_IN_DATE: Partial<Record<Phase, keyof GrantDates>> = {
  * The day this grant reached `phase`, for the stepper: the activity row that
  * says so (the latest, given `activity` oldest first), else the key date.
  * A grant brought in already under way never takes its created date for
- * Prospect: the phases it passed elsewhere show a date only where one was given.
+ * Prospect: the phases it passed elsewhere show only a submitted, decided or
+ * period-start date it was given.
  */
 export function phaseEnteredOn(
   grant: Pick<Grant, 'createdAt' | 'dates' | 'broughtIn'>,

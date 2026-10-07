@@ -175,12 +175,14 @@ describe('bringing in a grant at Active', () => {
     expect(rows[0]).toMatchObject({ text: 'Brought into the portal at Active', whoId: 's-keisha' });
   });
 
-  it('dates the passed steps from the dates given, never from the day it came in', () => {
+  it('dates the passed steps from the dates given, never from the day it came in or a deadline', () => {
     const rows = grants.activity.filter(a => a.grantId === id);
     const when = (p: Phase) => phaseEnteredOn(grant, p, rows);
     expect(passedPhases(grant, 'active')).toEqual(['prospect', 'applying', 'submitted', 'awarded']);
     expect(when('prospect')).toBeUndefined();
-    expect(when('applying')).toBe('2025-11-15');
+    // Application due is a deadline, not the day it started applying.
+    expect(grant.dates.applicationDue).toBe('2025-11-15');
+    expect(when('applying')).toBeUndefined();
     expect(when('submitted')).toBe('2025-11-14');
     expect(when('awarded')).toBe('2026-01-20');
     expect(when('active')).toBe('2026-02-01');
@@ -248,6 +250,28 @@ describe('at Awarded', () => {
     const g = h.grants().grants.find(x => x.id === id)!;
     expect(phaseEnteredOn(g, 'awarded', [])).toBe('2026-09-30');
     expect(phaseEnteredOn(g, 'prospect', [])).toBeUndefined();
+  });
+
+  it('shows no date for LOI or Applying, even with their due dates set', () => {
+    const h = harness();
+    const id = h.actions.addGrant(
+      input('awarded', {
+        loiRequired: true,
+        dates: {
+          loiDue: '2026-01-10',
+          applicationDue: '2026-03-15',
+          submitted: '2026-03-14',
+          decided: '2026-06-01',
+        },
+      }),
+    )!;
+    const g = h.grants().grants.find(x => x.id === id)!;
+    const rows = h.grants().activity.filter(a => a.grantId === id);
+    expect(phaseEnteredOn(g, 'prospect', rows)).toBeUndefined();
+    expect(phaseEnteredOn(g, 'loi', rows)).toBeUndefined();
+    expect(phaseEnteredOn(g, 'applying', rows)).toBeUndefined();
+    expect(phaseEnteredOn(g, 'submitted', rows)).toBe('2026-03-14');
+    expect(phaseEnteredOn(g, 'awarded', rows)).toBe('2026-06-01');
   });
 
   it('honours the tasks unticked in the checklist step', () => {

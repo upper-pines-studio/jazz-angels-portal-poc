@@ -45,7 +45,7 @@ for what has been brought into it.
   The checklist has no tasks for the phases it passed, the document register starts as
   submitted, and the activity log gets one row, "Brought into the portal at Active", not one per
   phase. The grant carries `broughtIn: { phase, on }`, so the stepper shows the passed phases
-  done, dated only where a grant date was given. Closed is not offered. Assigning the
+  done, dated only from its submitted, awarded and period-start dates. Closed is not offered. Assigning the
   QuickBooks transactions from before the switch-over is not built; it needs the sync below.
 - The QuickBooks sync reaches back to the start of the earliest grant in the portal, not just
   to the switch-over date, so an in-flight grant's earlier spending can be assigned.

@@ -121,9 +121,10 @@ inFlight: {
 - The activity log gets one row, `broughtInText(phase)`: "Brought into the portal at Active",
   credited to the signed-in person. It matches none of the stepper's `ENTERED` patterns.
 - **`Grant.broughtIn`** tells the stepper the grant arrived mid-life. `phaseEnteredOn` dates a
-  phase up to `broughtIn.phase` only from the grant date for it (LOI `loiDue`, Applying
-  `applicationDue`, Submitted `submitted`, Awarded `decided`, Active `periodStart`; Prospect
-  and Reporting have none), never from `createdAt`. Later phases date from their own activity
+  phase up to `broughtIn.phase` only from the grant date that says it entered it (Submitted
+  `submitted`, Awarded `decided`, Active `periodStart`), never from `createdAt`. Prospect,
+  LOI, Applying and Reporting show no date: `loiDue` and `applicationDue` are deadlines, not
+  the day the grant entered those phases. Later phases date from their own activity
   rows as for any grant.
 - The store's rule for `addGrant` needs "Award, budget, reports" edit as well as the pipeline
   row when `inFlight` is set, so the Office assistant is refused, and refuses any input

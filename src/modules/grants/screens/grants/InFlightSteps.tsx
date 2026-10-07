@@ -223,8 +223,7 @@ export function AwardStep({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
         <Eyebrow>Before the award</Eyebrow>
         <p style={{ margin: 0, font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
-          Leave blank any date you don’t have. The grant’s steps show a date only where you give
-          one.
+          Leave blank any date you don’t have.
         </p>
         <div className="ja-grid-2" style={{ alignItems: 'start' }}>
           <div

@@ -90,7 +90,7 @@ export interface Grant extends Archivable {
    * Set on a grant that was already under way when it came into the portal
    * (decision 0004): the phase it arrived at and the day it was brought in.
    * The phases before `phase` were passed elsewhere, so the stepper shows them
-   * done with a date only where `dates` has one, and the checklist has no tasks
+   * done, dated only from `dates.submitted`, `decided` and `periodStart`, and the checklist has no tasks
    * for them. Unset on a grant added at Prospect, LOI or Applying.
    */
   broughtIn?: { phase: Phase; on: string };
