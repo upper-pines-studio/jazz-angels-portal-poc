@@ -1,5 +1,12 @@
 import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
-import { PARAMOUNT_MS_VENUE_ID, STUDIO_VENUE_ID } from '../../../core';
+import {
+  PARAMOUNT_MS_VENUE_ID,
+  STUDIO_VENUE_ID,
+  archiveFields,
+  isArchived,
+  normaliseArchived,
+  restoreFields,
+} from '../../../core';
 import { mayTakeRoll } from './derive';
 import { makeEmpty, makeSeed } from './seed';
 import type {
@@ -113,6 +120,7 @@ export function describeChange(action: TeachingAction): string | undefined {
     case 'insert':
     case 'update':
     case 'remove':
+      if (action.type === 'update' && 'archivedAt' in action.patch) return 'the archive change';
       switch (action.key) {
         case 'attendance':
           return 'the roll call mark';
@@ -140,7 +148,7 @@ function createActions(
   getState: () => { teaching: TeachingState },
   ctx: SliceContext,
 ): TeachingActions {
-  const { newId } = ctx;
+  const { newId, today, user } = ctx;
   /** Every action leaves this module namespaced, so the store can route it. */
   const send = (action: TeachingAction) => dispatch({ ...action, type: `teaching/${action.type}` });
   const insert = <K extends CollectionKey>(key: K, item: Collections[K]): TeachingAction =>
@@ -182,7 +190,11 @@ function createActions(
       );
       const present = students
         .filter(
-          s => s.status === 'enrolled' && s.ensembleId === meeting.ensembleId && !marked.has(s.id),
+          s =>
+            s.status === 'enrolled' &&
+            !isArchived(s) &&
+            s.ensembleId === meeting.ensembleId &&
+            !marked.has(s.id),
         )
         .map(s =>
           insert('attendance', {
@@ -221,6 +233,18 @@ function createActions(
       const students = inputs.map(input => ({ ...input, id: newId('st') }));
       send({ type: 'batch', actions: students.map(s => insert('students', s)) });
       return students.length;
+    },
+    archiveStudent(id) {
+      send(update('students', id, archiveFields(user, today)));
+    },
+    restoreStudent(id) {
+      send(update('students', id, restoreFields()));
+    },
+    archiveEnsemble(id) {
+      send(update('ensembles', id, archiveFields(user, today)));
+    },
+    restoreEnsemble(id) {
+      send(update('ensembles', id, restoreFields()));
     },
   };
 }
@@ -278,6 +302,11 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     enrollStudent: 'students',
     updateStudent: 'students',
     importStudents: 'students',
+    // Whoever may edit the record may archive and restore it (decision 0002).
+    archiveStudent: 'students',
+    restoreStudent: 'students',
+    archiveEnsemble: 'schedule',
+    restoreEnsemble: 'schedule',
   },
   normalise(raw) {
     if (!raw || typeof raw !== 'object') return undefined;
@@ -285,12 +314,14 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     for (const key of COLLECTIONS) {
       if (!Array.isArray(candidate[key])) return undefined;
     }
-    const students = (candidate.students as Student[]).map(s => ({
-      ...s,
-      status: s.status ?? 'enrolled',
-      yearsIn: s.yearsIn ?? 1,
-    }));
-    const ensembles = (candidate.ensembles as Ensemble[]).map(withVenue);
+    const students = (candidate.students as Student[]).map(s =>
+      normaliseArchived({
+        ...s,
+        status: s.status ?? 'enrolled',
+        yearsIn: s.yearsIn ?? 1,
+      }),
+    );
+    const ensembles = (candidate.ensembles as Ensemble[]).map(e => normaliseArchived(withVenue(e)));
     const meetings = (candidate.meetings as ClassMeeting[]).map(withVenue);
     return { ...(candidate as unknown as TeachingState), students, ensembles, meetings };
   },

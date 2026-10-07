@@ -17,6 +17,7 @@ import { useToast } from '../../../app/ToastHost';
 import { OwnerAvatar } from '../../../app/components/badges';
 import { TableScroll } from '../../../app/components/TableScroll';
 import {
+  activeOnly,
   dateRange,
   dateShort,
   programById,
@@ -95,7 +96,9 @@ export default function Timesheets() {
   const monthHours = hoursThisMonth(scoped, today);
   const teachers = teachersThisMonth(scoped, today);
   const inSchool = hoursForProgram(scoped, 'in-school', month.from, month.to);
-  const teachingStaff = state.core.staff.filter(s => s.teaches);
+  // The current teaching artists. Someone archived keeps their hours (they still
+  // count below) and stays in the teacher filter for a week they logged in.
+  const teachingStaff = activeOnly(state.core.staff).filter(s => s.teaches);
 
   usePageHeader({
     title: 'Timesheets',
@@ -103,7 +106,8 @@ export default function Timesheets() {
   });
 
   const week = weekRange(monday);
-  const shown = visibleEntries(user, entriesForWeek(state, monday)).filter(
+  const weekEntries = visibleEntries(user, entriesForWeek(state, monday));
+  const shown = weekEntries.filter(
     e => !seesEveryone || teacher === 'all' || e.staffId === teacher,
   );
   const shownHours = shown.reduce((sum, e) => sum + e.hours, 0);
@@ -201,7 +205,15 @@ export default function Timesheets() {
                   onChange={e => setTeacher(e.target.value)}
                   options={[
                     { value: 'all', label: 'All teachers' },
-                    ...teachingStaff.map(s => ({ value: s.id, label: s.name })),
+                    ...state.core.staff
+                      .filter(
+                        s =>
+                          s.teaches &&
+                          (teachingStaff.includes(s) ||
+                            s.id === teacher ||
+                            weekEntries.some(e => e.staffId === s.id)),
+                      )
+                      .map(s => ({ value: s.id, label: s.name })),
                   ]}
                   style={{ width: '100%' }}
                 />

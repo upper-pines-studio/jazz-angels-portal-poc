@@ -24,7 +24,7 @@ import {
   percent,
   rollCounts,
   rollMarks,
-  rosterForEnsemble,
+  rollCallStudents,
   timeLabel,
   timeRange,
 } from '../domain';
@@ -48,7 +48,8 @@ export default function RollCall() {
   const meeting = meetingById(state, meetingId);
   const ensemble = ensembleById(state, meeting?.ensembleId);
   const venue = venueById(state, meeting?.venueId);
-  const roster = meeting ? rosterForEnsemble(state, meeting.ensembleId) : [];
+  // An open roll is today's roster; a submitted one is who was marked, archived students included.
+  const roster = meeting ? rollCallStudents(state, meeting) : [];
   const records = meeting ? attendanceForMeeting(state, meeting.id) : [];
   const submitted = Boolean(meeting?.rollSubmittedAt);
 

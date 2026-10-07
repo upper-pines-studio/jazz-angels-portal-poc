@@ -14,9 +14,19 @@ import {
 import { usePageHeader } from '../../../app/Shell';
 import { OwnerAvatar } from '../../../app/components/badges';
 import { TableScroll } from '../../../app/components/TableScroll';
+import { useToast } from '../../../app/ToastHost';
 import {
+  ArchiveDialog,
+  ArchivedName,
+  ShowArchivedSwitch,
+  useArchivedParam,
+} from '../../../app/components/archive';
+import {
+  activeOnly,
+  archivedOnly,
   dateRange,
   dateShort,
+  isArchived,
   placeLabel,
   programName,
   staffById,
@@ -28,6 +38,7 @@ import {
 import {
   ensembleById,
   ensembleCount,
+  ensemblesList,
   mayTakeRoll,
   meetingsForWeek,
   termForDate,
@@ -36,7 +47,7 @@ import {
   timeRange,
   weekStart,
 } from '../domain';
-import type { ClassMeeting } from '../domain';
+import type { ClassMeeting, Ensemble } from '../domain';
 import { RollBadge, TONE_COLOR } from './parts';
 import AddClassDialog from './schedule/AddClassDialog';
 import './schedule.css';
@@ -47,7 +58,8 @@ const DAYS = [0, 1, 2, 3, 4];
 export default function Schedule() {
   const nav = useNavigate();
   const { state, today } = useStore();
-  const ensembles = state.teaching.ensembles.length;
+  // An archived ensemble cannot have a class added, so only the current ones count.
+  const ensembles = activeOnly(state.teaching.ensembles).length;
   // A class belongs to an ensemble, so with none there is nothing to add a class to.
   const mayAdd = useCan()('schedule', 'edit') && ensembles > 0;
   const [params, setParams] = useSearchParams();
@@ -184,7 +196,7 @@ function WeekGrid({
         {term && week && <Badge tone="blue">{`${term.name} · week ${week}`}</Badge>}
       </div>
 
-      {slots.length === 0 && state.teaching.ensembles.length === 0 ? (
+      {slots.length === 0 && activeOnly(state.teaching.ensembles).length === 0 ? (
         <EmptyState
           icon={<Icon name="calendar" size={22} />}
           title="No ensembles yet"
@@ -305,9 +317,14 @@ function MeetingBlock({
 
 function TermView() {
   const nav = useNavigate();
-  const { state, today, user } = useStore();
+  const { state, today, user, actions } = useStore();
   const allowed = useCan();
+  const mayEdit = allowed('schedule', 'edit');
+  const toast = useToast();
   const term = termForDate(state, today);
+  // ?archived=1 lists the archived ensembles after the current ones.
+  const [showArchived, setShowArchived] = useArchivedParam();
+  const [archiving, setArchiving] = React.useState<Ensemble | null>(null);
 
   if (!term) {
     return (
@@ -321,19 +338,15 @@ function TermView() {
     );
   }
 
-  // The session's Sundays, taken from the first Sunday ensemble's meetings.
+  // The session's Sundays, taken from the first current Sunday ensemble's meetings.
+  const first = activeOnly(state.teaching.ensembles)[0] ?? state.teaching.ensembles[0];
   const sundays = state.teaching.meetings
-    .filter(
-      m =>
-        m.ensembleId === state.teaching.ensembles[0]?.id &&
-        m.date >= term.start &&
-        m.date <= term.end,
-    )
+    .filter(m => m.ensembleId === first?.id && m.date >= term.start && m.date <= term.end)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const done = sundays.filter(m => m.rollSubmittedAt).length;
 
-  const rows = state.teaching.ensembles.map(e => {
+  const rows = ensemblesList(state, showArchived).map(e => {
     const first = state.teaching.meetings
       .filter(m => m.ensembleId === e.id && m.date >= term.start && m.date <= term.end)
       .sort((a, b) => a.date.localeCompare(b.date))[0];
@@ -380,6 +393,13 @@ function TermView() {
         title="Ensembles"
         subtitle="Who meets when, and how many are on each roster"
         padding="0"
+        action={
+          <ShowArchivedSwitch
+            count={archivedOnly(state.teaching.ensembles).length}
+            checked={showArchived}
+            onChange={setShowArchived}
+          />
+        }
       >
         <TableScroll minWidth={820}>
           <DataTable
@@ -408,7 +428,7 @@ function TermView() {
                         background: TONE_COLOR[r.ensemble.tone],
                       }}
                     />
-                    {r.ensemble.name}
+                    <ArchivedName name={r.ensemble.name} record={r.ensemble} />
                   </span>
                 ),
               },
@@ -474,10 +494,58 @@ function TermView() {
                     />
                   ) : null,
               },
+              ...(mayEdit
+                ? [
+                    {
+                      key: 'archive',
+                      label: '',
+                      width: '90px',
+                      align: 'right' as const,
+                      render: (r: Row) => (
+                        <a
+                          href="#"
+                          onClick={e => {
+                            // The row opens the roll call; this link does not.
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!isArchived(r.ensemble)) {
+                              setArchiving(r.ensemble);
+                              return;
+                            }
+                            actions.teaching.restoreEnsemble(r.ensemble.id);
+                            toast({
+                              tone: 'success',
+                              title: 'Ensemble restored',
+                              message: `${r.ensemble.name} is back on the week grid and in Add class.`,
+                            });
+                          }}
+                        >
+                          {isArchived(r.ensemble) ? 'Restore' : 'Archive'}
+                        </a>
+                      ),
+                    },
+                  ]
+                : []),
             ]}
           />
         </TableScroll>
       </Card>
+
+      {archiving && mayEdit && (
+        <ArchiveDialog
+          title={`Archive ${archiving.name}?`}
+          message="Its classes from today on leave the week grid, and Add class stops offering it. Its students stay where they are, and past classes, roll calls and attendance stay. You can restore it."
+          onConfirm={() => {
+            actions.teaching.archiveEnsemble(archiving.id);
+            toast({
+              tone: 'success',
+              title: 'Ensemble archived',
+              message: `${archiving.name} is off the week grid from today. Restore it from Show archived.`,
+            });
+          }}
+          onClose={() => setArchiving(null)}
+        />
+      )}
     </>
   );
 }
