@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { AnyAction } from '../../../../core/module';
 import { makeCoreSeed } from '../../../../core/seed';
-import { guardActions } from '../../../../core/store';
+import { createLiveStore } from '../../../../core/live';
+import type { Repository } from '../../../../core/persistence';
+import type { PortalSlice } from '../../../../core/repository';
+import { describeChange, guardActions, makeReducer } from '../../../../core/store';
 import type { PortalState, Role, SignedInUser } from '../../../../core/types';
 import {
   attendanceForMeeting,
   leadsMeeting,
+  meetingById,
   mayTakeRoll,
   rosterFor,
   markCounts,
@@ -448,5 +452,75 @@ describe('the generic actions', () => {
       'the roll call mark',
       'the student',
     ]);
+  });
+});
+
+describe('a roll call that does not save', () => {
+  /** The teaching slice in the live store, on a repository that fails until told not to. */
+  function failing() {
+    let fail = true;
+    const failures: string[] = [];
+    const repo: Repository = {
+      load: slice => Promise.resolve(slice.seed(SEED_TODAY)),
+      apply: () => (fail ? Promise.reject(new Error('No connection.')) : Promise.resolve()),
+    };
+    const slices = [teachingSlice as unknown as PortalSlice];
+    const live = createLiveStore({
+      initial: { teaching: makeSeed() } as unknown as PortalState,
+      reducer: makeReducer(slices),
+      repository: repo,
+      describe: (sliceId, action) => describeChange(slices, sliceId, action),
+      onSaveFailed: message => failures.push(message),
+    });
+    let n = 0;
+    const actions = teachingSlice.createActions(live.dispatch, live.getState, {
+      today: SEED_TODAY,
+      newId: (prefix: string) => `${prefix}-${(n += 1)}`,
+      user: { id: 's-devon', name: 'Devon Price', role: 'teacher' },
+    });
+    return {
+      live,
+      actions,
+      failures,
+      succeed: () => (fail = false),
+      meeting: () => meetingById(live.getState(), COMBO_B)!,
+      marks: () => attendanceForMeeting(live.getState(), COMBO_B),
+    };
+  }
+
+  it('puts the marks and the open roll back, and says which change it was', async () => {
+    const h = failing();
+    const roster = rosterForEnsemble(h.live.getState(), 'e-combo-b');
+    h.actions.setMark(COMBO_B, roster[0].id, 'absent');
+    h.actions.submitRollCall(COMBO_B, 'Traded fours.');
+    // On screen at once.
+    expect(h.meeting().rollSubmittedAt).toBeDefined();
+    expect(h.marks()).toHaveLength(roster.length);
+
+    expect(await h.live.whenSaved()).toBe(false);
+    expect(h.meeting().rollSubmittedAt).toBeUndefined();
+    expect(h.marks()).toHaveLength(0);
+    expect(h.failures).toEqual(["Couldn't save the roll call mark"]);
+    expect(h.live.getSaving()).toMatchObject({
+      status: 'error',
+      error: "Couldn't save the roll call mark",
+    });
+  });
+
+  it('submits the same roll when the screen sends it again', async () => {
+    const h = failing();
+    const roster = rosterForEnsemble(h.live.getState(), 'e-combo-b');
+    h.actions.setMark(COMBO_B, roster[0].id, 'absent');
+    h.actions.submitRollCall(COMBO_B, 'Traded fours.');
+    await h.live.whenSaved();
+
+    h.succeed();
+    h.actions.setMark(COMBO_B, roster[0].id, 'absent');
+    h.actions.submitRollCall(COMBO_B, 'Traded fours.');
+    expect(await h.live.whenSaved()).toBe(true);
+    expect(h.meeting()).toMatchObject({ notes: 'Traded fours.' });
+    expect(h.meeting().rollSubmittedAt).toBeDefined();
+    expect(markCounts(h.marks())).toMatchObject({ absent: 1, present: roster.length - 1 });
+    expect(h.live.getSaving()).toEqual({ status: 'idle' });
   });
 });
