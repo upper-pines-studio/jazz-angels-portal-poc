@@ -42,6 +42,12 @@ actions.grants.transition(id, 'submitted', { date: today });
 - `user: SignedInUser` — `{ id, name, role }` of whoever is signed in, read
   from their staff record, so a rename or a new role in Settings shows at once.
 - `actions: PortalActions` — one namespace per slice. Every change is persisted.
+- `saving: Saving` — `{ status: 'idle' | 'saving' | 'error', error?, retry? }`:
+  whether a change is on its way to the repository, or the last one could not
+  be saved. The shell's top bar shows it.
+- `whenSaved(): Promise<boolean>` — resolves once everything dispatched so far
+  has been applied: `true`, or `false` when something failed and was rolled
+  back. Roll call waits on it before it leaves the page.
 
 **Who did it.** Every slice's `createActions(dispatch, getState, ctx)` gets a
 `SliceContext`: `today`, `newId(prefix)` and `user`, the signed-in person. An
@@ -57,10 +63,55 @@ only ever reaches the grants reducer. A slice that was not addressed keeps its
 identity, so nothing else re-renders. `portal/replace` swaps every slice at once
 (reset and import).
 
-**Persistence.** One localStorage key per slice, `ja-portal:<sliceId>:v1`, and
-only the slice that changed is written. Export and import use one envelope,
-`{ version, savedAt, slices }`; a file written before a module existed imports
-fine, because any slice it does not carry starts fresh instead.
+**Persistence.** The store talks to storage through one interface,
+`Repository` in `persistence.ts`:
+
+```ts
+interface Repository {
+  load(slice: ModuleSlice, today: string, demo: boolean): Promise<unknown>; // one per slice
+  apply(sliceId: string, action: AnyAction, next: unknown): Promise<void>;  // one per change
+}
+```
+
+`StoreProvider` calls `load` once per slice when it mounts and renders nothing
+until they are all in. After that every change goes through `live.ts`:
+
+1. `dispatch` runs the reducer and the screens see the change at once.
+2. Each slice the change touched is handed to `apply(sliceId, action, next)`:
+   the action as the slice dispatched it, for a backend that writes rows, and
+   the slice's whole new state, for one that writes documents. An import or a
+   reset (`portal/replace`) is one apply per slice.
+3. Applies run one at a time per slice, in order. While any is in flight
+   `saving.status` is `saving`.
+4. When one rejects, that slice goes back to how it stood before the failed
+   change, and the changes queued behind it on the same slice are dropped with
+   it (each was made on top of it). Other slices carry on. `saving` becomes
+   `error` with "Couldn't save <what>", where <what> comes from the slice's
+   `describe(action)` ("the roll call mark"), else "that change";
+   `onSaveFailed` gets the same sentence (App shows it as a toast), and
+   `saving.retry` dispatches the dropped changes again. The next successful
+   apply clears the error.
+
+There is no offline queue and nothing retries on its own (decision 0003).
+`StoreProvider` takes the repository as a prop (`repository`), defaulting to
+`localRepository`; the tests pass a fake that fails on demand.
+
+`localRepository` in `repository.ts` is the first implementation and the only
+one: one localStorage key per slice, `ja-portal:<sliceId>:v1`. `load` reads the
+key (and keeps a slice that started fresh, so it loads the same next time);
+`apply` writes the slice's new state and rejects when the browser will not
+store it (full, or storage switched off). In `npm run dev`, setting the
+preference `ja-portal:fail-saves` to `1` (`FAIL_SAVES_KEY`; in devtools,
+`localStorage.setItem('ja-portal:fail-saves', '1')`) makes every apply fail,
+so the failure path can be seen; remove it to save again. A production build
+ignores it.
+
+Export and import use one envelope, `{ version, savedAt, slices }`; a file
+written before a module existed imports fine, because any slice it does not
+carry starts fresh instead. `readImport` and `freshState` only build the new
+state; the store applies it like any other change. Preferences
+(`loadPreference` / `savePreference`) and `savedStaff()`, which sign-in reads
+before the store mounts, stay outside the interface: they are this browser's.
 
 **Demo or empty.** `isDemo()` in `demo.ts` is the one reading of the build-time
 `VITE_DEMO` switch: `1`/`true` on, `0`/`false` off, unset on in `npm run dev` and
@@ -82,12 +133,14 @@ carry it. Unset means the seed's day, `SEED_TODAY`; "Use the real date" stores
 | File | What is in it |
 | --- | --- |
 | `types.ts` | `StaffMember` (`title` is the job title, `role` is one of the seven `Role`s of decision 0001), `SignedInUser`, `Program`, `Organization`, `Venue`, `Address`, `AppSettings` (the fiscal year and the module switches; the demo date is not in it), `CoreState`, and the augmentable `PortalState` / `PortalActions`. |
-| `module.ts` | `ModuleSlice` (`seed(today)` the demo data, `empty()` a new office, `normalise(raw, demo)`, and its `rules`: what each action needs), `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are gated Cards for the Settings screen), `ModuleRoute` (`requires`, `allows`), `Requires`, `NavItem`, `NavSection`, `StatSpec`, `AttentionItem`, `GatedCard`, `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
-| `store.tsx` | `StoreProvider` (its `onRefused` shows a refused action's reason), `useStore`, `useCan`, `coreSlice`, `guardActions` (wraps every slice's actions in its `rules`), `refusalMessage`, `newId`, `resolveToday`, `savedStaff()` (the staff list as saved, which sign-in reads before the store mounts). |
+| `module.ts` | `ModuleSlice` (`seed(today)` the demo data, `empty()` a new office, `normalise(raw, demo)`, its `rules`: what each action needs, and an optional `describe(action)`: the change in plain words for a failed save), `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are gated Cards for the Settings screen), `ModuleRoute` (`requires`, `allows`), `Requires`, `NavItem`, `NavSection`, `StatSpec`, `AttentionItem`, `GatedCard`, `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
+| `persistence.ts` | The `Repository` interface: `load` one slice, `apply` one change, both promises. |
+| `live.ts` | `createLiveStore`: the state, the per-slice apply queue, the rollback, `Saving` and `whenSaved`. No React, so the tests drive it with a fake repository. |
+| `store.tsx` | `StoreProvider` (its `onRefused` shows a refused action's reason, its `onSaveFailed` a change that could not be saved, its `repository` defaults to localStorage), `useStore`, `useCan`, `coreSlice`, `guardActions` (wraps every slice's actions in its `rules`), `refusalMessage`, `newId`, `resolveToday`, `savedStaff()` (the staff list as saved, which sign-in reads before the store mounts). |
 | `demo.ts` | `isDemo()` (the `VITE_DEMO` switch), `DEMO_TODAY_KEY` and the demo-date preference helpers. |
 | `roles.ts` | `ROLES`, `ROLE_LABELS` (the words the screens use: Admin, Director, Office manager, Bookkeeper, Teacher, Office assistant, Read-only), `isRole`. |
 | `permissions.ts` | Decision 0001's table as data (`PERMISSION_TABLE`, same rows and columns as the decision file), `can(role, subject, need, own)` the one check, `cell`, `isOwnOnly`, `meets` / `meetsAny`, `mayChangeStaff` (only an Admin makes or changes an Admin). |
-| `repository.ts` | localStorage, one key per slice; export / import / reset, each given the demo mode (`fresh` picks `seed` or `empty`); `loadPreference` / `savePreference` for a per-browser setting such as the collapsed rail or the demo date. With `auth.ts`, the only file that may touch localStorage (lint-enforced). |
+| `repository.ts` | `localRepository`, the `Repository` on localStorage, one key per slice; `FAIL_SAVES_KEY`, the development switch that makes every save fail; export / `readImport` / `freshState`, each given the demo mode (`fresh` picks `seed` or `empty`); `loadPreference` / `savePreference` for a per-browser setting such as the collapsed rail or the demo date. With `auth.ts`, the only file that may touch localStorage (lint-enforced). |
 | `auth.ts` | Sign-in against SHA-256 credential hashes (no plaintext passwords in source); the session key. Exported as `auth`. |
 | `format.ts` | `money`, `dateShort`, `dateLong`, `dateRange`, `relativeDays`, `daysUntil`, `initials`. |
 | `seed.ts` | `makeCoreSeed()`: the ten staff (one per demo login, plus the teaching artists), the six programs, one district with two schools, the studio, the settings. `makeCoreEmpty()`: a new office, with the six programs pre-loaded, the seven staff records the logins need (`loginStaff()`), no partners or venues, the default settings. `STUDIO_VENUE_ID` and `PARAMOUNT_MS_VENUE_ID` are exported for module seeds. |
@@ -117,9 +170,9 @@ manages both on the Partners screen (`src/app/screens/partners/`).
 | `updateVenue(id, patch)` | Patches a venue. Ensembles point at it by id, so a rename shows everywhere. |
 | `updateSettings(patch)` | Patches the settings: the fiscal year, the module switches. |
 | `setModuleEnabled(id, on)` | Turns a module on or off. Its data stays. |
-| `resetDemo()` | Reseeds every slice. Demo only: with the demo off it changes nothing and says so. |
+| `resetDemo()` | Reseeds every slice, one apply per slice. Demo only: with the demo off it changes nothing and says so. |
 | `setDemoToday(iso)` | Moves the demo date, or `undefined` for the clock. A browser preference, not data. Demo only. |
-| `importJson(text)` | Replaces every slice from an exported file. Throws on an unreadable file. |
+| `importJson(text)` | Replaces every slice from an exported file, one apply per slice. Throws on an unreadable file. |
 | `exportJson()` | The whole portal as pretty JSON. |
 
 See `src/modules/README.md` for how to add a module.

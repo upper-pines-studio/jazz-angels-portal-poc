@@ -69,6 +69,13 @@ export interface ModuleSlice<S, A> {
    * from its seed; unset counts as off.
    */
   normalise?(raw: unknown, demo?: boolean): S | undefined;
+  /**
+   * Optional: name one of this slice's changes in plain words, for the toast
+   * when it could not be saved: `Couldn't save ${describe(action)}`. Given the
+   * action as dispatched (`{ type: 'teaching/update', key: 'attendance', … }`)
+   * it answers "the roll call mark". Unset, or undefined, reads "that change".
+   */
+  describe?(action: AnyAction): string | undefined;
 }
 
 /**
