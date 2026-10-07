@@ -37,7 +37,8 @@ export type TeachingAction =
   | { type: 'submit-roll-call'; meetingId: string; at: string; notes?: string }
   | { type: 'reopen-roll-call'; meetingId: string }
   | { type: 'enroll-student'; student: Student }
-  | { type: 'update-student'; id: string; patch: Partial<Student> };
+  | { type: 'update-student'; id: string; patch: Partial<Student> }
+  | { type: 'import-students'; students: Student[] };
 
 function withId<T extends { id: string }>(rows: T[], id: string, patch: Partial<T>): T[] {
   return rows.map(row => (row.id === id ? { ...row, ...patch } : row));
@@ -114,6 +115,10 @@ export function reducer(state: TeachingState, action: TeachingAction): TeachingS
     case 'update-student':
       return { ...state, students: withId(state.students, action.id, action.patch) };
 
+    case 'import-students':
+      if (action.students.length === 0) return state;
+      return { ...state, students: [...state.students, ...action.students] };
+
     default:
       return state;
   }
@@ -154,6 +159,11 @@ function createActions(
     },
     updateStudent(id, patch) {
       send({ type: 'update-student', id, patch });
+    },
+    importStudents(inputs) {
+      const students = inputs.map(input => ({ ...input, id: newId('st') }));
+      send({ type: 'import-students', students });
+      return students.length;
     },
   };
 }
@@ -203,6 +213,7 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     // The roster changes with "Students: Edit"; a teacher's "Own classes" is to see it.
     enrollStudent: 'students',
     updateStudent: 'students',
+    importStudents: 'students',
   },
   normalise(raw) {
     if (!raw || typeof raw !== 'object') return undefined;

@@ -41,6 +41,7 @@ up** — that is the one rule every rate in here follows.
 | `reopenRollCall(meetingId)` | Clears the stamp so the marks can be edited again. |
 | `enrollStudent(input)` | Adds a student to a roster or the waitlist. Returns the new id. |
 | `updateStudent(id, patch)` | Patches a student, their placement included. |
+| `importStudents(inputs)` | Adds many students in one change, as the CSV import does. Returns how many. |
 
 ## Derived data
 
@@ -49,6 +50,16 @@ up** — that is the one rule every rate in here follows.
 `ensembleTrend` (the last five submitted meetings), `unsubmittedRollCalls`
 (past and today only), `attendanceSummary`, `enrolledCount`, `ensembleCount`,
 plus the display helpers `timeLabel`, `timeRange` and `percent`.
+
+## Importing a roster
+
+`import.ts` turns a roster CSV into rows to check: `parseStudentsCsv(text, { programs,
+ensembles, students })` matches columns by header in any order and case, lists the ones it
+ignores, and gives each row its problems in plain sentences, the closest program or ensemble
+where one is near, and the student each choice would add (`add`, `closest`, `waitlist`).
+`studentsToImport(rows, choices)` is what Import hands `importStudents`;
+`studentsCsvTemplate` writes the blank template. `readCsv` and `writeCsv` are the small CSV
+reader and writer behind them.
 
 ## Public API
 

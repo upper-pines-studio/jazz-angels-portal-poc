@@ -118,6 +118,7 @@ Module folder `modules/teaching/`. Spec in `docs/PLATFORM.md` section 2.2.
 | Schedule: week grid and term view, add class | `/schedule` | Built | `teaching/screens/Schedule.tsx`, `schedule/AddClassDialog.tsx` | `teaching/domain/derive.ts`, `slice.ts` |
 | Roll call | `/roll/:meetingId` | Built | `teaching/screens/RollCall.tsx` | `teaching/domain/slice.ts` |
 | Students: roster, waitlist, enroll | `/students` | Built | `teaching/screens/Students.tsx`, `students/EnrollStudentDialog.tsx` | `teaching/domain/derive.ts` |
+| Import students from a CSV: blank template, preview with each row's problems, closest match or waitlist or skip, add all at once | `/students` (Import) | Built; layout proposed in #14, not final until reviewed | `teaching/screens/students/ImportStudentsDialog.tsx`, `students/import.css` | `teaching/domain/import.ts`: `parseStudentsCsv`, `studentsToImport`, `studentsCsvTemplate`, `readCsv`, `writeCsv`; `slice.ts`: `importStudents` |
 | Dashboard today's classes card | `/` | Built | `teaching/screens/TodayPanel.tsx` | `teaching/manifest.tsx` |
 
 ## Timesheets
@@ -138,6 +139,7 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 | Permissions are checked in the browser only; anyone with the dev tools can change their role. Row-level security comes with the backend (#22). | `core/permissions.ts` |
 | Rail badges count for everyone: a teacher sees the office's "awaiting approval" count on Timesheets, Read-only the roll calls due on Schedule. | `timesheets/manifest.tsx`, `teaching/manifest.tsx` (`badge`) |
 | QuickBooks is simulated. No real connection, and a sync brings new transactions only once. | `grants/domain/seed-money.ts` (`INCOMING`), `slice.ts` (`sync`) |
+| The student import adds new students only. A name already in the portal is flagged and starts on Skip; nothing updates an existing student from a file, and a guardian email or address column is ignored. | `teaching/domain/import.ts` |
 | File contents are not stored. A file added in a session is lost on reload; a seeded file is a drawn page. | `grants/screens/money/files.tsx` |
 | "Download all backup" produces a spreadsheet index, not a zip of the files. | `grants/screens/grant/ExpensesTab.tsx` |
 | Reminder emails are never sent. | `grants/screens/deadlines/ReminderPanel.tsx` |
