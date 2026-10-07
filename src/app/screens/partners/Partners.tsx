@@ -2,13 +2,17 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePageHeader } from '../../Shell';
 import { TableScroll } from '../../components/TableScroll';
+import { ArchivedName, ShowArchivedSwitch } from '../../components/archive';
 import { Button, Card, DataTable, EmptyState, Icon } from '../../../design-system';
 import {
+  activeOnly,
   addressLine,
+  archivedOnly,
   organizationById,
   useCan,
   useStore,
   venuesForOrganization,
+  withArchived,
 } from '../../../core';
 import type { Organization, Venue } from '../../../core';
 import {
@@ -30,22 +34,30 @@ export default function Partners() {
   const mayEdit = useCan()('partners', 'edit');
   const nav = useNavigate();
   const [adding, setAdding] = React.useState<'organization' | 'venue' | null>(null);
+  // Show archived, one switch per list. Nothing else on this page is in the URL.
+  const [showArchivedVenues, setShowArchivedVenues] = React.useState(false);
+  const [showArchivedOrgs, setShowArchivedOrgs] = React.useState(false);
 
-  const organizations = state.core.organizations;
+  const organizations = withArchived(state.core.organizations, showArchivedOrgs);
   // Venues under their organization, alphabetical within; the studio and other
-  // unattached places first, since they are ours.
-  const venues = [...state.core.venues].sort((a, b) => {
-    const oa = organizationById(state, a.organizationId)?.name ?? '';
-    const ob = organizationById(state, b.organizationId)?.name ?? '';
-    return oa.localeCompare(ob) || a.name.localeCompare(b.name);
-  });
+  // unattached places first, since they are ours. Archived ones come last.
+  const venues = withArchived(
+    [...state.core.venues].sort((a, b) => {
+      const oa = organizationById(state, a.organizationId)?.name ?? '';
+      const ob = organizationById(state, b.organizationId)?.name ?? '';
+      return oa.localeCompare(ob) || a.name.localeCompare(b.name);
+    }),
+    showArchivedVenues,
+  );
+  const currentOrgs = activeOnly(state.core.organizations).length;
+  const currentVenues = activeOnly(state.core.venues).length;
 
   usePageHeader({
     title: 'Partners',
     subtitle:
-      organizations.length + venues.length === 0
+      currentOrgs + currentVenues === 0
         ? 'No organizations or venues yet'
-        : `${organizations.length} ${organizations.length === 1 ? 'organization' : 'organizations'} · ${venues.length} ${venues.length === 1 ? 'venue' : 'venues'}`,
+        : `${currentOrgs} ${currentOrgs === 1 ? 'organization' : 'organizations'} · ${currentVenues} ${currentVenues === 1 ? 'venue' : 'venues'}`,
     actions: mayEdit ? (
       <>
         <Button
@@ -74,6 +86,13 @@ export default function Partners() {
         title="Venues"
         subtitle="Where classes and performances happen: the studio, each school, a hall."
         padding="0"
+        action={
+          <ShowArchivedSwitch
+            count={archivedOnly(state.core.venues).length}
+            checked={showArchivedVenues}
+            onChange={setShowArchivedVenues}
+          />
+        }
       >
         {venues.length === 0 ? (
           <EmptyState
@@ -103,7 +122,13 @@ export default function Partners() {
               rows={venues}
               onRowClick={(row: Venue) => nav(`/partners/venues/${row.id}`)}
               columns={[
-                { key: 'name', label: 'Name', strong: true, width: '1.4fr' },
+                {
+                  key: 'name',
+                  label: 'Name',
+                  strong: true,
+                  width: '1.4fr',
+                  render: (row: Venue) => <ArchivedName name={row.name} record={row} />,
+                },
                 {
                   key: 'kind',
                   label: 'Kind',
@@ -141,6 +166,13 @@ export default function Partners() {
         title="Organizations"
         subtitle="The partners behind the venues: a district and its schools, a community centre."
         padding="0"
+        action={
+          <ShowArchivedSwitch
+            count={archivedOnly(state.core.organizations).length}
+            checked={showArchivedOrgs}
+            onChange={setShowArchivedOrgs}
+          />
+        }
       >
         {organizations.length === 0 ? (
           <EmptyState
@@ -170,7 +202,13 @@ export default function Partners() {
               rows={organizations}
               onRowClick={(row: Organization) => nav(`/partners/organizations/${row.id}`)}
               columns={[
-                { key: 'name', label: 'Name', strong: true, width: '1.6fr' },
+                {
+                  key: 'name',
+                  label: 'Name',
+                  strong: true,
+                  width: '1.6fr',
+                  render: (row: Organization) => <ArchivedName name={row.name} record={row} />,
+                },
                 {
                   key: 'kind',
                   label: 'Kind',

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Dialog, Field, Input, Select, Textarea } from '../../../design-system';
 import { useToast } from '../../ToastHost';
-import { useStore } from '../../../core';
+import { pickable, useStore } from '../../../core';
 import type { Address, Organization, OrganizationKind, Venue, VenueKind } from '../../../core';
 
 /**
@@ -283,7 +283,11 @@ export function VenueDialog({
               value={draft.organizationId ?? NO_ORGANIZATION}
               options={[
                 { value: NO_ORGANIZATION, label: 'None' },
-                ...state.core.organizations.map(o => ({ value: o.id, label: o.name })),
+                // Current partners, and the one already chosen if it has been archived since.
+                ...pickable(state.core.organizations, draft.organizationId).map(o => ({
+                  value: o.id,
+                  label: o.name,
+                })),
               ]}
               onChange={e => patch({ organizationId: e.target.value })}
               style={{ width: '100%' }}

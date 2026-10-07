@@ -15,19 +15,24 @@ import {
   Tag,
 } from '../../design-system';
 import { usePageHeader } from '../Shell';
+import { ArchiveDialog, ArchivedName, ShowArchivedSwitch } from '../components/archive';
 import { useToast } from '../ToastHost';
 import {
   ROLES,
   ROLE_LABELS,
   SEED_TODAY,
   dateLong,
+  activeOnly,
+  archivedOnly,
   dateRange,
   fiscalYear,
+  isArchived,
   isRole,
   mayChangeStaff,
   meetsAny,
   useCan,
   useStore,
+  withArchived,
 } from '../../core';
 import type { ModuleManifest, Role, StaffMember } from '../../core';
 import { MODULES } from '../../modules';
@@ -71,6 +76,9 @@ export default function Settings() {
   const loc = useLocation();
   const [person, setPerson] = React.useState<PersonDraft | null>(null);
   const [confirmReset, setConfirmReset] = React.useState(false);
+  // Show archived on the staff list: this card's own, so local state.
+  const [showArchived, setShowArchived] = React.useState(false);
+  const [archiving, setArchiving] = React.useState<StaffMember | null>(null);
   const fileInput = React.useRef<HTMLInputElement>(null);
 
   usePageHeader({ title: 'Settings', subtitle: 'People, programs, modules and your data' });
@@ -78,7 +86,29 @@ export default function Settings() {
   const fy = fiscalYear(today, state.core.settings.fiscalYearStartMonth);
   const enabled = state.core.settings.enabledModules;
   // A new office: nobody on the staff list but the person signed in.
-  const onlyYou = state.core.staff.every(s => s.id === user.id);
+  const onlyYou = state.core.staff.every(s => s.id === user.id || isArchived(s));
+  const archivedStaff = archivedOnly(state.core.staff).length;
+  const staffRows = withArchived(state.core.staff, showArchived);
+  const partnerCount = activeOnly(state.core.organizations).length;
+  const venueCount = activeOnly(state.core.venues).length;
+
+  function archivePerson(row: StaffMember) {
+    actions.core.archiveStaff(row.id);
+    toast({
+      tone: 'success',
+      title: `${row.name} is archived`,
+      message: 'They can no longer sign in. Restore them from Show archived.',
+    });
+  }
+
+  function restorePerson(row: StaffMember) {
+    actions.core.restoreStaff(row.id);
+    toast({
+      tone: 'success',
+      title: `${row.name} is restored`,
+      message: 'They are back on the staff list and can sign in again.',
+    });
+  }
 
   function setDemoToday(iso: string | undefined) {
     actions.core.setDemoToday(iso);
@@ -154,12 +184,28 @@ export default function Settings() {
   return (
     <>
       {mayStaff && (
-        <Card title="Staff" subtitle="Who can own a grant, lead a class or log hours." padding="0">
+        <Card
+          title="Staff"
+          subtitle="Who can own a grant, lead a class or log hours."
+          padding="0"
+          action={
+            <ShowArchivedSwitch
+              count={archivedStaff}
+              checked={showArchived}
+              onChange={setShowArchived}
+            />
+          }
+        >
           <TableScroll minWidth={640}>
             <DataTable
-              rows={state.core.staff}
+              rows={staffRows}
               columns={[
-                { key: 'name', label: 'Name', strong: true },
+                {
+                  key: 'name',
+                  label: 'Name',
+                  strong: true,
+                  render: (row: StaffMember) => <ArchivedName name={row.name} record={row} />,
+                },
                 { key: 'title', label: 'Title' },
                 {
                   key: 'role',
@@ -171,7 +217,7 @@ export default function Settings() {
                   label: 'Teaches',
                   width: '110px',
                   render: (row: StaffMember) =>
-                    !mayChangeStaff(user.role, row.role, row.role) ? (
+                    isArchived(row) || !mayChangeStaff(user.role, row.role, row.role) ? (
                       row.teaches ? (
                         'Yes'
                       ) : (
@@ -197,26 +243,50 @@ export default function Settings() {
                 {
                   key: 'edit',
                   label: '',
-                  width: '80px',
+                  width: '150px',
                   align: 'right',
                   render: (row: StaffMember) =>
-                    mayChangeStaff(user.role, row.role, row.role) ? (
+                    !mayChangeStaff(user.role, row.role, row.role) ? null : isArchived(row) ? (
                       <a
                         href="#"
                         onClick={e => {
                           e.preventDefault();
-                          setPerson({
-                            id: row.id,
-                            name: row.name,
-                            title: row.title,
-                            role: row.role,
-                            teaches: row.teaches,
-                          });
+                          restorePerson(row);
                         }}
                       >
-                        Edit
+                        Restore
                       </a>
-                    ) : null,
+                    ) : (
+                      <span className="ja-actions" style={{ justifyContent: 'flex-end' }}>
+                        <a
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            setPerson({
+                              id: row.id,
+                              name: row.name,
+                              title: row.title,
+                              role: row.role,
+                              teaches: row.teaches,
+                            });
+                          }}
+                        >
+                          Edit
+                        </a>
+                        {/* Nobody archives themself. */}
+                        {row.id !== user.id && (
+                          <a
+                            href="#"
+                            onClick={e => {
+                              e.preventDefault();
+                              setArchiving(row);
+                            }}
+                          >
+                            Archive
+                          </a>
+                        )}
+                      </span>
+                    ),
                 },
               ]}
             />
@@ -316,17 +386,16 @@ export default function Settings() {
           style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}
         >
           <p style={{ ...MUTED_SM, margin: 0, flex: 1, minWidth: 240 }}>
-            {state.core.organizations.length + state.core.venues.length === 0 ? (
+            {partnerCount + venueCount === 0 ? (
               <>
                 No organizations or venues yet. Add them on the Partners screen, so the schedule
                 knows where each class meets.
               </>
             ) : (
               <>
-                {state.core.organizations.length}{' '}
-                {state.core.organizations.length === 1 ? 'organization' : 'organizations'} and{' '}
-                {state.core.venues.length} {state.core.venues.length === 1 ? 'venue' : 'venues'}.
-                They live on their own screen, since the schedule points at them.
+                {partnerCount} {partnerCount === 1 ? 'organization' : 'organizations'} and{' '}
+                {venueCount} {venueCount === 1 ? 'venue' : 'venues'}. They live on their own screen,
+                since the schedule points at them.
               </>
             )}
           </p>
@@ -515,6 +584,15 @@ export default function Settings() {
           <span style={MUTED_SM}>Design: Jazz Angels staff-portal design system</span>
         </div>
       </Card>
+
+      {archiving && mayStaff && (
+        <ArchiveDialog
+          title={`Archive ${archiving.name}?`}
+          message="They can no longer sign in, and they leave the staff list and the pickers. Their classes, hours, approvals and activity still name them. You can restore them."
+          onConfirm={() => archivePerson(archiving)}
+          onClose={() => setArchiving(null)}
+        />
+      )}
 
       {person && mayStaff && (
         <Dialog

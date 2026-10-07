@@ -3,9 +3,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { usePageHeader } from '../../Shell';
 import { TableScroll } from '../../components/TableScroll';
 import { KV, OwnerAvatar } from '../../components/badges';
+import { ArchiveButton, ArchiveDialog, ArchivedNotice } from '../../components/archive';
+import { useToast } from '../../ToastHost';
 import { Button, Card, DataTable, EmptyState, Icon } from '../../../design-system';
 import {
   addressLine,
+  isArchived,
   organizationById,
   programName,
   staffById,
@@ -24,7 +27,9 @@ import { VENUE_KINDS, VenueDialog, kindLabel } from './dialogs';
  */
 export default function VenueDetail() {
   const { id = '' } = useParams();
-  const { state, today } = useStore();
+  const { state, today, actions } = useStore();
+  const toast = useToast();
+  const [archiving, setArchiving] = React.useState(false);
   const allowed = useCan();
   const mayEdit = allowed('partners', 'edit');
   const mayOpenSchedule = allowed('schedule', 'open');
@@ -50,14 +55,17 @@ export default function VenueDetail() {
     ],
     actions:
       venue && mayEdit ? (
-        <Button
-          variant="secondary"
-          size="sm"
-          iconLeft={<Icon name="pencil" size={15} />}
-          onClick={() => setEditing(true)}
-        >
-          Edit venue
-        </Button>
+        <div className="ja-actions">
+          <Button
+            variant="secondary"
+            size="sm"
+            iconLeft={<Icon name="pencil" size={15} />}
+            onClick={() => setEditing(true)}
+          >
+            Edit venue
+          </Button>
+          {!isArchived(venue) && <ArchiveButton onClick={() => setArchiving(true)} />}
+        </div>
       ) : undefined,
   });
 
@@ -80,6 +88,23 @@ export default function VenueDetail() {
 
   return (
     <>
+      <ArchivedNotice
+        record={venue}
+        detail="It is off the Partners list and the venue pickers. Classes that met here still name it."
+        style={{ marginBottom: 'var(--space-4)' }}
+        onRestore={
+          mayEdit
+            ? () => {
+                actions.core.restoreVenue(venue.id);
+                toast({
+                  tone: 'success',
+                  title: 'Venue restored',
+                  message: `${venue.name} is back on the Partners list.`,
+                });
+              }
+            : undefined
+        }
+      />
       <div className="ja-split ja-split--aside-left">
         <Card title="Details">
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -208,6 +233,21 @@ export default function VenueDetail() {
       </div>
 
       {editing && mayEdit && <VenueDialog venue={venue} onClose={() => setEditing(false)} />}
+      {archiving && mayEdit && (
+        <ArchiveDialog
+          title="Archive this venue?"
+          message="It leaves the Partners list and the venue pickers. Classes that met here keep it in their history. You can restore it."
+          onConfirm={() => {
+            actions.core.archiveVenue(venue.id);
+            toast({
+              tone: 'success',
+              title: 'Venue archived',
+              message: `${venue.name} is off the Partners list. Restore it from this page.`,
+            });
+          }}
+          onClose={() => setArchiving(false)}
+        />
+      )}
     </>
   );
 }

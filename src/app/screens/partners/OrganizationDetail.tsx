@@ -3,9 +3,19 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { usePageHeader } from '../../Shell';
 import { TableScroll } from '../../components/TableScroll';
 import { KV } from '../../components/badges';
+import {
+  ArchiveButton,
+  ArchiveDialog,
+  ArchivedName,
+  ArchivedNotice,
+  ShowArchivedSwitch,
+} from '../../components/archive';
+import { useToast } from '../../ToastHost';
 import { Button, Card, DataTable, EmptyState, Icon } from '../../../design-system';
 import {
   addressLine,
+  archivedOnly,
+  isArchived,
   organizationById,
   useCan,
   useStore,
@@ -24,14 +34,22 @@ import {
 /** One partner: who to call, what was agreed, and the venues that belong to it. */
 export default function OrganizationDetail() {
   const { id = '' } = useParams();
-  const { state } = useStore();
+  const { state, actions } = useStore();
   const mayEdit = useCan()('partners', 'edit');
   const nav = useNavigate();
+  const toast = useToast();
   const [editing, setEditing] = React.useState(false);
   const [addingVenue, setAddingVenue] = React.useState(false);
+  const [archiving, setArchiving] = React.useState(false);
+  const [showArchived, setShowArchived] = React.useState(false);
 
+  // An archived partner still opens from a venue or a link: it is history.
   const organization = organizationById(state, id);
-  const venues = organization ? venuesForOrganization(state, organization.id) : [];
+  const venues = organization ? venuesForOrganization(state, organization.id, showArchived) : [];
+  const archivedVenues = organization
+    ? archivedOnly(venuesForOrganization(state, organization.id, true)).length
+    : 0;
+  const archived = isArchived(organization);
 
   usePageHeader({
     title: organization ? organization.name : 'Organization not found',
@@ -46,14 +64,17 @@ export default function OrganizationDetail() {
     ],
     actions:
       organization && mayEdit ? (
-        <Button
-          variant="secondary"
-          size="sm"
-          iconLeft={<Icon name="pencil" size={15} />}
-          onClick={() => setEditing(true)}
-        >
-          Edit organization
-        </Button>
+        <div className="ja-actions">
+          <Button
+            variant="secondary"
+            size="sm"
+            iconLeft={<Icon name="pencil" size={15} />}
+            onClick={() => setEditing(true)}
+          >
+            Edit organization
+          </Button>
+          {!archived && <ArchiveButton onClick={() => setArchiving(true)} />}
+        </div>
       ) : undefined,
   });
 
@@ -76,6 +97,23 @@ export default function OrganizationDetail() {
 
   return (
     <>
+      <ArchivedNotice
+        record={organization}
+        detail="It is off the Partners list and the venue picker. Its venues are as they were."
+        style={{ marginBottom: 'var(--space-4)' }}
+        onRestore={
+          mayEdit
+            ? () => {
+                actions.core.restoreOrganization(organization.id);
+                toast({
+                  tone: 'success',
+                  title: 'Partner restored',
+                  message: `${organization.name} is back on the Partners list.`,
+                });
+              }
+            : undefined
+        }
+      />
       <div className="ja-split ja-split--aside-left">
         <Card title="Contact">
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -112,6 +150,13 @@ export default function OrganizationDetail() {
           title="Venues"
           subtitle={`${venues.length} ${venues.length === 1 ? 'place' : 'places'} under ${organization.name}`}
           padding="0"
+          action={
+            <ShowArchivedSwitch
+              count={archivedVenues}
+              checked={showArchived}
+              onChange={setShowArchived}
+            />
+          }
         >
           {venues.length === 0 ? (
             <EmptyState
@@ -141,7 +186,13 @@ export default function OrganizationDetail() {
                 rows={venues}
                 onRowClick={(row: Venue) => nav(`/partners/venues/${row.id}`)}
                 columns={[
-                  { key: 'name', label: 'Name', strong: true, width: '1.4fr' },
+                  {
+                    key: 'name',
+                    label: 'Name',
+                    strong: true,
+                    width: '1.4fr',
+                    render: (row: Venue) => <ArchivedName name={row.name} record={row} />,
+                  },
                   {
                     key: 'kind',
                     label: 'Kind',
@@ -191,6 +242,21 @@ export default function OrganizationDetail() {
 
       {editing && mayEdit && (
         <OrganizationDialog organization={organization} onClose={() => setEditing(false)} />
+      )}
+      {archiving && mayEdit && (
+        <ArchiveDialog
+          title="Archive this partner?"
+          message="It leaves the Partners list and the venue picker. Its venues and their classes stay as they are, and it stays in their history. You can restore it."
+          onConfirm={() => {
+            actions.core.archiveOrganization(organization.id);
+            toast({
+              tone: 'success',
+              title: 'Partner archived',
+              message: `${organization.name} is off the Partners list. Restore it from this page.`,
+            });
+          }}
+          onClose={() => setArchiving(false)}
+        />
       )}
       {addingVenue && mayEdit && (
         <VenueDialog
