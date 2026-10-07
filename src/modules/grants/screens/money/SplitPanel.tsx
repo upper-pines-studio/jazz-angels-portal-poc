@@ -15,6 +15,7 @@ import {
   splitByPercent,
   suggestionFor,
   transactionAllocations,
+  usualShares,
 } from '../../domain';
 import type { Allocation, Transaction } from '../../domain';
 import { LinkButton } from './shared';
@@ -36,14 +37,6 @@ interface Part {
   pct: string;
   amt: string;
 }
-
-/**
- * How the office shares a bill it always splits the same way, before anyone
- * has saved a rule for it. The studio rent is three quarters Herb Alpert.
- */
-const USUAL_SHARES: Record<string, number[]> = {
-  'Signal Hill Properties': [75, 25],
-};
 
 let nextKey = 1;
 
@@ -68,38 +61,31 @@ function makePart(total: number, grantId: string, lineId: string, amount: number
   };
 }
 
-/** Where the panel starts: what it is on now, the saved rule, the suggestion, or one empty part. */
+/** Where the panel starts: what it is on now, the suggested line, the usual shares, or one empty part. */
 function proposal(state: PortalState, tx: Transaction): Part[] {
   const total = tx.amount;
   const current = tx.status === 'assigned' ? transactionAllocations(state, tx.id) : [];
   if (current.length) return current.map(a => makePart(total, a.grantId, a.budgetLineId, a.amount));
 
   const suggestion = suggestionFor(state, tx);
-  if (suggestion.kind === 'split') {
-    const amounts = splitByPercent(
-      total,
-      suggestion.rule.parts.map(p => p.percent),
-    );
-    return suggestion.rule.parts.map((p, i) =>
-      makePart(total, p.grantId, p.budgetLineId, amounts[i]),
-    );
-  }
   if (suggestion.kind === 'line')
     return [makePart(total, suggestion.grantId, suggestion.budgetLineId, total)];
-  if (suggestion.kind === 'ambiguous') {
+  if (suggestion.kind === 'split' || suggestion.kind === 'ambiguous') {
     // The bigger award first, and never more parts than the panel holds.
     const award = (id: string) => grantById(state, id)?.amountAwarded ?? 0;
-    const candidates = suggestion.candidates
-      .slice()
-      .sort((a, b) => award(b.grantId) - award(a.grantId))
-      .slice(0, MAX_PARTS);
-    const usual = USUAL_SHARES[tx.payee];
-    const shares =
-      usual && usual.length === candidates.length
-        ? usual
-        : candidates.map(() => 100 / candidates.length);
-    const amounts = splitByPercent(total, shares);
-    return candidates.map((c, i) => makePart(total, c.grantId, c.budgetLineId, amounts[i]));
+    const candidates =
+      suggestion.kind === 'ambiguous'
+        ? suggestion.candidates
+            .slice()
+            .sort((a, b) => award(b.grantId) - award(a.grantId))
+            .slice(0, MAX_PARTS)
+        : [];
+    const usual = usualShares(state, tx, candidates).parts;
+    const amounts = splitByPercent(
+      total,
+      usual.map(p => p.percent),
+    );
+    return usual.map((p, i) => makePart(total, p.grantId, p.budgetLineId, amounts[i]));
   }
   return [makePart(total, '', '', total)];
 }

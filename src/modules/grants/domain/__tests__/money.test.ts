@@ -20,6 +20,7 @@ import {
   trackedGrants,
   transactionAllocations,
   transactionCounts,
+  usualShares,
 } from '../money';
 import { SEED_TODAY, makeSeed } from '../seed';
 import { reducer } from '../slice';
@@ -104,13 +105,27 @@ describe('transactions', () => {
     });
   });
 
-  it('has eight proposals waiting', () => {
-    expect(acceptableSuggestions(state)).toHaveLength(8);
+  it('has nine proposals waiting', () => {
+    expect(acceptableSuggestions(state)).toHaveLength(9);
+  });
+
+  it('proposes the studio rent 75/25 from the saved rule', () => {
+    const rent = state.grants.transactions.find(t => t.id === 'tx-new-2')!;
+    const s = suggestionFor(state, rent);
+    expect(s.kind).toBe('split');
+    if (s.kind !== 'split') return;
+    expect(
+      splitByPercent(
+        rent.amount,
+        s.rule.parts.map(p => p.percent),
+      ),
+    ).toEqual([1800, 600]);
   });
 
   it('cannot choose for an account two grants share', () => {
-    const rent = state.grants.transactions.find(t => t.id === 'tx-new-2')!;
-    const s = suggestionFor(state, rent);
+    const noRules = { ...state, grants: { ...state.grants, splitRules: [] } } as PortalState;
+    const rent = noRules.grants.transactions.find(t => t.id === 'tx-new-2')!;
+    const s = suggestionFor(noRules, rent);
     expect(s.kind).toBe('ambiguous');
     expect(s.kind === 'ambiguous' && s.hint).toBe('6500 fits two grants. Pick one or split.');
   });
@@ -127,6 +142,124 @@ describe('transactions', () => {
     expect(splitByPercent(2400, [75, 25])).toEqual([1800, 600]);
     expect(splitByPercent(100, [33, 33, 34]).reduce((a, b) => a + b, 0)).toBe(100);
     expect(splitByPercent(101, [50, 50]).reduce((a, b) => a + b, 0)).toBe(101);
+  });
+
+  describe('usual shares for a payee', () => {
+    const RENT = { id: 'tx-new-2', payee: 'Signal Hill Properties' };
+    const candidates = [
+      { grantId: HA, budgetLineId: 'bl-ha-venue' },
+      { grantId: LBCF, budgetLineId: 'bl-lbcf-venue' },
+    ];
+    const noRules = { ...state.grants, splitRules: [] };
+
+    /** The state with no rules and one past rent, assigned to `parts`. */
+    const withPastRent = (
+      date: string,
+      parts: Array<{ grantId: string; budgetLineId: string; amount: number }>,
+      id = 'tx-past-rent',
+    ): PortalState['grants'] => ({
+      ...noRules,
+      transactions: [
+        ...noRules.transactions,
+        {
+          id,
+          date,
+          payee: 'Signal Hill Properties',
+          memo: 'Studio rent',
+          accountCode: '6500',
+          amount: parts.reduce((s, p) => s + p.amount, 0),
+          ref: 'Bill 1100',
+          status: 'assigned',
+          assignedById: 's-denise',
+          assignedAt: date,
+        },
+      ],
+      expenses: [
+        ...noRules.expenses,
+        ...parts.map((p, i) => ({
+          id: `${id}-${i}`,
+          ...p,
+          date,
+          payee: 'Signal Hill Properties',
+          transactionId: id,
+        })),
+      ],
+    });
+    const at = (grants: PortalState['grants']) => ({ ...state, grants }) as PortalState;
+
+    it('takes a saved rule first', () => {
+      const usual = usualShares(state, RENT, candidates);
+      expect(usual.source).toBe('rule');
+      expect(usual.parts.map(p => [p.budgetLineId, p.percent])).toEqual([
+        ['bl-ha-venue', 75],
+        ['bl-lbcf-venue', 25],
+      ]);
+    });
+
+    it('else the last assigned transaction from the payee', () => {
+      const grants = withPastRent('2026-08-10', [
+        { grantId: HA, budgetLineId: 'bl-ha-venue', amount: 1800 },
+        { grantId: LBCF, budgetLineId: 'bl-lbcf-venue', amount: 600 },
+      ]);
+      const usual = usualShares(at(grants), RENT, candidates);
+      expect(usual.source).toBe('history');
+      expect(
+        splitByPercent(
+          2400,
+          usual.parts.map(p => p.percent),
+        ),
+      ).toEqual([1800, 600]);
+    });
+
+    it('reads the most recent one, and drops a part on a line it cannot use', () => {
+      const older = withPastRent('2026-07-10', [
+        { grantId: HA, budgetLineId: 'bl-ha-venue', amount: 1200 },
+        { grantId: LBCF, budgetLineId: 'bl-lbcf-venue', amount: 1200 },
+      ]);
+      const grants = withPastRent(
+        '2026-08-10',
+        [
+          { grantId: HA, budgetLineId: 'bl-ha-venue', amount: 1500 },
+          { grantId: LBCF, budgetLineId: 'bl-lbcf-venue', amount: 500 },
+          { grantId: LAC, budgetLineId: 'bl-lac-venue', amount: 400 },
+        ],
+        'tx-later-rent',
+      );
+      const both = {
+        ...grants,
+        transactions: [...grants.transactions, ...older.transactions.slice(-1)],
+        expenses: [...grants.expenses, ...older.expenses.slice(-2)],
+      };
+      const usual = usualShares(at(both), RENT, candidates);
+      expect(usual.source).toBe('history');
+      expect(usual.parts.map(p => p.budgetLineId)).toEqual(['bl-ha-venue', 'bl-lbcf-venue']);
+      expect(
+        splitByPercent(
+          2400,
+          usual.parts.map(p => p.percent),
+        ),
+      ).toEqual([1800, 600]);
+    });
+
+    it('else even shares', () => {
+      const usual = usualShares(at(noRules), RENT, candidates);
+      expect(usual.source).toBe('even');
+      expect(usual.parts.map(p => p.percent)).toEqual([50, 50]);
+    });
+
+    it('a rule naming a removed line is passed over', () => {
+      const grants = {
+        ...noRules,
+        splitRules: [
+          {
+            id: 'rule-x',
+            payee: 'Signal Hill Properties',
+            parts: [{ grantId: HA, budgetLineId: 'bl-gone', percent: 100 }],
+          },
+        ],
+      };
+      expect(usualShares(at(grants), RENT, candidates).source).toBe('even');
+    });
   });
 
   it('a split becomes two expenses and moves both budgets', () => {

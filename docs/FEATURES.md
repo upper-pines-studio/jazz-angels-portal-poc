@@ -81,7 +81,7 @@ seed reproduces are in `design/saas/`.
 | Feature | Route | Status | Screen | Domain |
 | --- | --- | --- | --- | --- |
 | Transactions: tabs, filters, suggestions, accept, undo | `/transactions`, `?tab=`, `?grant=`, `?line=`, `?q=`, `?account=`, `?period=`, `?page=` | Mocked: QuickBooks feed is seed data | `money/Transactions.tsx`, `money/TransactionRow.tsx`, `money/TransactionMenu.tsx` | `money.ts`: `suggestionFor`, `acceptableSuggestions`, `transactionCounts`, `eligibleLines`, `backupCarry`, `backupMoves`, `transactionSnapshot`; `slice.ts`: `assignTransaction`, `markNotGrantFunded`, `acceptSuggestions`, `restoreTransactions`; `names.ts`: `funderShortName` |
-| Split a transaction across grants, save as a rule | `/transactions?tx=<id>` | Built | `money/SplitPanel.tsx` | `money.ts`: `splitByPercent`; `slice.ts`: `assignTransaction`, `saveSplitRule`; `names.ts`: `funderShortName` |
+| Split a transaction across grants, save as a rule | `/transactions?tx=<id>` | Built | `money/SplitPanel.tsx` | `money.ts`: `usualShares`, `splitByPercent`; `slice.ts`: `assignTransaction`, `saveSplitRule`; `names.ts`: `funderShortName` |
 | Sync with QuickBooks | button on Transactions and Settings | Mocked: moves `incoming` into `transactions`, once | | `slice.ts`: `syncQuickBooks` |
 | Budget vs. actual: table, warnings, export, print | `/budget`, `?period=fy\|all\|fy-prev`, `?grant=<id>` | Built | `money/BudgetVsActual.tsx`, `money/bva.ts`, `money/bva.css` (print rules) | `money.ts`: `linePaces`, `grantPace`, `lineNeedsAttention`, `trackedGrantsInFy`; `names.ts`: `funderShortName` |
 | Spend-down: charts, figures, advice | `/spend-down`, `?show=`, `#<grantId>` | Built | `money/SpendDown.tsx`, `money/SpendChart.tsx`, `money/spend.ts` (`whatToDo`) | `money.ts`: `grantPace`, `spendSeries`, `paceDriver` |
@@ -142,7 +142,6 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 | "Download all backup" produces a spreadsheet index, not a zip of the files. | `grants/screens/grant/ExpensesTab.tsx` |
 | Reminder emails are never sent. | `grants/screens/deadlines/ReminderPanel.tsx` |
 | Choosing another report while the reminders panel has unsaved edits discards them without asking. | `grants/screens/Deadlines.tsx` |
-| The 75/25 starting split for Signal Hill Properties is written in, not worked out. | `money/SplitPanel.tsx` (`USUAL_SHARES`) |
 | "Start from the usual five categories" reads its categories and accounts from the demo data. | `grant/BudgetTab.tsx`, `grants/domain/seed-money.ts` (`CATEGORY_ACCOUNTS`) |
 | The award letter card says the terms feed the budget and the spend-down warnings; only Spend-down's "What to do" reads them, and only the terms labelled "Unspent funds" and "Budget changes". | `grant/AwardTab.tsx`, `money/spend.ts` (`whatToDo`) |
 | The dashboard's "expenses missing a receipt" link counts every grant but opens only the first one's Expenses tab. | `money/MoneyPanel.tsx`, `grants/manifest.tsx` |

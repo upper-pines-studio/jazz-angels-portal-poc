@@ -285,10 +285,12 @@ Sep 8 Albert Alva 1,600) and one Long Beach expense (Sep 4 Albert Alva 900) have
 
 Transactions: 14 to assign, 86 assigned, 41 not grant-funded (Intuit QuickBooks, Verizon Business
 and Gusto every month for twelve months, and five Farmers and Merchants Bank fees), 141 in all.
-Eight of the 14 to assign have a suggestion that one click accepts. The studio rent of $2,400 from
+Nine of the 14 to assign have a suggestion that one click accepts. The studio rent of $2,400 from
 Signal Hill Properties (6500, no class) fits Venue and performances on both Herb Alpert and Long
 Beach and is the split example. Three more transactions wait in QuickBooks and arrive on the next
-sync (JW Pepper 142, Devon Price 300, Verizon Business 85). No split rules are saved.
+sync (JW Pepper 142, Devon Price 300, Verizon Business 85). One split rule is saved: Signal Hill
+Properties, 75% Herb Alpert and 25% Long Beach, both on Venue and performances, so the rent arrives
+with that split suggested.
 
 Reports owed, soonest first: LA County final, Sep 30, 2026 (drafting, due soon) · Herb Alpert
 interim, Jan 31, 2027 · Long Beach final, Mar 15, 2027 · Herb Alpert final, Jul 31, 2027 (all not
@@ -706,9 +708,11 @@ nothing each week.
 Docked on the right (`SidePanel`). Title: payee and amount; under it date, memo, account, and "From
 QuickBooks. Splitting here does not change QuickBooks." Eyebrow "Assign", or "Split across grants"
 with more than one part.
-- **Starting parts**: where it is now, if assigned; else the saved rule; else the suggested line;
-  else, when ambiguous, the candidate lines, bigger award first, at most four, shared evenly (or
-  75/25 for Signal Hill Properties, a share written into the screen; tracked in #12); else one empty part.
+- **Starting parts**: where it is now, if assigned; else the payee's saved rule, while every line it
+  names exists; else the suggested line; else, when ambiguous, the candidate lines (bigger award
+  first, at most four) shared as the payee's most recent assigned transaction was, by amount, its
+  parts on other lines dropped and the rest rescaled; else shared evenly; else one empty part. The
+  rule, the history and the even share come from `usualShares`.
 - Each part: grant (eligible grants on the transaction's date, plus any grant already on a part),
   line, percent and dollars. Changing the grant picks the line with the same category, else one that
   uses the transaction's account, else the first. With two parts, editing one gives the rest to the
@@ -843,9 +847,9 @@ where it and the mockups or `SAAS-BRIEF.md` disagree:
   on Jul 8 and the agreement on Jul 14.
 - **Set-aside suggestion.** The Transactions mockup shows Intuit QuickBooks as "Last 3 months"; the
   code counts every month the payee was set aside, so it reads "Last 12 months".
-- **Signal Hill Properties split.** The mockup proposes 75% and 25%. The code writes that share into
-  the split panel rather than working it out (#12), and the row shows the ambiguous hint until the
-  panel opens.
+- **Signal Hill Properties split.** The mockup proposes 75% and 25% with "Always split Signal Hill
+  Properties this way" unticked. The seed reaches 75/25 through a saved rule, so the box starts
+  ticked and the row offers the split for Accept instead of the ambiguous hint.
 - **Receipts.** The Expenses mockup lists Herb Alpert expenses after the brief's four that are not
   the seed's (Albert Alva $3,800 on Sep 8, Renee Cole, Devon Price), and shows 3 missing backup for
   $4,992; the seed has 3 missing for $2,792. The mockup's "Download all backup" is "one zip with an
@@ -859,9 +863,6 @@ where it and the mockups or `SAAS-BRIEF.md` disagree:
 - **Award letter card.** Its footnote, from the mockup, says the terms "feed the budget and the
   spend-down warnings". In the code only Spend-down's What to do reads terms, and only the two named
   "Unspent funds" and "Budget changes"; the budget does not read them.
-
-**Known problems, tracked elsewhere.** The 75/25 Signal Hill split is written in
-(#12).
 
 ---
 

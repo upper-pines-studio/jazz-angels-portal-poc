@@ -21,6 +21,7 @@ import type {
   Transaction,
   TransactionSnapshot,
   TransactionStatus,
+  UsualShares,
 } from './types';
 
 /**
@@ -591,6 +592,62 @@ export function splitByPercent(amount: number, percents: number[]): number[] {
   const drift = amount - parts.reduce((sum, n) => sum + n, 0);
   if (parts.length) parts[parts.length - 1] += drift;
   return parts;
+}
+
+/**
+ * The shares a transaction's parts start from, for a payee the office may
+ * always split the same way. In order:
+ *
+ * 1. `rule`: the payee's saved split rule, when every line it names still
+ *    exists. Its parts as saved; candidates the rule does not name are left out.
+ * 2. `history`: the payee's most recent assigned transaction (by date, then by
+ *    when it was assigned), its parts' shares by amount. A part whose line is
+ *    not a candidate is dropped and the rest rescaled to 100. When none of its
+ *    parts is on a candidate, history gives nothing and the shares are even.
+ * 3. `even`: every candidate an equal share.
+ *
+ * Percentages are not rounded; `splitByPercent` turns them into dollars.
+ */
+export function usualShares(
+  state: PortalState,
+  tx: Pick<Transaction, 'id' | 'payee'>,
+  candidates: ReadonlyArray<Pick<Allocation, 'grantId' | 'budgetLineId'>>,
+): UsualShares {
+  const rule = state.grants.splitRules.find(r => r.payee === tx.payee);
+  if (rule && rule.parts.every(p => lineById(state, p.budgetLineId)))
+    return { source: 'rule', parts: rule.parts.map(p => ({ ...p })) };
+
+  const last = state.grants.transactions
+    .filter(t => t.status === 'assigned' && t.payee === tx.payee && t.id !== tx.id)
+    .sort(
+      (a, b) =>
+        b.date.localeCompare(a.date) || (b.assignedAt ?? '').localeCompare(a.assignedAt ?? ''),
+    )[0];
+  if (last) {
+    const before = transactionAllocations(state, last.id);
+    const kept = candidates
+      .map(c => ({ c, amount: before.find(a => a.budgetLineId === c.budgetLineId)?.amount ?? 0 }))
+      .filter(k => k.amount > 0);
+    const sum = kept.reduce((s, k) => s + k.amount, 0);
+    if (sum > 0)
+      return {
+        source: 'history',
+        parts: kept.map(k => ({
+          grantId: k.c.grantId,
+          budgetLineId: k.c.budgetLineId,
+          percent: (k.amount / sum) * 100,
+        })),
+      };
+  }
+
+  return {
+    source: 'even',
+    parts: candidates.map(c => ({
+      grantId: c.grantId,
+      budgetLineId: c.budgetLineId,
+      percent: 100 / candidates.length,
+    })),
+  };
 }
 
 // ---------------------------------------------------------------------------

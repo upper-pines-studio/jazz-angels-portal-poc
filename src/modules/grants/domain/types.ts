@@ -251,6 +251,15 @@ export interface SplitRule {
   parts: Array<{ grantId: string; budgetLineId: string; percent: number }>;
 }
 
+/**
+ * Where a transaction's parts start, and what that came from: the payee's
+ * saved rule, its last assigned transaction, or an even share (`usualShares`).
+ */
+export interface UsualShares {
+  source: 'rule' | 'history' | 'even';
+  parts: SplitRule['parts'];
+}
+
 export type GrantFileKind =
   'award-letter' | 'agreement' | 'receipt' | 'invoice' | 'timesheet' | 'other';
 
