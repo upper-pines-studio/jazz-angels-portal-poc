@@ -60,7 +60,7 @@ Add/update actions that create something return its new id.
 | `updateFunder(id, patch)` | Patches a funder. |
 | `archiveFunder(id)` / `restoreFunder(id)` | Archives a funder (off the Funders list and the Add grant picker; its grants untouched) or restores it. Needs the pipeline row. |
 | `archiveGrant(id)` / `restoreGrant(id)` | Archives a grant, or restores it, and logs "Archived" / "Restored" in the same change. Needs the pipeline row. |
-| `addGrant(input: NewGrantInput)` | Creates the grant, its checklist from the chosen template, the standard document register, and a "Grant added" activity row. Returns the grant id. |
+| `addGrant(input: NewGrantInput)` | Creates the grant, its checklist from the chosen template, the standard document register, and a "Grant added" activity row. Returns the grant id. With `input.inFlight` it brings in a grant already under way instead (see below). |
 | `updateGrant(id, patch)` | Patches a grant, `dates` included (pass the whole `dates` object). |
 | `transition(grantId, to, payload?)` | Moves the phase, writes the dates that phase implies, logs activity. `payload: { date?, amountAwarded?, periodStart?, periodEnd?, reason? }`. |
 | `addTask(input)` / `updateTask(id, patch)` / `deleteTask(id)` | Checklist rows. |
@@ -95,8 +95,41 @@ Staff, settings, export, import and reset are core's, not this module's:
   templateId?: string | null;     // null / omitted = no checklist
   excludeTemplateItemIds?: string[];   // items the user unchecked in step 3
   includeDocumentRegister?: boolean;   // default true
+  inFlight?: InFlightInput;            // a grant already under way
 }
 ```
+
+### Bringing in a grant already under way (decision 0004)
+
+`addGrant` with `phase` at `'awarded'`, `'active'` or `'reporting'` (`IN_FLIGHT_PHASES`)
+and `inFlight` set writes, in one change (one `add-grant` action, so one save):
+
+```ts
+inFlight: {
+  amountAwarded: number;                                   // required, whole dollars
+  budgetLines?: { category; planned }[];                   // accounts and class come later
+  payments?: { label; expectedDate; amount; receivedDate? }[];   // received = has a date
+  reports?: { kind; dueDate; status; submittedDate? }[];         // sent = submitted/accepted
+}
+```
+
+- The phase dates it knows go in `dates` as usual (`loiDue`, `applicationDue`, `submitted`,
+  `decided`, `periodStart`, `periodEnd`); any may be left out.
+- The grant gets `amountAwarded` and `broughtIn: { phase, on: today }`.
+- The checklist is the template from `phase` on: `instantiateTemplate(…, fromPhase)` drops
+  the items of every phase before it. The document register is created `submitted`.
+- The activity log gets one row, `broughtInText(phase)`: "Brought into the portal at Active",
+  credited to the signed-in person. It matches none of the stepper's `ENTERED` patterns.
+- **`Grant.broughtIn`** tells the stepper the grant arrived mid-life. `phaseEnteredOn` dates a
+  phase up to `broughtIn.phase` only from the grant date for it (LOI `loiDue`, Applying
+  `applicationDue`, Submitted `submitted`, Awarded `decided`, Active `periodStart`; Prospect
+  and Reporting have none), never from `createdAt`. Later phases date from their own activity
+  rows as for any grant.
+- The store's rule for `addGrant` needs "Award, budget, reports" edit as well as the pipeline
+  row when `inFlight` is set, so the Office assistant is refused, and refuses any input
+  `inFlightRefusal(input)` objects to (Closed or a pre-award phase, no award or cents on it,
+  an end before the start, a budget line with no category or a repeated one ignoring case,
+  a payment without a name, amount or expected date, a sent date on a report not sent).
 
 ---
 
@@ -214,13 +247,16 @@ button needs no dialog beyond a confirmation. Terminal phases return `[]`.
 `DEFAULT_TEMPLATE_ID`), **Government grant**, **Corporate sponsorship**,
 **Renewal (returning funder)**. Live templates are in `state.templates`.
 
-- `instantiateTemplate(template, grant, excludeItemIds?)` → `Omit<Task,'id'>[]`.
+- `instantiateTemplate(template, grant, excludeItemIds?, fromPhase?)` → `Omit<Task,'id'>[]`.
   Each due date is `grant.dates[anchor] + offsetDays`; when the anchor date is
   unknown the task gets `dueDate: undefined`. LOI items are skipped when the
-  grant does not require an LOI.
+  grant does not require an LOI, and with `fromPhase` the items of every phase
+  before it are skipped (a grant brought in already under way).
+- `templatePlan(…same arguments)` → `{ item, task }[]`, the kept items paired with
+  their tasks, for the Add grant checklist preview.
 - `timingLabel(item)` → "21 days before application due" for the Playbook screen.
-- `DEFAULT_DOCUMENT_REGISTER` / `instantiateDocumentRegister(grantId, updatedAt)`
-  — narrative, budget, IRS letter, board list, financials, all `needed`.
+- `DEFAULT_DOCUMENT_REGISTER` / `instantiateDocumentRegister(grantId, updatedAt, status?)`
+  — narrative, budget, IRS letter, board list, financials, all `needed` (or `status`).
 
 ---
 

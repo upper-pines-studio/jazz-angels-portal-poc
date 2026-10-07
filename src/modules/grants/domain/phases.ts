@@ -1,4 +1,13 @@
-import type { Grant, Phase, PhaseTone, Transition } from './types';
+import { toISO } from '../../../core/format';
+import type {
+  Activity,
+  Grant,
+  GrantDates,
+  InFlightPhase,
+  Phase,
+  PhaseTone,
+  Transition,
+} from './types';
 
 /** The eight phases shown in the stepper, in order (SPEC §1). */
 export const PHASE_ORDER: Phase[] = [
@@ -70,6 +79,73 @@ export function isTerminal(phase: Phase): boolean {
 /** The steps to draw for this grant: LOI is hidden when the funder does not require one. */
 export function stepperPhases(grant: Pick<Grant, 'loiRequired'>): Phase[] {
   return grant.loiRequired ? PHASE_ORDER : PHASE_ORDER.filter(p => p !== 'loi');
+}
+
+/** Where Add grant may bring in a grant already under way (decision 0004). */
+export const IN_FLIGHT_PHASES: InFlightPhase[] = ['awarded', 'active', 'reporting'];
+
+export function isInFlightPhase(phase: Phase | undefined): phase is InFlightPhase {
+  return !!phase && (IN_FLIGHT_PHASES as Phase[]).includes(phase);
+}
+
+/** The stepper phases a grant brought in at `phase` has already passed, in order. */
+export function passedPhases(grant: Pick<Grant, 'loiRequired'>, phase: Phase): Phase[] {
+  return stepperPhases(grant).filter(p => phaseIndex(p) < phaseIndex(phase));
+}
+
+/** What an activity row looks like when a grant entered this phase. */
+export const ENTERED: Record<Phase, RegExp | undefined> = {
+  prospect: /grant added/i,
+  loi: /start loi|changed to loi/i,
+  applying: /start application|changed to applying/i,
+  submitted: /mark(ed)? submitted/i,
+  awarded: /record award|award recorded/i,
+  active: /agreement signed/i,
+  reporting: /start(ed)? (the )?(final |interim )?report/i,
+  closed: /close(d)? grant|grant closed/i,
+  declined: /record decline|decline recorded/i,
+  withdrawn: /withdraw/i,
+};
+
+/**
+ * The grant date a brought-in grant shows under each step it passed before it
+ * came into the portal. Prospect and Reporting have none, so they show no date.
+ */
+const BROUGHT_IN_DATE: Partial<Record<Phase, keyof GrantDates>> = {
+  loi: 'loiDue',
+  applying: 'applicationDue',
+  submitted: 'submitted',
+  awarded: 'decided',
+  active: 'periodStart',
+};
+
+/**
+ * The day this grant reached `phase`, for the stepper: the activity row that
+ * says so (the latest, given `activity` oldest first), else the key date.
+ * A grant brought in already under way never takes its created date for
+ * Prospect: the phases it passed elsewhere show a date only where one was given.
+ */
+export function phaseEnteredOn(
+  grant: Pick<Grant, 'createdAt' | 'dates' | 'broughtIn'>,
+  phase: Phase,
+  activity: Pick<Activity, 'at' | 'text'>[],
+): string | undefined {
+  const pattern = ENTERED[phase];
+  const hit = pattern ? activity.filter(a => pattern.test(a.text)).slice(-1)[0] : undefined;
+  if (hit) {
+    // `at` is an ISO date-time in UTC; the day we show is the reader's day.
+    const when = new Date(hit.at);
+    return Number.isNaN(when.getTime()) ? hit.at.slice(0, 10) : toISO(when);
+  }
+  if (grant.broughtIn && phaseIndex(phase) <= phaseIndex(grant.broughtIn.phase)) {
+    const key = BROUGHT_IN_DATE[phase];
+    return key ? grant.dates[key] : undefined;
+  }
+  if (phase === 'prospect') return grant.createdAt;
+  if (phase === 'submitted') return grant.dates.submitted;
+  if (phase === 'awarded') return grant.dates.decided;
+  if (phase === 'active') return grant.dates.periodStart;
+  return undefined;
 }
 
 const WITHDRAW: Transition = {

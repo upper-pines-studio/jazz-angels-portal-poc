@@ -3,17 +3,31 @@
  * src/app/responsive.css.
  */
 
-/* The three step bars. They stay three across at every width: the row is the
- * progress indicator, and a stacked version would read as a list rather than a
- * journey. On a phone the dialog body is about 260px, so each step gets roughly
- * 80px — enough for the rule and a label on two lines once the gap tightens. */
+/* The step bars: three for a new grant, five for one already under way (the
+ * dialog sets the count in --steps). They stay in one row at every width: the
+ * row is the progress indicator, and a stacked version would read as a list
+ * rather than a journey. On a phone the dialog body is about 260px, so each of
+ * three steps gets roughly 80px, and each of five about 45px: enough for the
+ * rule and a label on two or three lines once the gap tightens. */
 .ja-grant-steps {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--steps, 3), minmax(0, 1fr));
   gap: var(--space-3);
   margin-bottom: var(--space-5);
 }
 
 @media (max-width: 640px) {
   .ja-grant-steps { gap: var(--space-2); }
+}
+
+/* A budget line in the in-flight path: category, approved amount, remove. */
+.ja-inflight-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px 14px;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .ja-inflight-line { grid-template-columns: minmax(0, 1fr) 110px 14px; }
 }

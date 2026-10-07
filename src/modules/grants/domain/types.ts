@@ -86,6 +86,14 @@ export interface Grant extends Archivable {
   dates: GrantDates;
   notes?: string;
   createdAt: string;
+  /**
+   * Set on a grant that was already under way when it came into the portal
+   * (decision 0004): the phase it arrived at and the day it was brought in.
+   * The phases before `phase` were passed elsewhere, so the stepper shows them
+   * done with a date only where `dates` has one, and the checklist has no tasks
+   * for them. Unset on a grant added at Prospect, LOI or Applying.
+   */
+  broughtIn?: { phase: Phase; on: string };
 }
 
 /** Checklist item on a grant, usually created from a template. */
@@ -415,7 +423,11 @@ export interface NewGrantInput {
   program: ProgramId;
   restriction: Restriction;
   ownerId: string;
-  /** Defaults to 'prospect'; the dialog may start a grant in 'loi' or 'applying'. */
+  /**
+   * Defaults to 'prospect'; the dialog may start a new grant in 'loi' or
+   * 'applying', and a grant already under way (`inFlight`) in 'awarded',
+   * 'active' or 'reporting'.
+   */
   phase?: Phase;
   loiRequired: boolean;
   amountRequested?: number;
@@ -427,6 +439,31 @@ export interface NewGrantInput {
   excludeTemplateItemIds?: string[];
   /** Create the standard document register (narrative, budget, …). Default true. */
   includeDocumentRegister?: boolean;
+  /**
+   * "This grant is already under way": set to bring in a grant at Awarded,
+   * Active or Reporting (`phase` must be one of them) with what has already
+   * happened. See `inFlightRefusal` for what is accepted.
+   */
+  inFlight?: InFlightInput;
+}
+
+/** The phases a grant already under way may be brought in at. Closed is not one. */
+export type InFlightPhase = 'awarded' | 'active' | 'reporting';
+
+/**
+ * What the in-flight path of Add grant records beyond a new grant. Dates it
+ * does not know stay blank: `NewGrantInput.dates` carries the ones it does
+ * (loiDue, applicationDue, submitted, decided, periodStart, periodEnd).
+ */
+export interface InFlightInput {
+  /** Whole dollars. Required on this path. */
+  amountAwarded: number;
+  /** Category and approved amount; accounts and class are set on the Budget tab. */
+  budgetLines?: Array<Pick<BudgetLine, 'category' | 'planned'>>;
+  /** The payment schedule; a payment with `receivedDate` has already arrived. */
+  payments?: Array<Pick<Payment, 'label' | 'expectedDate' | 'amount' | 'receivedDate'>>;
+  /** The reports owed; one with status submitted or accepted has been sent. */
+  reports?: Array<Pick<Report, 'kind' | 'dueDate' | 'status' | 'submittedDate'>>;
 }
 
 // ---------------------------------------------------------------------------

@@ -38,10 +38,15 @@ for what has been brought into it.
 
 ## What it means for the build
 
-- **Bringing over a grant in flight is a feature that does not exist yet.** Add grant starts a
-  grant at Prospect or Applying only (`grants/screens/grants/AddGrantDialog.tsx`). An in-flight
-  grant needs to start at Awarded, Active or Reporting, with payments and reports already
-  recorded and none of the checklist steps it has already passed.
+- **Bringing over a grant in flight is built (#21).** Add grant offers "This grant is already
+  under way" to the roles that may edit the award. It starts the grant at Awarded, Active or
+  Reporting with its award, budget lines, payment schedule (received ones with their dates),
+  the reports owed (sent ones with their dates) and the phase dates it knows, all in one change.
+  The checklist has no tasks for the phases it passed, the document register starts as
+  submitted, and the activity log gets one row, "Brought into the portal at Active", not one per
+  phase. The grant carries `broughtIn: { phase, on }`, so the stepper shows the passed phases
+  done, dated only where a grant date was given. Closed is not offered. Assigning the
+  QuickBooks transactions from before the switch-over is not built; it needs the sync below.
 - The QuickBooks sync reaches back to the start of the earliest grant in the portal, not just
   to the switch-over date, so an in-flight grant's earlier spending can be assigned.
 - The portal starts empty, not with the demo data, and must look right empty

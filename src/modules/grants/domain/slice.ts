@@ -3,7 +3,8 @@ import { archiveFields, normaliseArchived, restoreFields } from '../../../core/a
 import { can } from '../../../core/permissions';
 import { makeCoreSeed } from '../../../core/seed';
 import { acceptableSuggestions, backupCarry, splitByPercent } from './money';
-import { availableTransitions, isPostAward } from './phases';
+import { inFlightRefusal } from './inflight';
+import { availableTransitions, isPostAward, phaseLabel } from './phases';
 import { makeEmpty, makeSeed } from './seed';
 import { instantiateDocumentRegister, instantiateTemplate } from './templates';
 import type { PortalState, Role } from '../../../core/types';
@@ -84,12 +85,20 @@ export type GrantsAction =
   | { type: 'remove'; key: CollectionKey; id: string }
   | { type: 'batch'; actions: GrantsAction[] }
   | {
+      /**
+       * A new grant with its checklist, documents and one activity row. A grant
+       * brought in already under way (`grant.broughtIn`) carries its budget,
+       * payments and reports too, all in this one change.
+       */
       type: 'add-grant';
       grant: Grant;
       funder?: Funder;
       templateId?: string | null;
       excludeTemplateItemIds?: string[];
       includeDocumentRegister: boolean;
+      budgetLines?: BudgetLine[];
+      payments?: Payment[];
+      reports?: Report[];
       activityId: string;
       at: string;
       whoId: string;
@@ -194,6 +203,14 @@ export function moveExpensesRefusal(
   return undefined;
 }
 
+/**
+ * The one activity row a grant brought in already under way gets. It matches
+ * none of the stepper's `ENTERED` patterns, so it dates no phase.
+ */
+export function broughtInText(phase: Phase): string {
+  return `Brought into the portal at ${phaseLabel(phase)}`;
+}
+
 /** The module's own reducer. The store only ever reaches it through the slice. */
 export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
   switch (action.type) {
@@ -219,39 +236,50 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
     }
 
     case 'add-grant': {
+      const { grant } = action;
       const template = action.templateId
         ? state.templates.find(t => t.id === action.templateId)
         : undefined;
 
+      // A grant brought in has passed the earlier phases elsewhere: no tasks for them.
       const tasks: Task[] = template
-        ? instantiateTemplate(template, action.grant, action.excludeTemplateItemIds).map(
-            (task, index) => ({ ...task, id: `${action.grant.id}-t${index + 1}` }),
-          )
+        ? instantiateTemplate(
+            template,
+            grant,
+            action.excludeTemplateItemIds,
+            grant.broughtIn?.phase,
+          ).map((task, index) => ({ ...task, id: `${grant.id}-t${index + 1}` }))
         : [];
 
       const documents: GrantDocument[] = action.includeDocumentRegister
-        ? instantiateDocumentRegister(action.grant.id, action.grant.createdAt).map(
-            (doc, index) => ({
-              ...doc,
-              id: `${action.grant.id}-d${index + 1}`,
-            }),
-          )
+        ? instantiateDocumentRegister(
+            grant.id,
+            grant.createdAt,
+            grant.broughtIn ? 'submitted' : 'needed',
+          ).map((doc, index) => ({
+            ...doc,
+            id: `${grant.id}-d${index + 1}`,
+          }))
         : [];
 
       return {
         ...state,
         funders: action.funder ? [...state.funders, action.funder] : state.funders,
-        grants: [...state.grants, action.grant],
+        grants: [...state.grants, grant],
         tasks: [...state.tasks, ...tasks],
         documents: [...state.documents, ...documents],
+        budgetLines: [...state.budgetLines, ...(action.budgetLines ?? [])],
+        payments: [...state.payments, ...(action.payments ?? [])],
+        reports: [...state.reports, ...(action.reports ?? [])],
         activity: [
           ...state.activity,
           {
             id: action.activityId,
-            grantId: action.grant.id,
+            grantId: grant.id,
             at: action.at,
             whoId: action.whoId,
-            text: 'Grant added',
+            // One row for a grant brought in, never one per phase it passed.
+            text: grant.broughtIn ? broughtInText(grant.broughtIn.phase) : 'Grant added',
           },
         ],
       };
@@ -475,7 +503,13 @@ export interface GrantsActions {
   archiveFunder(id: string): void;
   restoreFunder(id: string): void;
 
-  /** Create a grant plus its checklist, document register and "Grant added" activity. */
+  /**
+   * Create a grant plus its checklist, document register and "Grant added"
+   * activity. With `input.inFlight`, bring in a grant already under way at
+   * Awarded, Active or Reporting: its award, budget lines, payments and
+   * reports, no tasks for the phases it passed, and one "Brought into the
+   * portal at …" row, all in one change.
+   */
   addGrant(input: NewGrantInput): string;
   updateGrant(id: string, patch: Partial<Grant>): void;
   /**
@@ -643,6 +677,8 @@ function createActions(
         funder = { ...input.newFunder, id: funderId };
       }
 
+      const flight = input.inFlight;
+      const phase = input.phase ?? 'prospect';
       const grant: Grant = {
         id: grantId,
         funderId,
@@ -650,13 +686,17 @@ function createActions(
         program: input.program,
         restriction: input.restriction,
         ownerId: input.ownerId,
-        phase: input.phase ?? 'prospect',
+        phase,
         loiRequired: input.loiRequired,
         amountRequested: input.amountRequested,
         dates: input.dates ?? {},
         notes: input.notes,
         createdAt,
       };
+      if (flight) {
+        grant.amountAwarded = flight.amountAwarded;
+        grant.broughtIn = { phase, on: today };
+      }
 
       send({
         type: 'add-grant',
@@ -665,6 +705,28 @@ function createActions(
         templateId: input.templateId,
         excludeTemplateItemIds: input.excludeTemplateItemIds,
         includeDocumentRegister: input.includeDocumentRegister ?? true,
+        budgetLines: flight?.budgetLines?.map(line => ({
+          id: newId('bl'),
+          grantId,
+          category: line.category.trim(),
+          planned: line.planned,
+        })),
+        payments: flight?.payments?.map(p => ({
+          id: newId('pay'),
+          grantId,
+          label: p.label.trim(),
+          expectedDate: p.expectedDate,
+          amount: p.amount,
+          ...(p.receivedDate ? { receivedDate: p.receivedDate } : {}),
+        })),
+        reports: flight?.reports?.map(r => ({
+          id: newId('rep'),
+          grantId,
+          kind: r.kind,
+          dueDate: r.dueDate,
+          status: r.status,
+          ...(r.submittedDate ? { submittedDate: r.submittedDate } : {}),
+        })),
         activityId: newId('act'),
         at: now(),
         whoId,
@@ -1046,7 +1108,14 @@ const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
   // Whoever may edit a grant or a funder may archive and restore it (decision 0002).
   archiveFunder: 'grants',
   restoreFunder: 'grants',
-  addGrant: 'grants',
+  // Bringing in a grant already under way records its award, so it needs
+  // "Award, budget, reports" too, and an input the store would not write is refused.
+  addGrant: (user, _state, input) => {
+    if (!can(user.role, 'grants', 'edit')) return false;
+    if (!input?.inFlight) return true;
+    if (!can(user.role, 'award', 'edit')) return false;
+    return inFlightRefusal(input) ?? true;
+  },
   archiveGrant: 'grants',
   restoreGrant: 'grants',
   // The amount awarded is the award's; the rest of a grant's record is the pipeline's.
