@@ -1,44 +1,14 @@
 import React from 'react';
 import { Card, Icon } from '../../../../design-system';
-import { dateShort, toISO, useStore } from '../../../../core';
-import { PHASES, grantActivity, phaseIndex, stepperPhases } from '../../domain';
-import type { Activity, Grant, Phase } from '../../domain';
+import { dateShort, useStore } from '../../../../core';
+import { PHASES, grantActivity, phaseEnteredOn, phaseIndex, stepperPhases } from '../../domain';
+import type { Grant, Phase } from '../../domain';
 
 /**
  * The grant's life as connected steps (SPEC §4.4): done steps teal with a check,
  * the current step blue with a halo, future steps an empty ring. Declined and
  * withdrawn grants stop where they stopped and get a terminal marker.
  */
-
-/** What an activity row looks like when a grant entered this phase. */
-const ENTERED: Record<Phase, RegExp | undefined> = {
-  prospect: /grant added/i,
-  loi: /start loi|changed to loi/i,
-  applying: /start application|changed to applying/i,
-  submitted: /mark(ed)? submitted/i,
-  awarded: /record award|award recorded/i,
-  active: /agreement signed/i,
-  reporting: /start(ed)? (the )?(final |interim )?report/i,
-  closed: /close(d)? grant|grant closed/i,
-  declined: /record decline|decline recorded/i,
-  withdrawn: /withdraw/i,
-};
-
-/** The date this grant reached `phase`: the activity row that says so, else the key date. */
-function phaseDate(grant: Grant, phase: Phase, activity: Activity[]): string | undefined {
-  const pattern = ENTERED[phase];
-  const hit = pattern ? activity.filter(a => pattern.test(a.text)).slice(-1)[0] : undefined;
-  if (hit) {
-    // `at` is an ISO date-time in UTC; the day we show is the reader's day.
-    const when = new Date(hit.at);
-    return Number.isNaN(when.getTime()) ? hit.at.slice(0, 10) : toISO(when);
-  }
-  if (phase === 'prospect') return grant.createdAt;
-  if (phase === 'submitted') return grant.dates.submitted;
-  if (phase === 'awarded') return grant.dates.decided;
-  if (phase === 'active') return grant.dates.periodStart;
-  return undefined;
-}
 
 interface Step {
   phase: Phase;
@@ -50,7 +20,7 @@ const DOT = 24;
 
 export function PhaseStepper({ grant }: { grant: Grant }) {
   const { state } = useStore();
-  // Oldest first, so the *first* time a phase was entered wins where it repeats.
+  // Oldest first; `phaseEnteredOn` takes the latest row for a phase entered more than once.
   const activity = React.useMemo(
     () => grantActivity(state, grant.id).slice().reverse(),
     [state, grant.id],
@@ -66,12 +36,12 @@ export function PhaseStepper({ grant }: { grant: Grant }) {
     const reached = ladder.filter(p => phaseIndex(p) <= phaseIndex('submitted'));
     let last = 0;
     reached.forEach((p, i) => {
-      if (phaseDate(grant, p, activity)) last = i;
+      if (phaseEnteredOn(grant, p, activity)) last = i;
     });
     steps = reached.slice(0, last + 1).map(phase => ({
       phase,
       state: 'done' as const,
-      when: phaseDate(grant, phase, activity),
+      when: phaseEnteredOn(grant, phase, activity),
     }));
   } else {
     steps = ladder.map(phase => {
@@ -80,7 +50,7 @@ export function PhaseStepper({ grant }: { grant: Grant }) {
       return {
         phase,
         state: stepState as Step['state'],
-        when: stepState === 'future' ? undefined : phaseDate(grant, phase, activity),
+        when: stepState === 'future' ? undefined : phaseEnteredOn(grant, phase, activity),
       };
     });
   }

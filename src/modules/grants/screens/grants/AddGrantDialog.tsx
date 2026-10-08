@@ -14,6 +14,7 @@ import {
 } from '../../../../design-system';
 import {
   activeOnly,
+  can,
   useStore,
   staffById,
   dateShort,
@@ -22,11 +23,13 @@ import {
   toISO,
 } from '../../../../core';
 import {
-  instantiateTemplate,
+  templatePlan,
   DEFAULT_TEMPLATE_ID,
+  IN_FLIGHT_PHASES,
   PHASE_ORDER,
   PHASES,
   funderById,
+  phaseLabel,
 } from '../../domain';
 import type { ProgramId } from '../../../../core';
 import type {
@@ -34,18 +37,52 @@ import type {
   ChecklistTemplateItem,
   FunderType,
   GrantDates,
+  InFlightPhase,
   NewGrantInput,
   Phase,
   Restriction,
   Task,
 } from '../../domain';
+import {
+  AwardStep,
+  BudgetStep,
+  EMPTY_AWARD,
+  PaymentsReportsStep,
+  awardErrors,
+  budgetValid,
+  inFlightFrom,
+  paymentsReportsValid,
+} from './InFlightSteps';
+import type { AwardDraft, LineDraft, PaymentDraft, ReportDraft } from './InFlightSteps';
 import './add-grant.css';
 
 const NEW_FUNDER = '__new__';
 const NO_CHECKLIST = '__none__';
 const STEPS = ['Funder & program', 'Amount & dates', 'Checklist'];
 const STEP_DESC = ['Funder and program', 'Amount and dates', 'Checklist'];
+/** A grant already under way (decision 0004) takes five steps. */
+const IN_FLIGHT_STEPS = [
+  'Funder & program',
+  'Award & dates',
+  'Budget',
+  'Payments & reports',
+  'Checklist',
+];
+const IN_FLIGHT_DESC = [
+  'Funder and program',
+  'Award and dates',
+  'Budget',
+  'Payments and reports',
+  'Checklist',
+];
 const SUGGESTED_LEAD_DAYS = 45;
+
+/** What each starting phase means, under the choice in step 1. */
+const IN_FLIGHT_HINT: Record<InFlightPhase, string> = {
+  awarded: 'The award letter is in; the agreement is not signed yet.',
+  active: 'The agreement is signed and the money is being spent.',
+  reporting: 'A report to the funder is due or being written.',
+};
 
 const FUNDER_TYPES: Array<{ value: FunderType; label: string }> = [
   { value: 'foundation', label: 'Foundation' },
@@ -59,7 +96,7 @@ type DateKey =
   'loiDue' | 'applicationDue' | 'decisionExpected' | 'periodStart' | 'periodEnd' | 'startBy';
 
 export default function AddGrantDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { state, actions } = useStore();
+  const { state, actions, user, today } = useStore();
   const toast = useToast();
   const nav = useNavigate();
 
@@ -78,6 +115,23 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
   const [restriction, setRestriction] = React.useState<Restriction>('restricted');
   const [ownerId, setOwnerId] = React.useState(activeOnly(state.core.staff)[0]?.id ?? '');
   const [started, setStarted] = React.useState(false);
+
+  // "This grant is already under way": only a role that may record an award is offered it.
+  const mayBringIn = can(user.role, 'award', 'edit');
+  const [underWay, setUnderWay] = React.useState(false);
+  const inFlight = mayBringIn && underWay;
+  const [startPhase, setStartPhase] = React.useState<InFlightPhase>('active');
+  const [award, setAward] = React.useState<AwardDraft>(EMPTY_AWARD);
+  const keys = React.useRef(0);
+  const newKey = () => (keys.current += 1);
+  const [lines, setLines] = React.useState<LineDraft[]>(() => [
+    { key: newKey(), category: '', planned: '' },
+  ]);
+  const [payments, setPayments] = React.useState<PaymentDraft[]>([]);
+  const [reports, setReports] = React.useState<ReportDraft[]>([]);
+  const steps = inFlight ? IN_FLIGHT_STEPS : STEPS;
+  const stepDesc = inFlight ? IN_FLIGHT_DESC : STEP_DESC;
+  const lastStep = steps.length - 1;
 
   const [amount, setAmount] = React.useState('');
   const [loiRequired, setLoiRequired] = React.useState(false);
@@ -113,39 +167,62 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
   const titleError = !title.trim() ? 'Give the grant a title.' : undefined;
   const step1Valid = !funderError && !nameError && !titleError;
 
-  const grantDates: GrantDates = {
-    startBy: startBy || undefined,
-    loiDue: loiRequired && dates.loiDue ? dates.loiDue : undefined,
-    applicationDue: dates.applicationDue || undefined,
-    decisionExpected: dates.decisionExpected || undefined,
-    periodStart: dates.periodStart || undefined,
-    periodEnd: dates.periodEnd || undefined,
-  };
+  const grantDates: GrantDates = inFlight
+    ? {
+        loiDue: loiRequired && award.loiDue ? award.loiDue : undefined,
+        applicationDue: award.applicationDue || undefined,
+        submitted: award.submitted || undefined,
+        decided: award.decided || undefined,
+        periodStart: award.periodStart || undefined,
+        periodEnd: award.periodEnd || undefined,
+      }
+    : {
+        startBy: startBy || undefined,
+        loiDue: loiRequired && dates.loiDue ? dates.loiDue : undefined,
+        applicationDue: dates.applicationDue || undefined,
+        decisionExpected: dates.decisionExpected || undefined,
+        periodStart: dates.periodStart || undefined,
+        periodEnd: dates.periodEnd || undefined,
+      };
+  // A grant brought in has passed the earlier phases: their tasks are not offered.
+  const fromPhase: Phase | undefined = inFlight ? startPhase : undefined;
 
   const template: ChecklistTemplate | undefined = state.grants.templates.find(
     t => t.id === templateId,
   );
-  const preview = React.useMemo(() => {
-    if (!template) return [];
-    // instantiateTemplate drops the source item id, so zip its output back onto the
-    // items it keeps (same filter, same order) to know what each row belongs to.
-    const items = template.items.filter(i => i.phase !== 'loi' || loiRequired);
-    const tasks = instantiateTemplate(template, {
-      id: 'draft',
-      loiRequired,
-      dates: grantDates,
-      ownerId,
-    });
-    return items.map((item, i) => ({ item, task: tasks[i] })).filter(r => r.task);
-  }, [template, loiRequired, ownerId, JSON.stringify(grantDates)]);
+  const preview = React.useMemo(
+    () =>
+      template
+        ? templatePlan(
+            template,
+            { id: 'draft', loiRequired, dates: grantDates, ownerId },
+            [],
+            fromPhase,
+          )
+        : [],
+    [template, loiRequired, ownerId, fromPhase, JSON.stringify(grantDates)],
+  );
 
   const grouped = PHASE_ORDER.map(phase => ({
     phase,
     rows: preview.filter(r => r.item.phase === phase),
   })).filter(g => g.rows.length > 0);
 
+  /** Whether the step in hand may be left forward. */
+  function stepValid(): boolean {
+    if (step === 0) return step1Valid;
+    if (!inFlight) return true;
+    if (step === 1) {
+      const e = awardErrors(award);
+      return !e.amount && !e.period;
+    }
+    if (step === 2) return budgetValid(lines);
+    if (step === 3) return paymentsReportsValid(payments, reports);
+    return true;
+  }
+
   function next() {
-    if (step === 0 && !step1Valid) {
+    if (!stepValid()) {
       setShowErrors(true);
       return;
     }
@@ -168,15 +245,32 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
       program,
       restriction,
       ownerId,
-      phase: started ? 'applying' : 'prospect',
+      phase: inFlight ? startPhase : started ? 'applying' : 'prospect',
       loiRequired,
-      amountRequested: amount ? Number(amount) : undefined,
+      amountRequested: inFlight
+        ? award.requested
+          ? Number(award.requested)
+          : undefined
+        : amount
+          ? Number(amount)
+          : undefined,
       dates: grantDates,
       templateId: templateId === NO_CHECKLIST ? null : templateId,
       excludeTemplateItemIds: excluded,
+      inFlight: inFlight ? inFlightFrom(award, lines, payments, reports) : undefined,
     };
     const id = actions.grants.addGrant(input);
-    toast({ tone: 'success', title: 'Grant added', message: `${funderName} · ${title.trim()}` });
+    // The store refuses with a toast of its own.
+    if (!id) return;
+    toast(
+      inFlight
+        ? {
+            tone: 'success',
+            title: 'Grant brought in',
+            message: `${funderName} · ${title.trim()} · at ${phaseLabel(startPhase)}`,
+          }
+        : { tone: 'success', title: 'Grant added', message: `${funderName} · ${title.trim()}` },
+    );
     onClose();
     nav(`/grants/${id}`);
   }
@@ -187,7 +281,7 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
       onClose={onClose}
       width={640}
       title="Add grant"
-      description={`Step ${step + 1} of 3 · ${STEP_DESC[step]}`}
+      description={`Step ${step + 1} of ${steps.length} · ${stepDesc[step]}`}
       footer={
         <>
           <Button
@@ -196,19 +290,19 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
           >
             {step === 0 ? 'Cancel' : 'Back'}
           </Button>
-          {step < 2 ? (
+          {step < lastStep ? (
             <Button variant="primary" onClick={next}>
-              Next: {STEPS[step + 1]}
+              Next: {steps[step + 1]}
             </Button>
           ) : (
             <Button variant="primary" onClick={create}>
-              Create grant
+              {inFlight ? 'Bring in grant' : 'Create grant'}
             </Button>
           )}
         </>
       }
     >
-      <StepBars step={step} />
+      <StepBars steps={steps} step={step} />
       {step === 0 && (
         <Grid>
           <Field
@@ -301,50 +395,88 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
               ]}
             />
           </Field>
-          <SwitchRow
-            label="We've already started working on this"
-            checked={started}
-            onChange={setStarted}
-          />
+          {!inFlight && (
+            <SwitchRow
+              label="We've already started working on this"
+              checked={started}
+              onChange={setStarted}
+            />
+          )}
+          {mayBringIn && (
+            <SwitchRow
+              label="This grant is already under way"
+              hint="Awarded, active or reporting: bring it in with its award, budget, payments and reports."
+              checked={underWay}
+              onChange={setUnderWay}
+            />
+          )}
+          {inFlight && (
+            <Field
+              label="Where it is now"
+              hint={IN_FLIGHT_HINT[startPhase]}
+              style={{ gridColumn: '1/-1' }}
+            >
+              <RadioGroup
+                value={startPhase}
+                direction="row"
+                onChange={v => setStartPhase(v as InFlightPhase)}
+                options={IN_FLIGHT_PHASES.map(p => ({ value: p, label: phaseLabel(p) }))}
+              />
+            </Field>
+          )}
         </Grid>
       )}
 
-      {step === 1 && (
+      {step > 0 && step < lastStep && (
+        <Summary
+          text={[
+            inFlight ? phaseLabel(startPhase) : '',
+            funderName || 'New funder',
+            title.trim(),
+            `Owner ${staffById(state, ownerId)?.name ?? '—'}`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+          onEdit={() => setStep(0)}
+        />
+      )}
+
+      {inFlight && step > 0 && step < lastStep && (
+        <StepScroll>
+          {step === 1 && (
+            <AwardStep
+              award={award}
+              onChange={patch => setAward(a => ({ ...a, ...patch }))}
+              loiRequired={loiRequired}
+              onLoiRequired={setLoiRequired}
+              showErrors={showErrors}
+            />
+          )}
+          {step === 2 && (
+            <BudgetStep
+              lines={lines}
+              onChange={setLines}
+              awarded={Number(award.amount) || 0}
+              newKey={newKey}
+              showErrors={showErrors}
+            />
+          )}
+          {step === 3 && (
+            <PaymentsReportsStep
+              payments={payments}
+              onPayments={setPayments}
+              reports={reports}
+              onReports={setReports}
+              awarded={Number(award.amount) || 0}
+              newKey={newKey}
+              showErrors={showErrors}
+            />
+          )}
+        </StepScroll>
+      )}
+
+      {!inFlight && step === 1 && (
         <Grid>
-          <div
-            style={{
-              gridColumn: '1/-1',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-3)',
-              padding: '0 0 var(--space-4)',
-              borderBottom: 'var(--border-width) solid var(--border-subtle)',
-              marginBottom: 'var(--space-1)',
-            }}
-          >
-            <span
-              style={{
-                flex: 1,
-                minWidth: 0,
-                font: 'var(--type-body-sm)',
-                color: 'var(--text-muted)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {[
-                funderName || 'New funder',
-                title.trim(),
-                `Owner ${staffById(state, ownerId)?.name ?? '—'}`,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </span>
-            <Button variant="ghost" size="sm" onClick={() => setStep(0)}>
-              Edit
-            </Button>
-          </div>
           <Field label="Amount requested" hint="Whole dollars.">
             <Input
               value={amount ? plainNumber(Number(amount)) : ''}
@@ -414,11 +546,15 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
         </Grid>
       )}
 
-      {step === 2 && (
+      {step === lastStep && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
           <Field
             label="Checklist template"
-            hint="Every task is created with a due date worked back from the dates you entered."
+            hint={
+              inFlight
+                ? `Only the tasks for ${phaseLabel(startPhase)} and later are made; the earlier phases were done before the grant came in. Untick any already done.`
+                : 'Every task is created with a due date worked back from the dates you entered.'
+            }
           >
             <Select
               value={templateId}
@@ -458,6 +594,7 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
                       key={r.item.id}
                       item={r.item}
                       task={r.task}
+                      overdue={inFlight && !!r.task.dueDate && r.task.dueDate < today}
                       checked={!excluded.includes(r.item.id)}
                       onChange={on =>
                         setExcluded(xs =>
@@ -476,10 +613,10 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
   );
 }
 
-function StepBars({ step }: { step: number }) {
+function StepBars({ steps, step }: { steps: string[]; step: number }) {
   return (
-    <div className="ja-grant-steps">
-      {STEPS.map((name, i) => (
+    <div className="ja-grant-steps" style={{ '--steps': steps.length } as React.CSSProperties}>
+      {steps.map((name, i) => (
         <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           <span
             style={{
@@ -514,6 +651,26 @@ function StepBars({ step }: { step: number }) {
   );
 }
 
+/**
+ * The in-flight steps can run long (every payment, every report). The dialog
+ * does not scroll itself, so the step does, as the checklist preview does.
+ */
+function StepScroll({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        maxHeight: 'min(56vh, 540px)',
+        overflow: 'auto',
+        // Room for the focus ring, and for the scrollbar on the right.
+        margin: -3,
+        padding: '3px var(--space-3) 3px 3px',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function Grid({ children }: { children: React.ReactNode }) {
   return (
     <div className="ja-grid-2" style={{ alignItems: 'start' }}>
@@ -524,10 +681,12 @@ function Grid({ children }: { children: React.ReactNode }) {
 
 function SwitchRow({
   label,
+  hint,
   checked,
   onChange,
 }: {
   label: string;
+  hint?: string;
   checked: boolean;
   onChange: (v: boolean) => void;
 }) {
@@ -536,13 +695,59 @@ function SwitchRow({
       style={{
         gridColumn: '1/-1',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: hint ? 'flex-start' : 'center',
         gap: 'var(--space-3)',
         padding: 'var(--space-1) 0',
       }}
     >
       <Switch checked={checked} onChange={onChange} />
-      <span style={{ font: 'var(--type-label)', color: 'var(--text-strong)' }}>{label}</span>
+      <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ font: 'var(--type-label)', color: 'var(--text-strong)' }}>{label}</span>
+        {hint && (
+          <span
+            style={{
+              font: 'var(--type-body-sm)',
+              fontSize: 'var(--text-xs)',
+              color: 'var(--text-muted)',
+            }}
+          >
+            {hint}
+          </span>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/** What step 1 said, with a way back to it. */
+function Summary({ text, onEdit }: { text: string; onEdit: () => void }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-3)',
+        padding: '0 0 var(--space-4)',
+        borderBottom: 'var(--border-width) solid var(--border-subtle)',
+        marginBottom: 'var(--space-5)',
+      }}
+    >
+      <span
+        style={{
+          flex: 1,
+          minWidth: 0,
+          font: 'var(--type-body-sm)',
+          color: 'var(--text-muted)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {text}
+      </span>
+      <Button variant="ghost" size="sm" onClick={onEdit}>
+        Edit
+      </Button>
     </div>
   );
 }
@@ -550,11 +755,14 @@ function SwitchRow({
 function TaskRow({
   item,
   task,
+  overdue,
   checked,
   onChange,
 }: {
   item: ChecklistTemplateItem;
   task: Omit<Task, 'id'>;
+  /** Due before today: a grant brought in may already have done it. */
+  overdue: boolean;
   checked: boolean;
   onChange: (v: boolean) => void;
 }) {
@@ -579,8 +787,13 @@ function TaskRow({
       >
         {item.title}
       </span>
-      <span style={{ font: 'var(--type-numeric)', color: 'var(--text-muted)' }}>
-        {task.dueDate ? dateShort(task.dueDate) : '—'}
+      <span
+        style={{
+          font: 'var(--type-numeric)',
+          color: overdue && checked ? 'var(--danger-600)' : 'var(--text-muted)',
+        }}
+      >
+        {task.dueDate ? `${overdue ? 'Was due ' : ''}${dateShort(task.dueDate)}` : '—'}
       </span>
     </div>
   );

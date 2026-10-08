@@ -4,6 +4,7 @@ import {
   DEFAULT_TEMPLATES,
   instantiateDocumentRegister,
   instantiateTemplate,
+  templatePlan,
   timingLabel,
 } from '../templates';
 import type { Grant } from '../types';
@@ -141,6 +142,25 @@ describe('document register', () => {
     expect(docs).toHaveLength(5);
     expect(docs.every(d => d.status === 'needed')).toBe(true);
     expect(docs.every(d => d.grantId === 'g-test')).toBe(true);
+  });
+});
+
+describe('a grant brought in already under way', () => {
+  it('drops the items of every phase before the one it starts at', () => {
+    const tasks = instantiateTemplate(standard, grant({ loiRequired: true }), [], 'active');
+    expect([...new Set(tasks.map(t => t.phase))]).toEqual(['active', 'reporting', 'closed']);
+    expect(tasks.map(t => t.order)).toEqual(tasks.map((_, i) => i));
+  });
+
+  it('pairs each kept item with its task, for the checklist preview', () => {
+    const plan = templatePlan(standard, grant(), ['tpl-foundation-standard-i16'], 'awarded');
+    expect(plan[0].item.id).toBe('tpl-foundation-standard-i17');
+    expect(plan.every(r => r.item.title === r.task.title)).toBe(true);
+  });
+
+  it('files the document register as submitted', () => {
+    const docs = instantiateDocumentRegister('g-test', '2026-09-13', 'submitted');
+    expect(docs.every(d => d.status === 'submitted')).toBe(true);
   });
 });
 

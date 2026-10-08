@@ -1,10 +1,12 @@
 import { addDays } from 'date-fns';
 import { toDate, toISO } from '../../../core/format';
+import { phaseIndex } from './phases';
 import type {
   ChecklistTemplate,
   ChecklistTemplateItem,
   DateAnchor,
   DocumentKind,
+  DocumentStatus,
   Grant,
   GrantDocument,
   Phase,
@@ -180,31 +182,49 @@ export const DEFAULT_TEMPLATES: ChecklistTemplate[] = [STANDARD, GOVERNMENT, COR
 export const DEFAULT_TEMPLATE_ID = STANDARD_ID;
 
 /**
- * Turn a template into tasks for a grant.
+ * The template items a grant keeps, each with the task it becomes, in order.
  *
  * - A due date is computed as `grant.dates[anchor] + offsetDays`. When the
  *   anchor date is unknown the task is created with `dueDate: undefined`.
  * - LOI items are skipped when `grant.loiRequired` is false.
  * - `excludeItemIds` drops items the user unchecked in the onboarding dialog.
+ * - `fromPhase` drops the items of every phase before it: a grant brought in
+ *   already under way has passed them elsewhere (decision 0004).
  */
+export function templatePlan(
+  template: ChecklistTemplate,
+  grant: Pick<Grant, 'id' | 'loiRequired' | 'dates' | 'ownerId'>,
+  excludeItemIds: string[] = [],
+  fromPhase?: Phase,
+): Array<{ item: ChecklistTemplateItem; task: Omit<Task, 'id'> }> {
+  const excluded = new Set(excludeItemIds);
+  const from = fromPhase ? phaseIndex(fromPhase) : 0;
+  return template.items
+    .filter(item => !excluded.has(item.id))
+    .filter(item => item.phase !== 'loi' || grant.loiRequired)
+    .filter(item => phaseIndex(item.phase) < 0 || phaseIndex(item.phase) >= from)
+    .map((item, index) => ({
+      item,
+      task: {
+        grantId: grant.id,
+        phase: item.phase,
+        title: item.title,
+        dueDate: dueDateFor(item.anchor, item.offsetDays, grant.dates),
+        assigneeId: grant.ownerId,
+        done: false,
+        order: index,
+      },
+    }));
+}
+
+/** Turn a template into tasks for a grant: the tasks of `templatePlan`. */
 export function instantiateTemplate(
   template: ChecklistTemplate,
   grant: Pick<Grant, 'id' | 'loiRequired' | 'dates' | 'ownerId'>,
   excludeItemIds: string[] = [],
+  fromPhase?: Phase,
 ): Array<Omit<Task, 'id'>> {
-  const excluded = new Set(excludeItemIds);
-  return template.items
-    .filter(item => !excluded.has(item.id))
-    .filter(item => item.phase !== 'loi' || grant.loiRequired)
-    .map((item, index) => ({
-      grantId: grant.id,
-      phase: item.phase,
-      title: item.title,
-      dueDate: dueDateFor(item.anchor, item.offsetDays, grant.dates),
-      assigneeId: grant.ownerId,
-      done: false,
-      order: index,
-    }));
+  return templatePlan(template, grant, excludeItemIds, fromPhase).map(row => row.task);
 }
 
 function dueDateFor(
@@ -238,7 +258,9 @@ export function timingLabel(item: Pick<ChecklistTemplateItem, 'offsetDays' | 'an
 
 /**
  * The standard document register created with every grant (SPEC §4.3):
- * narrative, budget, IRS letter, board list, financials — all `needed`.
+ * narrative, budget, IRS letter, board list, financials — all `needed`, or
+ * all `submitted` on a grant brought in already awarded (the application that
+ * won it went in with them).
  */
 export const DEFAULT_DOCUMENT_REGISTER: Array<{ name: string; kind: DocumentKind }> = [
   { name: 'Program narrative', kind: 'narrative' },
@@ -251,12 +273,13 @@ export const DEFAULT_DOCUMENT_REGISTER: Array<{ name: string; kind: DocumentKind
 export function instantiateDocumentRegister(
   grantId: string,
   updatedAt: string,
+  status: DocumentStatus = 'needed',
 ): Array<Omit<GrantDocument, 'id'>> {
   return DEFAULT_DOCUMENT_REGISTER.map(doc => ({
     grantId,
     name: doc.name,
     kind: doc.kind,
-    status: 'needed' as const,
+    status,
     updatedAt,
   }));
 }
