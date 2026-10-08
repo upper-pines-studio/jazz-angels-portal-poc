@@ -162,7 +162,7 @@ a.bva-gpace__report:hover { color: var(--text-link); text-decoration: underline;
   @page { size: letter landscape; margin: 0.45in; }
   html, body, #root { height: auto !important; background: var(--neutral-0) !important; }
   .ja-sidebar, .ja-scrim, .ja-menu-btn, .ja-toasts, .bva-actions, .bva-noprint { display: none !important; }
-  .ja-shell, .ja-frame { display: block !important; height: auto !important; }
+  .ja-shell, .ja-frame, .ja-viewport { display: block !important; height: auto !important; overflow: visible !important; }
   .ja-main { overflow: visible !important; padding: 0 !important; }
   .ja-topbar > header { padding-left: 0 !important; padding-right: 0 !important; }
   .bva-page .ja-grid-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }

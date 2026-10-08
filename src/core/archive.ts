@@ -1,15 +1,16 @@
 /**
  * Archiving (decision 0002). A grant, a funder, a staff member, a student, a
- * partner, a venue or a class that is no longer current is archived: it
+ * partner, a venue, a class (an ensemble), a session or a program that is no
+ * longer current is archived: it
  * leaves the everyday lists and pickers, stays in history and reports, and can
  * be restored. Nothing is deleted, and nothing cascades.
  *
- * Every module reads archived-ness through these helpers, so the seven record
+ * Every module reads archived-ness through these helpers, so the nine record
  * types behave the same way. Archiving is an ordinary update that sets the two
  * fields; restoring is one that clears them.
  */
 
-/** The two fields each of the seven record types carries. Both unset means current. */
+/** The two fields each of the nine record types carries. Both unset means current. */
 export interface Archivable {
   /** ISO `YYYY-MM-DD`: the day it was archived. */
   archivedAt?: string;
@@ -72,7 +73,7 @@ export function restoreFields(): Archivable {
 /**
  * A record as loaded, with the archive fields checked: a field that is not a
  * string (a `null` from an older export, say) is dropped, and so is a stray
- * `archivedById` without a date. Every slice's `normalise` runs its seven-type
+ * `archivedById` without a date. Every slice's `normalise` runs its archivable
  * rows through this.
  */
 export function normaliseArchived<T extends object>(row: T): T {

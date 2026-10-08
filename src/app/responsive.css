@@ -118,12 +118,26 @@
   display: none;
 }
 
+/*
+ * The visible content area under the top bar. It is the positioned box the
+ * design-system Dialog (position:absolute) anchors to, and it does not
+ * scroll, so a dialog and its overlay cover what is on screen however far
+ * main has scrolled. Main scrolls inside it and is not positioned.
+ */
+.ja-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .ja-main {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: var(--space-7);
-  /* position:relative so the design-system Dialog (position:absolute) scopes to the scrolling area */
-  position: relative;
 }
 
 /* The page fills whatever width the screen gives it. */
@@ -218,8 +232,8 @@
 .ja-stepper > div { min-width: max-content; }
 
 /*
- * Dialog overlay. The design-system Dialog is position:absolute inside the
- * scrolling main and cannot be given a class, so it is matched by the one
+ * Dialog overlay. The design-system Dialog is position:absolute, anchored to
+ * .ja-viewport (not the scrolling main), and cannot be given a class, so it is matched by the one
  * inline property unique to it. A panel taller than the viewport scrolls
  * inside the overlay instead of being clipped at both ends.
  */

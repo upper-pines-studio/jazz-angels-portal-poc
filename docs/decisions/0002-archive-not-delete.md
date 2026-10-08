@@ -6,7 +6,10 @@
 
 Nothing the office has entered is deleted. A grant, a funder, a staff member, a student, a
 partner, a venue or a class that is no longer current is archived: it leaves the everyday lists
-and stays in history, reports and the activity log.
+and stays in history, reports and the activity log. Sessions (terms) and programs joined them
+with #44, when they became editable: an archived session leaves the Schedule's session list and
+is no longer the current session, its classes untouched; an archived program leaves the pickers
+for new records, and every grant, student, ensemble and hour that names it keeps its name.
 
 ## Why
 

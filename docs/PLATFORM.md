@@ -54,8 +54,8 @@ src/
 ```ts
 // core/types.ts
 export interface StaffMember { id: string; name: string; role: string; teaches: boolean }
-export interface Program { id: ProgramId; name: string; short: string }   // short: "Studio", "In-school"
-export type ProgramId = 'studio-sessions'|'in-school'|'homeschool'|'jazz-legacy'|'advanced-workshop'|'general-operating';
+export interface Program extends Archivable { id: ProgramId; name: string; short: string }   // short: "Studio", "In-school"
+export type ProgramId = string;   // the six seeded programs keep 'studio-sessions', 'in-school', …; one added in Settings gets a generated `p-…` id
 
 // Places. An Organization is a partner (a school district, a community centre): the
 // relationship, who to call, what was agreed. A Venue is a physical place a class or a
@@ -190,8 +190,8 @@ Everything in `docs/SPEC.md`, moved under `modules/grants/`. Behaviour unchanged
 **Entities** (`modules/teaching/domain/types.ts`):
 
 ```ts
-interface Term { id; name: 'Fall 2026 session'; programId; start: '2026-09-13'; end: '2026-11-08'; meetingsPlanned: 8 }
-interface Ensemble { id; name; programId; venueId; room; leadStaffId; tone: 'blue'|'teal'|'olive'|'gold'|'neutral' }   // venueId: a core Venue; room is the space inside it
+interface Term extends Archivable { id; name: 'Fall 2026 session'; programId?; start: '2026-09-13'; end: '2026-11-08'; meetingsPlanned: 8 }   // the screens say "session"
+interface Ensemble extends Archivable { id; name; programId; venueId; room; leadStaffId; tone: 'blue'|'teal'|'olive'|'gold'|'neutral' }   // venueId: a core Venue; room is the space inside it
 interface ClassMeeting { id; ensembleId; date; start: '16:00'; end: '17:00'; venueId; room; rollSubmittedAt?: string; notes?: string }   // place copied from the ensemble when scheduled
 interface Student { id; name; instrument; yearsIn: number; guardianName; guardianPhone?; programId; ensembleId?; status: 'enrolled'|'waitlist'|'alumni' }
 interface AttendanceRecord { id; meetingId; studentId; mark: 'present'|'late'|'absent' }
@@ -232,8 +232,16 @@ for its period and "attendance trend" has history.
   classes) for the week of today, rows are time slots; a class block shows ensemble, room, lead
   avatar; today's column header is highlighted; a block for a meeting whose roll is submitted
   shows a small check. Prev/next week, "Today". Click a block → Roll call for that meeting. Term
-  tab: the eight Sundays as a row of dots with performances marked; a list of ensembles with
-  enrolled counts. "Add class" opens a small Dialog (ensemble, date, time, room).
+  tab: the current session's weeks as a row of dots with performances marked; a **Sessions** list
+  (name, dates, classes planned) and an **Ensembles** list with enrolled counts, each with Edit,
+  Archive and Restore and an Add button along its foot for the roles that edit the schedule.
+  "Add class" opens a small Dialog (ensemble, date, time, room). **Add session** (name, starts,
+  ends, classes planned, which follows the weeks between the dates until typed) and **Add
+  ensemble** (name, program, lead teacher from the staff who teach, venue and room, colour as
+  five named swatches of the ensemble tones) are dialogs too, and edit the same fields. An
+  ensemble moved to a new venue or room takes its classes from today on with it; past classes
+  and any whose roll is in keep the place they met. With no ensembles the top bar offers Add
+  ensemble instead of Add class, and the week grid's empty state says to add one.
 - **Roll call** `/roll/:meetingId` — Header: ensemble, "Sunday, Sep 13 · 4:00pm · Studio 1".
   Left card: the roster, each row Avatar, name, instrument · year N, and three circle buttons:
   check (present), clock (late), cross (absent). Everyone starts present (the check filled
@@ -316,7 +324,8 @@ awaiting approval" as `info` when > 0; no panel.
     (program, when, room, lead, students), read from the teaching module's public index and shown
     only while Teaching is on. Edit venue in the top bar.
 - **Settings** `/settings` — Cards: Staff (name, role, "teaches" Switch), Partners and venues (a
-  count and a button to the Partners screen), Programs, Fiscal year,
+  count and a button to the Partners screen), Programs (name and short name; Add program, Edit,
+  Archive and Restore for Admin and Director, Show archived on the card), Fiscal year,
   **Modules** (one row per registered module: label, description, Switch; core cannot be turned
   off; copy: "Turning a module off hides it from the rail and the dashboard. Its data stays."),
   Data (Export JSON, Import, Reset demo data).

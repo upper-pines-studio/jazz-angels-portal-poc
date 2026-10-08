@@ -52,7 +52,8 @@ export default function ImportStudentsDialog({
   const [choices, setChoices] = React.useState<Record<number, ImportChoice>>({});
 
   const context = {
-    programs: state.core.programs,
+    // A row is matched to a current program only, as Enroll offers.
+    programs: activeOnly(state.core.programs),
     // A row is matched to a current ensemble only; every student, archived ones
     // included, still counts as already in the portal.
     ensembles: activeOnly(state.teaching.ensembles),

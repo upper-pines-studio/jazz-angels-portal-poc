@@ -13,12 +13,13 @@ export const CORE_REQUIRES: Array<Pick<ModuleRoute, 'path' | 'requires'>> = [
   { path: '/partners', requires: { subject: 'partners' } },
   { path: '/partners/organizations/:id', requires: { subject: 'partners' } },
   { path: '/partners/venues/:id', requires: { subject: 'partners' } },
-  // Settings holds staff, the system settings and the QuickBooks connection;
-  // whoever may touch one of them may open it, and sees only that part.
+  // Settings holds staff, programs, the system settings and the QuickBooks
+  // connection; whoever may touch one of them may open it, and sees only that part.
   {
     path: '/settings',
     requires: [
       { subject: 'staff' },
+      { subject: 'programs' },
       { subject: 'modules' },
       { subject: 'quickbooks-connect' },
       { subject: 'quickbooks-sync' },

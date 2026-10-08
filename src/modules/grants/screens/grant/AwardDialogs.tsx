@@ -1,6 +1,14 @@
 import React from 'react';
 import { Button, Dialog, Field, Input, Select, Textarea } from '../../../../design-system';
-import { dateLong, money, pickable, programName, staffById, useStore } from '../../../../core';
+import {
+  dateLong,
+  money,
+  pickable,
+  programName,
+  programOptions,
+  staffById,
+  useStore,
+} from '../../../../core';
 import type { ProgramId } from '../../../../core';
 import type { AwardTerm, Grant, Payment, Restriction } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
@@ -156,7 +164,10 @@ export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: ()
             <Select
               value={program}
               onChange={e => setProgram(e.target.value as ProgramId)}
-              options={state.core.programs.map(p => ({ value: p.id, label: p.name }))}
+              options={programOptions(state, grant.program).map(p => ({
+                value: p.id,
+                label: p.name,
+              }))}
             />
           </Field>
         </FieldRow>

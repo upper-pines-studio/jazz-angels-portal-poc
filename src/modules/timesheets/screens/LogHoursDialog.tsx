@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Dialog, Field, Input, Select } from '../../../design-system';
 import type { InputProps } from '../../../design-system';
-import { useStore } from '../../../core';
+import { programOptions, useStore } from '../../../core';
 import type { ProgramId } from '../../../core';
 import { ensembleOptions } from '../../teaching';
 import type { NewTimeEntryInput } from '../domain';
@@ -26,7 +26,7 @@ export default function LogHoursDialog({
   // only name on offer is the signed-in person's.
   const staffId = user.id;
   const [date, setDate] = React.useState(today);
-  const [programId, setProgramId] = React.useState<string>(state.core.programs[0]?.id ?? '');
+  const [programId, setProgramId] = React.useState<string>(programOptions(state)[0]?.id ?? '');
   const [ensembleId, setEnsembleId] = React.useState('');
   const [activity, setActivity] = React.useState('');
   const [hours, setHours] = React.useState('2.00');
@@ -84,7 +84,7 @@ export default function LogHoursDialog({
           <Select
             value={programId}
             onChange={e => setProgramId(e.target.value)}
-            options={state.core.programs.map(p => ({ value: p.id, label: p.name }))}
+            options={programOptions(state).map(p => ({ value: p.id, label: p.name }))}
           />
         </Field>
         {ensembles.length > 0 && (

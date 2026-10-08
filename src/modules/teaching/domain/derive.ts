@@ -4,20 +4,25 @@ import {
   archivedBy,
   can,
   isArchived,
+  pickable,
   toDate,
   toISO,
   withArchived,
 } from '../../../core';
-import type { PortalState, ProgramId, SignedInUser } from '../../../core';
+import type { PortalState, ProgramId, SignedInUser, StaffMember } from '../../../core';
+import { ENSEMBLE_TONES } from './types';
 import type {
   AttendanceRecord,
   AttendanceSummary,
   AttendanceWindow,
   ClassMeeting,
   Ensemble,
+  EnsembleInput,
+  EnsembleTone,
   Mark,
   Student,
   Term,
+  TermInput,
 } from './types';
 
 /**
@@ -40,9 +45,9 @@ export function meetingById(state: PortalState, id: string | undefined): ClassMe
   return id ? state.teaching.meetings.find(m => m.id === id) : undefined;
 }
 
-/** The term `dateISO` falls inside, or the next one to start. */
+/** The term `dateISO` falls inside, or the next one to start. An archived term is neither. */
 export function termForDate(state: PortalState, dateISO: string): Term | undefined {
-  const terms = [...state.teaching.terms].sort((a, b) => a.start.localeCompare(b.start));
+  const terms = activeOnly(state.teaching.terms).sort((a, b) => a.start.localeCompare(b.start));
   return (
     terms.find(t => dateISO >= t.start && dateISO <= t.end) ?? terms.find(t => t.start > dateISO)
   );
@@ -61,6 +66,107 @@ export function sessionWeekLabel(state: PortalState, today: string): string | un
   const week = termWeek(term, today);
   if (!term || !week) return undefined;
   return `${term.name.replace(/ \d{4}/, '')} week ${week}`;
+}
+
+// --- Setting up sessions and ensembles ---------------------------------------
+
+/**
+ * The sessions as the Schedule lists them, earliest first: the current ones,
+ * then, with `includeArchived`, the archived ones after them.
+ */
+export function termsList(state: PortalState, includeArchived = false): Term[] {
+  const byStart = (a: Term, b: Term) => a.start.localeCompare(b.start);
+  return withArchived([...state.teaching.terms].sort(byStart), includeArchived);
+}
+
+/**
+ * The weeks between two dates, at least one: what a new session plans until
+ * the office says otherwise. Sep 13 to Nov 8 is eight weeks.
+ */
+export function weeksBetween(start: string, end: string): number {
+  if (!start || !end || end < start) return 1;
+  const days = Math.round((toDate(end).getTime() - toDate(start).getTime()) / 86400000);
+  return Math.max(1, Math.round(days / 7));
+}
+
+/** What is wrong with a session, field by field. Empty when it can be saved. */
+export type TermProblems = Partial<Record<keyof TermInput, string>>;
+
+export function termProblems(input: Partial<TermInput>): TermProblems {
+  const problems: TermProblems = {};
+  if (!input.name?.trim()) problems.name = 'Give the session a name.';
+  if (!input.start) problems.start = 'Pick the day the session starts.';
+  if (!input.end) problems.end = 'Pick the day the session ends.';
+  else if (input.start && input.end <= input.start)
+    problems.end = 'The session has to end after it starts.';
+  const planned = input.meetingsPlanned;
+  if (planned === undefined || !Number.isInteger(planned) || planned < 1)
+    problems.meetingsPlanned = 'Plan at least one class for each ensemble.';
+  return problems;
+}
+
+/** The first thing wrong with a session, for the store to refuse it with. */
+export function termRefusal(input: Partial<TermInput>): string | undefined {
+  return Object.values(termProblems(input))[0];
+}
+
+/** What is wrong with an ensemble, field by field. Empty when it can be saved. */
+export type EnsembleProblems = Partial<Record<keyof EnsembleInput, string>>;
+
+/**
+ * An ensemble needs a name no current ensemble already has, a program, a
+ * lead, a venue and a tone that exist. `id` is the ensemble being edited, so
+ * its own name and its own (possibly since archived) choices still pass.
+ */
+export function ensembleProblems(
+  state: PortalState,
+  input: Partial<EnsembleInput>,
+  id?: string,
+): EnsembleProblems {
+  const problems: EnsembleProblems = {};
+  const name = input.name?.trim() ?? '';
+  if (!name) problems.name = 'Give the ensemble a name.';
+  else {
+    const taken = activeOnly(state.teaching.ensembles).find(
+      e => e.id !== id && e.name.trim().toLowerCase() === name.toLowerCase(),
+    );
+    if (taken) problems.name = `There is already an ensemble called ${taken.name}.`;
+  }
+  if (!input.programId || !state.core.programs.some(p => p.id === input.programId))
+    problems.programId = 'Pick the program it belongs to.';
+  if (!input.leadStaffId || !state.core.staff.some(s => s.id === input.leadStaffId))
+    problems.leadStaffId = 'Pick who leads it.';
+  if (!input.venueId || !state.core.venues.some(v => v.id === input.venueId))
+    problems.venueId = 'Pick where it meets.';
+  if (!input.tone || !ENSEMBLE_TONES.includes(input.tone)) problems.tone = 'Pick a colour.';
+  return problems;
+}
+
+/** The first thing wrong with an ensemble, for the store to refuse it with. */
+export function ensembleRefusal(
+  state: PortalState,
+  input: Partial<EnsembleInput>,
+  id?: string,
+): string | undefined {
+  return Object.values(ensembleProblems(state, input, id))[0];
+}
+
+/**
+ * Who can lead an ensemble: the current staff who teach, by name, plus
+ * `keepId` when the ensemble being edited is led by someone who has since
+ * stopped teaching or been archived.
+ */
+export function leadOptions(state: PortalState, keepId?: string): StaffMember[] {
+  return pickable(
+    state.core.staff.filter(s => s.teaches || s.id === keepId),
+    keepId,
+  ).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** The tone a new ensemble starts with: the first one no current ensemble uses, else blue. */
+export function nextTone(state: PortalState): EnsembleTone {
+  const used = new Set(activeOnly(state.teaching.ensembles).map(e => e.tone));
+  return ENSEMBLE_TONES.find(t => !used.has(t)) ?? 'blue';
 }
 
 // --- The schedule -----------------------------------------------------------
@@ -280,9 +386,9 @@ export interface AttendanceHeadline {
   footnote: string;
 }
 
-/** The term that finished most recently before `dateISO`. */
+/** The current term that finished most recently before `dateISO`. */
 function lastFinishedTerm(state: PortalState, dateISO: string): Term | undefined {
-  return [...state.teaching.terms]
+  return activeOnly(state.teaching.terms)
     .filter(t => t.end < dateISO)
     .sort((a, b) => a.end.localeCompare(b.end))
     .pop();

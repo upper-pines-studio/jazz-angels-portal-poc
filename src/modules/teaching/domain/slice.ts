@@ -1,22 +1,25 @@
 import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import {
   PARAMOUNT_MS_VENUE_ID,
+  can,
   STUDIO_VENUE_ID,
   archiveFields,
   isArchived,
   normaliseArchived,
   restoreFields,
 } from '../../../core';
-import { mayTakeRoll } from './derive';
+import { ensembleRefusal, mayTakeRoll, termRefusal } from './derive';
 import { makeEmpty, makeSeed } from './seed';
 import type {
   AttendanceRecord,
   ClassMeeting,
   Ensemble,
+  EnsembleInput,
   Student,
   TeachingActions,
   TeachingState,
   Term,
+  TermInput,
 } from './types';
 
 /**
@@ -113,6 +116,9 @@ export function describeChange(action: TeachingAction): string | undefined {
         a => a.type === 'update' && a.key === 'meetings' && 'rollSubmittedAt' in a.patch,
       );
       if (closesRoll) return 'the roll call';
+      // An ensemble moved to a new place carries its coming classes with it.
+      if (action.actions[0]?.type === 'update' && action.actions[0].key === 'ensembles')
+        return 'the ensemble';
       if (action.actions.length > 1 && action.actions.every(a => a.type === 'insert'))
         return action.actions[0].key === 'students' ? 'the imported students' : undefined;
       return action.actions[0] && describeChange(action.actions[0]);
@@ -133,7 +139,7 @@ export function describeChange(action: TeachingAction): string | undefined {
         case 'ensembles':
           return 'the ensemble';
         case 'terms':
-          return 'the term';
+          return 'the session';
       }
   }
   return undefined;
@@ -142,6 +148,28 @@ export function describeChange(action: TeachingAction): string | undefined {
 // ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
+
+/** A session's own fields, tidied: the name trimmed, the classes planned a whole number. */
+function termFields(input: TermInput): TermInput {
+  return {
+    name: input.name.trim(),
+    start: input.start,
+    end: input.end,
+    meetingsPlanned: Math.round(input.meetingsPlanned),
+  };
+}
+
+/** An ensemble's own fields, tidied: the name and room trimmed. */
+function ensembleFields(input: EnsembleInput): EnsembleInput {
+  return {
+    name: input.name.trim(),
+    programId: input.programId,
+    leadStaffId: input.leadStaffId,
+    venueId: input.venueId,
+    room: input.room.trim(),
+    tone: input.tone,
+  };
+}
 
 function createActions(
   dispatch: (action: AnyAction) => void,
@@ -246,6 +274,57 @@ function createActions(
     restoreEnsemble(id) {
       send(update('ensembles', id, restoreFields()));
     },
+    addTerm(input) {
+      const id = newId('t');
+      send(insert('terms', { ...termFields(input), id }));
+      return id;
+    },
+    updateTerm(id, patch) {
+      const current = getState().teaching.terms.find(t => t.id === id);
+      if (!current) return;
+      send(update('terms', id, termFields({ ...current, ...patch })));
+    },
+    archiveTerm(id) {
+      send(update('terms', id, archiveFields(user, today)));
+    },
+    restoreTerm(id) {
+      send(update('terms', id, restoreFields()));
+    },
+    addEnsemble(input) {
+      const id = newId('e');
+      send(insert('ensembles', { ...ensembleFields(input), id }));
+      return id;
+    },
+    updateEnsemble(id, patch) {
+      const { ensembles, meetings } = getState().teaching;
+      const current = ensembles.find(e => e.id === id);
+      if (!current) return;
+      const next = ensembleFields({ ...current, ...patch });
+      const moved = next.venueId !== current.venueId || next.room !== current.room;
+      // Its coming classes that still met at the old place go with it; a past
+      // class, or one whose roll is in, is the record of where it met.
+      const coming = moved
+        ? meetings.filter(
+            m =>
+              m.ensembleId === id &&
+              m.date >= today &&
+              !m.rollSubmittedAt &&
+              m.venueId === current.venueId &&
+              m.room === current.room,
+          )
+        : [];
+      if (coming.length === 0) {
+        send(update('ensembles', id, next));
+        return;
+      }
+      send({
+        type: 'batch',
+        actions: [
+          update('ensembles', id, next),
+          ...coming.map(m => update('meetings', m.id, { venueId: next.venueId, room: next.room })),
+        ],
+      });
+    },
   };
 }
 
@@ -307,6 +386,24 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     restoreStudent: 'students',
     archiveEnsemble: 'schedule',
     restoreEnsemble: 'schedule',
+    // Sessions and ensembles are the schedule itself: "Schedule and classes: Edit".
+    // A session or an ensemble that could not be saved is refused with what is wrong.
+    addTerm: (user, _state, input) =>
+      can(user.role, 'schedule', 'edit') && (termRefusal(input) ?? true),
+    updateTerm: (user, state, id, patch) => {
+      if (!can(user.role, 'schedule', 'edit')) return false;
+      const current = state.teaching.terms.find(t => t.id === id);
+      return !current || (termRefusal({ ...current, ...patch }) ?? true);
+    },
+    archiveTerm: 'schedule',
+    restoreTerm: 'schedule',
+    addEnsemble: (user, state, input) =>
+      can(user.role, 'schedule', 'edit') && (ensembleRefusal(state, input) ?? true),
+    updateEnsemble: (user, state, id, patch) => {
+      if (!can(user.role, 'schedule', 'edit')) return false;
+      const current = state.teaching.ensembles.find(e => e.id === id);
+      return !current || (ensembleRefusal(state, { ...current, ...patch }, id) ?? true);
+    },
   },
   normalise(raw) {
     if (!raw || typeof raw !== 'object') return undefined;
@@ -322,7 +419,14 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
       }),
     );
     const ensembles = (candidate.ensembles as Ensemble[]).map(e => normaliseArchived(withVenue(e)));
+    const terms = (candidate.terms as Term[]).map(t =>
+      normaliseArchived({
+        ...t,
+        meetingsPlanned:
+          typeof t.meetingsPlanned === 'number' && t.meetingsPlanned > 0 ? t.meetingsPlanned : 8,
+      }),
+    );
     const meetings = (candidate.meetings as ClassMeeting[]).map(withVenue);
-    return { ...(candidate as unknown as TeachingState), students, ensembles, meetings };
+    return { ...(candidate as unknown as TeachingState), terms, students, ensembles, meetings };
   },
 };

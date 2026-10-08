@@ -9,13 +9,12 @@
 
 import type { Archivable } from './archive';
 
-export type ProgramId =
-  | 'studio-sessions'
-  | 'in-school'
-  | 'homeschool'
-  | 'jazz-legacy'
-  | 'advanced-workshop'
-  | 'general-operating';
+/**
+ * A program's id. An ordinary string: the six Jazz Angels programs keep the
+ * ids they were seeded with ('studio-sessions', 'in-school', …), and a program
+ * added in Settings gets a generated one (`p-…`), so renaming it breaks nothing.
+ */
+export type ProgramId = string;
 
 /**
  * What a person may do in the portal, one per person (decision 0001). Whether
@@ -47,7 +46,13 @@ export interface SignedInUser {
   role: Role;
 }
 
-export interface Program {
+/**
+ * What the money and the classes are for: "Studio Semester Sessions", "In-School
+ * Program". Added and renamed in Settings. Archived (decision 0002) when it
+ * stops running: it leaves the pickers for new grants, students, ensembles and
+ * hours, and every record that names it keeps its name.
+ */
+export interface Program extends Archivable {
   id: ProgramId;
   name: string;
   /** Column-width name: "Studio", "In-school". */
@@ -144,6 +149,16 @@ export interface CoreActions {
   archiveStaff(id: string): void;
   /** Put an archived person back on the staff list; they can sign in again. */
   restoreStaff(id: string): void;
+  /** Add a program: its name and short name. Returns the new id. */
+  addProgram(input: Pick<Program, 'name' | 'short'>): string;
+  /** Rename a program. Its id stays, so every grant, student and ensemble still names it. */
+  updateProgram(id: string, patch: Partial<Pick<Program, 'name' | 'short'>>): void;
+  /**
+   * Archive a program: it leaves the pickers for new records. The grants,
+   * students, ensembles and hours that name it keep it: nothing cascades.
+   */
+  archiveProgram(id: string): void;
+  restoreProgram(id: string): void;
   /** Archive a partner. Its venues stay as they are: nothing cascades. */
   archiveOrganization(id: string): void;
   restoreOrganization(id: string): void;

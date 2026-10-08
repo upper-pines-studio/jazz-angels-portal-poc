@@ -12,7 +12,6 @@ import {
   Input,
   Select,
   Switch,
-  Tag,
 } from '../../design-system';
 import { usePageHeader } from '../Shell';
 import { ArchiveDialog, ArchivedName, ShowArchivedSwitch } from '../components/archive';
@@ -36,6 +35,7 @@ import {
 } from '../../core';
 import type { ModuleManifest, Role, StaffMember } from '../../core';
 import { MODULES } from '../../modules';
+import ProgramsCard from './settings/ProgramsCard';
 
 const MONTHS = [
   'January',
@@ -408,27 +408,7 @@ export default function Settings() {
         </div>
       </Card>
 
-      <Card title="Programs" subtitle="What the money and the classes are for.">
-        {state.core.programs.length === 0 ? (
-          <EmptyState
-            style={{ padding: 'var(--space-4) var(--space-6)' }}
-            title="No programs yet"
-            message="Studio sessions, in-school classes and the other programs a grant or a class belongs to show up here. They come from the Jazz Angels site; adding them in the portal is not built yet."
-          />
-        ) : (
-          <>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-              {state.core.programs.map(p => (
-                <Tag key={p.id}>{p.name}</Tag>
-              ))}
-            </div>
-            <p style={{ ...MUTED_SM, margin: 'var(--space-4) 0 0' }}>
-              Programs come from the Jazz Angels site. Editing them is out of scope for this proof
-              of concept.
-            </p>
-          </>
-        )}
-      </Card>
+      <ProgramsCard />
 
       <Card title="Fiscal year" subtitle="Where the year starts for every total on the dashboard.">
         {maySystem && (

@@ -19,6 +19,7 @@ import {
   staffById,
   dateShort,
   plainNumber,
+  programOptions,
   toDate,
   toISO,
 } from '../../../../core';
@@ -109,8 +110,9 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
   const [newContactName, setNewContactName] = React.useState('');
   const [newContactEmail, setNewContactEmail] = React.useState('');
   const [title, setTitle] = React.useState('');
+  // A new grant is offered the current programs only (an archived one is history).
   const [program, setProgram] = React.useState<ProgramId>(
-    state.core.programs[0]?.id ?? 'general-operating',
+    programOptions(state)[0]?.id ?? 'general-operating',
   );
   const [restriction, setRestriction] = React.useState<Restriction>('restricted');
   const [ownerId, setOwnerId] = React.useState(activeOnly(state.core.staff)[0]?.id ?? '');
@@ -374,7 +376,7 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
             <Select
               value={program}
               onChange={e => setProgram(e.target.value as ProgramId)}
-              options={state.core.programs.map(p => ({ value: p.id, label: p.name }))}
+              options={programOptions(state).map(p => ({ value: p.id, label: p.name }))}
             />
           </Field>
           <Field label="Owner">

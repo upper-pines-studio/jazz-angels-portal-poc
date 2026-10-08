@@ -117,7 +117,7 @@ export default function AddClassDialog({
         <Field
           label="Venue"
           required
-          hint="Where the ensemble usually meets. Add venues in Settings."
+          hint="Where the ensemble usually meets. Add venues on the Partners screen."
         >
           <Select
             value={venueId}

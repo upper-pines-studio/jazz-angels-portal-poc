@@ -157,3 +157,46 @@
   .ja-week__slot { padding: var(--space-2); }
   .ja-term-dots { gap: var(--space-4); }
 }
+
+/*
+ * The colour picker in the ensemble dialog: one option per ensemble tone, a
+ * swatch of the rule its classes carry and the tone's name. The selected one
+ * takes the blue border a focused control has.
+ */
+.ja-tone-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.ja-tone-picker__option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 30px;
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  font: var(--weight-medium) var(--text-sm)/1 var(--font-sans);
+  color: var(--text-body);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.ja-tone-picker__option:hover {
+  background: var(--neutral-50);
+  border-color: var(--border-strong);
+}
+.ja-tone-picker__option:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.ja-tone-picker__option.is-selected {
+  border-color: var(--border-focus);
+  background: var(--blue-50);
+  color: var(--text-strong);
+}
+.ja-tone-picker__swatch {
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+}

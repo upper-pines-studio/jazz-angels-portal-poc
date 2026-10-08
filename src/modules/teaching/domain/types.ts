@@ -12,13 +12,22 @@ import type { Archivable, ProgramId } from '../../../core';
 /** Which brand hue identifies an ensemble on the week grid. */
 export type EnsembleTone = 'blue' | 'teal' | 'olive' | 'gold' | 'neutral';
 
+/** Every tone, in the order the ensemble dialog offers them. */
+export const ENSEMBLE_TONES: readonly EnsembleTone[] = ['blue', 'teal', 'olive', 'gold', 'neutral'];
+
 /** What a teacher can record for one student at one meeting. */
 export type Mark = 'present' | 'late' | 'absent';
 
 export type StudentStatus = 'enrolled' | 'waitlist' | 'alumni';
 
-/** A session: the eight weeks the office plans and reports on. */
-export interface Term {
+/**
+ * A session: the eight weeks or so the office plans and reports on. The
+ * screens call it a session ("Fall 2026 session"); the code calls it a term.
+ * Archived (decision 0002) when it was entered by mistake or is no longer
+ * wanted: it leaves the Schedule's session list and stops being the current
+ * session; its classes and roll calls are not touched.
+ */
+export interface Term extends Archivable {
   id: string;
   /** "Fall 2026 session". */
   name: string;
@@ -29,6 +38,15 @@ export interface Term {
   /** How many times each ensemble is scheduled to meet. */
   meetingsPlanned: number;
 }
+
+/** What a new session needs: its name, its dates and how many classes each ensemble meets for. */
+export type TermInput = Pick<Term, 'name' | 'start' | 'end' | 'meetingsPlanned'>;
+
+/** What a new ensemble needs. */
+export type EnsembleInput = Pick<
+  Ensemble,
+  'name' | 'programId' | 'leadStaffId' | 'venueId' | 'room' | 'tone'
+>;
 
 /**
  * A standing group: the same students, the same place, the same hour each week.
@@ -147,4 +165,22 @@ export interface TeachingActions {
    */
   archiveEnsemble(id: string): void;
   restoreEnsemble(id: string): void;
+  /** Add a session. Returns the new id. */
+  addTerm(input: TermInput): string;
+  /** Change a session's name, dates or classes planned. */
+  updateTerm(id: string, patch: Partial<TermInput>): void;
+  /**
+   * Archive a session: it leaves the session list and is no longer the
+   * current session. Its classes, roll calls and attendance stay.
+   */
+  archiveTerm(id: string): void;
+  restoreTerm(id: string): void;
+  /** Add an ensemble. Returns the new id. */
+  addEnsemble(input: EnsembleInput): string;
+  /**
+   * Change an ensemble. A new venue or room moves its classes from today on
+   * that still met at the old place and have no roll in; past classes keep
+   * the place they met.
+   */
+  updateEnsemble(id: string, patch: Partial<EnsembleInput>): void;
 }
