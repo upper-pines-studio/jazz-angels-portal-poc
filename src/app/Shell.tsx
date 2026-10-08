@@ -276,9 +276,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
               }
             />
           </div>
-          <main className="ja-main">
-            <div className="ja-page">{children}</div>
-          </main>
+          {/* The visible area a dialog anchors to; main scrolls inside it. */}
+          <div className="ja-viewport">
+            <main className="ja-main">
+              <div className="ja-page">{children}</div>
+            </main>
+          </div>
         </div>
       </div>
     </HeaderCtx.Provider>
