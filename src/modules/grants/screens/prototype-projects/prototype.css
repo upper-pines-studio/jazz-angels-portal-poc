@@ -1,0 +1,220 @@
+/* PROTOTYPE — throwaway styles for /prototype/projects. */
+
+.pp-note {
+  margin-bottom: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-left: var(--rule-accent-width) solid var(--gold-400);
+  background: var(--surface-accent-soft);
+  font: var(--type-body-sm);
+  color: var(--text-body);
+}
+
+.pp-muted {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+}
+.pp-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.pp-warn {
+  color: var(--danger-600);
+  font: var(--type-body-sm);
+}
+.pp-label {
+  font: var(--type-eyebrow);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+.pp-big {
+  font: var(--type-h3);
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A stacked bar: one segment per grant or project, hatched when only hoped for. */
+.pp-stack {
+  display: flex;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--neutral-100);
+}
+.pp-stack > span {
+  height: 100%;
+}
+.pp-stack > span + span {
+  box-shadow: inset 2px 0 0 var(--surface-card);
+}
+.pp-hoped {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 4px,
+    rgba(255, 255, 255, 0.55) 4px 8px
+  );
+}
+.pp-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: var(--space-2);
+  vertical-align: baseline;
+}
+
+/* --- A: project sheet --- */
+.pp-a {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.pp-a__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.pp-a__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.pp-a__item[aria-current='true'] {
+  border-color: var(--border-brand);
+  box-shadow: var(--shadow-ring-brand);
+}
+.pp-a__figs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+.pp-a__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px 160px 32px;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+
+/* --- B: grid --- */
+.pp-grid {
+  width: 100%;
+  border-collapse: collapse;
+}
+.pp-grid th,
+.pp-grid td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  vertical-align: middle;
+}
+.pp-grid thead th {
+  text-align: right;
+  font: var(--type-label);
+  color: var(--text-strong);
+  vertical-align: bottom;
+}
+.pp-grid thead th:first-child {
+  text-align: left;
+}
+.pp-grid tfoot td {
+  font-weight: var(--weight-semibold);
+  border-bottom: 0;
+  border-top: var(--border-width-thick) solid var(--border-default);
+}
+.pp-grid input {
+  width: 96px;
+  height: var(--control-h-sm);
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  background: var(--surface-card);
+}
+.pp-grid input:placeholder-shown {
+  background: var(--surface-sunken);
+  border-color: var(--border-subtle);
+}
+.pp-grid input[aria-invalid='true'] {
+  border-color: var(--danger-500);
+  background: var(--danger-50);
+}
+.pp-grid .pp-col-total {
+  background: var(--surface-sunken);
+}
+.pp-over {
+  color: var(--danger-600);
+}
+
+/* --- C: grant pots --- */
+.pp-c__strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+.pp-c__need {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-subtle);
+}
+.pp-c__pots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.pp-c__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.pp-c__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  font: var(--type-body-sm);
+}
+.pp-c__chip button {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font: inherit;
+}
+.pp-c__give {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-3);
+}
+
+.pp-state {
+  margin-top: var(--space-8);
+  font: var(--type-body-sm);
+  color: var(--text-muted);
+}
+.pp-state pre {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  white-space: pre-wrap;
+}
+.pp-grid tbody td:first-child {
+  min-width: 260px;
+}

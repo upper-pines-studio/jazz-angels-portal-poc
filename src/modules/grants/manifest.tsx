@@ -27,6 +27,7 @@ import Transactions from './screens/money/Transactions';
 import BudgetVsActual from './screens/money/BudgetVsActual';
 import SpendDown from './screens/money/SpendDown';
 import { MoneyPanel } from './screens/money/MoneyPanel';
+import ProjectsPrototype from './screens/prototype-projects/ProjectsPrototype';
 import { QuickBooksCard } from './screens/settings/QuickBooksCard';
 import { RemindersCard } from './screens/settings/RemindersCard';
 
@@ -191,6 +192,10 @@ export const manifest: ModuleManifest = {
           badge: state => transactionCounts(state)['to-assign'],
         },
         { path: '/budget', label: 'Budget vs. actual', icon: 'chart-bar-big' },
+        // PROTOTYPE — dev only, throwaway.
+        ...(import.meta.env.DEV
+          ? [{ path: '/prototype/projects', label: 'Projects (prototype)', icon: 'folder-kanban' }]
+          : []),
         {
           path: '/spend-down',
           label: 'Spend-down',
@@ -213,6 +218,9 @@ export const manifest: ModuleManifest = {
     { path: '/transactions', element: <Transactions />, requires: { subject: 'transactions' } },
     { path: '/budget', element: <BudgetVsActual />, requires: AWARD },
     { path: '/spend-down', element: <SpendDown />, requires: AWARD },
+    ...(import.meta.env.DEV
+      ? [{ path: '/prototype/projects', element: <ProjectsPrototype />, requires: AWARD }]
+      : []),
   ],
   dashboard: {
     stats,
