@@ -2,7 +2,7 @@ import type { ActionRule, AnyAction, ModuleSlice, SliceContext } from '../../../
 import { archiveFields, normaliseArchived, restoreFields } from '../../../core/archive';
 import { can } from '../../../core/permissions';
 import { makeCoreSeed } from '../../../core/seed';
-import { acceptableSuggestions, backupCarry, splitByPercent } from './money';
+import { acceptableSuggestions, backupCarry, isReportOpen, splitByPercent } from './money';
 import { inFlightRefusal } from './inflight';
 import { availableTransitions, isPostAward, phaseLabel } from './phases';
 import { makeEmpty, makeSeed } from './seed';
@@ -1097,6 +1097,10 @@ export const LINE_IN_USE_REFUSAL =
 export const PAYMENT_RECEIVED_REFUSAL =
   'A payment that has arrived stays on the record. Clear its received date first if it was entered by mistake.';
 
+/** Why a report that has been sent is not deleted. */
+export const REPORT_SENT_REFUSAL =
+  'A report that has been sent stays on the record. Set its status back first if it was marked by mistake.';
+
 /**
  * What each action needs. The rows are the table's: "Grants: pipeline,
  * checklist, deadlines" (`grants`), "Award, budget, reports" (`award`),
@@ -1183,7 +1187,13 @@ const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
 
   addReport: 'award',
   updateReport: 'award',
-  deleteReport: 'award',
+  // A report sent to the funder is history (decision 0002), like a payment that
+  // has arrived: it is not removed. One marked sent by mistake has its status set back first.
+  deleteReport: (user, state, id) => {
+    if (!can(user.role, 'award', 'edit')) return false;
+    const report = state.grants.reports.find(r => r.id === id);
+    return report && !isReportOpen(report) ? REPORT_SENT_REFUSAL : true;
+  },
   markReportSubmitted: 'award',
 
   addNote: 'grants',

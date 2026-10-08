@@ -171,7 +171,7 @@ manages both on the Partners screen (`src/app/screens/partners/`).
 | `updateVenue(id, patch)` | Patches a venue. Ensembles point at it by id, so a rename shows everywhere. |
 | `updateSettings(patch)` | Patches the settings: the fiscal year, the module switches. |
 | `setModuleEnabled(id, on)` | Turns a module on or off. Its data stays. |
-| `archiveStaff(id)` / `restoreStaff(id)` | Archives a person (they cannot sign in and leave the staff list and pickers; their work still names them) or restores them. Same rule as editing them (`mayChangeStaff`); nobody archives themself. |
+| `archiveStaff(id)` / `restoreStaff(id)` | Archives a person (they cannot sign in and leave the staff list and pickers; their work still names them) or restores them. Same rule as editing them (`mayChangeStaff`); nobody archives themself ("You can't archive yourself. Ask someone else who manages staff."). |
 | `archiveOrganization(id)` / `restoreOrganization(id)` | Archives a partner or restores it. Its venues are not touched. Needs Partners: Edit. |
 | `archiveVenue(id)` / `restoreVenue(id)` | Archives a venue or restores it. Classes that met there keep it. Needs Partners: Edit. |
 | `resetDemo()` | Reseeds every slice, one apply per slice. Demo only: with the demo off it changes nothing and says so. |
