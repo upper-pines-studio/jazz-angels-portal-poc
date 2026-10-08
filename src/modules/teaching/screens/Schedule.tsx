@@ -761,7 +761,7 @@ function EnsemblesCard({
         />
       ) : (
         <>
-          <TableScroll minWidth={880}>
+          <TableScroll minWidth={1040}>
             <DataTable
               rows={rows}
               onRowClick={(r: Row) => {
@@ -775,6 +775,8 @@ function EnsemblesCard({
                   label: 'Ensemble',
                   width: '1.4fr',
                   strong: true,
+                  // A long name, time or place wraps rather than being cut off.
+                  wrap: true,
                   render: (r: Row) => (
                     <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                       <span
@@ -793,7 +795,8 @@ function EnsemblesCard({
                 {
                   key: 'program',
                   label: 'Program',
-                  width: '1fr',
+                  width: '0.9fr',
+                  wrap: true,
                   // The short name fits the column; the full one is a hover away.
                   render: (r: Row) => (
                     <span
@@ -808,7 +811,8 @@ function EnsemblesCard({
                 {
                   key: 'when',
                   label: 'When',
-                  width: '1.8fr',
+                  width: '2fr',
+                  wrap: true,
                   render: (r: Row) =>
                     r.usual ? (
                       `${format(toDate(r.usual.date), 'EEEE')} · ${timeRange(r.usual)}`
@@ -820,6 +824,7 @@ function EnsemblesCard({
                   key: 'where',
                   label: 'Where',
                   width: '1.3fr',
+                  wrap: true,
                   render: (r: Row) => placeLabel(state, r.ensemble.venueId, r.ensemble.room),
                 },
                 {
