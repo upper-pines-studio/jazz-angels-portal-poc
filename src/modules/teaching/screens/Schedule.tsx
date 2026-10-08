@@ -808,7 +808,7 @@ function EnsemblesCard({
                 {
                   key: 'when',
                   label: 'When',
-                  width: '1.4fr',
+                  width: '1.8fr',
                   render: (r: Row) =>
                     r.usual ? (
                       `${format(toDate(r.usual.date), 'EEEE')} · ${timeRange(r.usual)}`
