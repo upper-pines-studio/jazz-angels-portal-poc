@@ -13,6 +13,15 @@ export const TONE_COLOR: Record<EnsembleTone, string> = {
   neutral: 'var(--neutral-400)',
 };
 
+/** The tone's name, as the ensemble dialog offers it. */
+export const TONE_LABEL: Record<EnsembleTone, string> = {
+  blue: 'Blue',
+  teal: 'Teal',
+  olive: 'Olive',
+  gold: 'Gold',
+  neutral: 'Grey',
+};
+
 const MARK_TONE: Record<Mark, 'teal' | 'gold' | 'danger'> = {
   present: 'teal',
   late: 'gold',

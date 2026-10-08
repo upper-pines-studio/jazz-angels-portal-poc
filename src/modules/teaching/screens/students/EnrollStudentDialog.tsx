@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
 import { useToast } from '../../../../app/ToastHost';
-import { activeOnly, placeLabel, useStore } from '../../../../core';
+import { activeOnly, placeLabel, programOptions, useStore } from '../../../../core';
 import type { ProgramId } from '../../../../core';
 import { ensembleById } from '../../domain';
 
@@ -31,8 +31,11 @@ export default function EnrollStudentDialog({
   const [instrument, setInstrument] = React.useState('');
   const [guardianName, setGuardianName] = React.useState('');
   const [guardianPhone, setGuardianPhone] = React.useState('');
+  // A new student is offered the current programs only; an archived program's
+  // tab still opens this, and it starts on the first current one instead.
+  const programs = programOptions(state);
   const [programId, setProgramId] = React.useState<ProgramId>(
-    defaultProgramId ?? state.core.programs[0]?.id ?? 'studio-sessions',
+    programs.find(p => p.id === defaultProgramId)?.id ?? programs[0]?.id ?? '',
   );
   const [ensembleId, setEnsembleId] = React.useState(defaultEnsembleId ?? WAITLIST);
   const [showErrors, setShowErrors] = React.useState(false);
@@ -132,7 +135,7 @@ export default function EnrollStudentDialog({
           <Select
             value={programId}
             onChange={e => setProgramId(e.target.value as ProgramId)}
-            options={state.core.programs.map(p => ({ value: p.id, label: p.name }))}
+            options={programs.map(p => ({ value: p.id, label: p.name }))}
             style={{ width: '100%' }}
           />
         </Field>

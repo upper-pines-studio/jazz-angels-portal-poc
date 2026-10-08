@@ -21,7 +21,7 @@ actions.teaching.setMark(meetingId, studentId, 'present');
 
 | Noun | What it is |
 | --- | --- |
-| `Term` | A session: eight weeks the office plans and reports on. |
+| `Term` | A session (the screens' word): eight weeks or so the office plans and reports on, with `meetingsPlanned`, how many times each ensemble meets ("week 1 of 8"). Archived when entered by mistake or no longer wanted: it leaves the session list and is no longer the current session (`termForDate`); its classes and roll calls stay. |
 | `Ensemble` | A standing group: same students, same place, same hour each week. `venueId` is a core `Venue`; `room` is the space inside it. Archived when it stops meeting: its classes on and after `archivedAt` leave the schedule (`isScheduled`); the ones before stay, roll calls and all. |
 | `ClassMeeting` | One class on one date. `rollSubmittedAt` set means roll is closed. |
 | `Student` | On a roster, on the waitlist, or an alum. `ensembleId` is unset while waiting. |
@@ -51,8 +51,19 @@ up** — that is the one rule every rate in here follows.
 | `importStudents(inputs)` | Adds many students in one change, as the CSV import does. Returns how many. |
 | `archiveStudent(id)` / `restoreStudent(id)` | Archives a student (off the roster, the roll call and the counts; status untouched) or restores them. Needs Students: Edit. |
 | `archiveEnsemble(id)` / `restoreEnsemble(id)` | Archives an ensemble from today (its classes from then on leave the schedule; its students stay placed) or restores it. Needs Schedule: Edit. |
+| `addTerm(input)` / `updateTerm(id, patch)` | Adds a session (name, start, end, `meetingsPlanned`) or changes one. Returns the new id. Needs Schedule: Edit, and is refused with what is wrong (`termRefusal`): no name, no dates, an end on or before the start, fewer than one class. |
+| `archiveTerm(id)` / `restoreTerm(id)` | Archives a session or restores it. Needs Schedule: Edit. |
+| `addEnsemble(input)` / `updateEnsemble(id, patch)` | Adds an ensemble (name, program, lead, venue, room, tone) or changes one. Needs Schedule: Edit, and is refused with what is wrong (`ensembleRefusal`): no name or one a current ensemble has, or a program, lead or venue that does not exist. A new venue or room moves its classes from today on that met at the old place and have no roll in, in the same change; past ones keep theirs. |
 
 ## Derived data
+
+`termForDate` (the current or next session), `sessionWeekLabel` and `recentAttendance`'s last
+finished term leave out archived sessions; `termsList` lists them earliest first, archived ones
+only with `includeArchived`. For the session and ensemble dialogs: `termProblems` and
+`ensembleProblems` (what is wrong, field by field, in the words the dialog shows),
+`weeksBetween` (the classes a new session plans until typed), `leadOptions` (the current staff
+who teach, plus the lead already chosen) and `nextTone` (the first colour no current ensemble
+uses).
 
 `meetingsForWeek`, `todaysMeetings`, `nextMeeting` and `unsubmittedRollCalls` leave out an
 archived ensemble's classes from its archive date (`isScheduled`); `rosterForEnsemble`,
@@ -97,7 +108,7 @@ evidence a grant report can quote.
 
 | Route | Screen |
 | --- | --- |
-| `/schedule` | Week grid (Sun–Thu) and the term view. `?view=term` opens the second tab. |
+| `/schedule` | Week grid (Sun–Thu) and the term view. `?view=term` opens the second tab: the current session, the Sessions list and the Ensembles list, with Add session and Add ensemble (`screens/schedule/TermDialog.tsx`, `EnsembleDialog.tsx`) next to Add class. |
 | `/roll/:meetingId` | Roll call: roster, marks, notes, trend. Read-only once submitted. |
 | `/students` | Roster by program plus the waitlist, with the selected student beside it. |
 

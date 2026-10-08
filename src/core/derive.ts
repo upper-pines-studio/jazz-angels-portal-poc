@@ -1,5 +1,5 @@
 import { addDays, addYears } from 'date-fns';
-import { withArchived } from './archive';
+import { pickable, withArchived } from './archive';
 import { toDate, toISO } from './format';
 import type {
   Address,
@@ -42,9 +42,49 @@ export function programById(state: PortalState, id: string): Program | undefined
   return state.core.programs.find(p => p.id === id);
 }
 
-/** The program's full name, falling back to its id so a row is never blank. */
+/**
+ * The program's full name, falling back to its id so a row is never blank.
+ * An archived program still reads by its name on the records that name it.
+ */
 export function programName(state: PortalState, id: string): string {
   return programById(state, id)?.name ?? id;
+}
+
+/**
+ * The programs a picker offers: the current ones, plus `keepId` when the
+ * record being edited already names one that has since been archived.
+ */
+export function programOptions(state: PortalState, keepId?: string): Program[] {
+  return pickable(state.core.programs, keepId);
+}
+
+/**
+ * The programs as Settings lists them: the current ones, then, with
+ * `includeArchived`, the archived ones after them.
+ */
+export function programsList(state: PortalState, includeArchived = false): Program[] {
+  return withArchived(state.core.programs, includeArchived);
+}
+
+/** A program's name and short name, tidied: trimmed, the short name falling back to the name. */
+export function programFields(input: Partial<Pick<Program, 'name' | 'short'>>) {
+  const name = input.name?.trim() ?? '';
+  return { name, short: input.short?.trim() || name };
+}
+
+/** Why a program cannot be saved with this name, or undefined when it can. */
+export function programProblem(
+  programs: readonly Program[],
+  input: Partial<Pick<Program, 'name' | 'short'>>,
+  id?: string,
+): string | undefined {
+  const { name } = programFields(input);
+  if (!name) return 'Give the program a name.';
+  const taken = programs.find(
+    p => p.id !== id && p.name.trim().toLowerCase() === name.toLowerCase(),
+  );
+  if (taken) return `There is already a program called ${taken.name}.`;
+  return undefined;
 }
 
 export function organizationById(

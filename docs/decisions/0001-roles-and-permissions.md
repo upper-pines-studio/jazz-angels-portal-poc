@@ -33,6 +33,7 @@ director's role and gets a teacher's view of their own classes on top.
 | Timesheets: approve | Yes | Yes | Yes | Yes | – | – | – |
 | Partners and venues | Edit | Edit | Edit | View | View | View | View |
 | Staff and roles | Yes | Yes | – | – | – | – | – |
+| Programs: add, rename, archive | Yes | Yes | – | – | – | – | – |
 | Modules, import, export | Yes | – | – | – | – | – | – |
 | QuickBooks: connect | Yes | – | – | – | – | – | – |
 | QuickBooks: sync | Yes | Yes | Yes | Yes | – | – | – |
@@ -66,6 +67,10 @@ director's role and gets a teacher's view of their own classes on top.
   as a Teacher"). The screens leave out what the store would refuse. The database enforces the
   same table with row-level security (#22); the screens only hide what the database would
   refuse anyway.
+- The Programs row was added with #44, when programs became editable in Settings: proposed as
+  Admin and Director, the same people as "Staff and roles", since programs are the office's own
+  configuration and a grant or a report is filed under them. Not final until the client reviews
+  it; the open question is whether the Office manager should have it too.
 - Beyond the table, only an Admin makes someone an Admin or changes an Admin's record, so the
   "Staff and roles" row cannot hand out "Modules, import, export" (`mayChangeStaff`).
 - "Own classes" means the ensembles the teacher is assigned to teach: `Ensemble.leadStaffId`

@@ -6,7 +6,7 @@ import type { Archivable } from '../../core';
 
 /**
  * The archive controls every list and record page shares (decision 0002), so
- * the seven record types look and read the same way:
+ * the nine record types look and read the same way:
  *
  * - `ShowArchivedSwitch`: the quiet "Show archived" switch at the right of a
  *   list's filter bar or card header, off by default, shown once there is

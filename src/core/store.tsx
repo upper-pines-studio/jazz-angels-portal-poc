@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { archiveFields, isArchived, normaliseArchived, restoreFields } from './archive';
 import { DEMO_TODAY_KEY, demoTodayFrom, demoTodayToStore, isDemo } from './demo';
+import { programFields, programProblem } from './derive';
 import { toISO } from './format';
 import type { ActionRules, AnyAction, ModuleSlice } from './module';
 import { can, mayChangeStaff } from './permissions';
@@ -19,6 +20,7 @@ import type {
   CoreState,
   Organization,
   PortalActions,
+  Program,
   PortalState,
   Role,
   SignedInUser,
@@ -47,6 +49,8 @@ export function newId(prefix: string): string {
 type CoreAction =
   | { type: 'core/add-staff'; member: StaffMember }
   | { type: 'core/update-staff'; id: string; patch: Partial<StaffMember> }
+  | { type: 'core/add-program'; program: Program }
+  | { type: 'core/update-program'; id: string; patch: Partial<Program> }
   | { type: 'core/add-organization'; organization: Organization }
   | { type: 'core/update-organization'; id: string; patch: Partial<Organization> }
   | { type: 'core/add-venue'; venue: Venue }
@@ -64,6 +68,11 @@ function coreReducer(state: CoreState, raw: AnyAction): CoreState {
       return { ...state, staff: [...state.staff, action.member] };
     case 'core/update-staff':
       return { ...state, staff: withId(state.staff, action.id, action.patch) };
+    case 'core/add-program':
+      if (state.programs.some(p => p.id === action.program.id)) return state;
+      return { ...state, programs: [...state.programs, action.program] };
+    case 'core/update-program':
+      return { ...state, programs: withId(state.programs, action.id, action.patch) };
     case 'core/add-organization':
       return { ...state, organizations: [...state.organizations, action.organization] };
     case 'core/update-organization':
@@ -105,6 +114,21 @@ function normaliseStaff(raw: Partial<StaffMember>, seeded: StaffMember[]): Staff
   });
 }
 
+/**
+ * A program as saved, brought up to date. Its id is kept as it was, whatever
+ * it is: the seeded ones and the generated ones are all just strings now. A
+ * missing short name takes the full one.
+ */
+function normaliseProgram(raw: Partial<Program>): Program {
+  const name = String(raw.name ?? raw.id ?? '');
+  return normaliseArchived({
+    ...raw,
+    id: String(raw.id ?? ''),
+    name,
+    short: typeof raw.short === 'string' && raw.short.trim() ? raw.short : name,
+  });
+}
+
 /** Why a person may not archive this record, or true when they may. */
 function mayArchiveStaff(user: SignedInUser, state: PortalState, id: string): boolean | string {
   if (id === user.id) return "You can't archive yourself. Ask someone else who manages staff.";
@@ -123,6 +147,9 @@ export function describeCoreChange(action: AnyAction): string | undefined {
     case 'core/add-organization':
     case 'core/update-organization':
       return 'the partner';
+    case 'core/add-program':
+    case 'core/update-program':
+      return 'the program';
     case 'core/add-venue':
     case 'core/update-venue':
       return 'the venue';
@@ -154,6 +181,23 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       },
       updateStaff(id, patch) {
         dispatch({ type: 'core/update-staff', id, patch });
+      },
+      addProgram(input) {
+        const id = newId('p');
+        dispatch({ type: 'core/add-program', program: { ...programFields(input), id } });
+        return id;
+      },
+      updateProgram(id, patch) {
+        const current = getState().core.programs.find(p => p.id === id);
+        if (!current) return;
+        const fields = programFields({ ...current, ...patch });
+        dispatch({ type: 'core/update-program', id, patch: fields });
+      },
+      archiveProgram(id) {
+        dispatch({ type: 'core/update-program', id, patch: archived() });
+      },
+      restoreProgram(id) {
+        dispatch({ type: 'core/update-program', id, patch: restoreFields() });
       },
       addOrganization(input) {
         const id = newId('org');
@@ -213,6 +257,18 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       const role = state.core.staff.find(s => s.id === id)?.role;
       return mayChangeStaff(user.role, role, role);
     },
+    // Programs are the office's own configuration, so they go with "Staff and
+    // roles": Admin and Director (decision 0001, "Programs" row, proposed in #44).
+    addProgram: (user, state, input) =>
+      can(user.role, 'programs', 'edit') && (programProblem(state.core.programs, input) ?? true),
+    updateProgram: (user, state, id, patch) => {
+      if (!can(user.role, 'programs', 'edit')) return false;
+      const current = state.core.programs.find(p => p.id === id);
+      if (!current) return true;
+      return programProblem(state.core.programs, { ...current, ...patch }, id) ?? true;
+    },
+    archiveProgram: 'programs',
+    restoreProgram: 'programs',
     addOrganization: 'partners',
     updateOrganization: 'partners',
     archiveOrganization: 'partners',
@@ -246,7 +302,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     // teaching module's venue ids still resolve.
     return {
       staff,
-      programs: c.programs.map(p => ({ ...p, short: p.short ?? p.name })),
+      programs: c.programs.map(normaliseProgram),
       organizations: Array.isArray(c.organizations)
         ? c.organizations.map(normaliseArchived)
         : demo

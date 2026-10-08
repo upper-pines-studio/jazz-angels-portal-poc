@@ -24,6 +24,7 @@ export type Subject =
   | 'timesheets-approve'
   | 'partners'
   | 'staff'
+  | 'programs'
   | 'modules'
   | 'quickbooks-connect'
   | 'quickbooks-sync';
@@ -53,6 +54,7 @@ export const PERMISSION_TABLE: ReadonlyArray<readonly [Subject, string, Row]> = 
   ['timesheets-approve', 'Timesheets: approve',                    ['Yes',  'Yes',   'Yes',   'Yes',   '–',           '–',     '–']],
   ['partners',           'Partners and venues',                    ['Edit', 'Edit',  'Edit',  'View',  'View',        'View',  'View']],
   ['staff',              'Staff and roles',                        ['Yes',  'Yes',   '–',     '–',     '–',           '–',     '–']],
+  ['programs',           'Programs: add, rename, archive',         ['Yes',  'Yes',   '–',     '–',     '–',           '–',     '–']],
   ['modules',            'Modules, import, export',                ['Yes',  '–',     '–',     '–',     '–',           '–',     '–']],
   ['quickbooks-connect', 'QuickBooks: connect',                    ['Yes',  '–',     '–',     '–',     '–',           '–',     '–']],
   ['quickbooks-sync',    'QuickBooks: sync',                       ['Yes',  'Yes',   'Yes',   'Yes',   '–',           '–',     '–']],

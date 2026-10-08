@@ -16,6 +16,7 @@ import {
   money,
   pickable,
   programName,
+  programOptions,
   staffById,
   useCan,
   useStore,
@@ -386,7 +387,10 @@ function DetailsDialog({ grant, onClose }: { grant: Grant; onClose: () => void }
             <Select
               value={program}
               onChange={e => setProgram(e.target.value as ProgramId)}
-              options={state.core.programs.map(p => ({ value: p.id, label: p.name }))}
+              options={programOptions(state, grant.program).map(p => ({
+                value: p.id,
+                label: p.name,
+              }))}
             />
           </Field>
           <Field label="Restriction">
