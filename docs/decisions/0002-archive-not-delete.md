@@ -38,7 +38,8 @@ Done (#20) in the browser build. The database carries the same fields and the sa
 - Small parts of a record that are mistakes rather than history, such as a mistyped checklist
   task or a budget line added in error before anything was charged to it, may still be removed.
   Anything with money or attendance against it is archived instead. The store refuses removing
-  a budget line that still has expenses on it (they move first) and a payment that has arrived.
+  a budget line that still has expenses on it (they move first), a payment that has arrived and
+  a report that has been sent to the funder.
 - Nothing cascades: archiving a funder leaves its grants as they are, and the grant page says
   the funder is archived; archiving a partner leaves its venues, and a class its students.
 - The database has no cascading deletes on these records.

@@ -113,8 +113,15 @@ describe('archiving and restoring a person', () => {
   it('refuses archiving yourself', () => {
     const h = core(GWEN);
     h.actions.archiveStaff('s-gwen');
-    expect(h.refused).toEqual(["You can't archive yourself. Ask another admin."]);
+    expect(h.refused).toEqual(["You can't archive yourself. Ask someone else who manages staff."]);
     expect(isArchived(h.state().core.staff.find(s => s.id === 's-gwen'))).toBe(false);
+  });
+
+  it('refuses a Director archiving themself with the same words', () => {
+    const h = core(person('director', 's-barry'));
+    h.actions.archiveStaff('s-barry');
+    expect(h.refused).toEqual(["You can't archive yourself. Ask someone else who manages staff."]);
+    expect(isArchived(h.state().core.staff.find(s => s.id === 's-barry'))).toBe(false);
   });
 
   it('follows the staff rule: a Director archives a teacher, not an Admin', () => {

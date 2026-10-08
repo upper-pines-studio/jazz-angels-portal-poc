@@ -187,7 +187,7 @@ export function ReportsTab({ grant }: { grant: Grant }) {
                 width: '1fr',
                 wrap: true,
                 render: (r: Report) => {
-                  if (mayEdit && deleting === r.id) {
+                  if (mayEdit && deleting === r.id && isReportOpen(r)) {
                     return (
                       <span
                         style={{
@@ -221,7 +221,7 @@ export function ReportsTab({ grant }: { grant: Grant }) {
                 width: '120px',
                 align: 'right',
                 render: (r: Report) =>
-                  mayEdit && deleting === r.id ? (
+                  mayEdit && deleting === r.id && isReportOpen(r) ? (
                     <span
                       style={{
                         display: 'inline-flex',
@@ -272,10 +272,13 @@ export function ReportsTab({ grant }: { grant: Grant }) {
                           >
                             <Icon name="pencil" size={14} />
                           </IconButton>
-                          <DeleteX
-                            label={`Delete the ${label(r).toLowerCase()}`}
-                            onClick={() => setDeleting(r.id)}
-                          />
+                          {/* A report that has been sent is history (decision 0002): it is kept. */}
+                          {isReportOpen(r) && (
+                            <DeleteX
+                              label={`Delete the ${label(r).toLowerCase()}`}
+                              onClick={() => setDeleting(r.id)}
+                            />
+                          )}
                         </span>
                       )}
                     </span>

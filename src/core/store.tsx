@@ -107,7 +107,7 @@ function normaliseStaff(raw: Partial<StaffMember>, seeded: StaffMember[]): Staff
 
 /** Why a person may not archive this record, or true when they may. */
 function mayArchiveStaff(user: SignedInUser, state: PortalState, id: string): boolean | string {
-  if (id === user.id) return "You can't archive yourself. Ask another admin.";
+  if (id === user.id) return "You can't archive yourself. Ask someone else who manages staff.";
   const role = state.core.staff.find(s => s.id === id)?.role;
   return mayChangeStaff(user.role, role, role);
 }

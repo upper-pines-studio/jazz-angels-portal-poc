@@ -30,6 +30,7 @@ import { SEED_TODAY, makeSeed } from '../seed';
 import {
   LINE_IN_USE_REFUSAL,
   PAYMENT_RECEIVED_REFUSAL,
+  REPORT_SENT_REFUSAL,
   describeChange,
   grantsSlice,
 } from '../slice';
@@ -204,6 +205,42 @@ describe('what may still be removed (decision 0002)', () => {
     expect(h.grants().payments.some(p => p.id === received.id)).toBe(true);
     h.actions.deletePayment(expected.id);
     expect(h.grants().payments.some(p => p.id === expected.id)).toBe(false);
+  });
+
+  it('keeps a report that has been sent, and removes one not sent yet', () => {
+    const h = harness();
+    const accepted = h.grants().reports.find(r => r.status === 'accepted')!;
+    const [submitted, open] = h.grants().reports.filter(r => r.status === 'upcoming');
+    h.actions.markReportSubmitted(submitted.id, TODAY);
+    h.actions.deleteReport(submitted.id);
+    h.actions.deleteReport(accepted.id);
+    expect(h.refused).toEqual([REPORT_SENT_REFUSAL, REPORT_SENT_REFUSAL]);
+    expect(h.grants().reports.some(r => r.id === submitted.id)).toBe(true);
+    expect(h.grants().reports.some(r => r.id === accepted.id)).toBe(true);
+    h.actions.deleteReport(open.id);
+    expect(h.refused).toHaveLength(2);
+    expect(h.grants().reports.some(r => r.id === open.id)).toBe(false);
+  });
+
+  it('keeps a report with a sent date whatever its status says', () => {
+    const h = harness();
+    const open = h.grants().reports.find(r => r.status === 'upcoming')!;
+    h.actions.updateReport(open.id, { submittedDate: TODAY });
+    h.actions.deleteReport(open.id);
+    expect(h.refused).toEqual([REPORT_SENT_REFUSAL]);
+    expect(h.grants().reports.some(r => r.id === open.id)).toBe(true);
+  });
+
+  it('removes a report marked sent by mistake once its status is set back', () => {
+    const h = harness();
+    const open = h.grants().reports.find(r => r.status === 'upcoming')!;
+    h.actions.markReportSubmitted(open.id, TODAY);
+    h.actions.deleteReport(open.id);
+    expect(h.refused).toEqual([REPORT_SENT_REFUSAL]);
+    h.actions.updateReport(open.id, { status: 'upcoming', submittedDate: undefined });
+    h.actions.deleteReport(open.id);
+    expect(h.refused).toHaveLength(1);
+    expect(h.grants().reports.some(r => r.id === open.id)).toBe(false);
   });
 
   it('keeps a budget line with expenses on it until they move', () => {
