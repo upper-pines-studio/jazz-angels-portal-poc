@@ -140,7 +140,7 @@ carry it. Unset means the seed's day, `SEED_TODAY`; "Use the real date" stores
 | `demo.ts` | `isDemo()` (the `VITE_DEMO` switch), `DEMO_TODAY_KEY` and the demo-date preference helpers. |
 | `roles.ts` | `ROLES`, `ROLE_LABELS` (the words the screens use: Admin, Director, Office manager, Bookkeeper, Teacher, Office assistant, Read-only), `isRole`. |
 | `archive.ts` | Decision 0002 in one place: `Archivable` (`archivedAt`, `archivedById`), `isArchived`, `archivedBy(record, date)` (archived on or before a day), `activeOnly`, `archivedOnly`, `withArchived(rows, include)` (current first, archived after), `pickable(rows, keepId)` (current, plus the one already chosen), `archiveFields(user, today)`, `restoreFields()`, `normaliseArchived` (every slice's `normalise` runs the nine archivable record types through it: the seven of decision 0002, plus sessions and programs). |
-| `permissions.ts` | Decision 0001's table as data (`PERMISSION_TABLE`, same rows and columns as the decision file), `can(role, subject, need, own)` the one check, `cell`, `isOwnOnly`, `meets` / `meetsAny`, `mayChangeStaff` (only an Admin makes or changes an Admin). |
+| `permissions.ts` | Decision 0001's table as data (`PERMISSION_TABLE`, same rows and columns as the decision file), `can(role, subject, need, own)` the one check, `cell`, `isOwnOnly`, `meets` / `meetsAny`, `mayChangeStaff` (only an Admin or a Director, `ADMIN_MAKERS`, makes, changes or archives an Admin), `OWN_ROLE_REFUSAL` (nobody changes their own role). |
 | `repository.ts` | `localRepository`, the `Repository` on localStorage, one key per slice; `FAIL_SAVES_KEY`, the development switch that makes every save fail; export / `readImport` / `freshState`, each given the demo mode (`fresh` picks `seed` or `empty`); `loadPreference` / `savePreference` for a per-browser setting such as the collapsed rail or the demo date. With `auth.ts`, the only file that may touch localStorage (lint-enforced). |
 | `auth.ts` | Sign-in against SHA-256 credential hashes (no plaintext passwords in source); the session key. Exported as `auth`. |
 | `format.ts` | `money`, `dateShort`, `dateLong`, `dateRange`, `relativeDays`, `daysUntil`, `initials`. |
@@ -163,8 +163,8 @@ manages both on the Partners screen (`src/app/screens/partners/`).
 
 | Action | What it does |
 | --- | --- |
-| `addStaff(input)` | Adds a person: name, title, role, teaches. Returns the new id. |
-| `updateStaff(id, patch)` | Patches a person, `role` and `teaches` included. |
+| `addStaff(input)` | Adds a person: name, title, role, teaches. Returns the new id. Needs Staff and roles; adding an Admin needs an Admin or a Director (`mayChangeStaff`). |
+| `updateStaff(id, patch)` | Patches a person, `role` and `teaches` included. Same rule as `addStaff`, and an Admin's record too needs an Admin or a Director; nobody changes their own role (`OWN_ROLE_REFUSAL`, "You can't change your own role. Ask someone else who manages staff."). |
 | `addOrganization(input)` | Adds a partner: a district, a community centre. Returns the new id. |
 | `updateOrganization(id, patch)` | Patches a partner. |
 | `addVenue(input)` | Adds a place classes meet, optionally under an organization. Returns the new id. |

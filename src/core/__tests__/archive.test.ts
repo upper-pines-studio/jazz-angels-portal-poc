@@ -124,13 +124,15 @@ describe('archiving and restoring a person', () => {
     expect(isArchived(h.state().core.staff.find(s => s.id === 's-barry'))).toBe(false);
   });
 
-  it('follows the staff rule: a Director archives a teacher, not an Admin', () => {
+  it('follows the staff rule: a Director archives and restores a teacher and an Admin', () => {
     const h = core(person('director', 's-barry'));
     h.actions.archiveStaff('s-devon');
     expect(isArchived(h.state().core.staff.find(s => s.id === 's-devon'))).toBe(true);
     h.actions.archiveStaff('s-gwen');
+    expect(isArchived(h.state().core.staff.find(s => s.id === 's-gwen'))).toBe(true);
+    h.actions.restoreStaff('s-gwen');
     expect(isArchived(h.state().core.staff.find(s => s.id === 's-gwen'))).toBe(false);
-    expect(h.refused).toHaveLength(1);
+    expect(h.refused).toEqual([]);
   });
 
   it('refuses a role that may not edit staff', () => {

@@ -129,7 +129,11 @@ export default function Settings() {
     const title = person.title.trim() || 'Staff';
     const { role, teaches } = person;
     const message = `${name} · ${ROLE_LABELS[role]}`;
-    if (person.id) {
+    if (person.id === user.id) {
+      // Your own role is not yours to change, so it stays out of the patch.
+      actions.core.updateStaff(person.id, { name, title, teaches });
+      toast({ tone: 'success', title: 'Person updated', message });
+    } else if (person.id) {
       actions.core.updateStaff(person.id, { name, title, role, teaches });
       toast({ tone: 'success', title: 'Person updated', message });
     } else {
@@ -582,9 +586,11 @@ export default function Settings() {
           open
           title={person.id ? 'Edit person' : 'Add person'}
           description={
-            person.id
-              ? 'Change the name, the title, the role or whether they teach.'
-              : 'Someone who works here.'
+            person.id === user.id
+              ? 'Change your name, your title or whether you teach.'
+              : person.id
+                ? 'Change the name, the title, the role or whether they teach.'
+                : 'Someone who works here.'
           }
           onClose={() => setPerson(null)}
           footer={
@@ -616,18 +622,30 @@ export default function Settings() {
                 onChange={e => setPerson({ ...person, title: e.target.value })}
               />
             </Field>
-            <Field label="Role" hint="What they can do in the portal when they sign in.">
-              <Select
-                value={person.role}
-                options={ROLES.filter(r => mayChangeStaff(user.role, person.role, r)).map(r => ({
-                  value: r,
-                  label: ROLE_LABELS[r],
-                }))}
-                onChange={e => {
-                  if (isRole(e.target.value)) setPerson({ ...person, role: e.target.value });
-                }}
-              />
-            </Field>
+            {/* Nobody changes their own role, Admin included (decision 0001). */}
+            {person.id === user.id ? (
+              <Field
+                label="Role"
+                hint="You can't change your own role. Ask someone else who manages staff."
+              >
+                <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-strong)' }}>
+                  {ROLE_LABELS[person.role]}
+                </span>
+              </Field>
+            ) : (
+              <Field label="Role" hint="What they can do in the portal when they sign in.">
+                <Select
+                  value={person.role}
+                  options={ROLES.filter(r => mayChangeStaff(user.role, person.role, r)).map(r => ({
+                    value: r,
+                    label: ROLE_LABELS[r],
+                  }))}
+                  onChange={e => {
+                    if (isRole(e.target.value)) setPerson({ ...person, role: e.target.value });
+                  }}
+                />
+              </Field>
+            )}
             <Field label="Teaches" hint="Teaching artists lead ensembles and log hours.">
               <Switch
                 checked={person.teaches}

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import decision from '../../../docs/decisions/0001-roles-and-permissions.md?raw';
-import { PERMISSION_TABLE, can, cell, isOwnOnly, mayChangeStaff, meetsAny } from '../permissions';
+import {
+  OWN_ROLE_REFUSAL,
+  PERMISSION_TABLE,
+  can,
+  cell,
+  isOwnOnly,
+  mayChangeStaff,
+  meetsAny,
+} from '../permissions';
 import type { Cell, Need, Subject } from '../permissions';
 import { ROLES, ROLE_LABELS } from '../roles';
 import { coreSlice, guardActions, refusalMessage } from '../store';
@@ -126,19 +134,24 @@ describe('the rules the table spells out', () => {
     expect(meetsAny('bookkeeper', { subject: 'grants', need: 'edit' })).toBe(false);
   });
 
-  it('lets only an Admin make an Admin or change one', () => {
+  it('lets an Admin or a Director make an Admin or change one, and nobody else', () => {
     expect(mayChangeStaff('admin', 'teacher', 'admin')).toBe(true);
     expect(mayChangeStaff('director', 'teacher', 'office-manager')).toBe(true);
-    expect(mayChangeStaff('director', 'teacher', 'admin')).toBe(false);
-    expect(mayChangeStaff('director', 'admin', 'admin')).toBe(false);
-    expect(mayChangeStaff('office-manager', 'teacher', 'teacher')).toBe(false);
+    expect(mayChangeStaff('director', 'teacher', 'admin')).toBe(true);
+    expect(mayChangeStaff('director', undefined, 'admin')).toBe(true);
+    expect(mayChangeStaff('director', 'admin', 'admin')).toBe(true);
+    expect(mayChangeStaff('director', 'admin', 'teacher')).toBe(true);
+    for (const role of ROLES.filter(r => r !== 'admin' && r !== 'director')) {
+      expect(mayChangeStaff(role, 'teacher', 'admin'), role).toBe(false);
+      expect(mayChangeStaff(role, 'teacher', 'teacher'), role).toBe(false);
+    }
   });
 });
 
 describe('the store refuses what the role may not do', () => {
-  const user = (role: Role): SignedInUser => ({ id: 's-someone', name: 'Someone', role });
+  const user = (role: Role, id = 's-someone'): SignedInUser => ({ id, name: 'Someone', role });
 
-  function core(role: Role) {
+  function core(role: Role, id?: string) {
     let state = { core: makeCoreSeed() } as unknown as PortalState;
     const refused: string[] = [];
     const getState = () => state;
@@ -148,11 +161,11 @@ describe('the store refuses what the role may not do', () => {
           state = { ...state, core: coreSlice.reducer(state.core, a) };
         },
         getState,
-        { today: '2026-09-13', newId: p => `${p}-1`, user: user(role) },
+        { today: '2026-09-13', newId: p => `${p}-1`, user: user(role, id) },
       ),
       coreSlice.rules,
       getState,
-      user(role),
+      user(role, id),
       m => refused.push(m),
     );
     return { actions, refused, state: () => state };
@@ -173,13 +186,56 @@ describe('the store refuses what the role may not do', () => {
     expect(h.state().core.organizations.some(o => o.name === 'Somewhere')).toBe(true);
   });
 
-  it('keeps a Director from making anyone an Admin', () => {
+  it('lets a Director make another person an Admin, and edit an Admin', () => {
     const h = core('director');
     h.actions.updateStaff('s-devon', { role: 'admin' });
-    expect(h.refused).toHaveLength(1);
+    expect(h.refused).toEqual([]);
+    expect(h.state().core.staff.find(s => s.id === 's-devon')?.role).toBe('admin');
+    h.actions.updateStaff('s-gwen', { title: 'Systems Lead' });
+    expect(h.refused).toEqual([]);
+    expect(h.state().core.staff.find(s => s.id === 's-gwen')?.title).toBe('Systems Lead');
+  });
+
+  it('lets a Director add someone as an Admin', () => {
+    const h = core('director');
+    h.actions.addStaff({ name: 'Dana Whitfield', title: 'Systems', role: 'admin', teaches: false });
+    expect(h.refused).toEqual([]);
+    expect(h.state().core.staff.find(s => s.name === 'Dana Whitfield')?.role).toBe('admin');
+  });
+
+  it('keeps an Office manager from making anyone an Admin', () => {
+    const h = core('office-manager');
+    h.actions.updateStaff('s-devon', { role: 'admin' });
+    h.actions.addStaff({ name: 'Dana Whitfield', title: 'Systems', role: 'admin', teaches: false });
+    expect(h.refused).toEqual([
+      "You can't do that as an Office manager.",
+      "You can't do that as an Office manager.",
+    ]);
     expect(h.state().core.staff.find(s => s.id === 's-devon')?.role).toBe('teacher');
-    h.actions.updateStaff('s-devon', { title: 'Lead Teaching Artist' });
-    expect(h.state().core.staff.find(s => s.id === 's-devon')?.title).toBe('Lead Teaching Artist');
+    expect(h.state().core.staff.some(s => s.name === 'Dana Whitfield')).toBe(false);
+  });
+
+  it('keeps everyone, Admin included, from changing their own role', () => {
+    const people: Array<[Role, string, Role]> = [
+      ['director', 's-barry', 'admin'],
+      ['admin', 's-gwen', 'director'],
+    ];
+    for (const [role, id, next] of people) {
+      const h = core(role, id);
+      h.actions.updateStaff(id, { role: next });
+      expect(h.refused, role).toEqual([OWN_ROLE_REFUSAL]);
+      expect(h.state().core.staff.find(s => s.id === id)?.role, role).toBe(role);
+    }
+    expect(OWN_ROLE_REFUSAL).toBe(
+      "You can't change your own role. Ask someone else who manages staff.",
+    );
+  });
+
+  it('still lets you change the rest of your own record', () => {
+    const h = core('director', 's-barry');
+    h.actions.updateStaff('s-barry', { title: 'Executive Director', role: 'director' });
+    expect(h.refused).toEqual([]);
+    expect(h.state().core.staff.find(s => s.id === 's-barry')?.title).toBe('Executive Director');
   });
 
   it('words the refusal for every role', () => {

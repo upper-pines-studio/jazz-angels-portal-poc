@@ -4,7 +4,7 @@ import { DEMO_TODAY_KEY, demoTodayFrom, demoTodayToStore, isDemo } from './demo'
 import { programFields, programProblem } from './derive';
 import { toISO } from './format';
 import type { ActionRules, AnyAction, ModuleSlice } from './module';
-import { can, mayChangeStaff } from './permissions';
+import { OWN_ROLE_REFUSAL, can, mayChangeStaff } from './permissions';
 import type { Need, Subject } from './permissions';
 import { REPLACE, createLiveStore } from './live';
 import type { Saving } from './live';
@@ -245,12 +245,14 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
   },
   rules: {
     addStaff: (user, _state, input) => mayChangeStaff(user.role, undefined, input.role),
-    updateStaff: (user, state, id, patch) =>
-      mayChangeStaff(
-        user.role,
-        state.core.staff.find(s => s.id === id)?.role,
-        patch.role ?? state.core.staff.find(s => s.id === id)?.role,
-      ),
+    updateStaff: (user, state, id, patch) => {
+      const from = state.core.staff.find(s => s.id === id)?.role;
+      const to = patch.role ?? from;
+      // Nobody changes their own role, Admin included (decision 0001); the
+      // rest of their own record follows the staff rule like anyone's.
+      if (id === user.id && to !== from) return OWN_ROLE_REFUSAL;
+      return mayChangeStaff(user.role, from, to);
+    },
     // Whoever may edit a person may archive them (decision 0002), but not themself.
     archiveStaff: mayArchiveStaff,
     restoreStaff: (user, state, id) => {
