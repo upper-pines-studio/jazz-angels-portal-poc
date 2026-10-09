@@ -43,6 +43,7 @@ src/
     Shell.tsx              rail built from MODULES (sections + items + badge counts)
     screens/Dashboard.tsx  composed from every enabled module's dashboard contributions
     screens/Settings.tsx   core: staff, programs, fiscal year, Modules on/off, export/import/reset
+    screens/programs/      core: Programs list and sheet, ProgramDialog
     screens/partners/      core: Partners list, OrganizationDetail, VenueDetail, shared dialogs
     components/            shared app-level bits (badges, TableScroll)
     responsive.css
@@ -323,14 +324,22 @@ awaiting approval" as `info` when > 0; no panel.
     contact, phone, email, notes) and **Classes here**: the ensembles that meet at this venue
     (program, when, room, lead, students), read from the teaching module's public index and shown
     only while Teaching is on. Edit venue in the top bar.
+- **Programs** `/programs`, `/programs/:id` — Core, Operations in the rail. A list of every
+  program in its own column (name, short name; it keeps to the window and scrolls by itself, and
+  stacks above the sheet under 900px) and the selected program's sheet beside it (name and short
+  name for now). The URL names the selection; `?archived=1` is Show archived. Add program in the
+  top bar, Edit and Archive on the sheet, Restore on an archived program's sheet: Admin and
+  Director only (decision 0001, "Programs"); everyone else reads. With no programs it shows an
+  empty state with Add program. Later parts of the sheet (budget, projects, who pays for it)
+  are sections of the same card.
 - **Settings** `/settings` — Cards: Staff (name, role, "teaches" Switch), Partners and venues (a
-  count and a button to the Partners screen), Programs (name and short name; Add program, Edit,
-  Archive and Restore for Admin and Director, Show archived on the card), Fiscal year,
+  count and a button to the Partners screen), Programs (a count and a button to the Programs page), Fiscal year,
   **Modules** (one row per registered module: label, description, Switch; core cannot be turned
   off; copy: "Turning a module off hides it from the rail and the dashboard. Its data stays."),
   Data (Export JSON, Import, Reset demo data).
 - Rail: **Overview** → Dashboard · then each enabled module's section in registry order
-  (**Grants**: All grants, Deadlines, Funders, Playbook · **Money**: Transactions, Budget vs.
+  (**Grants**: All grants, Deadlines, Funders, Playbook · **Operations**: Programs (core's own,
+  placed right after Grants) · **Money**: Transactions, Budget vs.
   actual, Spend-down · **Teaching**: Schedule, Students ·
   **Office**: Timesheets, Partners, Settings). Sections with the same name merge; "Office" is
   where Timesheets and the core Partners and Settings screens meet. Badge counts come from

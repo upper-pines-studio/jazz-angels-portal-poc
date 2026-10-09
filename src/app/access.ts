@@ -10,6 +10,9 @@ import { MODULES } from '../modules';
  */
 export const CORE_REQUIRES: Array<Pick<ModuleRoute, 'path' | 'requires'>> = [
   { path: '/' },
+  // Anyone signed in may read the programs; changing them is `programs` Edit.
+  { path: '/programs' },
+  { path: '/programs/:id' },
   { path: '/partners', requires: { subject: 'partners' } },
   { path: '/partners/organizations/:id', requires: { subject: 'partners' } },
   { path: '/partners/venues/:id', requires: { subject: 'partners' } },
