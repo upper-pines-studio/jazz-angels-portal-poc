@@ -55,7 +55,7 @@ given". Shares are by grant, not by budget line.
 
 - a share is outside a restricted grant's programs;
 - a project falls outside the grant period;
-- a program's year starts after the grant period ends;
+- a program's year starts after the grant period ends, or ended before it starts;
 - more is given out than the grant has.
 
 Pending grants (LOI, Applying, Submitted) can take shares against the amount requested. Those
@@ -67,6 +67,21 @@ Archive, Restore and Show archived move from Settings › Programs (built in #44
 programs stays as it is: Admin and Director (decision 0001, "Programs"). The list of programs
 and projects scrolls in its own column and stays in view while the sheet beside it scrolls.
 
+**Answered after the build** (October 2026, from the questions in #57 to #60):
+
+- Who sees the Programs page follows "Program budgets and projects": everyone but the Teacher.
+  The Admin, Director, Office manager and Bookkeeper edit budgets, projects and shares.
+- A closed grant's shares keep counting toward their year: they are history.
+- A grant with no period yet: a share to a program defaults to the fiscal year it is given in.
+  Good for now.
+- A share to a program year that ended before the grant period starts is flagged too, the
+  mirror of a year that starts after it ends.
+- Warnings stay red, as in the prototype, though none of them stops anything.
+- The Programs list shows every project; one that does not run in the chosen year is greyed,
+  with the years it does run.
+- A project that crosses two fiscal years counts its whole budget in each, for now. Splitting
+  it between the years, by hand, is wanted later (`docs/ROADMAP.md`).
+
 ## What it means for the build
 
 - **#53 (built):** `Grant.programs` everywhere; Add grant, Grant details and Edit award record
@@ -74,7 +89,7 @@ and projects scrolls in its own column and stays in view while the sheet beside 
   add them up. In the demo, the Port of Long Beach grant is for In-School and Homeschool.
 - **#55 (built, domain only):** program budgets by fiscal year (named "FY27") and `Project`
   in core, with their actions and rules; `GrantShare` with Give, Change and Take back in the
-  grants module (`domain/shares.ts`), the totals and the four warnings; the manifest's
+  grants module (`domain/shares.ts`), the totals and the warnings; the manifest's
   `funding` contribution, through which the Programs page asks what pays for a program's year
   or a project. Saved data loads with none of them; the demo seeds the prototype's. Choices
   made there: a grant's money counts once it reaches LOI (as "If awarded") and goes on counting
