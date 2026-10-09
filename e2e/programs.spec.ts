@@ -63,6 +63,17 @@ test('a role without program rights reads the programs and cannot change them', 
   await expect(main.getByRole('button', { name: 'Archive' })).toHaveCount(0);
 });
 
+test('a project outside the chosen year stays on the list, greyed', async ({ page }) => {
+  await freshStart(page, 'gwen');
+  await page.goto('/programs?fy=FY28');
+  const list = page.getByRole('complementary', { name: 'Programs' });
+  const showcase = list.getByRole('link', { name: /Spring Showcase 2027/ });
+  await expect(showcase).toContainText('Ran in FY27');
+  await expect(showcase).toHaveClass(/ja-programs__item--other-year/);
+  await showcase.click();
+  await expect(page).toHaveURL(/\/programs\/projects\/prj-showcase/);
+});
+
 test('a Teacher does not see the Programs page', async ({ page }) => {
   await freshStart(page, 'devon');
   await page.goto('/programs');
