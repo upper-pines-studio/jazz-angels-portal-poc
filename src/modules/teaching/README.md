@@ -97,6 +97,7 @@ Other modules import `src/modules/teaching/index.ts` and nothing deeper:
 import { attendanceSummary, enrolledCount } from '../teaching';
 
 attendanceSummary(state, { programId: 'in-school', from, to });
+attendanceSummary(state, { programIds: ['in-school', 'homeschool'], from, to }); // a grant naming two
 // { meetings, studentsServed, attendanceRate /* 0–1 */, contactHours }
 enrolledCount(state, 'homeschool');
 ```

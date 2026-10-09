@@ -9,7 +9,7 @@ See `docs/PLATFORM.md` §2.3 for the spec.
 
 ```
 timesheets/
-  index.ts        PUBLIC API: manifest, hoursByProgram, hoursForProgram
+  index.ts        PUBLIC API: manifest, hoursByProgram, hoursForProgram, hoursForPrograms
   manifest.tsx    nav (Office → Timesheets), route, dashboard contribution
   domain/
     types.ts      TimeEntry, TimesheetsState, TimesheetsActions
@@ -78,6 +78,7 @@ dashboard attention row.
 ```ts
 hoursByProgram(state, { from, to }): Array<{ programId; hours }>   // biggest first
 hoursForProgram(state, programId, from, to): number
+hoursForPrograms(state, programIds, from, to): number   // a grant that names several
 ```
 
 Both are inclusive of `from` and `to` and count every entry, whatever its

@@ -43,6 +43,16 @@ describe('attendanceSummary', () => {
     );
   });
 
+  it('adds up several programs at once, as a grant that names two quotes them', () => {
+    const both = attendanceSummary(state, {
+      ...SPRING,
+      programIds: ['in-school', 'studio-sessions'],
+    });
+    expect(both.meetings).toBe(8 + 24);
+    const one = attendanceSummary(state, { ...SPRING, programIds: ['in-school'] });
+    expect(one).toEqual(attendanceSummary(state, { ...SPRING, programId: 'in-school' }));
+  });
+
   it('reports a rate between 85% and 96% and contact hours that follow the clock', () => {
     const summary = attendanceSummary(state, { ...SPRING, programId: 'in-school' });
     expect(summary.attendanceRate).toBeGreaterThanOrEqual(0.85);

@@ -1,5 +1,5 @@
 import { activeOnly, isArchived, withArchived } from '../../../core/archive';
-import { fiscalYear, staffById } from '../../../core/derive';
+import { fiscalYear, programById, programName, staffById } from '../../../core/derive';
 import { daysUntil } from '../../../core/format';
 import type { PortalState, ProgramId } from '../../../core/types';
 import { PHASE_ORDER, POST_AWARD_PHASES, PRE_AWARD_PHASES, isTerminal, phaseIndex } from './phases';
@@ -314,9 +314,33 @@ export function fundersList(state: PortalState, includeArchived = false) {
   return withArchived(state.grants.funders, includeArchived);
 }
 
-/** Every grant whose money is for this program. Part of the module's public API. */
+/** Every grant whose money is for this program, among others if it names several. Part of the module's public API. */
 export function grantsForProgram(state: PortalState, programId: ProgramId): Grant[] {
-  return state.grants.grants.filter(g => g.program === programId);
+  return state.grants.grants.filter(g => g.programs.includes(programId));
+}
+
+/** The seeded id of the program for money that pays for the whole studio. */
+export const GENERAL_OPERATING = 'general-operating';
+
+/** A grant on General operating pays for every program, so its numbers are not narrowed. */
+export function coversWholeStudio(grant: Pick<Grant, 'programs'>): boolean {
+  return grant.programs.includes(GENERAL_OPERATING);
+}
+
+/**
+ * The grant's programs in words: "In-School Program and Homeschool Program",
+ * or with three, "A, B and C". `short` uses the short names a narrow column has room for.
+ */
+export function programNames(
+  state: PortalState,
+  grant: Pick<Grant, 'programs'>,
+  short = false,
+): string {
+  const names = grant.programs.map(id =>
+    short ? (programById(state, id)?.short ?? programName(state, id)) : programName(state, id),
+  );
+  if (names.length < 2) return names[0] ?? '—';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 /**

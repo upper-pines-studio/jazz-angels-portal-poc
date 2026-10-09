@@ -49,7 +49,7 @@ function input(phase: InFlightPhase, overrides: Partial<NewGrantInput> = {}): Ne
   return {
     funderId: 'f-herb-alpert',
     title: 'Music in the Parks 2026',
-    program: 'in-school',
+    programs: ['in-school'],
     restriction: 'restricted',
     ownerId: 's-keisha',
     phase,

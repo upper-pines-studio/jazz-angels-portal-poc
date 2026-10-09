@@ -43,6 +43,11 @@ function GrantDetail() {
 - Derive functions take the whole `PortalState`, so they can read
   `state.core.settings` as well as `state.grants.*`.
 
+**A grant's programs.** `Grant.programs` is a list of at least one program id
+(decision 0006). For a restricted grant it is where the money may go; for an
+unrestricted one, what it was applied for. A grant saved before this had one
+`program`; `normalise` (`withPrograms` in `slice.ts`) loads it as a list of one.
+
 **Conventions:** money is always whole dollars as an integer. Dates are always
 ISO `YYYY-MM-DD` strings (`Activity.at` is the one ISO date-time). The DOM's
 `Document` type would clash, so the document-register interface is
@@ -87,7 +92,7 @@ Staff, settings, export, import and reset are core's, not this module's:
 {
   funderId?: string;              // existing funder
   newFunder?: Omit<Funder,'id'>;  // or the "New funder…" branch
-  title; program; restriction; ownerId; loiRequired;
+  title; programs /* one or more */; restriction; ownerId; loiRequired;
   phase?: Phase;                  // default 'prospect'
   amountRequested?: number;
   dates?: GrantDates;
@@ -157,7 +162,7 @@ out. History keeps them: `grantById`, `grantsByFunder`, `funderTotals` ("awarded
 last-year views read. `fundersList(state, includeArchived?)` is the Funders list.
 
 Lookup helpers, because every screen needs them: `grantById`, `funderById`,
-`grantsByFunder`, `grantsForProgram`, `funderTotals`, `grantActivity` (newest
+`grantsByFunder`, `grantsForProgram` (a grant is under each program it names), `programNames(state, grant, short?)` ("A, B and C"), `coversWholeStudio(grant)` (it names General operating), `funderTotals`, `grantActivity` (newest
 first), `activityWho` (the name an activity row credits). `staffById`, `programName` and `fiscalYear` are core's.
 
 `funderShortName(name, tight?)` (`names.ts`) is the one way to shorten a

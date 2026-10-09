@@ -343,8 +343,12 @@ export function durationHours(meeting: ClassMeeting): number {
  * Only submitted roll calls count, because only those are evidence.
  */
 export function attendanceSummary(state: PortalState, window: AttendanceWindow): AttendanceSummary {
-  const inProgram = (m: ClassMeeting) =>
-    !window.programId || ensembleById(state, m.ensembleId)?.programId === window.programId;
+  const wanted = window.programIds ?? (window.programId ? [window.programId] : undefined);
+  const inProgram = (m: ClassMeeting) => {
+    if (!wanted) return true;
+    const programId = ensembleById(state, m.ensembleId)?.programId;
+    return programId !== undefined && wanted.includes(programId);
+  };
 
   const meetings = state.teaching.meetings.filter(
     m => m.rollSubmittedAt && m.date >= window.from && m.date <= window.to && inProgram(m),

@@ -4,7 +4,7 @@ import { usePageHeader } from '../../../app/Shell';
 import { useToast } from '../../../app/ToastHost';
 import { ArchiveButton, ArchiveDialog, ArchivedNotice } from '../../../app/components/archive';
 import { Button, Card, EmptyState, Icon, Tabs } from '../../../design-system';
-import { isArchived, programName, staffById, useCan, useStore } from '../../../core';
+import { isArchived, staffById, useCan, useStore } from '../../../core';
 import {
   availableTransitions,
   funderById,
@@ -12,6 +12,7 @@ import {
   grantFiles,
   isPostAward,
   mayMoveTo,
+  programNames,
 } from '../domain';
 import type { Transition } from '../domain';
 import { PhaseStepper } from './grant/PhaseStepper';
@@ -57,7 +58,7 @@ export default function GrantDetail() {
           title: grant.title,
           subtitle: [
             funder && (isArchived(funder) ? `${funder.name} (archived funder)` : funder.name),
-            programName(state, grant.program),
+            programNames(state, grant),
             owner?.name,
           ]
             .filter(Boolean)

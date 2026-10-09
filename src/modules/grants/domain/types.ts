@@ -74,8 +74,12 @@ export interface Grant extends Archivable {
   funderId: string;
   /** "Arts Education Grant 2026" */
   title: string;
-  /** Which Jazz Angels program the money is for. */
-  program: ProgramId;
+  /**
+   * The Jazz Angels programs the money is for, at least one. For a restricted
+   * grant these are the programs its money may go to; for an unrestricted one,
+   * what it was applied for (decision 0006).
+   */
+  programs: ProgramId[];
   restriction: Restriction;
   /** Staff member responsible. */
   ownerId: string;
@@ -420,7 +424,8 @@ export interface NewGrantInput {
   /** "New funder…" branch of step 1. */
   newFunder?: Omit<Funder, 'id'>;
   title: string;
-  program: ProgramId;
+  /** At least one. */
+  programs: ProgramId[];
   restriction: Restriction;
   ownerId: string;
   /**

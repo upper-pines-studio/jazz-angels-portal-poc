@@ -15,18 +15,17 @@ import {
   dateRange,
   money,
   pickable,
-  programName,
-  programOptions,
   staffById,
   useCan,
   useStore,
 } from '../../../../core';
-import { funderById, isPostAward } from '../../domain';
+import { funderById, isPostAward, programNames } from '../../domain';
 import type { ProgramId } from '../../../../core';
 import type { Grant, GrantDates, Restriction } from '../../domain';
 import { KV } from '../../../../app/components/badges';
 import { useToast } from '../../../../app/ToastHost';
 import { DialogFields, FieldRow } from './parts';
+import { ProgramPicker } from './ProgramPicker';
 
 /** The right-hand column of grant detail: key dates, the funder, the terms. */
 
@@ -306,8 +305,12 @@ function DetailsCard({ grant }: { grant: Grant }) {
         }
       />
       <KV
-        k={<span style={{ fontSize: 'var(--text-xs)' }}>Program</span>}
-        v={<span style={{ fontSize: 'var(--text-xs)' }}>{programName(state, grant.program)}</span>}
+        k={
+          <span style={{ fontSize: 'var(--text-xs)' }}>
+            {grant.programs.length > 1 ? 'Programs' : 'Program'}
+          </span>
+        }
+        v={<span style={{ fontSize: 'var(--text-xs)' }}>{programNames(state, grant)}</span>}
       />
       <KV
         k={<span style={{ fontSize: 'var(--text-xs)' }}>Owner</span>}
@@ -337,7 +340,7 @@ function DetailsDialog({ grant, onClose }: { grant: Grant; onClose: () => void }
   const { state, actions } = useStore();
   const toast = useToast();
   const [title, setTitle] = React.useState(grant.title);
-  const [program, setProgram] = React.useState<ProgramId>(grant.program);
+  const [programs, setPrograms] = React.useState<ProgramId[]>(grant.programs);
   const [restriction, setRestriction] = React.useState<Restriction>(grant.restriction);
   const [ownerId, setOwnerId] = React.useState(grant.ownerId);
   const [amount, setAmount] = React.useState(
@@ -359,11 +362,11 @@ function DetailsDialog({ grant, onClose }: { grant: Grant; onClose: () => void }
           </Button>
           <Button
             variant="primary"
-            disabled={!title.trim()}
+            disabled={!title.trim() || programs.length === 0}
             onClick={() => {
               actions.grants.updateGrant(grant.id, {
                 title: title.trim(),
-                program,
+                programs,
                 restriction,
                 ownerId,
                 amountRequested: amount.trim() === '' ? undefined : Math.round(Number(amount)),
@@ -382,17 +385,8 @@ function DetailsDialog({ grant, onClose }: { grant: Grant; onClose: () => void }
         <Field label="Grant title" required>
           <Input value={title} onChange={e => setTitle(e.target.value)} />
         </Field>
+        <ProgramPicker value={programs} onChange={setPrograms} keep={grant.programs} />
         <FieldRow>
-          <Field label="Program">
-            <Select
-              value={program}
-              onChange={e => setProgram(e.target.value as ProgramId)}
-              options={programOptions(state, grant.program).map(p => ({
-                value: p.id,
-                label: p.name,
-              }))}
-            />
-          </Field>
           <Field label="Restriction">
             <Select
               value={restriction}
@@ -403,8 +397,6 @@ function DetailsDialog({ grant, onClose }: { grant: Grant; onClose: () => void }
               ]}
             />
           </Field>
-        </FieldRow>
-        <FieldRow>
           <Field label="Owner">
             <Select
               value={ownerId}
@@ -415,16 +407,16 @@ function DetailsDialog({ grant, onClose }: { grant: Grant; onClose: () => void }
               }))}
             />
           </Field>
-          <Field label="Amount requested">
-            <Input
-              type="number"
-              mono
-              prefix={<span style={{ font: 'var(--type-numeric)' }}>$</span>}
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-            />
-          </Field>
         </FieldRow>
+        <Field label="Amount requested">
+          <Input
+            type="number"
+            mono
+            prefix={<span style={{ font: 'var(--type-numeric)' }}>$</span>}
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+          />
+        </Field>
         <Field label="Notes">
           <Textarea
             rows={3}

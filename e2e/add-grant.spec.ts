@@ -14,9 +14,12 @@ test('add a grant in three steps, find it in the table and open it', async ({ pa
   const add = dialog(page, 'Add grant');
   await expect(add.getByText('Step 1 of 3')).toBeVisible();
 
-  // Step 1: funder and program.
+  // Step 1: funder, title and programs. The first program is ticked; the grant names two more.
   await field(add, 'Funder').selectOption({ label: 'Herb Alpert Foundation' });
   await field(add, 'Grant title').fill(TITLE);
+  const programs = add.getByRole('group', { name: 'Programs' });
+  await programs.getByText('In-School Program').click();
+  await programs.getByText('Homeschool Program').click();
   await add.getByRole('button', { name: 'Next: Amount & dates' }).click();
 
   // Step 2: amount and dates.
@@ -33,6 +36,11 @@ test('add a grant in three steps, find it in the table and open it', async ({ pa
   await expect(page).toHaveURL(/\/grants\/[^/?]+$/);
   const grantUrl = new URL(page.url()).pathname;
   await expect(page.getByRole('heading', { level: 1, name: TITLE })).toBeVisible();
+  await expect(
+    page.getByText(
+      'Herb Alpert Foundation · Studio Semester Sessions, In-School Program and Homeschool Program',
+    ),
+  ).toBeVisible();
 
   // It is in the table, and its row opens the same page.
   await page.getByRole('button', { name: 'All grants' }).click();
@@ -42,4 +50,23 @@ test('add a grant in three steps, find it in the table and open it', async ({ pa
   await expect(row).toBeVisible();
   await row.click();
   await expect(page).toHaveURL(new RegExp(`${grantUrl}$`));
+});
+
+test('the grants list shows every program a grant names and filters by any of them', async ({
+  page,
+}) => {
+  await freshStart(page, 'keisha');
+  await page.goto('/grants');
+  const port = page.getByText('In-School Program expansion', { exact: true });
+  await expect(port).toBeVisible();
+  // The Port of Long Beach grant is for In-School and Homeschool.
+  await expect(page.getByText('In-school and Homeschool', { exact: true })).toBeVisible();
+
+  const filter = page.locator('select').filter({ hasText: 'All programs' });
+  await filter.selectOption({ label: 'Homeschool Program' });
+  await expect(port).toBeVisible();
+  await filter.selectOption({ label: 'In-School Program' });
+  await expect(port).toBeVisible();
+  await filter.selectOption({ label: 'Jazz Legacy Program' });
+  await expect(port).toBeHidden();
 });

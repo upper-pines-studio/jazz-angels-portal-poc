@@ -135,6 +135,8 @@ export interface AttendanceSummary {
 /** A window to summarise over. `programId` narrows it to one program. */
 export interface AttendanceWindow {
   programId?: ProgramId;
+  /** Several programs at once (a grant that names more than one); `programId` is the same with one. */
+  programIds?: ProgramId[];
   from: string;
   to: string;
 }

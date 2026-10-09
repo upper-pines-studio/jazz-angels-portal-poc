@@ -7,7 +7,7 @@ import { inFlightRefusal } from './inflight';
 import { availableTransitions, isPostAward, phaseLabel } from './phases';
 import { makeEmpty, makeSeed } from './seed';
 import { instantiateDocumentRegister, instantiateTemplate } from './templates';
-import type { PortalState, Role } from '../../../core/types';
+import type { PortalState, ProgramId, Role } from '../../../core/types';
 import type {
   Activity,
   Allocation,
@@ -683,7 +683,7 @@ function createActions(
         id: grantId,
         funderId,
         title: input.title,
-        program: input.program,
+        programs: [...input.programs],
         restriction: input.restriction,
         ownerId: input.ownerId,
         phase,
@@ -1286,11 +1286,21 @@ export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
     return {
       ...state,
       funders: state.funders.map(normaliseArchived),
-      grants: state.grants.map(normaliseArchived),
+      grants: state.grants.map(g => normaliseArchived(withPrograms(g))),
       activity: state.activity.map(row => creditActivity(row, staff)),
     };
   },
 };
+
+/**
+ * A grant saved before a grant could name several programs has `program`, one
+ * id; it loads as `programs` with that one in it. A saved list stays as it is.
+ */
+export function withPrograms(saved: Grant): Grant {
+  const { program, ...rest } = saved as Grant & { program?: ProgramId };
+  if (Array.isArray(rest.programs) && rest.programs.length > 0) return rest;
+  return { ...rest, programs: typeof program === 'string' ? [program] : [] };
+}
 
 /**
  * Rows saved before activity carried a staff id named the person instead.

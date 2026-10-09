@@ -24,6 +24,8 @@ director's role and gets a teacher's view of their own classes on top.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Grants: pipeline, checklist, deadlines | Edit | Edit | Edit | View | – | Edit | View |
 | Award, budget, reports | Edit | Edit | Edit | Edit | – | View | View |
+| Program budgets and projects | Edit | Edit | Edit | Edit | – | View | View |
+| Grant shares | Edit | Edit | Edit | Edit | – | View | View |
 | Transactions: assign, split | Edit | Edit | Edit | Edit | – | – | View |
 | Schedule and classes | Edit | Edit | Edit | – | View all | View | View |
 | Roll call | Any class | Any class | Any class | – | Own classes | – | – |
@@ -72,6 +74,14 @@ director's role and gets a teacher's view of their own classes on top.
   Admin and Director, the same people as "Staff and roles", since programs are the office's own
   configuration and a grant or a report is filed under them. Not final until the client reviews
   it; the open question is whether the Office manager should have it too.
+- The Program budgets and projects and Grant shares rows were added with decision
+  [0006](0006-programs-projects-and-shares.md) (#53), proposed to follow "Award, budget,
+  reports": a program's budget, a project and the shares of a grant's money are money, so the
+  office manager and bookkeeper edit them along with the Admin and Director. Not final until the
+  client reviews it. The rows are in `permissions.ts` (`program-budgets`, `grant-shares`),
+  because the test that keeps it equal to this table needs them; no screen or action reads them
+  until #55. Adding, renaming and archiving a program stays on the Programs row, which
+  moves with the Programs page (#54) but does not change who may do it.
 - Beyond the table, only an Admin or a Director makes someone an Admin, adds someone as an
   Admin, or edits, archives or restores an Admin's record (`mayChangeStaff`, `ADMIN_MAKERS`).
   Changed with #47: it was the Admin alone. A role given "Staff and roles" later does not get
