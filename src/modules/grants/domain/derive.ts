@@ -1,5 +1,11 @@
 import { activeOnly, isArchived, withArchived } from '../../../core/archive';
-import { fiscalYear, programById, programName, staffById } from '../../../core/derive';
+import {
+  OPERATIONS_ID,
+  fiscalYear,
+  programById,
+  programName,
+  staffById,
+} from '../../../core/derive';
 import { daysUntil } from '../../../core/format';
 import type { PortalState, ProgramId } from '../../../core/types';
 import { PHASE_ORDER, POST_AWARD_PHASES, PRE_AWARD_PHASES, isTerminal, phaseIndex } from './phases';
@@ -319,12 +325,12 @@ export function grantsForProgram(state: PortalState, programId: ProgramId): Gran
   return state.grants.grants.filter(g => g.programs.includes(programId));
 }
 
-/** The seeded id of the program for money that pays for the whole studio. */
-export const GENERAL_OPERATING = 'general-operating';
-
-/** A grant on General operating pays for every program, so its numbers are not narrowed. */
+/**
+ * A grant on Operations, the office's running costs (decision 0006), pays for
+ * every program, so its numbers are not narrowed.
+ */
 export function coversWholeStudio(grant: Pick<Grant, 'programs'>): boolean {
-  return grant.programs.includes(GENERAL_OPERATING);
+  return grant.programs.includes(OPERATIONS_ID);
 }
 
 /**

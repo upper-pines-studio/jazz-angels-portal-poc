@@ -1,3 +1,4 @@
+import { OPERATIONS_ID } from '../../../core/derive';
 import { SEED_PROJECT_IDS, SEED_TODAY } from '../../../core/seed';
 import type { FundingTarget } from '../../../core/types';
 import { PHASE_ORDER } from './phases';
@@ -137,7 +138,7 @@ const GRANTS: Grant[] = [
     id: 'g-herb-alpert-2026',
     funderId: 'f-herb-alpert',
     title: 'General operating support 2026',
-    programs: ['general-operating'],
+    programs: [OPERATIONS_ID],
     restriction: 'unrestricted',
     ownerId: 's-barry',
     phase: 'active',
@@ -158,7 +159,7 @@ const GRANTS: Grant[] = [
     id: 'g-la-county-2026',
     funderId: 'f-la-county-arts',
     title: 'Organizational Grant Program FY26-27',
-    programs: ['general-operating'],
+    programs: [OPERATIONS_ID],
     restriction: 'unrestricted',
     ownerId: 's-barry',
     phase: 'reporting',
@@ -842,7 +843,7 @@ const project = (projectId: string): FundingTarget => ({ kind: 'project', projec
  */
 const SHARES: GrantShare[] = (
   [
-    { grantId: 'g-herb-alpert-2026', target: fy27('general-operating'), amount: 15000 },
+    { grantId: 'g-herb-alpert-2026', target: fy27(OPERATIONS_ID), amount: 15000 },
     { grantId: 'g-herb-alpert-2026', target: fy27('studio-sessions'), amount: 10000 },
     { grantId: 'g-herb-alpert-2026', target: fy27('in-school'), amount: 6000 },
     { grantId: 'g-herb-alpert-2026', target: project(SEED_PROJECT_IDS.instruments), amount: 3000 },

@@ -65,7 +65,7 @@ export function ProgramNumbers({ grant }: { grant: Grant }) {
   const end = grant.dates.periodEnd;
   const to = end && end < today ? end : today;
 
-  // General operating pays for everything, so it is not narrowed to a program.
+  // Operations, the office's running costs, pays for everything, so it is not narrowed to a program.
   const wholeStudio = coversWholeStudio(grant);
   const scope = wholeStudio ? 'All programs' : programNames(state, grant);
 
