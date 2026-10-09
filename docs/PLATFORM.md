@@ -58,7 +58,7 @@ export interface StaffMember { id: string; name: string; role: string; teaches: 
 export interface Program extends Archivable { id: ProgramId; name: string; short: string }   // short: "Studio", "In-school"
 export type ProgramId = string;   // the seeded programs keep 'studio-sessions', 'in-school', …; one added on the Programs page gets a generated `p-…` id
 // Operations, the office's running costs, is a Program record but not a program (decision 0006): id OPERATIONS_ID
-// ('general-operating', General operating's id), named "Operations", never archived or renamed, offered last in pickers
+// ('general-operating', General operating's id), named "Operations", never archived or renamed, offered last in the money and hours pickers, left out of the class and student ones
 
 // Places. An Organization is a partner (a school district, a community centre): the
 // relationship, who to call, what was agreed. A Venue is a physical place a class or a

@@ -104,6 +104,9 @@ and projects scrolls in its own column and stays in view while the sheet beside 
   there in a new office (decision 0004) as well as in the demo.
 - Wherever a program is chosen (Add grant, Edit record, the grants filter, Log hours, Add a
   project, Give to a program or project), Operations is still offered, last, as "Operations".
+  A class or a student is not put in Operations: Add ensemble, Enroll and Import students leave
+  it out (the office, October 2026: a student is part of a class, and nobody takes a class in
+  the running costs). A class or student already in it keeps it.
 - Grant titles keep the funder's own words: the Herb Alpert grant is still "General operating
   support 2026".
 
