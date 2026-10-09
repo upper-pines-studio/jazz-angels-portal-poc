@@ -366,6 +366,15 @@ still at Applying, $13,000 of its $15,000 to both. `__tests__/shares.test.ts`
 holds every program's and project's FY27 figures to the prototype's. A save from
 before shares loads with none, and a new office starts with none.
 
+On screen (#56), in `screens/shares/`: `WhereMoneyGoes` is the grant's card
+under its Award tab, or its first tab before an award (`grantGiving` for the
+rows and the bar, `defaultShareYear` for the Fiscal year a Give starts on,
+`giveWarnings` to show the warnings before a Give); `PaidFor` is the manifest's
+`funding.panel` on a program's or a project's sheet (`fundingFor` for the rows,
+`givingGrants` for Add money from a grant, `shareTo` to find the share a row
+changes or takes back); `ShareDialogs` holds Change the share and Take back,
+which both sides use.
+
 ---
 
 ## The money side (`money.ts`, `seed-money.ts`)

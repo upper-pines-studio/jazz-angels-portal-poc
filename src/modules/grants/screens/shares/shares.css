@@ -1,0 +1,130 @@
+/*
+ * A grant's shares (decision 0006): "Paid for by" on a program's or a
+ * project's sheet, and "Where this grant's money goes" on the grant.
+ */
+.ja-shares,
+.ja-gives {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ja-shares__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ja-shares__row,
+.ja-gives__row {
+  display: grid;
+  align-items: center;
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  padding: var(--space-3) 0;
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+.ja-shares__row {
+  grid-template-columns: minmax(0, 1fr) 96px 170px 84px;
+}
+.ja-gives__row {
+  grid-template-columns: minmax(0, 1fr) 96px 84px;
+}
+.ja-shares__rows > :last-child {
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+.ja-gives__row--off .ja-shares__amount,
+.ja-gives__row--off .ja-shares__funder {
+  color: var(--text-muted);
+}
+
+.ja-shares__who {
+  min-width: 0;
+}
+.ja-shares__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+  row-gap: var(--space-1);
+  font: var(--type-body-sm);
+  color: var(--text-body);
+}
+.ja-shares__funder {
+  font-weight: var(--weight-semibold);
+}
+.ja-shares__detail {
+  color: var(--text-muted);
+}
+.ja-shares__amount {
+  font: var(--type-numeric);
+  color: var(--text-strong);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ja-shares__left {
+  font: var(--type-body-sm);
+  color: var(--text-muted);
+}
+.ja-shares__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+.ja-shares__empty,
+.ja-shares__note {
+  margin: 0;
+  font: var(--type-body-sm);
+  color: var(--text-muted);
+}
+
+.ja-shares__give {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 720px;
+}
+.ja-shares__giverow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+/* The button sits on the controls' line, under the labels. */
+.ja-shares__go {
+  padding-top: calc(var(--text-sm) * 1.3 + var(--space-2));
+}
+
+/* The figure in the grant card's header. */
+.ja-gives__left {
+  text-align: right;
+}
+.ja-gives__big {
+  font: var(--type-h3);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+.ja-gives__big--over {
+  color: var(--danger-600);
+}
+.ja-gives__of {
+  font: var(--type-body-sm);
+  color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  .ja-shares__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ja-shares__row .ja-shares__left {
+    grid-column: 1;
+  }
+  .ja-gives__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ja-gives__row .ja-shares__actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
