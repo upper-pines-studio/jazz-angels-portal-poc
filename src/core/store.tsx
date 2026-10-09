@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { archiveFields, isArchived, normaliseArchived, restoreFields } from './archive';
 import { DEMO_TODAY_KEY, demoTodayFrom, demoTodayToStore, isDemo } from './demo';
-import { programFields, programProblem } from './derive';
+import {
+  programBudgetProblem,
+  programFields,
+  programProblem,
+  projectFields,
+  projectProblem,
+} from './derive';
 import { toISO } from './format';
 import type { ActionRules, AnyAction, ModuleSlice } from './module';
 import { OWN_ROLE_REFUSAL, can, mayChangeStaff } from './permissions';
@@ -21,6 +27,8 @@ import type {
   Organization,
   PortalActions,
   Program,
+  ProgramBudget,
+  Project,
   PortalState,
   Role,
   SignedInUser,
@@ -55,6 +63,9 @@ type CoreAction =
   | { type: 'core/update-organization'; id: string; patch: Partial<Organization> }
   | { type: 'core/add-venue'; venue: Venue }
   | { type: 'core/update-venue'; id: string; patch: Partial<Venue> }
+  | { type: 'core/set-program-budget'; budget: ProgramBudget }
+  | { type: 'core/add-project'; project: Project }
+  | { type: 'core/update-project'; id: string; patch: Partial<Project> }
   | { type: 'core/update-settings'; patch: Partial<AppSettings> };
 
 function withId<T extends { id: string }>(rows: T[], id: string, patch: Partial<T>): T[] {
@@ -81,6 +92,17 @@ function coreReducer(state: CoreState, raw: AnyAction): CoreState {
       return { ...state, venues: [...state.venues, action.venue] };
     case 'core/update-venue':
       return { ...state, venues: withId(state.venues, action.id, action.patch) };
+    case 'core/set-program-budget': {
+      const { budget } = action;
+      const same = (b: ProgramBudget) =>
+        b.programId === budget.programId && b.fiscalYear === budget.fiscalYear;
+      const rest = state.programBudgets.filter(b => !same(b));
+      return { ...state, programBudgets: [...rest, budget] };
+    }
+    case 'core/add-project':
+      return { ...state, projects: [...state.projects, action.project] };
+    case 'core/update-project':
+      return { ...state, projects: withId(state.projects, action.id, action.patch) };
     case 'core/update-settings':
       return { ...state, settings: { ...state.settings, ...action.patch } };
     default:
@@ -129,6 +151,13 @@ function normaliseProgram(raw: Partial<Program>): Program {
   });
 }
 
+/** A program's budget as saved, or undefined when the row is not one. */
+function normaliseBudget(raw: Partial<ProgramBudget>): ProgramBudget | undefined {
+  if (typeof raw?.programId !== 'string' || typeof raw.fiscalYear !== 'string') return undefined;
+  if (typeof raw.amount !== 'number' || !Number.isFinite(raw.amount)) return undefined;
+  return { programId: raw.programId, fiscalYear: raw.fiscalYear, amount: Math.round(raw.amount) };
+}
+
 /** Why a person may not archive this record, or true when they may. */
 function mayArchiveStaff(user: SignedInUser, state: PortalState, id: string): boolean | string {
   if (id === user.id) return "You can't archive yourself. Ask someone else who manages staff.";
@@ -153,6 +182,11 @@ export function describeCoreChange(action: AnyAction): string | undefined {
     case 'core/add-venue':
     case 'core/update-venue':
       return 'the venue';
+    case 'core/set-program-budget':
+      return 'the program budget';
+    case 'core/add-project':
+    case 'core/update-project':
+      return 'the project';
     case 'core/update-settings':
       return 'the settings';
   }
@@ -198,6 +232,33 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       },
       restoreProgram(id) {
         dispatch({ type: 'core/update-program', id, patch: restoreFields() });
+      },
+      setProgramBudget(programId, fiscalYear, amount) {
+        dispatch({ type: 'core/set-program-budget', budget: { programId, fiscalYear, amount } });
+      },
+      addProject(input) {
+        const id = newId('prj');
+        const { name, programId, start, end, budget } = projectFields(input);
+        dispatch({
+          type: 'core/add-project',
+          project: { id, name, programId, start, end, budget },
+        });
+        return id;
+      },
+      updateProject(id, patch) {
+        const { name, programId, start, end, budget } = projectFields(patch);
+        const fields = Object.fromEntries(
+          Object.entries({ name, programId, start, end, budget }).filter(
+            ([, v]) => v !== undefined,
+          ),
+        ) as Partial<Project>;
+        dispatch({ type: 'core/update-project', id, patch: fields });
+      },
+      archiveProject(id) {
+        dispatch({ type: 'core/update-project', id, patch: archived() });
+      },
+      restoreProject(id) {
+        dispatch({ type: 'core/update-project', id, patch: restoreFields() });
       },
       addOrganization(input) {
         const id = newId('org');
@@ -271,6 +332,21 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     },
     archiveProgram: 'programs',
     restoreProgram: 'programs',
+    // A program's budget and its projects are money, so they follow "Award,
+    // budget, reports" (decision 0001, "Program budgets and projects", #53).
+    setProgramBudget: (user, state, programId, fiscalYear, amount) =>
+      can(user.role, 'program-budgets', 'edit') &&
+      (programBudgetProblem(state, programId, fiscalYear, amount) ?? true),
+    addProject: (user, state, input) =>
+      can(user.role, 'program-budgets', 'edit') && (projectProblem(state, input) ?? true),
+    updateProject: (user, state, id, patch) => {
+      if (!can(user.role, 'program-budgets', 'edit')) return false;
+      const current = state.core.projects.find(p => p.id === id);
+      if (!current) return 'That project is no longer in the portal.';
+      return projectProblem(state, { ...current, ...patch }) ?? true;
+    },
+    archiveProject: 'program-budgets',
+    restoreProject: 'program-budgets',
     addOrganization: 'partners',
     updateOrganization: 'partners',
     archiveOrganization: 'partners',
@@ -311,6 +387,11 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
           ? seeded.organizations
           : [],
       venues: Array.isArray(c.venues) ? c.venues.map(normaliseArchived) : demo ? seeded.venues : [],
+      // Saved before budgets and projects existed: none, demo or not (decision 0006).
+      programBudgets: Array.isArray(c.programBudgets)
+        ? c.programBudgets.flatMap(b => normaliseBudget(b) ?? [])
+        : [],
+      projects: Array.isArray(c.projects) ? c.projects.map(normaliseArchived) : [],
       settings: {
         fiscalYearStartMonth: settings.fiscalYearStartMonth ?? 7,
         enabledModules: settings.enabledModules ?? [...DEFAULT_ENABLED_MODULES],
