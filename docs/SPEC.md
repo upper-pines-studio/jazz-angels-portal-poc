@@ -170,6 +170,7 @@ interface Activity {       // audit trail, mostly automatic
 interface StaffMember { id: string; name: string; role: string; }
 
 type ProgramId = 'studio-sessions'|'in-school'|'homeschool'|'jazz-legacy'|'advanced-workshop'|'general-operating';
+// 'general-operating' is Operations, the office's running costs, not a program (decision 0006)
 
 interface ChecklistTemplate {   // the "playbook" — what to do in each phase
   id: string; name: string;     // "Foundation grant (standard)", "Government grant"
@@ -223,7 +224,8 @@ A `repository` module wraps every read/write so Supabase can replace it later wi
 Staff: Barry Cogert (Program Director), Denise Moreno (Office Administrator), Albert Alva (Co-founder / Artistic Director).
 
 Programs: Studio Semester Sessions, In-School Program (Paramount Unified), Homeschool Program,
-Jazz Legacy Program, Advanced Jazz Workshop, General operating.
+Jazz Legacy Program, Advanced Jazz Workshop. Beside them, Operations: the office's running costs
+and unrestricted money, not a program (decision 0006), with the id `general-operating`.
 
 Funders and grants (today is 2026-09-13; FY27 started 2026-07-01):
 
@@ -265,7 +267,7 @@ the same accounts and to the grant's own class:
 
 Across the three: awarded 80,500, spent 42,125, remaining 38,375.
 
-- **Herb Alpert, General operating support 2026** (unrestricted, General operating, owner Barry):
+- **Herb Alpert, General operating support 2026** (unrestricted, Operations, owner Barry):
   ten expenses. The first four are Jul 10 Nonprofits Insurance Alliance 1,090 · Jul 18 Signal Hill
   Music Service 1,240 · Jul 24 Melissa Hasin 1,450 · Aug 5 JW Pepper 268. Payments: 25,000 received
   Jul 15, 25,000 expected Jan 15, 2027. Seven award terms. Award letter (3 pages) and signed
@@ -670,7 +672,7 @@ What the funder is owed and when, and who gets reminded.
   with their due dates and reminders. Add the ones the award letter asks for." with "Add report".
 - **Program numbers** card, under the tab, once the grant is post-award and has a period start:
   meetings held, students served and attendance from Teaching, and teaching hours from Timesheets,
-  from the period start to today (or the period end, if earlier). A general operating grant counts
+  from the period start to today (or the period end, if earlier). A grant on Operations counts
   every program; any other grant only its own. When Teaching or Timesheets is turned off it says
   which and links to Settings; with no roll call yet: "No numbers yet".
 

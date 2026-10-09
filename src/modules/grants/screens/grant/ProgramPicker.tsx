@@ -1,11 +1,11 @@
 import { Checkbox, Field } from '../../../../design-system';
-import { isArchived, useStore } from '../../../../core';
+import { programOptions, useStore } from '../../../../core';
 import type { ProgramId } from '../../../../core';
 
 /**
  * Choose the programs a grant's money is for, one or more (decision 0006).
- * They stay in the order the office lists its programs, whatever order they
- * were ticked in. `error` shows when none is ticked.
+ * They stay in the order the office lists its programs, Operations last,
+ * whatever order they were ticked in. `error` shows when none is ticked.
  */
 export function ProgramPicker({
   keep = [],
@@ -23,7 +23,7 @@ export function ProgramPicker({
 }) {
   const { state } = useStore();
   // The current programs, plus any archived one the grant already names.
-  const options = state.core.programs.filter(p => !isArchived(p) || keep.includes(p.id));
+  const options = programOptions(state, keep);
   const toggle = (id: ProgramId, on: boolean) =>
     onChange(options.map(p => p.id).filter(pid => (pid === id ? on : value.includes(pid))));
 

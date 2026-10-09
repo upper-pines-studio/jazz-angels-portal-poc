@@ -1,5 +1,5 @@
 import { addDays, addYears } from 'date-fns';
-import { activeOnly, pickable, withArchived } from './archive';
+import { activeOnly, isArchived, withArchived } from './archive';
 import { toDate, toISO } from './format';
 import type {
   Address,
@@ -110,19 +110,78 @@ export function programName(state: PortalState, id: string): string {
 }
 
 /**
- * The programs a picker offers: the current ones, plus `keepId` when the
- * record being edited already names one that has since been archived.
+ * Operations: the office's running costs and unrestricted money (rent,
+ * salaries, insurance), not a program (decision 0006). There is exactly one.
+ * It keeps the id General operating had, so every grant, share, budget,
+ * project and time entry saved against it loads unchanged; it can't be
+ * archived or renamed, and a grant that names it counts every program.
  */
-export function programOptions(state: PortalState, keepId?: string): Program[] {
-  return pickable(state.core.programs, keepId);
+export const OPERATIONS_ID: ProgramId = 'general-operating';
+
+/** What Operations is called, in full and short. */
+export const OPERATIONS_NAME = 'Operations';
+
+/** Operations as a fresh record, for the seed and for a saved office without it. */
+export function operationsRecord(): Program {
+  return { id: OPERATIONS_ID, name: OPERATIONS_NAME, short: OPERATIONS_NAME };
+}
+
+/** True when the id is Operations' rather than a program's. */
+export function isOperations(id: ProgramId | undefined): boolean {
+  return id === OPERATIONS_ID;
+}
+
+/** Operations, or undefined only in a hand-made state with none. */
+export function operations(state: PortalState): Program | undefined {
+  return programById(state, OPERATIONS_ID);
+}
+
+/** The same programs, in their order, with Operations moved to the end. */
+export function operationsLast(programs: readonly Program[]): Program[] {
+  return [
+    ...programs.filter(p => !isOperations(p.id)),
+    ...programs.filter(p => isOperations(p.id)),
+  ];
 }
 
 /**
- * The programs as Settings lists them: the current ones, then, with
- * `includeArchived`, the archived ones after them.
+ * The programs a picker offers: the current ones, plus any in `keep` (the ones
+ * the record being edited already names) that have since been archived, then
+ * Operations last.
+ */
+export function programOptions(
+  state: PortalState,
+  keep?: ProgramId | readonly ProgramId[],
+): Program[] {
+  const kept: readonly ProgramId[] =
+    keep === undefined ? [] : typeof keep === 'string' ? [keep] : keep;
+  return operationsLast(state.core.programs.filter(p => !isArchived(p) || kept.includes(p.id)));
+}
+
+/**
+ * The programs a class (an ensemble) or a student can be in: `programOptions`
+ * without Operations, since nobody takes a class in the office's running
+ * costs. A record that already names Operations keeps it, so nothing saved is lost.
+ */
+export function classProgramOptions(
+  state: PortalState,
+  keep?: ProgramId | readonly ProgramId[],
+): Program[] {
+  const kept: readonly ProgramId[] =
+    keep === undefined ? [] : typeof keep === 'string' ? [keep] : keep;
+  return programOptions(state, keep).filter(p => !isOperations(p.id) || kept.includes(p.id));
+}
+
+/**
+ * The programs as the Programs page lists them: the current ones, then, with
+ * `includeArchived`, the archived ones after them. Operations is not one of
+ * them; the page shows it on its own (`operations`).
  */
 export function programsList(state: PortalState, includeArchived = false): Program[] {
-  return withArchived(state.core.programs, includeArchived);
+  return withArchived(
+    state.core.programs.filter(p => !isOperations(p.id)),
+    includeArchived,
+  );
 }
 
 /** A program's name and short name, tidied: trimmed, the short name falling back to the name. */
@@ -130,6 +189,17 @@ export function programFields(input: Partial<Pick<Program, 'name' | 'short'>>) {
   const name = input.name?.trim() ?? '';
   return { name, short: input.short?.trim() || name };
 }
+
+/** What adding or renaming a program to "Operations" is refused with. */
+export const OPERATIONS_NAME_TAKEN =
+  "Operations is already the office's running costs. Give the program another name.";
+
+/** What archiving Operations is refused with. */
+export const OPERATIONS_ARCHIVE_REFUSAL =
+  "Operations can't be archived. It is the office's running costs, not a program.";
+
+/** What renaming Operations is refused with. */
+export const OPERATIONS_RENAME_REFUSAL = "Operations can't be renamed.";
 
 /** Why a program cannot be saved with this name, or undefined when it can. */
 export function programProblem(
@@ -139,6 +209,9 @@ export function programProblem(
 ): string | undefined {
   const { name } = programFields(input);
   if (!name) return 'Give the program a name.';
+  if (!isOperations(id) && name.toLowerCase() === OPERATIONS_NAME.toLowerCase()) {
+    return OPERATIONS_NAME_TAKEN;
+  }
   const taken = programs.find(
     p => p.id !== id && p.name.trim().toLowerCase() === name.toLowerCase(),
   );

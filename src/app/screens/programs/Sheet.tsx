@@ -5,6 +5,7 @@ import {
   dateRange,
   fiscalYearsOverlapping,
   isArchived,
+  isOperations,
   money,
   programBudget,
   programName,
@@ -169,6 +170,10 @@ function RecordActions({
  * ("Programs"); the budget and the projects for the roles with "Program
  * budgets and projects" Edit. A role without "Program budgets and projects"
  * sees the name only.
+ *
+ * Operations has the same sheet, with what it is in place of the name, and
+ * no Edit or Archive: it is not a program and there is exactly one
+ * (decision 0006).
  */
 export function ProgramSheet({
   program,
@@ -196,19 +201,23 @@ export function ProgramSheet({
   const budget = programBudget(state, program.id, fy.label);
   const target: FundingTarget = { kind: 'program', programId: program.id, fiscalYear: fy.label };
   const projects = projectsForProgram(state, program.id, showArchived);
+  const office = isOperations(program.id);
+  const kind = office ? "The office's running costs" : 'Program';
 
   return (
     <SheetCard
       title={program.name}
-      subtitle={mayMoney ? `Program · ${fy.label}` : 'Program'}
+      subtitle={mayMoney ? `${kind} · ${fy.label}` : kind}
       archived={archived}
       action={
-        <RecordActions
-          archived={archived}
-          onEdit={onEdit}
-          onArchive={onArchive}
-          onRestore={onRestore}
-        />
+        office ? undefined : (
+          <RecordActions
+            archived={archived}
+            onEdit={onEdit}
+            onArchive={onArchive}
+            onRestore={onRestore}
+          />
+        )
       }
     >
       {mayMoney && (
@@ -241,8 +250,9 @@ export function ProgramSheet({
           <FundingLabel>Projects in {program.name}</FundingLabel>
           {projects.length === 0 ? (
             <p className="ja-sheet__empty">
-              No projects in this program yet. A project is one-off work, like a spring showcase or
-              an instrument refresh, with its own dates and budget.
+              {office
+                ? 'No projects in Operations yet. A project is one-off work, like an office move or a new laptop, with its own dates and budget.'
+                : 'No projects in this program yet. A project is one-off work, like a spring showcase or an instrument refresh, with its own dates and budget.'}
             </p>
           ) : (
             <ul className="ja-sheet__projects">
@@ -281,13 +291,24 @@ export function ProgramSheet({
         </section>
       )}
 
-      <section className="ja-sheet__part" aria-label="Details">
-        {mayMoney && <FundingLabel>Details</FundingLabel>}
-        <div>
-          <KV k="Name" v={program.name} />
-          <KV k="Short name" v={program.short} />
-        </div>
-      </section>
+      {office ? (
+        <section className="ja-sheet__part" aria-label="About Operations">
+          {mayMoney && <FundingLabel>About Operations</FundingLabel>}
+          <p className="ja-sheet__about">
+            Operations is where money that isn't tied to one program goes: rent, salaries,
+            insurance, the office. It isn't a program, so it keeps its name and can't be archived. A
+            grant that names it counts every program's numbers on its Reports tab.
+          </p>
+        </section>
+      ) : (
+        <section className="ja-sheet__part" aria-label="Details">
+          {mayMoney && <FundingLabel>Details</FundingLabel>}
+          <div>
+            <KV k="Name" v={program.name} />
+            <KV k="Short name" v={program.short} />
+          </div>
+        </section>
+      )}
     </SheetCard>
   );
 }

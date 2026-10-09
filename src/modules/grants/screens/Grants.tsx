@@ -20,7 +20,15 @@ import {
   Icon,
   EmptyState,
 } from '../../../design-system';
-import { activeOnly, isArchived, useStore, useCan, money, dateShort } from '../../../core';
+import {
+  activeOnly,
+  isArchived,
+  operationsLast,
+  useStore,
+  useCan,
+  money,
+  dateShort,
+} from '../../../core';
 import {
   grantsByView,
   nextDeadline,
@@ -218,7 +226,7 @@ export default function Grants() {
               onChange={e => setProgram(e.target.value)}
               options={[
                 { value: 'all', label: 'All programs' },
-                ...state.core.programs.map(p => ({ value: p.id, label: p.name })),
+                ...operationsLast(state.core.programs).map(p => ({ value: p.id, label: p.name })),
               ]}
               style={{ width: '100%' }}
             />

@@ -1,4 +1,5 @@
 // Operations › Programs: open it from the rail, add a program, edit it, archive it and restore it.
+// Operations, the office's running costs, sits on its own above the programs (decision 0006).
 // Gwen (Admin) manages programs; Keisha (Office manager) has no Programs rights and only reads;
 // Devon (Teacher) has no "Program budgets and projects" and does not see the page.
 import { expect, test } from '@playwright/test';
@@ -48,6 +49,43 @@ test('an admin opens Programs from the rail, adds a program, archives and restor
   await expect(main.getByRole('button', { name: 'Archive' })).toBeVisible();
   await list.getByText(/Show archived/).click();
   await expect(list.getByRole('link', { name: /Summer Jazz Camp/ })).toBeVisible();
+});
+
+test('Operations sits above the programs, apart from them, and keeps its name', async ({
+  page,
+}) => {
+  await freshStart(page, 'gwen');
+  await page.goto('/programs');
+  const main = page.locator('main');
+  const side = page.getByRole('complementary', { name: 'Programs' });
+
+  // Not one of the five programs, and on the list before them.
+  await expect(page.getByText('5 programs', { exact: true })).toBeVisible();
+  const office = side.getByRole('list', { name: 'Operations' });
+  const programs = side.getByRole('list', { name: 'The programs' });
+  await expect(office.getByRole('link', { name: /^Operations/ })).toBeVisible();
+  await expect(programs.getByRole('link', { name: /^Operations/ })).toHaveCount(0);
+  await expect(programs.getByRole('link', { name: /Studio Semester Sessions/ })).toBeVisible();
+  const officeBox = await office.boundingBox();
+  const programsBox = await programs.boundingBox();
+  expect(officeBox!.y).toBeLessThan(programsBox!.y);
+
+  // Its sheet: budget, Paid for by and projects, and no Edit or Archive.
+  await office.getByRole('link', { name: /^Operations/ }).click();
+  await expect(page).toHaveURL(/\/programs\/general-operating$/);
+  await expect(main.getByRole('heading', { name: 'Operations', exact: true })).toBeVisible();
+  await expect(main.getByText("The office's running costs · FY27")).toBeVisible();
+  await expect(main.getByText('Paid for by')).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Projects in Operations' })).toBeVisible();
+  await expect(main.getByRole('button', { name: 'Edit' })).toHaveCount(0);
+  await expect(main.getByRole('button', { name: 'Archive' })).toHaveCount(0);
+
+  // A project can go under it, and it is offered last.
+  await main.getByRole('button', { name: 'Add a project' }).click();
+  const add = dialog(page, 'Add a project');
+  const partOf = field(add, 'Part of', 'select');
+  await expect(partOf).toHaveValue('general-operating');
+  await expect(partOf.locator('option').last()).toHaveText('Operations');
 });
 
 test('a role without program rights reads the programs and cannot change them', async ({

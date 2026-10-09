@@ -1,4 +1,5 @@
 import { addDays } from 'date-fns';
+import { OPERATIONS_ID } from '../../../core/derive';
 import { toDate, toISO } from '../../../core/format';
 import { SEED_TODAY } from '../../../core/seed';
 import type { ProgramId } from '../../../core/types';
@@ -89,7 +90,7 @@ const SPRING_WEEK: Shift[] = [
   [1, 's-renee', 'homeschool', 'Homeschool I and II, Studio 2', 2.25],
   [2, 's-albert', 'jazz-legacy', 'Jazz Legacy rehearsal, Main room', 1.5, 'e-jazz-legacy'],
   [2, 's-barry', 'advanced-workshop', 'Advanced Workshop, Studio 1', 1.5, 'e-advanced-workshop'],
-  [3, 's-albert', 'general-operating', 'Chart prep', 0.75],
+  [3, 's-albert', OPERATIONS_ID, 'Chart prep', 0.75],
   [4, 's-devon', 'in-school', 'Paramount MS, in-school band', 2, 'e-paramount-ms'],
 ];
 
@@ -109,12 +110,12 @@ const SPRING_SUNDAYS = [
 
 /** Anchored on the Monday: summer groups, chart prep and the office work around them. */
 const SUMMER_WEEK: Shift[] = [
-  [0, 's-albert', 'general-operating', 'Chart prep for the fall books', 1.5],
+  [0, 's-albert', OPERATIONS_ID, 'Chart prep for the fall books', 1.5],
   [1, 's-albert', 'jazz-legacy', 'Jazz Legacy rehearsal, Main room', 1.5, 'e-jazz-legacy'],
   [1, 's-barry', 'advanced-workshop', 'Advanced Workshop, Studio 1', 1.5, 'e-advanced-workshop'],
   [2, 's-renee', 'homeschool', 'Homeschool summer group, Studio 2', 2],
   [3, 's-devon', 'in-school', 'Paramount MS summer band', 2, 'e-paramount-ms'],
-  [5, 's-renee', 'general-operating', 'Family calls and scheduling', 1],
+  [5, 's-renee', OPERATIONS_ID, 'Family calls and scheduling', 1],
   [6, 's-albert', 'studio-sessions', 'Combo A rehearsal, Studio 1', 2, 'e-combo-a'],
   [6, 's-barry', 'studio-sessions', 'Combo B rehearsal, Studio 1', 2, 'e-combo-b'],
   [6, 's-devon', 'studio-sessions', 'Big Band rehearsal, Main room', 1.5, 'e-big-band'],
@@ -135,8 +136,8 @@ const SUMMER_DRAFTS: Record<string, Record<number, TimeEntryStatus>> = {
  * the studio sessions start. Devon and Renee are the two waiting on approval.
  */
 const THIS_WEEK: Array<[Shift, TimeEntryStatus]> = [
-  [[0, 's-albert', 'general-operating', 'Chart prep for the fall books', 1.5], 'approved'],
-  [[0, 's-barry', 'general-operating', 'Fall session rosters and room setup', 2], 'approved'],
+  [[0, 's-albert', OPERATIONS_ID, 'Chart prep for the fall books', 1.5], 'approved'],
+  [[0, 's-barry', OPERATIONS_ID, 'Fall session rosters and room setup', 2], 'approved'],
   [[1, 's-barry', 'studio-sessions', 'Placement auditions, Studio 1', 2.5], 'approved'],
   [[1, 's-renee', 'homeschool', 'Homeschool curriculum planning', 2], 'approved'],
   [[2, 's-devon', 'in-school', 'Paramount MS planning with the band director', 1.25], 'approved'],

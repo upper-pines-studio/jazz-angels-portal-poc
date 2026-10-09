@@ -58,8 +58,37 @@
   color: var(--text-muted);
 }
 .ja-programs__none {
-  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   font: var(--type-body-sm);
+  color: var(--text-muted);
+}
+.ja-programs__none p {
+  margin: 0;
+}
+/*
+ * Operations sits on its own over the programs, since it is not one of them;
+ * the two scroll together, so a phone still shows several programs.
+ */
+.ja-programs__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 2px 4px 2px 2px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.ja-programs__scroll .ja-programs__list {
+  padding: 0;
+  overflow: visible;
+  flex: none;
+}
+.ja-programs__label {
+  margin: var(--space-2) 0 0;
+  font: var(--type-eyebrow);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 .ja-programs__title {
@@ -132,6 +161,11 @@
 }
 .ja-sheet__bar {
   margin-top: var(--space-2);
+}
+.ja-sheet__about {
+  margin: 0;
+  font: var(--type-body-sm);
+  color: var(--text-body);
 }
 .ja-sheet__when,
 .ja-sheet__empty,

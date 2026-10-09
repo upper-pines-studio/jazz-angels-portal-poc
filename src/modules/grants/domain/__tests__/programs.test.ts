@@ -66,7 +66,7 @@ describe('a grant names several programs (decision 0006)', () => {
     expect(programNames(state, port, true)).toBe('In-school and Homeschool');
   });
 
-  it('counts a grant on General operating as the whole studio, among others too', () => {
+  it('counts a grant on Operations (id general-operating) as the whole studio, among others too', () => {
     expect(coversWholeStudio({ programs: ['general-operating'] })).toBe(true);
     expect(coversWholeStudio({ programs: ['in-school', 'general-operating'] })).toBe(true);
     expect(coversWholeStudio(port)).toBe(false);

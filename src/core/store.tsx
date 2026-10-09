@@ -2,6 +2,10 @@ import React, { createContext, useContext, useEffect, useMemo, type ReactNode } 
 import { archiveFields, isArchived, normaliseArchived, restoreFields } from './archive';
 import { DEMO_TODAY_KEY, demoTodayFrom, demoTodayToStore, isDemo } from './demo';
 import {
+  OPERATIONS_ARCHIVE_REFUSAL,
+  OPERATIONS_RENAME_REFUSAL,
+  isOperations,
+  operationsRecord,
   programBudgetProblem,
   programFields,
   programProblem,
@@ -149,6 +153,17 @@ function normaliseProgram(raw: Partial<Program>): Program {
     name,
     short: typeof raw.short === 'string' && raw.short.trim() ? raw.short : name,
   });
+}
+
+/**
+ * The programs as saved, with Operations as it now is (decision 0006): a saved
+ * "General operating" is renamed, one archived or renamed before that was
+ * refused is put back, and an office saved without it gets it at the end.
+ * Its id stays, so everything that names it loads unchanged.
+ */
+function withOperations(programs: Program[]): Program[] {
+  if (!programs.some(p => isOperations(p.id))) return [...programs, operationsRecord()];
+  return programs.map(p => (isOperations(p.id) ? operationsRecord() : p));
 }
 
 /** A program's budget as saved, or undefined when the row is not one. */
@@ -328,9 +343,16 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       if (!can(user.role, 'programs', 'edit')) return false;
       const current = state.core.programs.find(p => p.id === id);
       if (!current) return true;
+      if (isOperations(id)) {
+        const next = programFields({ ...current, ...patch });
+        const same = next.name === current.name && next.short === current.short;
+        return same || OPERATIONS_RENAME_REFUSAL;
+      }
       return programProblem(state.core.programs, { ...current, ...patch }, id) ?? true;
     },
-    archiveProgram: 'programs',
+    // Operations is not a program and there is exactly one (decision 0006).
+    archiveProgram: (user, _state, id) =>
+      can(user.role, 'programs', 'edit') && (isOperations(id) ? OPERATIONS_ARCHIVE_REFUSAL : true),
     restoreProgram: 'programs',
     // A program's budget and its projects are money, so they follow "Award,
     // budget, reports" (decision 0001, "Program budgets and projects", #53).
@@ -380,7 +402,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     // teaching module's venue ids still resolve.
     return {
       staff,
-      programs: c.programs.map(normaliseProgram),
+      programs: withOperations(c.programs.map(normaliseProgram)),
       organizations: Array.isArray(c.organizations)
         ? c.organizations.map(normaliseArchived)
         : demo

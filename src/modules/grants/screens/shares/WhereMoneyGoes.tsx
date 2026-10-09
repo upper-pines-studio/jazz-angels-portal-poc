@@ -5,6 +5,7 @@ import {
   activeOnly,
   fiscalYearChoices,
   isArchived,
+  isOperations,
   money,
   targetName,
   useCan,
@@ -184,7 +185,9 @@ function Give({ giving }: { giving: GrantGiving }) {
   const [text, setText] = React.useState('');
   const [showErrors, setShowErrors] = React.useState(false);
 
-  const programs = activeOnly(state.core.programs);
+  // The programs, then their projects, then Operations last (decision 0006).
+  const programs = activeOnly(state.core.programs).filter(p => !isOperations(p.id));
+  const office = activeOnly(state.core.programs).filter(p => isOperations(p.id));
   const projects = activeOnly(state.core.projects);
   const [kind, id] = to.split(':');
   const target: FundingTarget | undefined =
@@ -226,7 +229,7 @@ function Give({ giving }: { giving: GrantGiving }) {
     setShowErrors(false);
   };
 
-  if (programs.length === 0 && projects.length === 0) {
+  if (programs.length === 0 && projects.length === 0 && office.length === 0) {
     return (
       <p className="ja-shares__empty">
         There are no programs to give to yet. Add one on the Programs page.
@@ -248,6 +251,7 @@ function Give({ giving }: { giving: GrantGiving }) {
               { value: '', label: 'Choose a program or project…' },
               ...programs.map(p => ({ value: `program:${p.id}`, label: p.name })),
               ...projects.map(p => ({ value: `project:${p.id}`, label: `${p.name} (project)` })),
+              ...office.map(p => ({ value: `program:${p.id}`, label: p.name })),
             ]}
             onChange={e => pick(e.target.value)}
           />

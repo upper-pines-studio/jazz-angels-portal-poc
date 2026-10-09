@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Dialog, Field, Input, Select } from '../../../design-system';
 import { useToast } from '../../ToastHost';
 import {
+  isOperations,
   money,
   programBudget,
   programBudgetProblem,
@@ -62,7 +63,11 @@ export function BudgetDialog({
       open
       width={420}
       title={`${name} budget, ${fy.label}`}
-      description={`What the program costs from ${fy.label}'s first day to its last. The grants paying for it are measured against it.`}
+      description={
+        isOperations(programId)
+          ? `What the office's running costs come to from ${fy.label}'s first day to its last: rent, salaries, insurance, the office. The grants paying for it are measured against it.`
+          : `What the program costs from ${fy.label}'s first day to its last. The grants paying for it are measured against it.`
+      }
       onClose={onClose}
       footer={
         <>
@@ -142,7 +147,9 @@ export function ProjectDialog({
       description={
         draft.id
           ? 'The grants giving to it keep their shares.'
-          : 'One-off work under a program, like a spring showcase or an instrument refresh, with its own dates and budget. Grants give to it directly.'
+          : isOperations(draft.programId)
+            ? 'One-off work for the office, like an office move or a new laptop, with its own dates and budget. Grants give to it directly.'
+            : 'One-off work under a program, like a spring showcase or an instrument refresh, with its own dates and budget. Grants give to it directly.'
       }
       onClose={onClose}
       footer={

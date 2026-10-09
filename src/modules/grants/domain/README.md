@@ -167,7 +167,7 @@ out. History keeps them: `grantById`, `grantsByFunder`, `funderTotals` ("awarded
 last-year views read. `fundersList(state, includeArchived?)` is the Funders list.
 
 Lookup helpers, because every screen needs them: `grantById`, `funderById`,
-`grantsByFunder`, `grantsForProgram` (a grant is under each program it names), `programNames(state, grant, short?)` ("A, B and C"), `coversWholeStudio(grant)` (it names General operating), `funderTotals`, `grantActivity` (newest
+`grantsByFunder`, `grantsForProgram` (a grant is under each program it names), `programNames(state, grant, short?)` ("A, B and C"), `coversWholeStudio(grant)` (it names Operations, core's `OPERATIONS_ID`), `funderTotals`, `grantActivity` (newest
 first), `activityWho` (the name an activity row credits). `staffById`, `programName` and `fiscalYear` are core's.
 
 `funderShortName(name, tight?)` (`names.ts`) is the one way to shorten a

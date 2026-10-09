@@ -29,6 +29,7 @@ import {
   isRole,
   mayChangeStaff,
   meetsAny,
+  programsList,
   useCan,
   useStore,
   withArchived,
@@ -90,8 +91,9 @@ export default function Settings() {
   const staffRows = withArchived(state.core.staff, showArchived);
   const partnerCount = activeOnly(state.core.organizations).length;
   const venueCount = activeOnly(state.core.venues).length;
-  const programCount = activeOnly(state.core.programs).length;
-  const archivedPrograms = state.core.programs.length - programCount;
+  // Operations is not a program (decision 0006), so it is not counted.
+  const programCount = programsList(state).length;
+  const archivedPrograms = programsList(state, true).length - programCount;
   const archivedPlaces =
     state.core.organizations.length + state.core.venues.length - partnerCount - venueCount;
 

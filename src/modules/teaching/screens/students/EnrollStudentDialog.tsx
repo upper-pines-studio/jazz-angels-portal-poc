@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
 import { useToast } from '../../../../app/ToastHost';
-import { activeOnly, placeLabel, programOptions, useStore } from '../../../../core';
+import { activeOnly, classProgramOptions, placeLabel, useStore } from '../../../../core';
 import type { ProgramId } from '../../../../core';
 import { ensembleById } from '../../domain';
 
@@ -31,9 +31,9 @@ export default function EnrollStudentDialog({
   const [instrument, setInstrument] = React.useState('');
   const [guardianName, setGuardianName] = React.useState('');
   const [guardianPhone, setGuardianPhone] = React.useState('');
-  // A new student is offered the current programs only; an archived program's
+  // A new student is offered the current programs only, not Operations; an archived program's
   // tab still opens this, and it starts on the first current one instead.
-  const programs = programOptions(state);
+  const programs = classProgramOptions(state);
   const [programId, setProgramId] = React.useState<ProgramId>(
     programs.find(p => p.id === defaultProgramId)?.id ?? programs[0]?.id ?? '',
   );

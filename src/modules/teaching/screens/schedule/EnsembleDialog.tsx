@@ -5,7 +5,7 @@ import { useToast } from '../../../../app/ToastHost';
 import {
   pickable,
   programName,
-  programOptions,
+  classProgramOptions,
   useCan,
   useStore,
   venueById,
@@ -32,7 +32,7 @@ export default function EnsembleDialog({
   const toast = useToast();
   const nav = useNavigate();
 
-  const programs = programOptions(state, ensemble?.programId);
+  const programs = classProgramOptions(state, ensemble?.programId);
   const leads = leadOptions(state, ensemble?.leadStaffId);
   const venues = pickable(state.core.venues, ensemble?.venueId);
 
@@ -111,7 +111,9 @@ export default function EnsembleDialog({
           label="Program"
           required
           error={error('programId')}
-          hint={programs.length === 0 ? 'No programs yet. Add one in Settings.' : undefined}
+          hint={
+            programs.length === 0 ? 'No programs yet. Add one on the Programs page.' : undefined
+          }
         >
           <Select
             value={programId}

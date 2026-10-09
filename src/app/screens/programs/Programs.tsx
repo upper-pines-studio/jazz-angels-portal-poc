@@ -16,6 +16,7 @@ import {
   fiscalYearsOverlapping,
   isArchived,
   money,
+  operations,
   programBudget,
   programsList,
   projectById,
@@ -35,8 +36,9 @@ import { barParts, fundingOf, useFiscalYearParam } from './funding';
 import './programs.css';
 
 /**
- * Operations › Programs: every program, with its projects nested under it, in
- * a list that scrolls on its own, and the selected one's sheet beside it
+ * Operations › Programs: Operations, the office's running costs, on its own at
+ * the top, then every program, each with its projects nested under it, in a
+ * list that scrolls on its own, and the selected one's sheet beside it
  * (decision 0006). The URL names the selection (`/programs/:id`, or
  * `/programs/projects/:projectId`), `?fy=FY28` the fiscal year (this one when
  * unset) and `?archived=1` Show archived.
@@ -68,10 +70,13 @@ export default function Programs() {
   const [archivingProject, setArchivingProject] = React.useState<Project | null>(null);
   const [budgetFor, setBudgetFor] = React.useState<string | null>(null);
 
+  // Operations is not a program: it is listed on its own and not counted.
+  const office = operations(state);
   const rows = programsList(state, showArchived);
-  const current = activeOnly(state.core.programs).length;
+  const current = programsList(state).length;
+  const none = programsList(state, true).length === 0;
   const archivedCount =
-    archivedOnly(state.core.programs).length +
+    archivedOnly(programsList(state, true)).length +
     (mayMoney ? archivedOnly(state.core.projects).length : 0);
   // The year's projects count in its totals; the list also shows the others,
   // greyed, after them, so a project is never only reachable from its program.
@@ -93,9 +98,9 @@ export default function Programs() {
     subtitle:
       current > 0
         ? `${current} ${current === 1 ? 'program' : 'programs'}`
-        : state.core.programs.length > 0
-          ? 'No current programs'
-          : 'No programs yet',
+        : none
+          ? 'No programs yet'
+          : 'No current programs',
     actions: mayEdit ? (
       <Button
         variant="primary"
@@ -208,13 +213,50 @@ export default function Programs() {
     );
   }
 
-  // No program or project named, or one that is not here: the first program on the list.
+  // No program or project named, or one that is not here: the first program
+  // on the list, or Operations when there is none.
   if (!program && !project) {
-    const first = rows[0] ?? state.core.programs[0];
+    const first = rows[0] ?? office ?? state.core.programs[0];
     return <Navigate to={`/programs/${first.id}${search}`} replace />;
   }
 
   const selectedKey = project ? `project:${project.id}` : `program:${program?.id}`;
+
+  /** A program, or Operations, on the list, with its projects under it. */
+  const programRow = (p: Program) => {
+    const under = listed.filter(x => x.programId === p.id);
+    return (
+      <li key={p.id}>
+        <ListItem
+          to={`/programs/${p.id}${search}`}
+          name={p.name}
+          archived={isArchived(p)}
+          current={selectedKey === `program:${p.id}`}
+          note={p.short !== p.name ? p.short : undefined}
+          target={mayMoney ? { kind: 'program', programId: p.id, fiscalYear: fy.label } : undefined}
+          fy={fy}
+        />
+        {under.length > 0 && (
+          <ul className="ja-programs__projects" aria-label={`Projects in ${p.name}`}>
+            {under.map(x => (
+              <li key={x.id}>
+                <ListItem
+                  to={`/programs/projects/${x.id}${search}`}
+                  name={x.name}
+                  archived={isArchived(x)}
+                  current={selectedKey === `project:${x.id}`}
+                  target={{ kind: 'project', projectId: x.id }}
+                  fy={fy}
+                  otherYear={otherYearNote(state, x, fy)}
+                  project
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    );
+  };
 
   return (
     <>
@@ -230,7 +272,11 @@ export default function Programs() {
                   onChange={e => setFy(e.target.value)}
                 />
               </label>
-              <YearTotals fy={fy} programs={rows} projects={projects} />
+              <YearTotals
+                fy={fy}
+                programs={office ? [office, ...rows] : rows}
+                projects={projects}
+              />
             </div>
           )}
           <ShowArchivedSwitch
@@ -238,52 +284,42 @@ export default function Programs() {
             checked={showArchived}
             onChange={setShowArchived}
           />
-          {rows.length === 0 ? (
-            <p className="ja-programs__none">
-              Every program is archived. Show archived lists them.
-            </p>
-          ) : (
-            <ul className="ja-programs__list">
-              {rows.map(p => {
-                const under = listed.filter(x => x.programId === p.id);
-                return (
-                  <li key={p.id}>
-                    <ListItem
-                      to={`/programs/${p.id}${search}`}
-                      name={p.name}
-                      archived={isArchived(p)}
-                      current={selectedKey === `program:${p.id}`}
-                      note={p.short !== p.name ? p.short : undefined}
-                      target={
-                        mayMoney
-                          ? { kind: 'program', programId: p.id, fiscalYear: fy.label }
-                          : undefined
-                      }
-                      fy={fy}
-                    />
-                    {under.length > 0 && (
-                      <ul className="ja-programs__projects" aria-label={`Projects in ${p.name}`}>
-                        {under.map(x => (
-                          <li key={x.id}>
-                            <ListItem
-                              to={`/programs/projects/${x.id}${search}`}
-                              name={x.name}
-                              archived={isArchived(x)}
-                              current={selectedKey === `project:${x.id}`}
-                              target={{ kind: 'project', projectId: x.id }}
-                              fy={fy}
-                              otherYear={otherYearNote(state, x, fy)}
-                              project
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          {/* Operations, then the programs, scrolling together under the year. */}
+          <div className="ja-programs__scroll">
+            {office && (
+              <ul className="ja-programs__list" aria-label="Operations">
+                {programRow(office)}
+              </ul>
+            )}
+            <p className="ja-programs__label">Programs</p>
+            {rows.length === 0 ? (
+              <div className="ja-programs__none">
+                <p>
+                  {none
+                    ? mayEdit
+                      ? 'No programs yet. Studio sessions, in-school classes and the other programs a grant, a student or an ensemble belongs to show up here.'
+                      : 'No programs yet. Studio sessions, in-school classes and the other programs show up here once an admin or a director adds them.'
+                    : 'Every program is archived. Show archived lists them.'}
+                </p>
+                {mayEdit && none && (
+                  <div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      iconLeft={<Icon name="plus" size={15} />}
+                      onClick={() => setDraft({ name: '', short: '' })}
+                    >
+                      Add program
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <ul className="ja-programs__list" aria-label="The programs">
+                {rows.map(programRow)}
+              </ul>
+            )}
+          </div>
         </aside>
 
         {program && (
