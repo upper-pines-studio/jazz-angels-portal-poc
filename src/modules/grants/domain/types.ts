@@ -644,6 +644,8 @@ export type ShareWarningKind =
   | 'project-outside-period'
   /** A program's fiscal year that starts after the grant period ends. */
   | 'year-after-period'
+  /** A program's fiscal year that ended before the grant period starts. */
+  | 'year-before-period'
   /** More given out than the grant has. */
   | 'over-given';
 

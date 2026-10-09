@@ -137,12 +137,17 @@ export function targetWarnings(
                 : undefined;
       if (message) out.push({ kind: 'project-outside-period', message });
     }
-  } else if (periodEnd) {
+  } else {
     const fy = fiscalYearNamed(target.fiscalYear, state.core.settings.fiscalYearStartMonth);
-    if (fy && fy.start > periodEnd) {
+    if (fy && periodEnd && fy.start > periodEnd) {
       out.push({
         kind: 'year-after-period',
         message: `${fy.label} starts after the grant period ends, ${dateLong(periodEnd)}`,
+      });
+    } else if (fy && periodStart && fy.end < periodStart) {
+      out.push({
+        kind: 'year-before-period',
+        message: `${fy.label} ended before the grant period starts, ${dateLong(periodStart)}`,
       });
     }
   }
