@@ -15,6 +15,8 @@ import type { Role } from './types';
 export type Subject =
   | 'grants'
   | 'award'
+  | 'program-budgets'
+  | 'grant-shares'
   | 'transactions'
   | 'schedule'
   | 'roll-call'
@@ -45,6 +47,8 @@ export const PERMISSION_TABLE: ReadonlyArray<readonly [Subject, string, Row]> = 
   //                                                       Admin   Director Office mgr Bookkeeper Teacher        Assistant Read-only
   ['grants',             'Grants: pipeline, checklist, deadlines', ['Edit', 'Edit',  'Edit',  'View',  '–',           'Edit',  'View']],
   ['award',              'Award, budget, reports',                 ['Edit', 'Edit',  'Edit',  'Edit',  '–',           'View',  'View']],
+  ['program-budgets',    'Program budgets and projects',           ['Edit', 'Edit',  'Edit',  'Edit',  '–',           'View',  'View']],
+  ['grant-shares',       'Grant shares',                           ['Edit', 'Edit',  'Edit',  'Edit',  '–',           'View',  'View']],
   ['transactions',       'Transactions: assign, split',            ['Edit', 'Edit',  'Edit',  'Edit',  '–',           '–',     'View']],
   ['schedule',           'Schedule and classes',                   ['Edit', 'Edit',  'Edit',  '–',     'View all',    'View',  'View']],
   ['roll-call',          'Roll call',                              ['Any class', 'Any class', 'Any class', '–', 'Own classes', '–', '–']],
