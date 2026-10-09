@@ -218,3 +218,35 @@
 .pp-grid tbody td:first-child {
   min-width: 260px;
 }
+
+/* Programs page */
+.pp-a__item--project {
+  margin-left: var(--space-5);
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+.pp-head {
+  display: flex;
+  gap: var(--space-4);
+  align-items: end;
+  margin-bottom: var(--space-4);
+}
+.pp-title {
+  font: var(--type-h3);
+  color: var(--text-strong);
+}
+.pp-a__row--project {
+  grid-template-columns: minmax(0, 1fr) 160px 160px;
+}
+.pp-linkish {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--text-link);
+  cursor: pointer;
+  text-align: left;
+}
+.pp-c__chip a {
+  color: var(--text-link);
+}

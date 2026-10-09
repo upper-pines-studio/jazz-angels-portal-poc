@@ -26,6 +26,7 @@ import { ReportsTab } from './grant/ReportsTab';
 import { ProgramNumbers } from './grant/ProgramNumbers';
 import { ActivityTab } from './grant/ActivityTab';
 import { SideCards } from './grant/SideCards';
+import { GrantShares } from './prototype-projects/GrantShares';
 
 /** One grant: where it is, what is left to do, and — once awarded — where the money went. */
 
@@ -200,6 +201,10 @@ export default function GrantDetail() {
           </Card>
 
           {tab === 'reports' && <ProgramNumbers grant={grant} />}
+          {/* PROTOTYPE — dev only, throwaway. */}
+          {import.meta.env.DEV && tab === (postAward ? 'award' : first) && (
+            <GrantShares grant={grant} />
+          )}
         </div>
 
         {aside}
