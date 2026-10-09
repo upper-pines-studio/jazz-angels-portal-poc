@@ -127,15 +127,27 @@ export function can(role: Role, subject: Subject, need: Need = 'open', own = fal
 }
 
 /**
+ * The roles that may make someone an Admin, or change or archive an Admin's
+ * record: Admin and Director (decision 0001, "Beyond the table"). A role
+ * given "Staff and roles" later does not get this with it.
+ */
+export const ADMIN_MAKERS: readonly Role[] = ['admin', 'director'];
+
+/**
  * May this role change a person's record from one role to another? "Staff and
- * roles" says who edits staff at all. Beyond the table, only an Admin makes
- * someone an Admin or changes an Admin's record: otherwise a Director could
- * hand themself "Modules, import, export" and the QuickBooks connection.
+ * roles" says who edits staff at all. Beyond the table, only an Admin or a
+ * Director makes someone an Admin or changes an Admin's record. Nobody changes
+ * their own role (the store refuses it with `OWN_ROLE_REFUSAL`), so a Director cannot hand themself
+ * "Modules, import, export" and the QuickBooks connection.
  */
 export function mayChangeStaff(role: Role, from: Role | undefined, to: Role | undefined): boolean {
   if (!can(role, 'staff', 'edit')) return false;
-  return role === 'admin' || (from !== 'admin' && to !== 'admin');
+  return ADMIN_MAKERS.includes(role) || (from !== 'admin' && to !== 'admin');
 }
+
+/** What the store says when someone tries to change their own role, Admin included. */
+export const OWN_ROLE_REFUSAL =
+  "You can't change your own role. Ask someone else who manages staff.";
 
 /** `can` for a `Requirement`. */
 export function meets(role: Role, requirement: Requirement): boolean {

@@ -1,6 +1,6 @@
 import { SEED_TODAY } from '../../../core/seed';
 import { PHASE_ORDER } from './phases';
-import { DEFAULT_TEMPLATES, DEFAULT_TEMPLATE_ID, instantiateTemplate } from './templates';
+import { DEFAULT_TEMPLATE_ID, defaultTemplates, instantiateTemplate } from './templates';
 import {
   LAC_BUDGET_LINES,
   LAC_EXPENSES,
@@ -824,7 +824,7 @@ function seedActivity(): Activity[] {
 
 /** A fresh copy of the demo data set. Never mutate the result in place. */
 export function makeSeed(): GrantsState {
-  const templates: ChecklistTemplate[] = JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+  const templates = defaultTemplates();
   const standard = templates.find(t => t.id === DEFAULT_TEMPLATE_ID) ?? templates[0];
 
   const grants: Grant[] = JSON.parse(JSON.stringify(GRANTS));
@@ -856,7 +856,9 @@ export function makeSeed(): GrantsState {
 
 /**
  * What a new office starts with when the demo is off (decision 0004): no
- * funders, grants or money, no checklist templates, the default reminders.
+ * funders, grants or money; the default playbook, the same templates the demo
+ * has; the default reminders. Only a fresh start gets the playbook: a saved
+ * slice keeps the templates it has, even none.
  */
 export function makeEmpty(): GrantsState {
   return {
@@ -868,7 +870,7 @@ export function makeEmpty(): GrantsState {
     budgetLines: [],
     reports: [],
     activity: [],
-    templates: [],
+    templates: defaultTemplates(),
     ...makeMoneyEmpty(),
   };
 }

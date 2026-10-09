@@ -246,7 +246,8 @@ button needs no dialog beyond a confirmation. Terminal phases return `[]`.
 
 `DEFAULT_TEMPLATES` ships four: **Foundation grant — standard** (the default,
 `DEFAULT_TEMPLATE_ID`), **Government grant**, **Corporate sponsorship**,
-**Renewal (returning funder)**. Live templates are in `state.templates`.
+**Renewal (returning funder)**. `defaultTemplates()` returns a fresh copy of
+them, for the demo and a new office alike. Live templates are in `state.templates`.
 
 - `instantiateTemplate(template, grant, excludeItemIds?, fromPhase?)` → `Omit<Task,'id'>[]`.
   Each due date is `grant.dates[anchor] + offsetDays`; when the anchor date is
@@ -285,8 +286,9 @@ staff id (`whoId`); a new row is credited to whoever is signed in
 (`SliceContext.user`), and `activityWho` gives the name to show.
 
 `makeEmpty()` is what a new office starts with when the demo is off
-(decision 0004): every collection empty, QuickBooks not connected, no checklist
-templates, the default reminder schedule. See `src/core/demo.ts`.
+(decision 0004): every collection empty but the playbook, QuickBooks not
+connected, the default reminder schedule. The playbook is `defaultTemplates()`,
+the same four templates the demo has (#47); a saved slice keeps its own. See `src/core/demo.ts`.
 
 Funder contact names, emails and phone numbers are invented for the demo —
 plausible-looking, but none of them is a real person or address.

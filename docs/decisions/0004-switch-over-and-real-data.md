@@ -50,7 +50,12 @@ for what has been brought into it.
 - The QuickBooks sync reaches back to the start of the earliest grant in the portal, not just
   to the switch-over date, so an in-flight grant's earlier spending can be assigned.
 - The portal starts empty, not with the demo data, and must look right empty
-  (see the empty-state pass).
+  (see the empty-state pass). Two things come pre-loaded, because every office needs them and
+  they hold no Jazz Angels history: the six programs, and the default playbook, the four
+  checklist templates the demo has (#47: `defaultTemplates()` in
+  `modules/grants/domain/templates.ts`, used by both `makeSeed` and `makeEmpty`). Their items
+  are offsets from a grant's own dates, so nothing depends on the demo date. Only a fresh start
+  gets them: a saved grants slice keeps the templates it has, even none.
 - A grant record must tolerate missing history, so past grants can be entered later with only
   funder, amount, dates and outcome.
 - A student CSV import is worth building; a grants import is not, until history is decided.

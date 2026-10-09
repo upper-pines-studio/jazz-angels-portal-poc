@@ -46,7 +46,8 @@ director's role and gets a teacher's view of their own classes on top.
 - An archived person cannot sign in, and everything they did stays attributed to them
   (see [0002](0002-archive-not-delete.md)). Done (#20): `checkSignIn` refuses them as
   `archived`, a saved session is turned away the same way, and archiving a person needs the
-  same permission as editing them (`mayChangeStaff`), never on your own record.
+  same permission as editing them (`mayChangeStaff`), never on your own record. Nobody changes
+  their own role either (#47; see below).
 - Every change records who made it. Done (#16): every action is credited to the signed-in person,
   passed to each module's actions as `SliceContext.user`; the activity log stores their staff id
   and shows their name as it is now.
@@ -71,8 +72,18 @@ director's role and gets a teacher's view of their own classes on top.
   Admin and Director, the same people as "Staff and roles", since programs are the office's own
   configuration and a grant or a report is filed under them. Not final until the client reviews
   it; the open question is whether the Office manager should have it too.
-- Beyond the table, only an Admin makes someone an Admin or changes an Admin's record, so the
-  "Staff and roles" row cannot hand out "Modules, import, export" (`mayChangeStaff`).
+- Beyond the table, only an Admin or a Director makes someone an Admin, adds someone as an
+  Admin, or edits, archives or restores an Admin's record (`mayChangeStaff`, `ADMIN_MAKERS`).
+  Changed with #47: it was the Admin alone. A role given "Staff and roles" later does not get
+  this with it. So that the "Staff and roles" row cannot hand out "Modules, import, export",
+  nobody changes their own role, the Admin included: the Edit dialog shows your own role as
+  text, and the store refuses the change ("You can't change your own role. Ask someone else who
+  manages staff."). The rest of your own record (name, title, teaches) you may still change.
+  Nobody archives themself either. Open question: may a Director demote or archive the last
+  Admin, which leaves nobody with "Modules, import, export"? Built as allowed, per #47.
+- For the backend (#22): once real accounts exist, a Director could add an Admin record and give
+  it a login they control. The self-role rule does not stop that, so creating an account needs
+  its own rule.
 - "Own classes" means the ensembles the teacher is assigned to teach: `Ensemble.leadStaffId`
   (`leadsEnsemble` and `mayTakeRoll` in `modules/teaching/domain/derive.ts`). Guardian name and
   phone are left off a student's record before it reaches the screen for anyone who may not see

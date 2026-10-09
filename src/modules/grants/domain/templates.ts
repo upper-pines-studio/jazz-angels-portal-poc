@@ -178,6 +178,15 @@ const RENEWAL: ChecklistTemplate = {
 
 export const DEFAULT_TEMPLATES: ChecklistTemplate[] = [STANDARD, GOVERNMENT, CORPORATE, RENEWAL];
 
+/**
+ * A fresh copy of the default playbook, for the demo and for a new office alike
+ * (decision 0004). Items are offsets from a grant's own dates, so nothing in
+ * them depends on the demo date. Never mutate `DEFAULT_TEMPLATES` itself.
+ */
+export function defaultTemplates(): ChecklistTemplate[] {
+  return JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+}
+
 /** The template the "Add grant" dialog pre-selects. */
 export const DEFAULT_TEMPLATE_ID = STANDARD_ID;
 
