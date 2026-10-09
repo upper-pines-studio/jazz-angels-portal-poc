@@ -1,4 +1,5 @@
 import { USERS } from './auth';
+import { OPERATIONS_ID, operationsRecord } from './derive';
 import type {
   AppSettings,
   CoreState,
@@ -78,13 +79,17 @@ const STAFF: StaffMember[] = [
   },
 ];
 
+/**
+ * The five Jazz Angels programs, then Operations, the office's running costs
+ * (decision 0006), which is not a program but lives beside them.
+ */
 const PROGRAMS: Program[] = [
   { id: 'studio-sessions', name: 'Studio Semester Sessions', short: 'Studio' },
   { id: 'in-school', name: 'In-School Program', short: 'In-school' },
   { id: 'homeschool', name: 'Homeschool Program', short: 'Homeschool' },
   { id: 'jazz-legacy', name: 'Jazz Legacy Program', short: 'Jazz Legacy' },
   { id: 'advanced-workshop', name: 'Advanced Jazz Workshop', short: 'Workshop' },
-  { id: 'general-operating', name: 'General operating', short: 'Operating' },
+  operationsRecord(),
 ];
 
 /** Jazz Angels' own studio: where every ensemble meets unless it says otherwise. */
@@ -144,7 +149,7 @@ const VENUES: Venue[] = [
  * the director saw (#49). The demo's today is in FY27.
  */
 const PROGRAM_BUDGETS: ProgramBudget[] = [
-  { programId: 'general-operating', fiscalYear: 'FY27', amount: 20000 },
+  { programId: OPERATIONS_ID, fiscalYear: 'FY27', amount: 20000 },
   { programId: 'studio-sessions', fiscalYear: 'FY27', amount: 18000 },
   { programId: 'in-school', fiscalYear: 'FY27', amount: 15000 },
   { programId: 'homeschool', fiscalYear: 'FY27', amount: 6000 },
@@ -223,7 +228,7 @@ export function loginStaff(): StaffMember[] {
 
 /**
  * What a new office starts with when the demo is off (decision 0004): the
- * programs as editable configuration, the people the logins need, the default
+ * programs as editable configuration and Operations, the people the logins need, the default
  * settings, and no partners, venues, budgets or projects.
  */
 export function makeCoreEmpty(): CoreState {
