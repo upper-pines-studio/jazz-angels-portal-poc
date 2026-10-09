@@ -81,6 +81,13 @@ and projects scrolls in its own column and stays in view while the sheet beside 
   when Closed; a program share with no grant period yet defaults to the year it is given in;
   giving again to the same program year or project adds to that share; a restricted grant
   naming General operating is restricted to General operating like any other program.
+- **#56 (built, the screens):** the Programs page lists each program's projects under it with
+  what is funded against its budget for a chosen fiscal year; a program's and a project's sheet
+  show the budget, the money from awarded grants and if pending grants come in, what is still
+  to find, the stacked bar hatched for "If awarded", "Paid for by" (the grants module's panel,
+  through its manifest) with Add money from a grant, and, on a program, its projects with Add a
+  project. Each grant shows "Where this grant's money goes" under its Award tab, or its first
+  tab before an award, with Give to a program or project. Warnings show and never stop anything.
 - **Budgets and projects are core nouns** (`Project`, program budgets by fiscal year in
   `src/core`); **`GrantShare` belongs to the grants module** (`domain/types.ts`), as do its
   actions, rules and totals. The Programs page is a core screen; the grants module adds its

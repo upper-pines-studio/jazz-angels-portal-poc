@@ -43,9 +43,9 @@ src/
     Shell.tsx              rail built from MODULES (sections + items + badge counts)
     screens/Dashboard.tsx  composed from every enabled module's dashboard contributions
     screens/Settings.tsx   core: staff, programs, fiscal year, Modules on/off, export/import/reset
-    screens/programs/      core: Programs list and sheet, ProgramDialog
+    screens/programs/      core: Programs list and sheets (program, project), ProgramDialog, ProjectDialog
     screens/partners/      core: Partners list, OrganizationDetail, VenueDetail, shared dialogs
-    components/            shared app-level bits (badges, TableScroll)
+    components/            shared app-level bits (badges, TableScroll, the funding bar)
     responsive.css
   design-system/           untouched
 ```
@@ -213,8 +213,13 @@ Everything in `docs/SPEC.md`, moved under `modules/grants/`. Behaviour unchanged
   <program>."
 - **A grant's money is shared out** (decision 0006, #55): a `GrantShare` gives part of a grant
   to one program's fiscal year or one project (`domain/shares.ts`). The manifest's `funding`
-  answers what pays toward a program's year or a project (`fundingFor`), so the Programs page
-  never reaches inside the module. The screens come with #56.
+  answers what pays toward a program's year or a project (`fundingFor`), and its `panel` is
+  "Paid for by" on the program's or project's sheet (`screens/shares/PaidFor.tsx`), so the
+  Programs page never reaches inside the module. The grant's own side is a card, **Where this
+  grant's money goes**, under the Award tab (the first tab before an award;
+  `screens/shares/WhereMoneyGoes.tsx`): not yet given of its total, a stacked bar, one row per
+  program year or project with Change and Take back, and Give to a program or project. Warnings
+  show on the row they are about and before a give; none stops it (#56).
 - Public API (`modules/grants/index.ts`): `manifest`, `deadlines`, `fyTotals`, `grantsForProgram`,
   `fundingFor`, `grantsPayingFor`.
 
@@ -356,14 +361,29 @@ awaiting approval" as `info` when > 0; no panel.
     contact, phone, email, notes) and **Classes here**: the ensembles that meet at this venue
     (program, when, room, lead, students), read from the teaching module's public index and shown
     only while Teaching is on. Edit venue in the top bar.
-- **Programs** `/programs`, `/programs/:id` — Core, Operations in the rail. A list of every
-  program in its own column (name, short name; it keeps to the window and scrolls by itself, and
-  stacks above the sheet under 900px) and the selected program's sheet beside it (name and short
-  name for now). The URL names the selection; `?archived=1` is Show archived. Add program in the
-  top bar, Edit and Archive on the sheet, Restore on an archived program's sheet: Admin and
-  Director only (decision 0001, "Programs"); everyone else reads. With no programs it shows an
-  empty state with Add program. Later parts of the sheet (budget, projects, who pays for it)
-  are sections of the same card.
+- **Programs** `/programs`, `/programs/:id`, `/programs/projects/:projectId` — Core, Operations
+  in the rail (decision 0006). A list of every program with its projects nested under it, in its
+  own column (it keeps to the window and scrolls by itself, and stacks above the sheet under
+  900px), and the selected one's sheet beside it. Over the list, a Fiscal year picker (`?fy=FY28`;
+  this year when unset; the choices are this year, the next, and every year with a budget or a
+  project) and the year's totals ("$106,500 budgeted · $83,500 funded"). Each list item shows
+  what is funded against its budget ("$15,300 of $18,000 · $2,700 to find", "covered", "$500
+  over", "No budget yet") and a small stacked bar; a project is listed in every year its dates
+  overlap. The URL names the selection; `?archived=1` is Show archived (programs and projects).
+  - **Program sheet**: figures Budget, From awarded grants, If pending grants come in, Still to
+    find (More than the budget when over), the stacked bar (one segment per grant, hatched for
+    "If awarded"), the year's dates; then each module's `funding.panel` (grants: **Paid for
+    by**), **Projects in <program>** with Add a project, and Details (name, short name). Set
+    budget / Change budget open a dialog. With no budget for the year it says so in a sentence
+    instead of the figures.
+  - **Project sheet**: the same figures and bar over all the project's dates ("Runs Jun 21 – Jul
+    30, 2027, so it counts in FY27 and FY28."), Paid for by, and Details (name, part of, dates,
+    budget). Edit, Archive and Restore on the sheet.
+  - Who does what: Add program, Edit, Archive and Restore of a program are Admin and Director
+    ("Programs"); budgets and projects are "Program budgets and projects" and the shares "Grant
+    shares" (Edit for Admin, Director, Office manager, Bookkeeper; View for Office assistant and
+    Read-only). A Teacher sees the names only, and a project's page is closed to them. With no
+    programs it shows an empty state with Add program.
 - **Settings** `/settings` — Cards: Staff (name, role, "teaches" Switch), Partners and venues (a
   count and a button to the Partners screen), Programs (a count and a button to the Programs page), Fiscal year,
   **Modules** (one row per registered module: label, description, Switch; core cannot be turned
