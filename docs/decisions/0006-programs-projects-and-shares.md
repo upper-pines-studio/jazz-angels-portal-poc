@@ -72,6 +72,15 @@ and projects scrolls in its own column and stays in view while the sheet beside 
 - **#53 (built):** `Grant.programs` everywhere; Add grant, Grant details and Edit award record
   choose one or more programs; the grants list shows them and filters by any; Program numbers
   add them up. In the demo, the Port of Long Beach grant is for In-School and Homeschool.
+- **#55 (built, domain only):** program budgets by fiscal year (named "FY27") and `Project`
+  in core, with their actions and rules; `GrantShare` with Give, Change and Take back in the
+  grants module (`domain/shares.ts`), the totals and the four warnings; the manifest's
+  `funding` contribution, through which the Programs page asks what pays for a program's year
+  or a project. Saved data loads with none of them; the demo seeds the prototype's. Choices
+  made there: a grant's money counts once it reaches LOI (as "If awarded") and goes on counting
+  when Closed; a program share with no grant period yet defaults to the year it is given in;
+  giving again to the same program year or project adds to that share; a restricted grant
+  naming General operating is restricted to General operating like any other program.
 - **Budgets and projects are core nouns** (`Project`, program budgets by fiscal year in
   `src/core`); **`GrantShare` belongs to the grants module** (`domain/types.ts`), as do its
   actions, rules and totals. The Programs page is a core screen; the grants module adds its

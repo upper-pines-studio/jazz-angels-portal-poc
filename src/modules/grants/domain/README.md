@@ -34,8 +34,10 @@ function GrantDetail() {
 - `state.grants: GrantsState` — what this module owns: `funders, grants, tasks,
   documents, payments, budgetLines, expenses, reports, activity, templates`,
   and for the money side `quickbooks, accounts, classes, transactions,
-  incoming, splitRules, files, terms, reminderPlans, reminderDefaults`.
-  The people, the programs and the settings live in `state.core`.
+  incoming, splitRules, files, terms, reminderPlans, reminderDefaults`,
+  and `grantShares`, how each grant's money is shared out.
+  The people, the programs (with their budgets and projects) and the settings
+  live in `state.core`.
 - `today: string` — today as `YYYY-MM-DD`. Pass it to every derive function
   rather than calling `new Date()` in a screen.
 - `actions.grants` — the only way to change anything here. Every change is
@@ -78,6 +80,9 @@ Add/update actions that create something return its new id.
 | `addExpense(input)` / `deleteExpense(id)` | Spend against a budget line. |
 | `addReport(input)` / `updateReport(id, patch)` / `deleteReport(id)` | Reports owed to the funder. Deleting one also drops its reminder plan. A report that has been sent (status `submitted` or `accepted`, or a `submittedDate`) is not deleted (`REPORT_SENT_REFUSAL`); set its status back first if it was marked by mistake. |
 | `markReportSubmitted(id, date)` | Stamps `submittedDate`, sets status `submitted`, logs activity. |
+| `giveShare({ grantId, target, amount })` | Gives part of a grant's money to a program's fiscal year or to a project, and logs "Gave $1,500 to Homeschool Program, FY27" in the same change. A program's year left out defaults to the one the grant period starts in (`defaultShareYear`). Giving again to the same program year or project adds to that share. Returns the share id. See "Grant shares" below. |
+| `changeShare(id, { amount?, fiscalYear? })` | Changes a share's amount, or the year a program share counts toward, and logs it. A project share has no year to change. |
+| `takeBackShare(id)` | Removes a share, so its money is not yet given again, and logs "Took back …" on the grant. |
 | `addNote(grantId, text)` | Free-text row on the Activity timeline. Returns the activity id. |
 | `addTemplate(input)` / `updateTemplate(id, patch)` / `deleteTemplate(id)` | Playbook templates. `addTemplate` re-ids the items for you. |
 | `duplicateTemplate(id)` | Copies a template and its items. Returns the new id. |
@@ -173,8 +178,10 @@ alone is the city; `tight` gives "Long Beach CF" for a table cell, a chip or a
 dashboard row. Other names are kept as they are; no name gives "Unknown funder".
 
 The module's public API — what other modules may import from
-`src/modules/grants` — is `manifest`, `deadlines`, `fyTotals` and
-`grantsForProgram`.
+`src/modules/grants` — is `manifest`, `deadlines`, `fyTotals`,
+`grantsForProgram`, `fundingFor` and `grantsPayingFor`. The manifest's
+`funding.sources` is `fundingFor`, which is how the Programs page (a core
+screen) learns what pays for a program's year or a project.
 
 ### The `Deadline` shape
 
@@ -297,6 +304,67 @@ the same four templates the demo has (#47); a saved slice keeps its own. See `sr
 
 Funder contact names, emails and phone numbers are invented for the demo —
 plausible-looking, but none of them is a real person or address.
+
+---
+
+## Grant shares (`shares.ts`, decision 0006)
+
+A `GrantShare` is a slice of a grant's money that one program's fiscal year or
+one project gets: `{ id, grantId, target, amount }`, where `target` is core's
+`FundingTarget` (`{ kind: 'program', programId, fiscalYear: 'FY27' }` or
+`{ kind: 'project', projectId }`). It is not a share of a transaction
+(`usualShares`, the part of a QuickBooks transaction one grant pays); the two
+never meet. Shares are by grant, not by budget line, and one share counts
+toward one fiscal year.
+
+- **Which grants count** (`grantStanding`): `awarded` at Awarded, Active,
+  Reporting and Closed, against `amountAwarded`; `if-awarded` at LOI, Applying
+  and Submitted, against `amountRequested`, kept apart as "If awarded"; `none`
+  for a prospect, a declined or withdrawn grant and an archived one. A grant
+  that stops counting keeps its shares; they count toward nothing.
+  `grantPot(grant)` is what it has to give.
+- **The fiscal year** of a program share defaults to the year the grant period
+  starts in, else the year it is given in (`defaultShareYear`;
+  `resolveTarget` fills it in). A project share has none: a project counts in
+  every year its dates overlap (core's `projectsInFiscalYear`).
+- **A grant's card** reads `grantGiving(state, grantId)`: `{ grant, standing,
+  total, given, notYetGiven, shares, warnings }`, each share a `ShareView`
+  (`name`, `programId`, `archived`, `counts`, `warnings`), programs before
+  projects. A share to an archived project stays in the list, `counts: false`,
+  and its money is not yet given again. `givingGrants(state)` lists the grants
+  with money to give, awarded first, largest first, for "Add money from a
+  grant". `sharesOfGrant`, `shareTo(state, grantId, target)`, `grantGiven` and
+  `shareCounts` are the parts.
+- **A program's or project's sheet** reads `fundingFor(state, target)`: one
+  core `FundingSource` per counting grant (funder short name, title, link to
+  its Award tab, the amount, `ifAwarded`, its total and not yet given, warning
+  sentences), awarded first, then by amount. A program's year sees only the
+  shares named for that year; a project sees all of its shares. Core's
+  `fundingSummary(targetBudget(state, target), sources)` gives the budget,
+  awarded, if awarded and still to find. `grantsPayingFor` is the same as grants.
+- **Warnings, never refusals** (`ShareWarning`, `{ kind, message }`):
+  `outside-restriction` ("Restricted to In-School Program and Homeschool
+  Program", for a restricted grant's money outside its programs, a project
+  judged by its program), `project-outside-period` ("Runs past the grant
+  period, which ends Jun 30, 2027"), `year-after-period` ("FY28 starts after
+  the grant period ends, Jun 30, 2027") and `over-given` ("$500 more than the
+  grant has", on the grant). `targetWarnings(state, grant, target)` gives the
+  first three for any target; `giveWarnings(state, { grantId, target, amount },
+  replacing?)` adds `over-given` as it would be after giving, for the Give form.
+  A grant with no period dates yet has no period to fall outside.
+- **What is refused** is only what cannot be saved, with why (`giveProblem`,
+  `changeProblem`): an amount that is not whole dollars above $0
+  (`SHARE_AMOUNT_REFUSAL`), a missing or archived grant, a prospect, a declined
+  or withdrawn grant, a missing program or project, an archived project, a year
+  that is not one, a year on a project share, and moving a program share onto a
+  year the grant already gives to. Who may: "Grant shares" in decision 0001.
+
+The demo seeds the prototype's shares (#49): Herb Alpert gives $48,000 of
+$50,000, some to the Summer Jazz Intensive past its period; Long Beach CF all of
+its $8,500; the Port of Long Beach, restricted to In-School and Homeschool and
+still at Applying, $13,000 of its $15,000 to both. `__tests__/shares.test.ts`
+holds every program's and project's FY27 figures to the prototype's. A save from
+before shares loads with none, and a new office starts with none.
 
 ---
 
