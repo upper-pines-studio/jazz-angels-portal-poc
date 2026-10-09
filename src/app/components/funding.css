@@ -1,0 +1,91 @@
+/*
+ * The funding bar and its parts (decision 0006). One segment per source; a
+ * pending one ("If awarded") is hatched with the card's own white, so the
+ * stripes come from the tokens and add no colour.
+ */
+.ja-fbar {
+  display: flex;
+  width: 100%;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--neutral-100);
+}
+.ja-fbar--md {
+  height: 14px;
+}
+.ja-fbar--sm {
+  height: 8px;
+}
+.ja-fbar__seg {
+  height: 100%;
+  flex: 0 0 auto;
+}
+.ja-fbar__seg + .ja-fbar__seg {
+  box-shadow: inset 2px 0 0 var(--surface-card);
+}
+.ja-fbar__seg--if {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 4px,
+    var(--surface-card) 4px 7px
+  );
+}
+
+.ja-fswatch {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-xs);
+}
+
+.ja-ffigs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+.ja-ffig__label,
+.ja-flabel {
+  margin: 0;
+  font: var(--type-eyebrow);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.ja-ffig__value {
+  margin-top: var(--space-1);
+  font: var(--type-h3);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+.ja-ffig__value--over {
+  color: var(--danger-600);
+}
+
+.ja-fwarn {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font: var(--type-body-sm);
+  color: var(--danger-600);
+}
+.ja-fwarn li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.ja-fwarn li > :first-child {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
+@media (max-width: 640px) {
+  .ja-ffigs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: var(--space-4);
+  }
+}
