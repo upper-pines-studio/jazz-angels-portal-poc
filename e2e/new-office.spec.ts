@@ -1,5 +1,5 @@
 // A new office on day one (decision 0004: the portal starts empty) puts its first class on the
-// schedule and takes roll for it: a program in Settings, a venue on Partners, a session and an
+// schedule and takes roll for it: a program on Programs, a venue on Partners, a session and an
 // ensemble on the Schedule, a class, a student, then the roll call. As in empty-states.spec.ts,
 // the dev server runs with the demo on, so each slice is stored empty before the app loads and
 // nothing is seeded; the core slice adds back the seeded staff, so Devon Price is there to lead.
@@ -49,21 +49,22 @@ test('a new office adds a session, an ensemble and a class, and takes roll', asy
   const main = page.locator('main');
 
   // Nothing on the empty screens says a step is missing from the portal.
-  for (const route of ['/settings', '/schedule', '/schedule?view=term']) {
+  for (const route of ['/settings', '/programs', '/schedule', '/schedule?view=term']) {
     await page.goto(route);
     await expect(main.locator('h3').first(), route).toBeVisible();
     await expect(main, route).not.toContainText('not built yet');
   }
 
-  // A program, in Settings.
-  await page.goto('/settings');
+  // A program, on the Programs page.
+  await page.goto('/programs');
   await expect(main.getByText('No programs yet')).toBeVisible();
   await main.getByRole('button', { name: 'Add program' }).click();
   const program = dialog(page, 'Add program');
   await field(program, 'Name').fill('Studio Semester Sessions');
   await field(program, 'Short name').fill('Studio');
   await program.getByRole('button', { name: 'Add program' }).click();
-  await expect(main.getByText('Studio Semester Sessions')).toBeVisible();
+  await expect(page).toHaveURL(/\/programs\/[^/]+$/);
+  await expect(main.getByRole('heading', { name: 'Studio Semester Sessions' })).toBeVisible();
 
   // A venue, on Partners.
   await page.goto('/partners');
