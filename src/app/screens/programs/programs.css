@@ -1,0 +1,81 @@
+/*
+ * Programs: the list in its own column and the selected program's sheet beside
+ * it. The list keeps to the window and scrolls by itself while a long sheet
+ * scrolls with the page. Under 900px the list stacks above the sheet.
+ */
+.ja-programs {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.ja-programs__side {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: calc(100vh - 200px);
+  min-height: 0;
+}
+
+.ja-programs__list {
+  list-style: none;
+  margin: 0;
+  padding: 2px 4px 2px 2px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.ja-programs__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  color: var(--text-strong);
+  text-decoration: none;
+}
+.ja-programs__item:hover {
+  border-color: var(--border-default);
+}
+.ja-programs__item[aria-current='page'] {
+  border-color: var(--border-brand);
+  box-shadow: var(--shadow-ring-brand);
+}
+.ja-programs__name {
+  font: var(--weight-semibold) var(--text-sm) / 1.4 var(--font-sans);
+}
+.ja-programs__short {
+  font: var(--type-body-sm);
+  color: var(--text-muted);
+}
+.ja-programs__none {
+  margin: 0;
+  font: var(--type-body-sm);
+  color: var(--text-muted);
+}
+.ja-programs__title {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@media (max-width: 900px) {
+  .ja-programs {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+  .ja-programs__side {
+    position: static;
+    max-height: 260px;
+  }
+}

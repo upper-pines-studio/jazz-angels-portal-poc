@@ -40,8 +40,9 @@ interface RailItem {
 
 /**
  * The rail: Overview first, then every enabled module's section in registry
- * order (sections with the same name merge), then Partners and Settings at the
- * end of Office: core screens, so they stay whichever modules are on.
+ * order (sections with the same name merge), then core's own screens, so they
+ * stay whichever modules are on: Programs in Operations right after Grants, and
+ * Partners and Settings at the end of Office.
  *
  * An item the role may not open is left out (an item's own `requires`, else
  * its route's), and a section left with nothing in it goes too.
@@ -80,6 +81,16 @@ function buildNav(state: PortalState, today: string, user: SignedInUser): RailIt
         });
       }
     }
+  }
+
+  // Operations sits right after Grants (after Overview when Grants is off).
+  // Core's own, so it stays whichever modules are on.
+  if (mayOpen(user, '/programs', state)) {
+    const at = sections.findIndex(s => s.name === 'Grants');
+    sections.splice(at === -1 ? 1 : at + 1, 0, {
+      name: 'Operations',
+      items: [{ id: '/programs', label: 'Programs', icon: <Icon name="layers" size={16} /> }],
+    });
   }
 
   const office = sectionFor('Office');
