@@ -35,7 +35,6 @@ import {
 } from '../../core';
 import type { ModuleManifest, Role, StaffMember } from '../../core';
 import { MODULES } from '../../modules';
-import ProgramsCard from './settings/ProgramsCard';
 
 const MONTHS = [
   'January',
@@ -91,6 +90,8 @@ export default function Settings() {
   const staffRows = withArchived(state.core.staff, showArchived);
   const partnerCount = activeOnly(state.core.organizations).length;
   const venueCount = activeOnly(state.core.venues).length;
+  const programCount = activeOnly(state.core.programs).length;
+  const archivedPrograms = state.core.programs.length - programCount;
   const archivedPlaces =
     state.core.organizations.length + state.core.venues.length - partnerCount - venueCount;
 
@@ -412,7 +413,20 @@ export default function Settings() {
         </div>
       </Card>
 
-      <ProgramsCard />
+      <Card title="Programs" subtitle="What the money and the classes are for.">
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}
+        >
+          <p style={{ ...MUTED_SM, margin: 0, flex: 1, minWidth: 240 }}>
+            {programCount === 0
+              ? 'No programs yet. Add them on the Programs page.'
+              : `${programCount} ${programCount === 1 ? 'program' : 'programs'}${archivedPrograms > 0 ? `, and ${archivedPrograms} archived` : ''}. They are added, renamed and archived on the Programs page.`}
+          </p>
+          <Button variant="secondary" size="sm" onClick={() => nav('/programs')}>
+            Open Programs
+          </Button>
+        </div>
+      </Card>
 
       <Card title="Fiscal year" subtitle="Where the year starts for every total on the dashboard.">
         {maySystem && (
