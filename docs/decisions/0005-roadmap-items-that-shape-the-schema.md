@@ -3,7 +3,7 @@
 **Status:** Open. Needs a yes, no or likely on each item below from the client.
 
 The ideas in `docs/ROADMAP.md` are not commitments. Most can be added later as new tables. These
-ten change the shape of tables that exist from day one, or how they link, so each needs a yes,
+eleven change the shape of tables that exist from day one, or how they link, so each needs a yes,
 no or likely before the schema is written. A "likely" is enough: the schema leaves room for it
 and the feature is built later.
 
@@ -19,6 +19,7 @@ and the feature is built later.
 | Organization documents | Versioned files with expiry dates that grants point at; shapes file storage | |
 | Funder contact log, calendar and email | One activity log across every module, or one per module | |
 | Photo releases | Guardian consent stored with the student; part of protecting student data | |
+| Spending by program or project | An expense (or a QuickBooks class or location) names a program or project; the schema leaves room for it (see [0006](0006-programs-projects-and-shares.md)) | Likely |
 
 ## Can wait
 
