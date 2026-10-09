@@ -9,7 +9,7 @@ shares in the domain), #56 (the screens).
 
 The director asked to see each program's budget for the year and the grants paying for it, and to
 handle one-off work under a program (a spring showcase, an instrument refresh) that draws money
-from several grants. Her words: one grant's money is often split across several programs and
+from several grants. In the director's words, one grant's money is often split across several programs and
 projects. Until now a grant named exactly one program, "restricted" meant restricted to that
 one, and nothing recorded how a grant's money was divided up.
 
