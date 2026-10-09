@@ -74,7 +74,11 @@ Settings screen renders after its Modules card while the module is on.
 `funding` is optional too: `{ sources(state, target), panel?, requires? }`
 says what the module puts toward a program's fiscal year or a project
 (`FundingTarget`, decision 0006), so the Programs page can add it up and show
-it without reaching into the module. Grants answers with each grant's share.
+it without reaching into the module. Grants answers with each grant's share,
+and its `panel`, "Paid for by", is drawn on the sheet with the target it is for.
+The sheet colours its bar by the order of the sources, module by module, so a
+panel colours its rows in its own sources' order to match (`fundingColour` in
+`app/components/funding.tsx`).
 
 **Who sees what.** A route, a rail item, a stat, an attention row, a panel and a
 Settings card can each name what it `requires`: a row of the permission table

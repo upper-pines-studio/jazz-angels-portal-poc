@@ -7,49 +7,75 @@ import {
   ShowArchivedSwitch,
   useArchivedParam,
 } from '../../components/archive';
-import { KV } from '../../components/badges';
+import { FundingBar } from '../../components/funding';
 import { useToast } from '../../ToastHost';
-import { Button, Card, EmptyState, Icon } from '../../../design-system';
+import { Button, Card, EmptyState, Icon, Select } from '../../../design-system';
 import {
   activeOnly,
   archivedOnly,
   isArchived,
+  money,
+  programBudget,
   programsList,
+  projectById,
+  projectsInFiscalYear,
   useCan,
   useStore,
 } from '../../../core';
-import type { Program } from '../../../core';
+import type { FiscalYear, FundingTarget, Program, Project } from '../../../core';
 import { ProgramDialog } from './ProgramDialog';
 import type { ProgramDraft } from './ProgramDialog';
+import { BudgetDialog, ProjectDialog } from './ProjectDialog';
+import type { ProjectDraft } from './ProjectDialog';
+import { ProgramSheet, ProjectSheet } from './Sheet';
+import { barParts, fundingOf, useFiscalYearParam } from './funding';
 import './programs.css';
 
 /**
- * Operations › Programs: every program in a list that scrolls on its own, and
- * the selected program's sheet beside it. The URL names the selection
- * (`/programs/:id`), and `?archived=1` is Show archived. Add program, Edit,
- * Archive and Restore are for Admin and Director (decision 0001, "Programs");
- * everyone else reads.
+ * Operations › Programs: every program, with its projects nested under it, in
+ * a list that scrolls on its own, and the selected one's sheet beside it
+ * (decision 0006). The URL names the selection (`/programs/:id`, or
+ * `/programs/projects/:projectId`), `?fy=FY28` the fiscal year (this one when
+ * unset) and `?archived=1` Show archived.
  *
- * A core screen, since programs are core's noun. Later issues add the budget,
- * the projects and the grants that pay for it as more parts of the sheet.
+ * Who does what (decision 0001): Add program, Edit, Archive and Restore of a
+ * program are Admin and Director ("Programs"). Budgets and projects are
+ * "Program budgets and projects": Edit for Admin, Director, Office manager and
+ * Bookkeeper, View for Office assistant and Read-only; a Teacher sees the
+ * program names only. "Paid for by" on each sheet is the grants module's part,
+ * through its manifest.
+ *
+ * A core screen, since programs, budgets and projects are core's nouns.
  */
 export default function Programs() {
   const { state, actions } = useStore();
-  const mayEdit = useCan()('programs', 'edit');
-  const { id } = useParams();
+  const can = useCan();
+  const mayEdit = can('programs', 'edit');
+  const mayMoney = can('program-budgets');
+  const mayBudget = can('program-budgets', 'edit');
+  const { id, projectId } = useParams();
   const { search } = useLocation();
   const nav = useNavigate();
   const toast = useToast();
   const [showArchived, setShowArchived] = useArchivedParam();
+  const { fy, choices, setFy } = useFiscalYearParam();
   const [draft, setDraft] = React.useState<ProgramDraft | null>(null);
   const [archiving, setArchiving] = React.useState<Program | null>(null);
+  const [projectDraft, setProjectDraft] = React.useState<ProjectDraft | null>(null);
+  const [archivingProject, setArchivingProject] = React.useState<Project | null>(null);
+  const [budgetFor, setBudgetFor] = React.useState<string | null>(null);
 
   const rows = programsList(state, showArchived);
   const current = activeOnly(state.core.programs).length;
-  const archivedCount = archivedOnly(state.core.programs).length;
-  // An archived program still opens from a link: it is history.
-  const selected = state.core.programs.find(p => p.id === id);
+  const archivedCount =
+    archivedOnly(state.core.programs).length +
+    (mayMoney ? archivedOnly(projectsInFiscalYear(state, fy, true)).length : 0);
+  const projects = mayMoney ? projectsInFiscalYear(state, fy, showArchived) : [];
+  // An archived program or project still opens from a link: it is history.
+  const project = projectId && mayMoney ? projectById(state, projectId) : undefined;
+  const program = projectId ? undefined : state.core.programs.find(p => p.id === id);
   const select = (programId: string) => nav(`/programs/${programId}${search}`);
+  const openProject = (pid: string) => nav(`/programs/projects/${pid}${search}`);
 
   usePageHeader({
     title: 'Programs',
@@ -80,6 +106,15 @@ export default function Programs() {
     });
   }
 
+  function restoreProject(p: Project) {
+    actions.core.restoreProject(p.id);
+    toast({
+      tone: 'success',
+      title: 'Project restored',
+      message: `${p.name} is back on the list, and the grant money given to it counts again.`,
+    });
+  }
+
   const dialogs = (
     <>
       {draft && mayEdit && (
@@ -101,6 +136,32 @@ export default function Programs() {
           }}
           onClose={() => setArchiving(null)}
         />
+      )}
+      {projectDraft && mayBudget && (
+        <ProjectDialog
+          draft={projectDraft}
+          onClose={() => setProjectDraft(null)}
+          onAdded={openProject}
+        />
+      )}
+      {archivingProject && mayBudget && (
+        <ArchiveDialog
+          title={`Archive ${archivingProject.name}?`}
+          message="It leaves the Programs list. The grant money given to it stays in each grant's history and goes back to not yet given. You can restore it."
+          onConfirm={() => {
+            actions.core.archiveProject(archivingProject.id);
+            toast({
+              tone: 'success',
+              title: 'Project archived',
+              message: `${archivingProject.name} is off the list. Restore it from Show archived.`,
+            });
+            if (!showArchived) select(archivingProject.programId);
+          }}
+          onClose={() => setArchivingProject(null)}
+        />
+      )}
+      {budgetFor && mayBudget && (
+        <BudgetDialog programId={budgetFor} fy={fy} onClose={() => setBudgetFor(null)} />
       )}
     </>
   );
@@ -136,15 +197,31 @@ export default function Programs() {
     );
   }
 
-  // No program named, or one that is not here: the first on the list.
-  if (!selected && rows.length > 0) {
-    return <Navigate to={`/programs/${rows[0].id}${search}`} replace />;
+  // No program or project named, or one that is not here: the first program on the list.
+  if (!program && !project) {
+    const first = rows[0] ?? state.core.programs[0];
+    return <Navigate to={`/programs/${first.id}${search}`} replace />;
   }
+
+  const selectedKey = project ? `project:${project.id}` : `program:${program?.id}`;
 
   return (
     <>
       <div className="ja-programs">
         <aside className="ja-programs__side" aria-label="Programs">
+          {mayMoney && (
+            <div className="ja-programs__head">
+              <label className="ja-programs__fy">
+                <span>Fiscal year</span>
+                <Select
+                  value={fy.label}
+                  options={choices.map(c => c.label)}
+                  onChange={e => setFy(e.target.value)}
+                />
+              </label>
+              <YearTotals fy={fy} programs={rows} projects={projects} />
+            </div>
+          )}
           <ShowArchivedSwitch
             count={archivedCount}
             checked={showArchived}
@@ -156,36 +233,92 @@ export default function Programs() {
             </p>
           ) : (
             <ul className="ja-programs__list">
-              {rows.map(p => (
-                <li key={p.id}>
-                  <Link
-                    to={`/programs/${p.id}${search}`}
-                    className="ja-programs__item"
-                    aria-current={p.id === selected?.id ? 'page' : undefined}
-                  >
-                    <span className="ja-programs__name">{p.name}</span>
-                    {isArchived(p) ? (
-                      <ArchivedBadge />
-                    ) : (
-                      p.short !== p.name && <span className="ja-programs__short">{p.short}</span>
+              {rows.map(p => {
+                const under = projects.filter(x => x.programId === p.id);
+                return (
+                  <li key={p.id}>
+                    <ListItem
+                      to={`/programs/${p.id}${search}`}
+                      name={p.name}
+                      archived={isArchived(p)}
+                      current={selectedKey === `program:${p.id}`}
+                      note={p.short !== p.name ? p.short : undefined}
+                      target={
+                        mayMoney
+                          ? { kind: 'program', programId: p.id, fiscalYear: fy.label }
+                          : undefined
+                      }
+                      fy={fy}
+                    />
+                    {under.length > 0 && (
+                      <ul className="ja-programs__projects" aria-label={`Projects in ${p.name}`}>
+                        {under.map(x => (
+                          <li key={x.id}>
+                            <ListItem
+                              to={`/programs/projects/${x.id}${search}`}
+                              name={x.name}
+                              archived={isArchived(x)}
+                              current={selectedKey === `project:${x.id}`}
+                              target={{ kind: 'project', projectId: x.id }}
+                              fy={fy}
+                              project
+                            />
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  </Link>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </aside>
 
-        {selected && (
-          <Sheet
-            program={selected}
+        {program && (
+          <ProgramSheet
+            program={program}
+            fy={fy}
+            showArchived={showArchived}
             onEdit={
               mayEdit
-                ? () => setDraft({ id: selected.id, name: selected.name, short: selected.short })
+                ? () => setDraft({ id: program.id, name: program.name, short: program.short })
                 : undefined
             }
-            onArchive={mayEdit ? () => setArchiving(selected) : undefined}
-            onRestore={mayEdit ? () => restore(selected) : undefined}
+            onArchive={mayEdit ? () => setArchiving(program) : undefined}
+            onRestore={mayEdit ? () => restore(program) : undefined}
+            onSetBudget={mayBudget ? () => setBudgetFor(program.id) : undefined}
+            onAddProject={
+              mayBudget
+                ? () =>
+                    setProjectDraft({
+                      name: '',
+                      programId: program.id,
+                      start: '',
+                      end: '',
+                      budget: '',
+                    })
+                : undefined
+            }
+          />
+        )}
+        {project && (
+          <ProjectSheet
+            project={project}
+            onEdit={
+              mayBudget
+                ? () =>
+                    setProjectDraft({
+                      id: project.id,
+                      name: project.name,
+                      programId: project.programId,
+                      start: project.start,
+                      end: project.end,
+                      budget: String(project.budget),
+                    })
+                : undefined
+            }
+            onArchive={mayBudget ? () => setArchivingProject(project) : undefined}
+            onRestore={mayBudget ? () => restoreProject(project) : undefined}
           />
         )}
       </div>
@@ -194,65 +327,108 @@ export default function Programs() {
   );
 }
 
-/**
- * The selected program. Each part of it is a section of the one card, so the
- * budget, the projects and who pays for it can be added below the details.
- */
-function Sheet({
-  program,
-  onEdit,
-  onArchive,
-  onRestore,
+/** "FY27: $106,500 budgeted · $83,500 funded", over the list. */
+function YearTotals({
+  fy,
+  programs,
+  projects,
 }: {
-  program: Program;
-  /** Unset for a role that may not change programs. */
-  onEdit?: () => void;
-  onArchive?: () => void;
-  onRestore?: () => void;
+  fy: FiscalYear;
+  programs: Program[];
+  projects: Project[];
 }) {
-  const archived = isArchived(program);
+  const { state, user } = useStore();
+  const targets: FundingTarget[] = [
+    ...activeOnly(programs).map(p => ({
+      kind: 'program' as const,
+      programId: p.id,
+      fiscalYear: fy.label,
+    })),
+    ...activeOnly(projects).map(p => ({ kind: 'project' as const, projectId: p.id })),
+  ];
+  let budgeted = 0;
+  let funded = 0;
+  for (const t of targets) {
+    const { summary } = fundingOf(state, user.role, t);
+    budgeted += summary.budget;
+    funded += summary.funded;
+  }
   return (
-    <Card
-      title={
-        <span className="ja-programs__title">
-          {program.name}
-          {archived && <ArchivedBadge />}
-        </span>
-      }
-      subtitle="Program"
-      action={
-        archived ? (
-          onRestore && (
-            <Button variant="secondary" size="sm" onClick={onRestore}>
-              Restore
-            </Button>
-          )
-        ) : onEdit ? (
-          <span className="ja-actions">
-            <Button
-              variant="secondary"
-              size="sm"
-              iconLeft={<Icon name="pencil" size={15} />}
-              onClick={onEdit}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              iconLeft={<Icon name="archive" size={15} />}
-              onClick={onArchive}
-            >
-              Archive
-            </Button>
-          </span>
-        ) : undefined
-      }
-    >
-      <section aria-label="Details">
-        <KV k="Name" v={program.name} />
-        <KV k="Short name" v={program.short} />
-      </section>
-    </Card>
+    <p className="ja-programs__totals">
+      {budgeted === 0 && funded === 0
+        ? `Nothing budgeted for ${fy.label} yet.`
+        : `${money(budgeted)} budgeted · ${money(funded)} funded`}
+    </p>
   );
+}
+
+/**
+ * One program or project on the list. For a role that may see budgets: what
+ * is funded against its budget for the fiscal year, and the bar.
+ */
+function ListItem({
+  to,
+  name,
+  archived,
+  current,
+  note,
+  target,
+  fy,
+  project = false,
+}: {
+  to: string;
+  name: string;
+  archived: boolean;
+  current: boolean;
+  /** The short name, for a role that sees no money. */
+  note?: string;
+  target?: FundingTarget;
+  fy: FiscalYear;
+  project?: boolean;
+}) {
+  const { state, user } = useStore();
+  const funding = target && fundingOf(state, user.role, target);
+  const hasBudget =
+    !target ||
+    target.kind === 'project' ||
+    programBudget(state, target.programId, fy.label) !== undefined;
+  return (
+    <Link
+      to={to}
+      className={project ? 'ja-programs__item ja-programs__item--project' : 'ja-programs__item'}
+      aria-current={current ? 'page' : undefined}
+    >
+      <span className="ja-programs__name">{name}</span>
+      {archived && <ArchivedBadge />}
+      {funding ? (
+        <>
+          <span className="ja-programs__short">{fundedLine(funding.summary, hasBudget)}</span>
+          {(funding.summary.budget > 0 || funding.summary.funded > 0) && (
+            <FundingBar
+              size="sm"
+              parts={barParts(funding.sources)}
+              max={funding.summary.budget}
+              label={fundedLine(funding.summary, hasBudget)}
+            />
+          )}
+        </>
+      ) : (
+        !archived && note && <span className="ja-programs__short">{note}</span>
+      )}
+    </Link>
+  );
+}
+
+/** "$15,300 of $18,000 · $2,700 to find", "covered", "over", or no budget yet. */
+function fundedLine(
+  s: { budget: number; funded: number; stillToFind: number; overBudget: number },
+  hasBudget: boolean,
+): string {
+  if (!hasBudget || s.budget === 0) {
+    return s.funded > 0 ? `${money(s.funded)} · no budget yet` : 'No budget yet';
+  }
+  const of = `${money(s.funded)} of ${money(s.budget)}`;
+  if (s.overBudget > 0) return `${of} · ${money(s.overBudget)} over`;
+  if (s.stillToFind > 0) return `${of} · ${money(s.stillToFind)} to find`;
+  return `${of} · covered`;
 }

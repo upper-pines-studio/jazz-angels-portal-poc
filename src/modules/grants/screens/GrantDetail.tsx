@@ -26,6 +26,7 @@ import { QuickBooksStatus } from './money/shared';
 import { ReportsTab } from './grant/ReportsTab';
 import { ProgramNumbers } from './grant/ProgramNumbers';
 import { ActivityTab } from './grant/ActivityTab';
+import { WhereMoneyGoes } from './shares/WhereMoneyGoes';
 import { SideCards } from './grant/SideCards';
 
 /** One grant: where it is, what is left to do, and — once awarded — where the money went. */
@@ -201,6 +202,8 @@ export default function GrantDetail() {
           </Card>
 
           {tab === 'reports' && <ProgramNumbers grant={grant} />}
+          {/* Where its money goes: under the Award tab, or the first tab before an award. */}
+          {tab === first && <WhereMoneyGoes grant={grant} />}
         </div>
 
         {aside}

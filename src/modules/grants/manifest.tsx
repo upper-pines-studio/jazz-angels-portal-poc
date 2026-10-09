@@ -30,6 +30,7 @@ import SpendDown from './screens/money/SpendDown';
 import { MoneyPanel } from './screens/money/MoneyPanel';
 import { QuickBooksCard } from './screens/settings/QuickBooksCard';
 import { RemindersCard } from './screens/settings/RemindersCard';
+import { PaidFor } from './screens/shares/PaidFor';
 
 const GRANTS: Requirement = { subject: 'grants' };
 const AWARD: Requirement = { subject: 'award' };
@@ -228,8 +229,8 @@ export const manifest: ModuleManifest = {
     { component: QuickBooksCard, requires: { subject: 'quickbooks-sync' } },
     { component: RemindersCard, requires: GRANTS },
   ],
-  // What each grant puts toward a program's year or a project (decision 0006).
-  // The "Paid for by" panel on the Programs page comes with the screens (#56).
-  funding: { sources: fundingFor, requires: { subject: 'grant-shares' } },
+  // What each grant puts toward a program's year or a project (decision 0006),
+  // and "Paid for by", the grants part of a program's or a project's sheet.
+  funding: { sources: fundingFor, panel: PaidFor, requires: { subject: 'grant-shares' } },
   slice: grantsSlice,
 };

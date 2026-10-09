@@ -69,6 +69,116 @@
   gap: var(--space-2);
 }
 
+/* Over the list: the fiscal year and its totals. */
+.ja-programs__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ja-programs__fy {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font: var(--type-label);
+  color: var(--text-strong);
+}
+.ja-programs__fy > :last-child {
+  flex: 1 1 auto;
+}
+.ja-programs__totals {
+  margin: 0;
+  font: var(--type-body-sm);
+  color: var(--text-muted);
+}
+.ja-programs__item .ja-fbar {
+  margin-top: var(--space-1);
+}
+/* A program's projects, indented under it. */
+.ja-programs__projects {
+  list-style: none;
+  margin: var(--space-2) 0 0 var(--space-5);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ja-programs__item--project {
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+
+/* The sheet: parts of one card, one under another, each with a rule above. */
+.ja-sheet {
+  display: flex;
+  flex-direction: column;
+}
+.ja-sheet__part {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.ja-sheet__part + .ja-sheet__part {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+.ja-sheet__bar {
+  margin-top: var(--space-2);
+}
+.ja-sheet__when,
+.ja-sheet__empty,
+.ja-sheet__nobudget p {
+  margin: 0;
+  font: var(--type-body-sm);
+  color: var(--text-muted);
+}
+.ja-sheet__nobudget {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+.ja-sheet__nobudget p {
+  flex: 1 1 260px;
+  color: var(--text-body);
+}
+.ja-sheet__figaction {
+  margin-top: var(--space-1);
+}
+.ja-sheet__muted {
+  font: var(--type-body-sm);
+  color: var(--text-muted);
+}
+.ja-sheet__num {
+  font: var(--type-body-sm);
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.ja-sheet__projects {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ja-sheet__projects li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+.ja-sheet__pname {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 @media (max-width: 900px) {
   .ja-programs {
     grid-template-columns: minmax(0, 1fr);
@@ -76,6 +186,16 @@
   }
   .ja-programs__side {
     position: static;
-    max-height: 260px;
+    max-height: 320px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ja-sheet__projects li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ja-sheet__projects li .ja-sheet__muted {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 }

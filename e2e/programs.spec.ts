@@ -26,7 +26,7 @@ test('an admin opens Programs from the rail, adds a program, archives and restor
     'aria-current',
     'page',
   );
-  await expect(main.getByRole('heading', { name: 'Summer Jazz Camp' })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Summer Jazz Camp', exact: true })).toBeVisible();
   await expect(main.getByText('Camp', { exact: true }).first()).toBeVisible();
 
   // Edit it.
