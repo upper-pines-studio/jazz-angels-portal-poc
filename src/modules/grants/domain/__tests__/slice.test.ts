@@ -21,7 +21,7 @@ describe('reducer: add-grant', () => {
       id: 'g-new',
       funderId: 'f-new',
       title: 'Test grant',
-      program: 'in-school',
+      programs: ['in-school'],
       restriction: 'restricted',
       ownerId: 's-barry',
       phase: 'prospect',

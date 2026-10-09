@@ -1,12 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, EmptyState, Icon } from '../../../../design-system';
-import { dateRange, programName, useCan, useStore } from '../../../../core';
+import { dateRange, useCan, useStore } from '../../../../core';
 import type { PortalState, ProgramId } from '../../../../core';
-import { isPostAward } from '../../domain';
+import { coversWholeStudio, isPostAward, programNames } from '../../domain';
 import type { Grant } from '../../domain';
 import { attendanceSummary } from '../../../teaching';
-import { hoursByProgram, hoursForProgram } from '../../../timesheets';
+import { hoursByProgram, hoursForPrograms } from '../../../timesheets';
 import './grant.css';
 
 /**
@@ -15,7 +15,7 @@ import './grant.css';
  *
  * Both modules are read through their public API and nothing deeper. A general
  * operating grant pays for the whole studio, so it counts every program; any
- * other grant is narrowed to the one it funds.
+ * other grant is narrowed to the programs it names, all of them together.
  */
 
 interface Numbers {
@@ -27,13 +27,13 @@ interface Numbers {
 
 function numbersFor(
   state: PortalState,
-  programId: ProgramId | undefined,
+  programIds: ProgramId[] | undefined,
   from: string,
   to: string,
 ): Numbers {
-  const roll = attendanceSummary(state, { programId, from, to });
-  const hours = programId
-    ? hoursForProgram(state, programId, from, to)
+  const roll = attendanceSummary(state, { programIds, from, to });
+  const hours = programIds
+    ? hoursForPrograms(state, programIds, from, to)
     : hoursByProgram(state, { from, to }).reduce((sum, row) => sum + row.hours, 0);
 
   return {
@@ -66,15 +66,15 @@ export function ProgramNumbers({ grant }: { grant: Grant }) {
   const to = end && end < today ? end : today;
 
   // General operating pays for everything, so it is not narrowed to a program.
-  const wholeStudio = grant.program === 'general-operating';
-  const scope = wholeStudio ? 'All programs' : programName(state, grant.program);
+  const wholeStudio = coversWholeStudio(grant);
+  const scope = wholeStudio ? 'All programs' : programNames(state, grant);
 
   const off = ['teaching', 'timesheets'].filter(
     id => !state.core.settings.enabledModules.includes(id),
   );
   const numbers =
     off.length === 0
-      ? numbersFor(state, wholeStudio ? undefined : grant.program, from, to)
+      ? numbersFor(state, wholeStudio ? undefined : grant.programs, from, to)
       : undefined;
   const counted = numbers && numbers.meetings > 0;
 

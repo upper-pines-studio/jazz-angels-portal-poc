@@ -54,6 +54,7 @@ import {
   inFlightFrom,
   paymentsReportsValid,
 } from './InFlightSteps';
+import { ProgramPicker } from '../grant/ProgramPicker';
 import type { AwardDraft, LineDraft, PaymentDraft, ReportDraft } from './InFlightSteps';
 import './add-grant.css';
 
@@ -111,9 +112,10 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
   const [newContactEmail, setNewContactEmail] = React.useState('');
   const [title, setTitle] = React.useState('');
   // A new grant is offered the current programs only (an archived one is history).
-  const [program, setProgram] = React.useState<ProgramId>(
-    programOptions(state)[0]?.id ?? 'general-operating',
-  );
+  const [programs, setPrograms] = React.useState<ProgramId[]>(() => {
+    const first = programOptions(state)[0]?.id;
+    return first ? [first] : [];
+  });
   const [restriction, setRestriction] = React.useState<Restriction>('restricted');
   const [ownerId, setOwnerId] = React.useState(activeOnly(state.core.staff)[0]?.id ?? '');
   const [started, setStarted] = React.useState(false);
@@ -167,7 +169,8 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
   const funderError = !funderId ? 'Pick a funder, or add a new one.' : undefined;
   const nameError = isNewFunder && !newFunderName.trim() ? 'Give the funder a name.' : undefined;
   const titleError = !title.trim() ? 'Give the grant a title.' : undefined;
-  const step1Valid = !funderError && !nameError && !titleError;
+  const programsError = programs.length === 0 ? 'Choose at least one program.' : undefined;
+  const step1Valid = !funderError && !nameError && !titleError && !programsError;
 
   const grantDates: GrantDates = inFlight
     ? {
@@ -244,7 +247,7 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
           }
         : undefined,
       title: title.trim(),
-      program,
+      programs,
       restriction,
       ownerId,
       phase: inFlight ? startPhase : started ? 'applying' : 'prospect',
@@ -372,13 +375,12 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
               onChange={e => setTitle(e.target.value)}
             />
           </Field>
-          <Field label="Program">
-            <Select
-              value={program}
-              onChange={e => setProgram(e.target.value as ProgramId)}
-              options={programOptions(state).map(p => ({ value: p.id, label: p.name }))}
-            />
-          </Field>
+          <ProgramPicker
+            value={programs}
+            onChange={setPrograms}
+            error={showErrors ? programsError : undefined}
+            style={{ gridColumn: '1/-1' }}
+          />
           <Field label="Owner">
             <Select
               value={ownerId}

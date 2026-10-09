@@ -1,18 +1,12 @@
 import React from 'react';
 import { Button, Dialog, Field, Input, Select, Textarea } from '../../../../design-system';
-import {
-  dateLong,
-  money,
-  pickable,
-  programName,
-  programOptions,
-  staffById,
-  useStore,
-} from '../../../../core';
+import { dateLong, money, pickable, staffById, useStore } from '../../../../core';
 import type { ProgramId } from '../../../../core';
+import { programNames } from '../../domain';
 import type { AwardTerm, Grant, Payment, Restriction } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
 import { DialogFields, FieldRow } from './parts';
+import { ProgramPicker } from './ProgramPicker';
 import { LetterPageField, pageFrom } from './awardShared';
 
 /** The dialogs behind the Award tab: the award record, one installment, one term. */
@@ -41,7 +35,7 @@ export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: ()
   const [periodEnd, setPeriodEnd] = React.useState(grant.dates.periodEnd ?? '');
   const [decided, setDecided] = React.useState(grant.dates.decided ?? '');
   const [restriction, setRestriction] = React.useState<Restriction>(grant.restriction);
-  const [program, setProgram] = React.useState<ProgramId>(grant.program);
+  const [programs, setPrograms] = React.useState<ProgramId[]>(grant.programs);
   const [ownerId, setOwnerId] = React.useState(grant.ownerId);
 
   const badAmount = amount.trim() !== '' && dollarsFrom(amount) === undefined;
@@ -66,7 +60,8 @@ export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: ()
       changes.push(`date awarded to ${decided ? dateLong(decided) : 'not set'}`);
     if (restriction !== grant.restriction)
       changes.push(`restriction to ${RESTRICTION_LABEL[restriction].toLowerCase()}`);
-    if (program !== grant.program) changes.push(`program to ${programName(state, program)}`);
+    if (programs.join() !== grant.programs.join())
+      changes.push(`programs to ${programNames(state, { programs })}`);
     if (ownerId !== grant.ownerId)
       changes.push(`owner to ${staffById(state, ownerId)?.name ?? 'someone else'}`);
 
@@ -77,7 +72,7 @@ export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: ()
     actions.grants.updateGrant(grant.id, {
       amountAwarded,
       restriction,
-      program,
+      programs,
       ownerId,
       dates: {
         ...grant.dates,
@@ -108,7 +103,11 @@ export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: ()
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" disabled={badAmount || badPeriod} onClick={save}>
+          <Button
+            variant="primary"
+            disabled={badAmount || badPeriod || programs.length === 0}
+            onClick={save}
+          >
             Save record
           </Button>
         </>
@@ -160,17 +159,8 @@ export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: ()
               ]}
             />
           </Field>
-          <Field label="Program">
-            <Select
-              value={program}
-              onChange={e => setProgram(e.target.value as ProgramId)}
-              options={programOptions(state, grant.program).map(p => ({
-                value: p.id,
-                label: p.name,
-              }))}
-            />
-          </Field>
         </FieldRow>
+        <ProgramPicker value={programs} onChange={setPrograms} keep={grant.programs} />
         <Field label="Owner">
           <Select
             value={ownerId}

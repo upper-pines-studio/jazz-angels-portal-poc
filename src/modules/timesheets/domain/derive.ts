@@ -115,6 +115,20 @@ export function hoursForProgram(
   );
 }
 
+/** The hours of several programs over an inclusive range, each hour counted once. */
+export function hoursForPrograms(
+  state: PortalState,
+  programIds: ProgramId[],
+  from: string,
+  to: string,
+): number {
+  return round2(
+    entriesInRange(state, { from, to })
+      .filter(e => programIds.includes(e.programId))
+      .reduce((sum, e) => sum + e.hours, 0),
+  );
+}
+
 /** Hours logged so far in the calendar month containing `today`. */
 export function hoursThisMonth(state: PortalState, today: string): number {
   return round2(entriesInRange(state, monthRange(today)).reduce((sum, e) => sum + e.hours, 0));

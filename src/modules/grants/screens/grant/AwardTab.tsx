@@ -9,16 +9,8 @@ import {
   Icon,
   IconButton,
 } from '../../../../design-system';
-import {
-  dateLong,
-  dateRange,
-  money,
-  programName,
-  staffById,
-  useCan,
-  useStore,
-} from '../../../../core';
-import { awardLetter, funderById, grantFiles } from '../../domain';
+import { dateLong, dateRange, money, staffById, useCan, useStore } from '../../../../core';
+import { awardLetter, funderById, grantFiles, programNames } from '../../domain';
 import type { AwardTerm, Grant, GrantFile, Payment } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
 import { Eyebrow } from '../../../../app/components/badges';
@@ -270,8 +262,8 @@ export function AwardTab({ grant }: { grant: Grant }) {
               {funder ? <Link to={`/funders/${funder.id}`}>{funder.name}</Link> : '—'}
             </span>
           </Fact>
-          <Fact label="Program">
-            <span className="ja-award-fact__value">{programName(state, grant.program)}</span>
+          <Fact label={grant.programs.length > 1 ? 'Programs' : 'Program'}>
+            <span className="ja-award-fact__value">{programNames(state, grant)}</span>
           </Fact>
           <Fact label="Owner">
             <span className="ja-award-fact__value">{owner?.name ?? '—'}</span>

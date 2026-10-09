@@ -6,6 +6,7 @@ import {
   entriesForWeek,
   hoursByProgram,
   hoursForProgram,
+  hoursForPrograms,
   hoursThisMonth,
   monthRange,
   ownDrafts,
@@ -110,6 +111,26 @@ describe('hoursForProgram', () => {
 
   it('is 0 for a program with nothing in the range', () => {
     expect(hoursForProgram(state, 'in-school', '2026-06-01', '2026-06-30')).toBe(0);
+  });
+});
+
+describe('hoursForPrograms', () => {
+  it('adds the hours of every program named, each hour once', () => {
+    const ids = hoursByProgram(state, SPRING).map(r => r.programId);
+    expect(ids.length).toBeGreaterThan(1);
+    const [a, b] = ids;
+    expect(hoursForPrograms(state, [a, b], SPRING.from, SPRING.to)).toBeCloseTo(
+      hoursForProgram(state, a, SPRING.from, SPRING.to) +
+        hoursForProgram(state, b, SPRING.from, SPRING.to),
+      2,
+    );
+    expect(hoursForPrograms(state, [a, a], SPRING.from, SPRING.to)).toBe(
+      hoursForProgram(state, a, SPRING.from, SPRING.to),
+    );
+  });
+
+  it('is 0 for no programs', () => {
+    expect(hoursForPrograms(state, [], SPRING.from, SPRING.to)).toBe(0);
   });
 });
 

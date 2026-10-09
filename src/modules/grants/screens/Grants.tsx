@@ -20,15 +20,7 @@ import {
   Icon,
   EmptyState,
 } from '../../../design-system';
-import {
-  activeOnly,
-  isArchived,
-  useStore,
-  useCan,
-  programName,
-  money,
-  dateShort,
-} from '../../../core';
+import { activeOnly, isArchived, useStore, useCan, money, dateShort } from '../../../core';
 import {
   grantsByView,
   nextDeadline,
@@ -37,6 +29,7 @@ import {
   ALL_PHASES,
   PHASES,
   PRE_AWARD_PHASES,
+  programNames,
 } from '../domain';
 import type { Grant, GrantView, Phase } from '../domain';
 
@@ -51,7 +44,7 @@ const VIEWS: Array<{ id: GrantView; label: string }> = [
 const COLS = [
   { key: 'funder', label: 'Funder', width: '1.6fr', strong: true, wrap: true },
   { key: 'title', label: 'Grant', width: '1.6fr', wrap: true },
-  { key: 'program', label: 'Program', width: '1.2fr' },
+  { key: 'program', label: 'Programs', width: '1.2fr' },
   { key: 'requested', label: 'Requested', width: '110px', align: 'right' as const, mono: true },
   { key: 'awarded', label: 'Awarded', width: '110px', align: 'right' as const, mono: true },
   { key: 'deadline', label: 'Next deadline', width: '130px' },
@@ -121,7 +114,7 @@ export default function Grants() {
   const archivedInView = grantsByView(state, view, true).length - grantsByView(state, view).length;
   const rows = grantsByView(state, view, showArchived)
     .filter(g => owner === 'all' || g.ownerId === owner)
-    .filter(g => program === 'all' || g.program === program)
+    .filter(g => program === 'all' || g.programs.includes(program))
     .filter(g => phase === 'all' || g.phase === phase)
     .filter(g => {
       if (!needle) return true;
@@ -151,7 +144,7 @@ export default function Grants() {
         case 'title':
           return <ArchivedName name={r.grant.title} record={r.grant} />;
         case 'program': {
-          const name = programName(state, r.grant.program);
+          const name = programNames(state, r.grant, true);
           return (
             <span title={name} style={{ color: 'var(--text-muted)' }}>
               {name}
