@@ -10,10 +10,10 @@ import { MODULES } from '../modules';
  */
 export const CORE_REQUIRES: Array<Pick<ModuleRoute, 'path' | 'requires'>> = [
   { path: '/' },
-  // Anyone signed in may read the programs; changing them is `programs` Edit.
-  { path: '/programs' },
-  { path: '/programs/:id' },
-  // A project is "Program budgets and projects" (decision 0006): not for a Teacher.
+  // The Programs page is "Program budgets and projects" (decision 0001): everyone
+  // but a Teacher reads it. Changing a program itself is `programs` Edit.
+  { path: '/programs', requires: { subject: 'program-budgets' } },
+  { path: '/programs/:id', requires: { subject: 'program-budgets' } },
   { path: '/programs/projects/:projectId', requires: { subject: 'program-budgets' } },
   { path: '/partners', requires: { subject: 'partners' } },
   { path: '/partners/organizations/:id', requires: { subject: 'partners' } },

@@ -1,5 +1,6 @@
 // Operations › Programs: open it from the rail, add a program, edit it, archive it and restore it.
-// Gwen (Admin) manages programs; Keisha (Office manager) has no Programs rights and only reads.
+// Gwen (Admin) manages programs; Keisha (Office manager) has no Programs rights and only reads;
+// Devon (Teacher) has no "Program budgets and projects" and does not see the page.
 import { expect, test } from '@playwright/test';
 import { dialog, field, freshStart } from './support';
 
@@ -60,6 +61,13 @@ test('a role without program rights reads the programs and cannot change them', 
   await expect(page.getByRole('button', { name: 'Add program' })).toHaveCount(0);
   await expect(main.getByRole('button', { name: 'Edit' })).toHaveCount(0);
   await expect(main.getByRole('button', { name: 'Archive' })).toHaveCount(0);
+});
+
+test('a Teacher does not see the Programs page', async ({ page }) => {
+  await freshStart(page, 'devon');
+  await page.goto('/programs');
+  await expect(page.getByRole('heading', { name: 'No access', level: 1 })).toBeVisible();
+  await expect(page.getByRole('navigation').getByText('Programs', { exact: true })).toHaveCount(0);
 });
 
 test('Settings points to the Programs page', async ({ page }) => {

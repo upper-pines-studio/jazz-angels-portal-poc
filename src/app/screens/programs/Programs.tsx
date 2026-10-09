@@ -41,8 +41,8 @@ import './programs.css';
  * Who does what (decision 0001): Add program, Edit, Archive and Restore of a
  * program are Admin and Director ("Programs"). Budgets and projects are
  * "Program budgets and projects": Edit for Admin, Director, Office manager and
- * Bookkeeper, View for Office assistant and Read-only; a Teacher sees the
- * program names only. "Paid for by" on each sheet is the grants module's part,
+ * Bookkeeper, View for Office assistant and Read-only. A Teacher has neither,
+ * so the page is not theirs to open (`app/access.ts`). "Paid for by" on each sheet is the grants module's part,
  * through its manifest.
  *
  * A core screen, since programs, budgets and projects are core's nouns.
