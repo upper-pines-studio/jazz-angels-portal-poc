@@ -1,5 +1,14 @@
 import { USERS } from './auth';
-import type { AppSettings, CoreState, Organization, Program, StaffMember, Venue } from './types';
+import type {
+  AppSettings,
+  CoreState,
+  Organization,
+  Program,
+  ProgramBudget,
+  Project,
+  StaffMember,
+  Venue,
+} from './types';
 
 /** The day the demo story is written around. Tests pin to this. */
 export const SEED_TODAY = '2026-09-13';
@@ -130,6 +139,57 @@ const VENUES: Venue[] = [
   },
 ];
 
+/**
+ * What each program costs this fiscal year (decision 0006), from the prototype
+ * the director saw (#49). The demo's today is in FY27.
+ */
+const PROGRAM_BUDGETS: ProgramBudget[] = [
+  { programId: 'general-operating', fiscalYear: 'FY27', amount: 20000 },
+  { programId: 'studio-sessions', fiscalYear: 'FY27', amount: 18000 },
+  { programId: 'in-school', fiscalYear: 'FY27', amount: 15000 },
+  { programId: 'homeschool', fiscalYear: 'FY27', amount: 6000 },
+  { programId: 'jazz-legacy', fiscalYear: 'FY27', amount: 10000 },
+  { programId: 'advanced-workshop', fiscalYear: 'FY27', amount: 8000 },
+];
+
+/** The ids of the demo's projects, for the grants seed's shares. */
+export const SEED_PROJECT_IDS = {
+  instruments: 'prj-instruments',
+  showcase: 'prj-showcase',
+  intensive: 'prj-intensive',
+} as const;
+
+/**
+ * One-off work under a program. The Summer Jazz Intensive runs into July 2027,
+ * so it shows in FY27 and FY28, and past the Herb Alpert grant's period.
+ */
+const PROJECTS: Project[] = [
+  {
+    id: SEED_PROJECT_IDS.instruments,
+    name: 'Instrument library refresh',
+    programId: 'studio-sessions',
+    start: '2026-09-01',
+    end: '2026-12-15',
+    budget: 6500,
+  },
+  {
+    id: SEED_PROJECT_IDS.showcase,
+    name: 'Spring Showcase 2027',
+    programId: 'studio-sessions',
+    start: '2027-03-01',
+    end: '2027-05-15',
+    budget: 9000,
+  },
+  {
+    id: SEED_PROJECT_IDS.intensive,
+    name: 'Summer Jazz Intensive',
+    programId: 'advanced-workshop',
+    start: '2027-06-21',
+    end: '2027-07-30',
+    budget: 14000,
+  },
+];
+
 /** Every module the office starts with switched on. */
 export const DEFAULT_ENABLED_MODULES = ['grants', 'teaching', 'timesheets'];
 
@@ -140,6 +200,8 @@ export function makeCoreSeed(): CoreState {
     programs: JSON.parse(JSON.stringify(PROGRAMS)),
     organizations: JSON.parse(JSON.stringify(ORGANIZATIONS)),
     venues: JSON.parse(JSON.stringify(VENUES)),
+    programBudgets: JSON.parse(JSON.stringify(PROGRAM_BUDGETS)),
+    projects: JSON.parse(JSON.stringify(PROJECTS)),
     settings: defaultSettings(),
   };
 }
@@ -162,7 +224,7 @@ export function loginStaff(): StaffMember[] {
 /**
  * What a new office starts with when the demo is off (decision 0004): the
  * programs as editable configuration, the people the logins need, the default
- * settings, and no partners or venues.
+ * settings, and no partners, venues, budgets or projects.
  */
 export function makeCoreEmpty(): CoreState {
   return {
@@ -170,6 +232,8 @@ export function makeCoreEmpty(): CoreState {
     programs: JSON.parse(JSON.stringify(PROGRAMS)),
     organizations: [],
     venues: [],
+    programBudgets: [],
+    projects: [],
     settings: defaultSettings(),
   };
 }

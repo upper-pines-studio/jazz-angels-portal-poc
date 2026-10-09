@@ -59,6 +59,57 @@ export interface Program extends Archivable {
   short: string;
 }
 
+/**
+ * A fiscal year by name: "FY27", the year it ends (`FiscalYear.label`). How a
+ * program's budget and a grant's share to a program name their year, so a
+ * saved row reads the way the screens say it. `fiscalYearNamed` turns it back
+ * into dates.
+ */
+export type FiscalYearLabel = string;
+
+/**
+ * What a program costs in one fiscal year, in whole dollars (decision 0006).
+ * One row per program and year; a year with no row has no budget set.
+ */
+export interface ProgramBudget {
+  programId: ProgramId;
+  fiscalYear: FiscalYearLabel;
+  amount: number;
+}
+
+/**
+ * One-off work under one program, with its own dates and budget: the Spring
+ * Showcase, an instrument refresh (decision 0006). It takes its money straight
+ * from grants, not out of its program's share, and counts in every fiscal year
+ * its dates overlap. Archived (decision 0002) when it is called off or done
+ * with: its shares stay in history and stop counting toward a grant's "not
+ * yet given".
+ */
+export interface Project extends Archivable {
+  id: string;
+  /** "Spring Showcase 2027" */
+  name: string;
+  /** The program it sits under. */
+  programId: ProgramId;
+  /** ISO dates, inclusive. */
+  start: string;
+  end: string;
+  /** What it costs, whole dollars, across all its dates. */
+  budget: number;
+}
+
+/** What Add a project and Edit project collect. */
+export type ProjectInput = Pick<Project, 'name' | 'programId' | 'start' | 'end' | 'budget'>;
+
+/**
+ * Where money can go (decision 0006): one fiscal year of a program's budget,
+ * or a project, which has no fiscal year. A grant's share names one, and a
+ * program's or project's sheet asks the modules what pays for one.
+ */
+export type FundingTarget =
+  | { kind: 'program'; programId: ProgramId; fiscalYear: FiscalYearLabel }
+  | { kind: 'project'; projectId: string };
+
 export type OrganizationKind = 'school-district' | 'school' | 'community' | 'government' | 'other';
 
 /**
@@ -121,6 +172,10 @@ export interface CoreState {
   programs: Program[];
   organizations: Organization[];
   venues: Venue[];
+  /** Each program's budget, per fiscal year (decision 0006). */
+  programBudgets: ProgramBudget[];
+  /** One-off work under a program (decision 0006). */
+  projects: Project[];
   settings: AppSettings;
 }
 
@@ -159,6 +214,21 @@ export interface CoreActions {
    */
   archiveProgram(id: string): void;
   restoreProgram(id: string): void;
+  /**
+   * Set what a program costs in one fiscal year ("FY27"), in whole dollars.
+   * Replaces the year's budget if it has one.
+   */
+  setProgramBudget(programId: ProgramId, fiscalYear: FiscalYearLabel, amount: number): void;
+  /** Add a project under a program. Returns the new id. */
+  addProject(input: ProjectInput): string;
+  /** Change a project's name, program, dates or budget. Its shares follow it. */
+  updateProject(id: string, patch: Partial<ProjectInput>): void;
+  /**
+   * Archive a project (decision 0002): it leaves the Programs list. Its shares
+   * stay in history and stop counting toward a grant's "not yet given".
+   */
+  archiveProject(id: string): void;
+  restoreProject(id: string): void;
   /** Archive a partner. Its venues stay as they are: nothing cascades. */
   archiveOrganization(id: string): void;
   restoreOrganization(id: string): void;

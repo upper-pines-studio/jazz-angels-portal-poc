@@ -15,6 +15,7 @@ export * from './archive';
 export {
   DEFAULT_ENABLED_MODULES,
   PARAMOUNT_MS_VENUE_ID,
+  SEED_PROJECT_IDS,
   SEED_TODAY,
   STUDIO_VENUE_ID,
   makeCoreEmpty,

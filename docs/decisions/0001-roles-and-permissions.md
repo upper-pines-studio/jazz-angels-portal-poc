@@ -79,8 +79,9 @@ director's role and gets a teacher's view of their own classes on top.
   reports": a program's budget, a project and the shares of a grant's money are money, so the
   office manager and bookkeeper edit them along with the Admin and Director. Not final until the
   client reviews it. The rows are in `permissions.ts` (`program-budgets`, `grant-shares`),
-  because the test that keeps it equal to this table needs them; no screen or action reads them
-  until #55. Adding, renaming and archiving a program stays on the Programs row, which
+  because the test that keeps it equal to this table needs them. Since #55 the store's actions
+  read them: `setProgramBudget` and the project actions need "Program budgets and projects",
+  `giveShare`, `changeShare` and `takeBackShare` need "Grant shares"; the screens come with #56. Adding, renaming and archiving a program stays on the Programs row, which
   moves with the Programs page (#54) but does not change who may do it.
 - Beyond the table, only an Admin or a Director makes someone an Admin, adds someone as an
   Admin, or edits, archives or restores an Admin's record (`mayChangeStaff`, `ADMIN_MAKERS`).

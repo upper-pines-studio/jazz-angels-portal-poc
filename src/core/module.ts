@@ -1,6 +1,6 @@
 import type React from 'react';
 import type { Requirement } from './permissions';
-import type { PortalState, SignedInUser } from './types';
+import type { FundingTarget, PortalState, SignedInUser } from './types';
 
 /**
  * What a module hands the platform: one slice of state and one manifest.
@@ -163,6 +163,46 @@ export interface DashboardContribution {
   panels?: GatedCard[];
 }
 
+/**
+ * One thing paying toward a program's year or a project, as its module sees
+ * it: for grants, one grant's share (decision 0006). The sheet adds up the
+ * amounts (`fundingSummary`) and draws one bar segment per source.
+ */
+export interface FundingSource {
+  /** Stable among one target's sources: the grant's id. */
+  id: string;
+  /** Who pays, short: "Herb Alpert". */
+  label: string;
+  /** What it is: the grant's title. */
+  detail: string;
+  /** Where the source's own page is. */
+  href: string;
+  /** Toward this target, whole dollars. */
+  amount: number;
+  /** Pending money: counts as "If awarded", apart from awarded money, with a hatched bar. */
+  ifAwarded: boolean;
+  /** All the source has to give: the amount awarded, or requested while pending. */
+  total: number;
+  /** What it has not yet given to anything; negative when more is given out than it has. */
+  notYetGiven: number;
+  /** Plain sentences saying why this money may not be usable here. Empty when none. */
+  warnings: string[];
+}
+
+/**
+ * What a module adds to a program's or a project's sheet on the Programs page
+ * (decision 0006): the money it puts toward it, and optionally its own part of
+ * the sheet ("Paid for by", with Add money from a grant), rendered with the
+ * target it is for.
+ */
+export interface FundingContribution {
+  /** Every source paying toward the target, awarded first, then by amount. */
+  sources(state: PortalState, target: FundingTarget): FundingSource[];
+  /** Its own section of the sheet, shown to the roles that meet `requires`. */
+  panel?: React.ComponentType<{ target: FundingTarget }>;
+  requires?: Requires;
+}
+
 export interface ModuleManifest {
   id: string;
   label: string;
@@ -177,6 +217,8 @@ export interface ModuleManifest {
    * the roles that meet its `requires`.
    */
   settings?: GatedCard[];
+  /** What it pays toward on the Programs page: a program's year or a project. */
+  funding?: FundingContribution;
   // The two positions where a manifest cannot know its own state and action types.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   slice: ModuleSlice<any, any>;

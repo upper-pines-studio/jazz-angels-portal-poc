@@ -1,4 +1,5 @@
-import { SEED_TODAY } from '../../../core/seed';
+import { SEED_PROJECT_IDS, SEED_TODAY } from '../../../core/seed';
+import type { FundingTarget } from '../../../core/types';
 import { PHASE_ORDER } from './phases';
 import { DEFAULT_TEMPLATE_ID, defaultTemplates, instantiateTemplate } from './templates';
 import {
@@ -17,6 +18,7 @@ import type {
   Funder,
   Grant,
   GrantDocument,
+  GrantShare,
   GrantsState,
   Payment,
   Phase,
@@ -820,6 +822,54 @@ function seedActivity(): Activity[] {
   }));
 }
 
+// --- Grant shares (decision 0006) -------------------------------------------
+
+/** A program's FY27 budget, the demo's current year. */
+const fy27 = (programId: string): FundingTarget => ({
+  kind: 'program',
+  programId,
+  fiscalYear: 'FY27',
+});
+const project = (projectId: string): FundingTarget => ({ kind: 'project', projectId });
+
+/**
+ * How the demo grants' money is shared out, as in the prototype the director
+ * saw (#49). Herb Alpert, unrestricted, gives $48,000 of its $50,000, some to
+ * the Summer Jazz Intensive, which runs past its grant period. Long Beach CF
+ * gives all of its $8,500, some to the Spring Showcase, after its period ends.
+ * The pending grants give against the amount requested, "If awarded": the
+ * Port of Long Beach, restricted to In-School and Homeschool, to both.
+ */
+const SHARES: GrantShare[] = (
+  [
+    { grantId: 'g-herb-alpert-2026', target: fy27('general-operating'), amount: 15000 },
+    { grantId: 'g-herb-alpert-2026', target: fy27('studio-sessions'), amount: 10000 },
+    { grantId: 'g-herb-alpert-2026', target: fy27('in-school'), amount: 6000 },
+    { grantId: 'g-herb-alpert-2026', target: project(SEED_PROJECT_IDS.instruments), amount: 3000 },
+    { grantId: 'g-herb-alpert-2026', target: project(SEED_PROJECT_IDS.showcase), amount: 6000 },
+    { grantId: 'g-herb-alpert-2026', target: project(SEED_PROJECT_IDS.intensive), amount: 8000 },
+    { grantId: 'g-lb-community-foundation-2026', target: fy27('studio-sessions'), amount: 5300 },
+    {
+      grantId: 'g-lb-community-foundation-2026',
+      target: project(SEED_PROJECT_IDS.instruments),
+      amount: 2000,
+    },
+    {
+      grantId: 'g-lb-community-foundation-2026',
+      target: project(SEED_PROJECT_IDS.showcase),
+      amount: 1200,
+    },
+    { grantId: 'g-port-of-long-beach-2026', target: fy27('in-school'), amount: 9000 },
+    { grantId: 'g-port-of-long-beach-2026', target: fy27('homeschool'), amount: 4000 },
+    { grantId: 'g-parsons-2026', target: fy27('jazz-legacy'), amount: 10000 },
+    {
+      grantId: 'g-arts-council-lb-2026',
+      target: project(SEED_PROJECT_IDS.intensive),
+      amount: 4000,
+    },
+  ] satisfies Omit<GrantShare, 'id'>[]
+).map((share, i) => ({ ...share, id: `gs-${i + 1}` }));
+
 // --- Assembly ---------------------------------------------------------------
 
 /** A fresh copy of the demo data set. Never mutate the result in place. */
@@ -851,6 +901,7 @@ export function makeSeed(): GrantsState {
     activity: seedActivity(),
     templates,
     ...moneySeed,
+    grantShares: JSON.parse(JSON.stringify(SHARES)),
   };
 }
 
@@ -872,5 +923,6 @@ export function makeEmpty(): GrantsState {
     activity: [],
     templates: defaultTemplates(),
     ...makeMoneyEmpty(),
+    grantShares: [],
   };
 }

@@ -2,8 +2,11 @@ import type { ActionRule, AnyAction, ModuleSlice, SliceContext } from '../../../
 import { archiveFields, normaliseArchived, restoreFields } from '../../../core/archive';
 import { can } from '../../../core/permissions';
 import { makeCoreSeed } from '../../../core/seed';
+import { programName, targetName } from '../../../core/derive';
+import { money } from '../../../core/format';
 import { acceptableSuggestions, backupCarry, isReportOpen, splitByPercent } from './money';
 import { inFlightRefusal } from './inflight';
+import { changeProblem, giveProblem, resolveTarget, shareTo } from './shares';
 import { availableTransitions, isPostAward, phaseLabel } from './phases';
 import { makeEmpty, makeSeed } from './seed';
 import { instantiateDocumentRegister, instantiateTemplate } from './templates';
@@ -19,13 +22,16 @@ import type {
   Grant,
   GrantDocument,
   GrantFile,
+  GrantShare,
   GrantsState,
+  GiveShareInput,
   NewGrantInput,
   Payment,
   Phase,
   ReminderDefaults,
   ReminderPlan,
   Report,
+  ShareChange,
   SplitRule,
   Task,
   Transaction,
@@ -67,6 +73,7 @@ interface Collections {
   splitRules: SplitRule;
   files: GrantFile;
   terms: AwardTerm;
+  grantShares: GrantShare;
 }
 
 type CollectionKey = keyof Collections;
@@ -595,6 +602,19 @@ export interface GrantsActions {
   /** Stamp a report submitted and log activity. */
   markReportSubmitted(id: string, date: string): void;
 
+  /**
+   * Give some of a grant's money to a program's fiscal year or to a project
+   * (decision 0006), and log it. A program's year defaults to the one the
+   * grant period starts in. Giving again to the same program year or project
+   * adds to the share it already has. Returns the share's id. Warnings
+   * (`giveWarnings`) never stop it.
+   */
+  giveShare(input: GiveShareInput): string;
+  /** Change a share's amount, or the fiscal year a program share counts toward, and log it. */
+  changeShare(id: string, change: ShareChange): void;
+  /** Take a share back: the money is not yet given again. Logged on the grant. */
+  takeBackShare(id: string): void;
+
   /** Free-text note on the activity timeline. Returns the activity row id. */
   addNote(grantId: string, text: string): string;
 
@@ -631,6 +651,13 @@ function createActions(
     });
     return id;
   };
+
+  /** An activity row to send in a batch with the change it describes. */
+  const activityRow = (grantId: string, text: string): GrantsAction => ({
+    type: 'insert',
+    key: 'activity',
+    item: { id: newId('act'), grantId, at: now(), whoId, text },
+  });
 
   const insert = <K extends CollectionKey>(key: K, item: Collections[K]) => {
     send({ type: 'insert', key, item } as GrantsAction);
@@ -1015,6 +1042,81 @@ function createActions(
       }
     },
 
+    giveShare(input) {
+      const state = getState() as PortalState;
+      const grant = state.grants.grants.find(g => g.id === input.grantId);
+      if (!grant) return '';
+      const target = resolveTarget(state, grant, input.target, today);
+      const name = targetName(state, target);
+      const existing = shareTo(state, grant.id, target);
+      const id = existing?.id ?? newId('gs');
+      const share: GrantsAction = existing
+        ? {
+            type: 'update',
+            key: 'grantShares',
+            id,
+            patch: { amount: existing.amount + input.amount },
+          }
+        : {
+            type: 'insert',
+            key: 'grantShares',
+            item: { id, grantId: grant.id, target, amount: input.amount },
+          };
+      // The share and its activity row are one change: saved together or not at all.
+      send({
+        type: 'batch',
+        actions: [share, activityRow(grant.id, `Gave ${money(input.amount)} to ${name}`)],
+      });
+      return id;
+    },
+    changeShare(id, change) {
+      const state = getState() as PortalState;
+      const share = state.grants.grantShares.find(s => s.id === id);
+      if (!share) return;
+      const patch: Partial<GrantShare> = {};
+      const said: string[] = [];
+      if (change.amount !== undefined && change.amount !== share.amount) {
+        patch.amount = change.amount;
+        said.push(`from ${money(share.amount)} to ${money(change.amount)}`);
+      }
+      if (
+        change.fiscalYear !== undefined &&
+        share.target.kind === 'program' &&
+        change.fiscalYear !== share.target.fiscalYear
+      ) {
+        patch.target = { ...share.target, fiscalYear: change.fiscalYear };
+        said.push(`from ${share.target.fiscalYear} to ${change.fiscalYear}`);
+      }
+      if (said.length === 0) return;
+      // The year is said in the change itself when it moves.
+      const what =
+        share.target.kind === 'program' && patch.target
+          ? programName(state, share.target.programId)
+          : targetName(state, share.target);
+      send({
+        type: 'batch',
+        actions: [
+          { type: 'update', key: 'grantShares', id, patch },
+          activityRow(share.grantId, `Changed the share to ${what} ${said.join(' and ')}`),
+        ],
+      });
+    },
+    takeBackShare(id) {
+      const state = getState() as PortalState;
+      const share = state.grants.grantShares.find(s => s.id === id);
+      if (!share) return;
+      send({
+        type: 'batch',
+        actions: [
+          { type: 'remove', key: 'grantShares', id },
+          activityRow(
+            share.grantId,
+            `Took back ${money(share.amount)} from ${targetName(state, share.target)}`,
+          ),
+        ],
+      });
+    },
+
     addNote(grantId, text) {
       return logActivity(grantId, text);
     },
@@ -1196,6 +1298,14 @@ const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
   },
   markReportSubmitted: 'award',
 
+  // A grant's shares are money (decision 0001, "Grant shares", #53). A
+  // warning never stops one; only what cannot be saved is refused, with why.
+  giveShare: (user, state, input) =>
+    can(user.role, 'grant-shares', 'edit') && (giveProblem(state, input) ?? true),
+  changeShare: (user, state, id, change) =>
+    can(user.role, 'grant-shares', 'edit') && (changeProblem(state, id, change) ?? true),
+  takeBackShare: 'grant-shares',
+
   addNote: 'grants',
 
   addTemplate: 'grants',
@@ -1220,6 +1330,7 @@ const ROW_WORDS: Record<CollectionKey, string> = {
   splitRules: 'the split rule',
   files: 'the file',
   terms: 'the award term',
+  grantShares: 'the share',
 };
 
 /** A change in plain words, for "Couldn't save …". */
@@ -1288,9 +1399,25 @@ export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
       funders: state.funders.map(normaliseArchived),
       grants: state.grants.map(g => normaliseArchived(withPrograms(g))),
       activity: state.activity.map(row => creditActivity(row, staff)),
+      // Saved before shares existed: none (decision 0006).
+      grantShares: Array.isArray(candidate.grantShares)
+        ? (candidate.grantShares as unknown[]).filter(isGrantShare)
+        : [],
     };
   },
 };
+
+/** A saved share that can be read: a grant, a program year or a project, and an amount. */
+function isGrantShare(raw: unknown): raw is GrantShare {
+  const s = raw as Partial<GrantShare> | null;
+  if (!s || typeof s.id !== 'string' || typeof s.grantId !== 'string') return false;
+  if (typeof s.amount !== 'number') return false;
+  const t = s.target;
+  if (t?.kind === 'program') {
+    return typeof t.programId === 'string' && typeof t.fiscalYear === 'string';
+  }
+  return t?.kind === 'project' && typeof t.projectId === 'string';
+}
 
 /**
  * A grant saved before a grant could name several programs has `program`, one

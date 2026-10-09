@@ -68,8 +68,20 @@ export interface Address { street; city; state; zip }
 export interface Venue { id; name; kind: 'studio'|'school'|'community'|'performance'|'other';
   organizationId?; address?: Address; contactName?; contactEmail?; contactPhone?; notes? }
 
+// Money for programs (decision 0006). A program has a budget for each fiscal year, named
+// "FY27" (the year it ends). A project is one-off work under one program, with its own dates
+// and budget; it counts in every fiscal year its dates overlap.
+export type FiscalYearLabel = string;   // 'FY27'
+export interface ProgramBudget { programId: ProgramId; fiscalYear: FiscalYearLabel; amount: number }
+export interface Project extends Archivable { id; name; programId: ProgramId; start; end; budget: number }
+// Where money can go: one fiscal year of a program, or a project. A grant's share names one.
+export type FundingTarget =
+  | { kind: 'program'; programId: ProgramId; fiscalYear: FiscalYearLabel }
+  | { kind: 'project'; projectId: string };
+
 export interface AppSettings { fiscalYearStartMonth: number; enabledModules: string[] }
-export interface CoreState { staff: StaffMember[]; programs: Program[]; organizations: Organization[]; venues: Venue[]; settings: AppSettings }
+export interface CoreState { staff: StaffMember[]; programs: Program[]; organizations: Organization[]; venues: Venue[];
+  programBudgets: ProgramBudget[]; projects: Project[]; settings: AppSettings }
 
 /** Augmented by each module with `declare module`. */
 export interface PortalState { core: CoreState }
@@ -124,12 +136,27 @@ export interface DashboardContribution {
   panels?: GatedCard[];                                            // each renders a Card
 }
 
+// What a module puts toward a program's year or a project, for the Programs page (decision 0006).
+export interface FundingSource {
+  id: string; label: string; detail: string; href: string;   // grants: the grant, its funder, its page
+  amount: number;                                // toward this target
+  ifAwarded: boolean;                            // pending money, kept apart from awarded money
+  total: number; notYetGiven: number;            // what the source has, and has not yet given anywhere
+  warnings: string[];
+}
+export interface FundingContribution {
+  sources(state: PortalState, target: FundingTarget): FundingSource[];
+  panel?: React.ComponentType<{ target: FundingTarget }>;   // its own "Paid for by" part of the sheet
+  requires?: Requires;
+}
+
 export interface ModuleManifest {
   id: string; label: string; description: string;   // description shows in Settings → Modules
   nav: { section: string; items: NavItem[] };
   routes: ModuleRoute[];
   dashboard?: DashboardContribution;
   settings?: GatedCard[];
+  funding?: FundingContribution;
   slice: ModuleSlice<any, any>;
 }
 ```
@@ -184,7 +211,12 @@ Everything in `docs/SPEC.md`, moved under `modules/grants/`. Behaviour unchanged
   Each number links to the module it came from. When a module is disabled or has no data in the
   period the card shows an EmptyState: "Numbers appear here once roll call is taken for
   <program>."
-- Public API (`modules/grants/index.ts`): `manifest`, `deadlines`, `fyTotals`, `grantsForProgram`.
+- **A grant's money is shared out** (decision 0006, #55): a `GrantShare` gives part of a grant
+  to one program's fiscal year or one project (`domain/shares.ts`). The manifest's `funding`
+  answers what pays toward a program's year or a project (`fundingFor`), so the Programs page
+  never reaches inside the module. The screens come with #56.
+- Public API (`modules/grants/index.ts`): `manifest`, `deadlines`, `fyTotals`, `grantsForProgram`,
+  `fundingFor`, `grantsPayingFor`.
 
 ### 2.2 Teaching (new; port of Schedule, Roll call, Students)
 

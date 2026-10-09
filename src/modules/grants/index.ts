@@ -5,3 +5,4 @@
 
 export { manifest } from './manifest';
 export { deadlines, fyTotals, grantsForProgram } from './domain/derive';
+export { fundingFor, grantsPayingFor } from './domain/shares';

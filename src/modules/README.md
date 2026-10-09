@@ -71,6 +71,10 @@ export const manifest: ModuleManifest = {
 puts its screens under **Grants** and its money screens under **Money**.
 `settings` is an optional list of `{ component, requires }`, each a Card the
 Settings screen renders after its Modules card while the module is on.
+`funding` is optional too: `{ sources(state, target), panel?, requires? }`
+says what the module puts toward a program's fiscal year or a project
+(`FundingTarget`, decision 0006), so the Programs page can add it up and show
+it without reaching into the module. Grants answers with each grant's share.
 
 **Who sees what.** A route, a rail item, a stat, an attention row, a panel and a
 Settings card can each name what it `requires`: a row of the permission table
