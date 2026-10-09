@@ -177,7 +177,7 @@ Everything in `docs/SPEC.md`, moved under `modules/grants/`. Behaviour unchanged
   covers it).
 - Nav section **Grants**: All grants, Deadlines, Funders, Playbook. A second section, **Money**
   (Transactions, Budget vs. actual, Spend-down), holds the screens for a grant after its award.
-- **Reports tab** gains a card **Program numbers** for the grant's period and program: meetings held,
+- **Reports tab** gains a card **Program numbers** for the grant's period and programs (all it names, added together): meetings held,
   students served, average attendance, contact hours (from Teaching) and teaching-artist hours
   (from Timesheets). Copy under the card: "From roll call and timesheets for <program>, <period>."
   Each number links to the module it came from. When a module is disabled or has no data in the
@@ -297,7 +297,7 @@ activity, hours. Below: "Hours by program" (ProgressBars, this month).
 awaiting approval" as `info` when > 0; no panel.
 
 **Public API**: `hoursByProgram(state, { from, to }): Array<{ programId; hours }>` and
-`hoursForProgram(state, programId, from, to): number`.
+`hoursForProgram(state, programId, from, to): number`; `hoursForPrograms(state, programIds, from, to)` adds several, for a grant that names more than one.
 
 ### 2.4 Core screens
 
