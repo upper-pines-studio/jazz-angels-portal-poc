@@ -8,6 +8,7 @@ import {
   hoursForProgram,
   hoursThisMonth,
   monthRange,
+  ownDrafts,
   weekRange,
   weekStart,
   weekTotals,
@@ -49,6 +50,18 @@ describe('awaitingApproval', () => {
     expect(waiting).toHaveLength(2);
     expect(waiting.map(e => e.staffId)).toEqual(['s-renee', 's-devon']);
     expect(waiting.every(e => e.status === 'submitted')).toBe(true);
+  });
+});
+
+describe('ownDrafts', () => {
+  it("is the person's own drafts for the week, oldest first, and nobody else's", () => {
+    const week = entriesForWeek(state, SEED_WEEK_START);
+    const albert = ownDrafts({ id: 's-albert' }, week);
+    expect(albert.length).toBeGreaterThan(0);
+    expect(albert.every(e => e.staffId === 's-albert' && e.status === 'draft')).toBe(true);
+    expect(albert.map(e => e.date)).toEqual(albert.map(e => e.date).sort());
+    // Devon's only entry that week is submitted, so there is nothing to hand over.
+    expect(ownDrafts({ id: 's-devon' }, week)).toEqual([]);
   });
 });
 

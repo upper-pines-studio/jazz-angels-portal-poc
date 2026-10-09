@@ -50,6 +50,12 @@ export interface TimesheetsActions {
   logHours(input: NewTimeEntryInput): string;
   /** Hand a draft to the office. */
   submitEntry(id: string): void;
+  /**
+   * Hand every one of the signed-in person's drafts in the Monday-to-Sunday
+   * week containing `weekStartISO` (its Monday, or any day of it) to the
+   * office, as one change. Returns how many went.
+   */
+  submitWeek(weekStartISO: string): number;
   /** Approve a submitted entry, stamping who approved it and when. */
   approveEntry(id: string): void;
   deleteEntry(id: string): void;

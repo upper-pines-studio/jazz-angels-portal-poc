@@ -3,7 +3,7 @@
  * on their own: the week card's header controls, and the program bars.
  */
 
-/* Prev week · Today · next week · teacher · Log hours. Wraps under the card
+/* Prev week · Today · next week · teacher · Submit week · Log hours. Wraps under the card
    title at 640px, where the card header itself already wraps. */
 .ja-ts-controls {
   display: flex;

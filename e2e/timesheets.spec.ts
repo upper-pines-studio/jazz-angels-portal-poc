@@ -1,14 +1,11 @@
-// Log hours as devon (Teacher): decision 0001 has everyone log only their own hours, and the
-// dialog defaults the teacher to whoever is signed in. Approve as keisha (Office manager): the
-// office approves, and nobody approves their own hours. Both stay allowed once roles are
-// enforced (#17).
-//
-// Not covered: submitting hours. The Timesheets screen has no Submit control yet (only the
-// `submitEntry` action in the domain), so a logged entry stays a draft in the UI. The approve
-// check therefore uses Devon's seeded submitted entry for the demo week.
+// Hours from logging to approval, with two logins. Devon (Teacher) logs his own hours, which go
+// in as a draft (decision 0001: everyone logs only their own), and submits the week; once
+// submitted the entry is the office's and Submit week is gone. Keisha (Office manager) then
+// approves it: the office approves, and nobody approves their own hours. Keisha has no drafts
+// of her own that week, so she gets no Submit week even though she sees everyone's drafts.
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { dialog, field, freshStart } from './support';
+import { dialog, field, freshStart, switchUser } from './support';
 
 /** The table row for an activity: the innermost block holding the activity's text. */
 function entryRow(page: Page, activity: string) {
@@ -18,12 +15,15 @@ function entryRow(page: Page, activity: string) {
     .last();
 }
 
-test('a teacher logs his own hours and they go in as a draft', async ({ page }) => {
+test('a teacher logs and submits his hours, and the office approves them', async ({ page }) => {
   const activity = 'Big Band sectional prep, Main room';
   await freshStart(page, 'devon');
   await page.goto('/timesheets');
   await expect(page.getByRole('heading', { name: 'Timesheets' })).toBeVisible();
+  // Devon's only entry this week is already submitted: nothing of his to submit yet.
+  await expect(page.getByRole('button', { name: 'Submit week' })).toHaveCount(0);
 
+  // Log: the dialog names the signed-in teacher, and the entry goes in as a draft.
   await page.getByRole('button', { name: 'Log hours' }).click();
   const log = dialog(page, 'Log hours');
   await expect(field(log, 'Teacher').locator('option:checked')).toHaveText('Devon Price');
@@ -36,19 +36,27 @@ test('a teacher logs his own hours and they go in as a draft', async ({ page }) 
   await expect(row.getByText('Devon Price')).toBeVisible();
   await expect(row.getByText('1.50')).toBeVisible();
   await expect(row.getByText('Draft', { exact: true })).toBeVisible();
-});
 
-test("the office approves a teacher's submitted hours", async ({ page }) => {
-  const activity = 'Big Band rehearsal and setup, Main room'; // Devon's, seeded as submitted
-  await freshStart(page, 'keisha');
-  await page.goto('/timesheets');
-  await expect(page.getByRole('heading', { name: 'Timesheets' })).toBeVisible();
+  // Submit the week: one draft, 1.50 hours, to the office.
+  await page.getByRole('button', { name: 'Submit week' }).click();
+  const submit = dialog(page, 'Submit the week of Sep 7');
+  await expect(submit.getByText('Your 1 draft entry, 1.50 hours')).toBeVisible();
+  await submit.getByRole('button', { name: 'Submit hours' }).click();
 
-  const row = entryRow(page, activity);
+  await expect(page.getByText('Hours submitted')).toBeVisible();
   await expect(row.getByText('Submitted', { exact: true })).toBeVisible();
-  await row.getByRole('button', { name: 'Approve' }).click();
+  await expect(page.getByRole('button', { name: 'Submit week' })).toHaveCount(0);
+  await expect(row.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+
+  // The office approves it.
+  await switchUser(page, 'keisha');
+  await expect(page.getByRole('heading', { name: 'Timesheets' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Submit week' })).toHaveCount(0);
+  const queued = entryRow(page, activity);
+  await expect(queued.getByText('Submitted', { exact: true })).toBeVisible();
+  await queued.getByRole('button', { name: 'Approve' }).click();
 
   await expect(page.getByText('Hours approved')).toBeVisible();
-  await expect(row.getByText('Approved', { exact: true })).toBeVisible();
-  await expect(row.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+  await expect(queued.getByText('Approved', { exact: true })).toBeVisible();
+  await expect(queued.getByRole('button', { name: 'Approve' })).toHaveCount(0);
 });

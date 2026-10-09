@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   DataTable,
+  Dialog,
   EmptyState,
   Icon,
   IconButton,
@@ -38,6 +39,7 @@ import {
   mayApprove,
   monthLabel,
   monthRange,
+  ownDrafts,
   teachersThisMonth,
   visibleEntries,
   weekRange,
@@ -75,6 +77,7 @@ export default function Timesheets() {
   const [monday, setMonday] = React.useState(() => weekStart(today));
   const [teacher, setTeacher] = React.useState('all');
   const [logging, setLogging] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
 
   const thisMonday = weekStart(today);
   const shiftWeeks = (by: number) => setMonday(toISO(addWeeks(toDate(monday), by)));
@@ -111,6 +114,27 @@ export default function Timesheets() {
     e => !seesEveryone || teacher === 'all' || e.staffId === teacher,
   );
   const shownHours = shown.reduce((sum, e) => sum + e.hours, 0);
+  // Submit week hands over the signed-in person's own drafts only, whoever else
+  // is on screen; once submitted they are the office's to approve.
+  // When the teacher filter shows somebody else, the button is left out too, so
+  // it never sits beside rows it would not submit.
+  const filteredToOthers = seesEveryone && teacher !== 'all' && teacher !== user.id;
+  const myDrafts =
+    mayLog && !filteredToOthers ? ownDrafts(user, entriesForWeek(state, monday)) : [];
+  const myDraftHours = myDrafts.reduce((sum, e) => sum + e.hours, 0);
+  const oneDraft = myDrafts.length === 1;
+  const submitMessage = `Your ${myDrafts.length} draft ${oneDraft ? 'entry' : 'entries'}, ${formatHours(myDraftHours)} hours, ${oneDraft ? 'goes' : 'go'} to the office for approval. Once submitted you can't change ${oneDraft ? 'it' : 'them'}.`;
+
+  const submitWeek = () => {
+    const sent = actions.timesheets.submitWeek(monday);
+    setSubmitting(false);
+    if (!sent) return;
+    toast({
+      tone: 'success',
+      title: 'Hours submitted',
+      message: `${sent} ${sent === 1 ? 'entry' : 'entries'} · ${formatHours(myDraftHours)} hrs`,
+    });
+  };
 
   const approve = (entry: TimeEntry) => {
     actions.timesheets.approveEntry(entry.id);
@@ -218,6 +242,16 @@ export default function Timesheets() {
                   style={{ width: '100%' }}
                 />
               </div>
+            )}
+            {myDrafts.length > 0 && (
+              <Button
+                variant="secondary"
+                size="sm"
+                iconLeft={<Icon name="send" size={15} />}
+                onClick={() => setSubmitting(true)}
+              >
+                Submit week
+              </Button>
             )}
             {logButton}
           </div>
@@ -363,6 +397,30 @@ export default function Timesheets() {
           </div>
         )}
       </Card>
+
+      {submitting && myDrafts.length > 0 && (
+        <Dialog
+          open
+          width={460}
+          title={`Submit the week of ${dateShort(week.from)}`}
+          description={submitMessage}
+          onClose={() => setSubmitting(false)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setSubmitting(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                iconLeft={<Icon name="send" size={15} />}
+                onClick={submitWeek}
+              >
+                Submit hours
+              </Button>
+            </>
+          }
+        />
+      )}
 
       {logging && (
         <LogHoursDialog
