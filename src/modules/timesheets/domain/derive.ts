@@ -73,6 +73,15 @@ export function weekTotals(state: PortalState, weekStartISO: string): WeekTotals
   };
 }
 
+/**
+ * This person's drafts among `entries`, oldest first: what Submit week hands to
+ * the office. Nobody submits anyone else's hours, so other people's drafts are
+ * left out whatever the role.
+ */
+export function ownDrafts(user: Pick<SignedInUser, 'id'>, entries: TimeEntry[]): TimeEntry[] {
+  return entries.filter(e => e.staffId === user.id && e.status === 'draft').sort(byDate);
+}
+
 /** Everything submitted and still waiting on the office, oldest first. */
 export function awaitingApproval(state: PortalState): TimeEntry[] {
   return state.timesheets.entries.filter(e => e.status === 'submitted').sort(byDate);

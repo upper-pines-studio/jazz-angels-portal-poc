@@ -3,7 +3,14 @@ import type { AnyAction } from '../../../../core/module';
 import { makeCoreSeed } from '../../../../core/seed';
 import { guardActions } from '../../../../core/store';
 import type { PortalState, Role, SignedInUser } from '../../../../core/types';
-import { OWN_HOURS_REFUSAL, awaitingApproval, mayApprove, mayLogFor } from '../derive';
+import {
+  OWN_HOURS_REFUSAL,
+  awaitingApproval,
+  entriesForWeek,
+  mayApprove,
+  mayLogFor,
+  ownDrafts,
+} from '../derive';
 import { SEED_TODAY, makeSeed } from '../seed';
 import { reducer, timesheetsSlice, toQuarterHours } from '../slice';
 import type { TimeEntry } from '../types';
@@ -347,5 +354,96 @@ describe('logging hours', () => {
     h.actions.deleteEntry(theirs!.id);
     expect(h.refused).toHaveLength(1);
     expect(h.state().entries.some(e => e.id === theirs!.id)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Submitting a week (decision 0001: log hours, own)
+// ---------------------------------------------------------------------------
+
+/** Albert's and Barry's drafts sit in the week of Sep 7; Devon has none there. */
+const SEP_7 = '2026-09-07';
+
+describe('submitWeek', () => {
+  it("hands over the signed-in person's drafts for the week as one change", () => {
+    const albert = as('s-albert', 'teacher');
+    const h = harness(albert);
+    const mine = ownDrafts(albert, entriesForWeek(portal(h.state()), SEP_7));
+    expect(mine.length).toBeGreaterThan(0);
+
+    expect(h.actions.submitWeek(SEP_7)).toBe(mine.length);
+    expect(h.sent).toHaveLength(1);
+    expect(h.sent[0].type).toBe('timesheets/batch');
+    for (const entry of mine) {
+      expect(h.state().entries.find(e => e.id === entry.id)!.status).toBe('submitted');
+    }
+  });
+
+  it("leaves everyone else's drafts and the other weeks alone", () => {
+    const h = harness(as('s-albert', 'teacher'));
+    const others = h
+      .state()
+      .entries.filter(e => e.status === 'draft' && (e.staffId !== 's-albert' || e.date < SEP_7));
+    expect(others.length).toBeGreaterThan(0);
+    h.actions.submitWeek(SEP_7);
+    for (const entry of others) {
+      expect(h.state().entries.find(e => e.id === entry.id)!.status).toBe('draft');
+    }
+  });
+
+  it('takes any day of the week as that Monday-to-Sunday week', () => {
+    const albert = as('s-albert', 'teacher');
+    const fromMonday = harness(albert);
+    const fromSunday = harness(albert);
+    const count = fromMonday.actions.submitWeek(SEP_7);
+    expect(count).toBeGreaterThan(0);
+    expect(fromSunday.actions.submitWeek('2026-09-13')).toBe(count);
+    expect(fromSunday.state()).toEqual(fromMonday.state());
+  });
+
+  it('sends nothing when the person has no drafts that week', () => {
+    const h = harness(DEVON);
+    const before = h.state();
+    expect(h.actions.submitWeek(SEP_7)).toBe(0);
+    expect(h.state()).toBe(before);
+    expect(h.sent).toEqual([]);
+  });
+
+  it('describes a failed submit as the hours', () => {
+    const h = harness(as('s-albert', 'teacher'));
+    h.actions.submitWeek(SEP_7);
+    expect(timesheetsSlice.describe!(h.sent[0])).toBe('the hours');
+  });
+});
+
+describe('submitting through the store', () => {
+  it('lets a teacher submit their own draft', () => {
+    const h = guarded(DEVON);
+    const id = h.actions.logHours(hours('s-devon'));
+    h.actions.submitEntry(id);
+    expect(h.refused).toEqual([]);
+    expect(h.state().entries.find(e => e.id === id)?.status).toBe('submitted');
+  });
+
+  it("refuses somebody else's draft, even for the office", () => {
+    for (const user of [DEVON, KEISHA]) {
+      const h = guarded(user);
+      const theirs = h.state().entries.find(e => e.staffId !== user.id && e.status === 'draft')!;
+      h.actions.submitEntry(theirs.id);
+      expect(h.refused).toHaveLength(1);
+      expect(h.state().entries.find(e => e.id === theirs.id)?.status).toBe('draft');
+    }
+  });
+
+  it('lets every role that logs submit a week, and refuses Read-only', () => {
+    const h = guarded(as('s-albert', 'teacher'));
+    expect(h.actions.submitWeek(SEP_7)).toBeGreaterThan(0);
+    expect(h.refused).toEqual([]);
+
+    const ro = guarded(as('s-albert', 'read-only'));
+    const before = ro.state();
+    expect(ro.actions.submitWeek(SEP_7)).toBeUndefined();
+    expect(ro.refused).toHaveLength(1);
+    expect(ro.state()).toBe(before);
   });
 });

@@ -53,3 +53,17 @@ export function dialog(page: Page, title: string): Locator {
 function escape(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+/**
+ * Hand the same tab to another of the demo logins, keeping the data the test has changed so
+ * far: the session record is swapped for theirs and the page reloads. The second login of a
+ * two-person flow (a teacher submits, the office approves).
+ */
+export async function switchUser(page: Page, username: string): Promise<void> {
+  await page.evaluate(
+    ({ key, username }) =>
+      localStorage.setItem(key, JSON.stringify({ username, signedInAt: new Date().toISOString() })),
+    { key: SESSION_KEY, username },
+  );
+  await page.reload();
+}

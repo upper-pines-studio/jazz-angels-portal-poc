@@ -1,6 +1,13 @@
 import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import type { PortalState } from '../../../core/types';
-import { OWN_HOURS_REFUSAL, mayApprove, mayLogFor } from './derive';
+import {
+  OWN_HOURS_REFUSAL,
+  entriesForWeek,
+  mayApprove,
+  mayLogFor,
+  ownDrafts,
+  weekStart,
+} from './derive';
 import { makeEmpty, makeSeed } from './seed';
 import type { TimeEntry, TimeEntryStatus, TimesheetsActions, TimesheetsState } from './types';
 
@@ -114,6 +121,22 @@ function createActions(
       if (entryOf(id)?.status !== 'draft') return;
       send({ type: 'update', key: 'entries', id, patch: { status: 'submitted' } });
     },
+    submitWeek(weekStartISO) {
+      // Only the signed-in person's own drafts; a submitted or approved entry stands.
+      // Any day of the week means its Monday-to-Sunday week.
+      const drafts = ownDrafts(user, entriesForWeek(getState(), weekStart(weekStartISO)));
+      if (drafts.length === 0) return 0;
+      send({
+        type: 'batch',
+        actions: drafts.map(e => ({
+          type: 'update',
+          key: 'entries',
+          id: e.id,
+          patch: { status: 'submitted' },
+        })),
+      });
+      return drafts.length;
+    },
     approveEntry(id) {
       const entry = entryOf(id);
       if (!entry || entry.status === 'approved') return;
@@ -162,6 +185,8 @@ export const timesheetsSlice: ModuleSlice<TimesheetsState, TimesheetsActions> = 
       const entry = state.timesheets.entries.find(e => e.id === id);
       return !!entry && mayLogFor(user, entry.staffId);
     },
+    // The action itself takes only the signed-in person's drafts.
+    submitWeek: user => mayLogFor(user, user.id),
     deleteEntry: (user, state, id) => {
       const entry = state.timesheets.entries.find(e => e.id === id);
       return !!entry && mayLogFor(user, entry.staffId);

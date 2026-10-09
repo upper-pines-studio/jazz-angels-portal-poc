@@ -14,7 +14,7 @@ timesheets/
   domain/
     types.ts      TimeEntry, TimesheetsState, TimesheetsActions
     seed.ts       the demo hours
-    derive.ts     weeks, months, totals by program
+    derive.ts     weeks, months, totals by program, own drafts, who may do what
     slice.ts      the reducer, the actions, the `declare module`
   screens/
     Timesheets.tsx      /timesheets
@@ -31,6 +31,19 @@ readable name lives in `activity` ("Combo A rehearsal, Studio 1").
 
 Status runs `draft` → `submitted` → `approved`. Approving stamps `approvedBy`
 and `approvedAt`, and that is the only thing that clears the rail's badge.
+
+## Submitting
+
+The week card's **Submit week** button hands over the signed-in person's own
+drafts for the week on screen, after a confirmation ("Submit the week of Sep 7":
+"Your 2 draft entries, 3.50 hours, go to the office for approval. Once submitted
+you can't change them.", or for one "Your 1 draft entry, 1.50 hours, goes to the
+office for approval. Once submitted you can't change it."; Cancel or Submit
+hours). The toast is "Hours
+submitted", "2 entries · 3.50 hrs". The button is left out when the person has no
+drafts that week, so the office, who see everyone's drafts, never get it for
+somebody else's, and when the teacher filter shows somebody else. There is no per-entry Submit: hours are handed in a week at a
+time, as the Log hours dialog says, and recalling a submitted entry is not built.
 
 ## Weeks
 
@@ -55,7 +68,8 @@ dashboard attention row.
 | Action | What it does |
 | --- | --- |
 | `logHours(input)` | Adds a draft entry, rounded to the nearest quarter hour. Returns the id. |
-| `submitEntry(id)` | Draft → submitted. A submitted or approved entry is left alone. |
+| `submitEntry(id)` | Draft → submitted. A submitted or approved entry is left alone. Only your own (the slice's rule refuses anyone else's, the office's too). No screen offers it on one entry. |
+| `submitWeek(weekStart)` | Every one of the signed-in person's drafts in that Monday-to-Sunday week → submitted, as one change. Nobody else's drafts move, whatever the role. Returns how many went. |
 | `approveEntry(id)` | Marks it approved and stamps the signed-in person and today. |
 | `deleteEntry(id)` | Removes it. No screen offers it yet; decision 0002 keeps it for drafts entered by mistake. |
 
