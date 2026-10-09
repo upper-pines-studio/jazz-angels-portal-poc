@@ -10,6 +10,7 @@ export * from './templates';
 export * from './derive';
 export * from './names';
 export * from './money';
+export * from './shares';
 export * from './seed';
 export * from './inflight';
 export * from './slice';

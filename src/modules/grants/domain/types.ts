@@ -1,5 +1,5 @@
 import type { Archivable } from '../../../core/archive';
-import type { FiscalYear, ProgramId } from '../../../core/types';
+import type { FiscalYear, FiscalYearLabel, FundingTarget, ProgramId } from '../../../core/types';
 
 export type { ProgramId };
 
@@ -98,6 +98,45 @@ export interface Grant extends Archivable {
    * for them. Unset on a grant added at Prospect, LOI or Applying.
    */
   broughtIn?: { phase: Phase; on: string };
+}
+
+/**
+ * A slice of a grant's money that one program's year or one project gets
+ * (decision 0006). Not a share of a transaction: that is the part of a
+ * QuickBooks transaction one grant pays (`usualShares`), and the two never meet.
+ *
+ * A share to a program names the fiscal year it counts toward
+ * (`target.fiscalYear`); a share to a project has none, and counts in every
+ * year the project runs. A pending grant's shares are against the amount
+ * requested and count as "If awarded".
+ */
+export interface GrantShare {
+  id: string;
+  grantId: string;
+  target: FundingTarget;
+  /** Whole dollars, more than 0. */
+  amount: number;
+}
+
+/**
+ * Where Give sends money. A program's fiscal year may be left out: it then
+ * defaults to the year the grant period starts in (`defaultShareYear`).
+ */
+export type ShareTargetInput =
+  | { kind: 'program'; programId: ProgramId; fiscalYear?: FiscalYearLabel }
+  | { kind: 'project'; projectId: string };
+
+/** What Give to a program or project collects. */
+export interface GiveShareInput {
+  grantId: string;
+  target: ShareTargetInput;
+  amount: number;
+}
+
+/** What changing a share may change: its amount, and a program share's fiscal year. */
+export interface ShareChange {
+  amount?: number;
+  fiscalYear?: FiscalYearLabel;
 }
 
 /** Checklist item on a grant, usually created from a template. */
@@ -415,6 +454,8 @@ export interface GrantsState {
   terms: AwardTerm[];
   reminderPlans: ReminderPlan[];
   reminderDefaults: ReminderDefaults;
+  /** How each grant's money is shared out to programs and projects (decision 0006). */
+  grantShares: GrantShare[];
 }
 
 /** What the "Add grant" dialog (SPEC §4.3) collects. */
@@ -585,6 +626,61 @@ export interface FyTotals extends FiscalYear {
   awarded: number;
   received: number;
   spent: number;
+}
+
+/**
+ * Whether a grant's money counts toward programs and projects, and how
+ * (decision 0006): awarded (Awarded, Active, Reporting, Closed), "If awarded"
+ * while pending (LOI, Applying, Submitted), or not at all (a prospect, a
+ * declined or withdrawn grant, an archived one).
+ */
+export type GrantStanding = 'awarded' | 'if-awarded' | 'none';
+
+/** Why a share's money may not be usable where it goes. Warnings, never refusals. */
+export type ShareWarningKind =
+  /** A restricted grant's money going outside its programs. */
+  | 'outside-restriction'
+  /** A project that runs outside the grant period. */
+  | 'project-outside-period'
+  /** A program's fiscal year that starts after the grant period ends. */
+  | 'year-after-period'
+  /** More given out than the grant has. */
+  | 'over-given';
+
+export interface ShareWarning {
+  kind: ShareWarningKind;
+  /** One plain sentence: "Restricted to In-School Program and Homeschool Program". */
+  message: string;
+}
+
+/** One share as a grant's card shows it. */
+export interface ShareView {
+  share: GrantShare;
+  /** "Studio Semester Sessions, FY27", "Spring Showcase 2027". */
+  name: string;
+  /** The program it goes to, or the project's program. */
+  programId: ProgramId | undefined;
+  /** The project is archived: the share is history and counts toward nothing given. */
+  archived: boolean;
+  /** Whether it counts toward what the grant has given. */
+  counts: boolean;
+  warnings: ShareWarning[];
+}
+
+/** Where one grant's money goes, and what is left. */
+export interface GrantGiving {
+  grant: Grant;
+  standing: GrantStanding;
+  /** All it has to give: the amount awarded, or requested while pending. 0 when it does not count. */
+  total: number;
+  /** Given to programs and to current projects. */
+  given: number;
+  /** total − given; negative when more is given out than the grant has. */
+  notYetGiven: number;
+  /** Its shares, programs first, then projects. */
+  shares: ShareView[];
+  /** About the grant as a whole: more given out than it has. */
+  warnings: ShareWarning[];
 }
 
 export interface PipelineBucket {

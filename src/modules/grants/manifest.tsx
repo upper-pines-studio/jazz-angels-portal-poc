@@ -7,6 +7,7 @@ import {
   expensesMissingBackup,
   funderById,
   funderShortName,
+  fundingFor,
   fyTotals,
   grantById,
   grantPace,
@@ -227,5 +228,8 @@ export const manifest: ModuleManifest = {
     { component: QuickBooksCard, requires: { subject: 'quickbooks-sync' } },
     { component: RemindersCard, requires: GRANTS },
   ],
+  // What each grant puts toward a program's year or a project (decision 0006).
+  // The "Paid for by" panel on the Programs page comes with the screens (#56).
+  funding: { sources: fundingFor, requires: { subject: 'grant-shares' } },
   slice: grantsSlice,
 };
