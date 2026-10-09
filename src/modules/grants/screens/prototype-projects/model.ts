@@ -59,6 +59,8 @@ export interface Target {
   start: string;
   end: string;
   budget: number;
+  /** An archived program, listed only with Show archived. */
+  archived?: boolean;
 }
 
 const FIRM_PHASES = ['awarded', 'active', 'reporting'];
@@ -99,10 +101,16 @@ export function fyOf(state: PortalState, today: string) {
 }
 
 /** Every program, then every project, as targets for the fiscal year. */
-export function targets(state: PortalState, s: ProtoState, today: string): Target[] {
+export function targets(
+  state: PortalState,
+  s: ProtoState,
+  today: string,
+  includeArchived = false,
+): Target[] {
   const fy = fyOf(state, today);
+  const programs = includeArchived ? state.core.programs : activeOnly(state.core.programs);
   return [
-    ...activeOnly(state.core.programs).map(p => ({
+    ...programs.map(p => ({
       key: programKey(p.id),
       kind: 'program' as const,
       name: p.name,
@@ -110,6 +118,7 @@ export function targets(state: PortalState, s: ProtoState, today: string): Targe
       start: fy.start,
       end: fy.end,
       budget: s.programBudgets[p.id] ?? 0,
+      archived: Boolean(p.archivedAt),
     })),
     ...s.projects.map(p => ({
       key: projectKey(p.id),

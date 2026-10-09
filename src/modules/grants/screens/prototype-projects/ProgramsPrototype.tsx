@@ -6,10 +6,14 @@
  */
 import React from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Badge, Button, Card, Input, Select } from '../../../../design-system';
-import { dateShort, money, programName, useStore } from '../../../../core';
+import { Badge, Button, Card, Icon, Input, Select } from '../../../../design-system';
+import { archivedOnly, dateShort, money, programName, useCan, useStore } from '../../../../core';
 import type { PortalState } from '../../../../core';
 import { usePageHeader } from '../../../../app/Shell';
+import { useToast } from '../../../../app/ToastHost';
+import { ArchiveDialog, ShowArchivedSwitch } from '../../../../app/components/archive';
+import { ProgramDialog } from '../../../../app/screens/settings/ProgramsCard';
+import type { ProgramDraft } from '../../../../app/screens/settings/ProgramsCard';
 import {
   firmIds,
   funded,
@@ -30,17 +34,22 @@ import type { Source, Target } from './model';
 import './prototype.css';
 
 export default function ProgramsPrototype() {
-  const { state, today } = useStore();
+  const { state, today, actions } = useStore();
   const [proto, update] = useProto();
   const [params, setParams] = useSearchParams();
+  const mayEditPrograms = useCan()('programs', 'edit');
+  const toast = useToast();
+  const [showArchived, setShowArchived] = React.useState(false);
+  const [draft, setDraft] = React.useState<ProgramDraft | null>(null);
+  const [archiving, setArchiving] = React.useState<Target | null>(null);
   const srcs = React.useMemo(() => sources(state), [state]);
   const firm = firmIds(srcs);
-  const all = targets(state, proto, today);
+  const all = targets(state, proto, today, showArchived);
   const fy = fyOf(state, today);
   const selected = all.find(t => t.key === params.get('sel')) ?? all[0];
   const select = (key: string) => setParams({ sel: key }, { replace: true });
 
-  const budgeted = sum(all.filter(t => t.kind === 'program').map(t => t.budget));
+  const budgeted = sum(all.filter(t => t.kind === 'program' && !t.archived).map(t => t.budget));
   const totals = all.map(t => funded(proto, t.key, firm));
   const programTargets = all.filter(t => t.kind === 'program');
 
@@ -70,28 +79,49 @@ export default function ProgramsPrototype() {
       </div>
 
       <div className="pp-a">
-        <div className="pp-a__list">
-          <div className="pp-muted" style={{ marginBottom: 'var(--space-2)' }}>
-            {fy.label}: {money(budgeted + sum(proto.projects.map(p => p.budget)))} budgeted ·{' '}
-            {money(sum(totals.map(t => t.total)))} funded
+        <div className="pp-a__side">
+          <div className="pp-a__side-head">
+            <div className="pp-muted">
+              {fy.label}: {money(budgeted + sum(proto.projects.map(p => p.budget)))} budgeted ·{' '}
+              {money(sum(totals.map(t => t.total)))} funded
+            </div>
+            <div className="pp-a__side-actions">
+              {mayEditPrograms && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  iconLeft={<Icon name="plus" size={15} />}
+                  onClick={() => setDraft({ name: '', short: '' })}
+                >
+                  Add program
+                </Button>
+              )}
+              <ShowArchivedSwitch
+                count={archivedOnly(state.core.programs).length}
+                checked={showArchived}
+                onChange={setShowArchived}
+              />
+            </div>
           </div>
-          {programTargets.map(p => {
-            const projects = all.filter(t => t.kind === 'project' && t.program === p.program);
-            return (
-              <React.Fragment key={p.key}>
-                <ListItem target={p} selected={selected} onSelect={select} srcs={srcs} />
-                {projects.map(t => (
-                  <ListItem
-                    key={t.key}
-                    target={t}
-                    selected={selected}
-                    onSelect={select}
-                    srcs={srcs}
-                  />
-                ))}
-              </React.Fragment>
-            );
-          })}
+          <div className="pp-a__list">
+            {programTargets.map(p => {
+              const projects = all.filter(t => t.kind === 'project' && t.program === p.program);
+              return (
+                <React.Fragment key={p.key}>
+                  <ListItem target={p} selected={selected} onSelect={select} srcs={srcs} />
+                  {projects.map(t => (
+                    <ListItem
+                      key={t.key}
+                      target={t}
+                      selected={selected}
+                      onSelect={select}
+                      srcs={srcs}
+                    />
+                  ))}
+                </React.Fragment>
+              );
+            })}
+          </div>
         </div>
 
         {selected && (
@@ -103,10 +133,55 @@ export default function ProgramsPrototype() {
               all={all}
               onSelect={select}
               onAddProject={addProject}
+              onEditProgram={
+                mayEditPrograms
+                  ? () => {
+                      const p = state.core.programs.find(x => x.id === selected.program);
+                      if (p) setDraft({ id: p.id, name: p.name, short: p.short });
+                    }
+                  : undefined
+              }
+              onArchiveProgram={mayEditPrograms ? () => setArchiving(selected) : undefined}
+              onRestoreProgram={
+                mayEditPrograms
+                  ? () => {
+                      actions.core.restoreProgram(selected.program);
+                      toast({
+                        tone: 'success',
+                        title: 'Program restored',
+                        message: `${selected.name} is back in the pickers.`,
+                      });
+                    }
+                  : undefined
+              }
             />
           </Card>
         )}
       </div>
+
+      {draft && (
+        <ProgramDialog
+          draft={draft}
+          onClose={() => setDraft(null)}
+          onAdded={id => select(programKey(id))}
+        />
+      )}
+
+      {archiving && (
+        <ArchiveDialog
+          title={`Archive ${archiving.name}?`}
+          message="It leaves this page and the pickers for new grants, students, ensembles and hours. Everything that already names it keeps it, and you can restore it."
+          onConfirm={() => {
+            actions.core.archiveProgram(archiving.program);
+            toast({
+              tone: 'success',
+              title: 'Program archived',
+              message: `${archiving.name} is off the list. Restore it from Show archived.`,
+            });
+          }}
+          onClose={() => setArchiving(null)}
+        />
+      )}
 
       <details className="pp-state">
         <summary>Prototype state</summary>
@@ -135,7 +210,9 @@ function ListItem({
       aria-current={t.key === selected?.key}
       onClick={() => onSelect(t.key)}
     >
-      <strong>{t.name}</strong>
+      <strong>
+        {t.name} {t.archived && <Badge tone="neutral">Archived</Badge>}
+      </strong>
       <span className="pp-muted">
         {t.budget === 0
           ? `${money(f.total)} · no budget yet`
@@ -161,6 +238,9 @@ function Sheet({
   all,
   onSelect,
   onAddProject,
+  onEditProgram,
+  onArchiveProgram,
+  onRestoreProgram,
 }: {
   state: PortalState;
   target: Target;
@@ -168,6 +248,10 @@ function Sheet({
   all: Target[];
   onSelect: (key: string) => void;
   onAddProject: (program: string) => void;
+  /** Unset for a role that may not change programs (decision 0001: Admin and Director). */
+  onEditProgram?: () => void;
+  onArchiveProgram?: () => void;
+  onRestoreProgram?: () => void;
 }) {
   const [proto, update] = useProto();
   const firm = firmIds(srcs);
@@ -191,7 +275,32 @@ function Sheet({
         <div className="pp-head">
           <div style={{ flex: 1 }}>
             <div className="pp-label">Program</div>
-            <div className="pp-title">{t.name}</div>
+            <div className="pp-title">
+              {t.name} {t.archived && <Badge tone="neutral">Archived</Badge>}
+            </div>
+            <div className="pp-muted">
+              Short name: {state.core.programs.find(p => p.id === t.program)?.short}
+              {onEditProgram && !t.archived && (
+                <>
+                  {' · '}
+                  <button className="pp-linkish" onClick={onEditProgram}>
+                    Edit
+                  </button>
+                  {' · '}
+                  <button className="pp-linkish" onClick={onArchiveProgram}>
+                    Archive
+                  </button>
+                </>
+              )}
+              {onRestoreProgram && t.archived && (
+                <>
+                  {' · '}
+                  <button className="pp-linkish" onClick={onRestoreProgram}>
+                    Restore
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           <div style={{ width: 160 }}>
             <div className="pp-label">Budget this year</div>
@@ -259,7 +368,7 @@ function Sheet({
         <Fig label="From awarded grants" value={money(f.firm)} />
         <Fig label="If pending grants come in" value={money(f.hoped)} />
         <Fig
-          label={f.total >= t.budget ? 'More than the budget' : 'Still to find'}
+          label={f.total > t.budget ? 'More than the budget' : 'Still to find'}
           value={money(Math.abs(t.budget - f.total))}
         />
       </div>

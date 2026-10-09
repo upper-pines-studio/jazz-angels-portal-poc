@@ -22,7 +22,7 @@ import {
 } from '../../../core';
 import type { Program } from '../../../core';
 
-interface ProgramDraft {
+export interface ProgramDraft {
   id?: string;
   name: string;
   short: string;
@@ -198,7 +198,16 @@ export default function ProgramsCard() {
 }
 
 /** Add program or Edit program: the name, and the short name a tab or a narrow column uses. */
-function ProgramDialog({ draft, onClose }: { draft: ProgramDraft; onClose: () => void }) {
+export function ProgramDialog({
+  draft,
+  onClose,
+  onAdded,
+}: {
+  draft: ProgramDraft;
+  onClose: () => void;
+  /** PROTOTYPE — lets /prototype/programs select the program it just added. */
+  onAdded?: (id: string) => void;
+}) {
   const { state, actions } = useStore();
   const toast = useToast();
   const [name, setName] = React.useState(draft.name);
@@ -216,7 +225,8 @@ function ProgramDialog({ draft, onClose }: { draft: ProgramDraft; onClose: () =>
       actions.core.updateProgram(draft.id, { name, short });
       toast({ tone: 'success', title: 'Program updated', message: name.trim() });
     } else {
-      actions.core.addProgram({ name, short });
+      const id = actions.core.addProgram({ name, short });
+      if (id) onAdded?.(id);
       toast({ tone: 'success', title: 'Program added', message: name.trim() });
     }
     onClose();
