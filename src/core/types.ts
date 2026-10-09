@@ -10,9 +10,11 @@
 import type { Archivable } from './archive';
 
 /**
- * A program's id. An ordinary string: the six Jazz Angels programs keep the
- * ids they were seeded with ('studio-sessions', 'in-school', …), and a program
- * added in Settings gets a generated one (`p-…`), so renaming it breaks nothing.
+ * A program's id. An ordinary string: the Jazz Angels programs keep the ids
+ * they were seeded with ('studio-sessions', 'in-school', …), and a program
+ * added on the Programs page gets a generated one (`p-…`), so renaming it
+ * breaks nothing. Operations, which is not a program, keeps General
+ * operating's id (`OPERATIONS_ID`, decision 0006).
  */
 export type ProgramId = string;
 

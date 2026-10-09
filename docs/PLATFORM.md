@@ -27,7 +27,7 @@ src/
     repository.ts          localStorage; one key per slice: `ja-portal:<sliceId>:v1`
     format.ts              money/date/initials helpers (moved from domain/format.ts, unchanged)
     seed.ts                core seed: staff, programs, settings
-    derive.ts              fiscalYear(), staffById(), programName()
+    derive.ts              fiscalYear(), staffById(), programName(), OPERATIONS_ID and the Operations helpers
     index.ts               barrel
   modules/
     index.ts               MODULES: the registry (ordered array of manifests)
@@ -43,7 +43,7 @@ src/
     Shell.tsx              rail built from MODULES (sections + items + badge counts)
     screens/Dashboard.tsx  composed from every enabled module's dashboard contributions
     screens/Settings.tsx   core: staff, programs, fiscal year, Modules on/off, export/import/reset
-    screens/programs/      core: Programs list and sheets (program, project), ProgramDialog, ProjectDialog
+    screens/programs/      core: Programs list (Operations on its own above the programs) and sheets (program, project), ProgramDialog, ProjectDialog
     screens/partners/      core: Partners list, OrganizationDetail, VenueDetail, shared dialogs
     components/            shared app-level bits (badges, TableScroll, the funding bar)
     responsive.css
@@ -56,7 +56,9 @@ src/
 // core/types.ts
 export interface StaffMember { id: string; name: string; role: string; teaches: boolean }
 export interface Program extends Archivable { id: ProgramId; name: string; short: string }   // short: "Studio", "In-school"
-export type ProgramId = string;   // the six seeded programs keep 'studio-sessions', 'in-school', …; one added in Settings gets a generated `p-…` id
+export type ProgramId = string;   // the seeded programs keep 'studio-sessions', 'in-school', …; one added on the Programs page gets a generated `p-…` id
+// Operations, the office's running costs, is a Program record but not a program (decision 0006): id OPERATIONS_ID
+// ('general-operating', General operating's id), named "Operations", never archived or renamed, offered last in pickers
 
 // Places. An Organization is a partner (a school district, a community centre): the
 // relationship, who to call, what was agreed. A Venue is a physical place a class or a

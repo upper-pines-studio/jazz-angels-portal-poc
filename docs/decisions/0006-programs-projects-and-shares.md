@@ -1,7 +1,8 @@
 # 0006 Programs, projects and how a grant's money is shared
 
 **Status:** Decided with the director, October 2026, from a prototype (#49). What "General
-operating" is, and spending by program, are still open (below). Built in four steps: #53 (a grant
+operating" is was decided after: it becomes Operations (#62, below). Spending by program is still
+open (below). Built in four steps: #53 (a grant
 names several programs, this decision), #54 (the Programs page), #55 (budgets, projects and
 shares in the domain), #56 (the screens).
 
@@ -32,8 +33,8 @@ one. Built in #53.
   anywhere.
 - Saved data loads unchanged: `normalise` turns a saved `program` into a list of one.
 - A grant matches the grants list's program filter when any of its programs does. Program
-  numbers on the Reports tab count across all of them together. A grant that names General
-  operating still counts every program.
+  numbers on the Reports tab count across all of them together. A grant that names Operations
+  (General operating until #62) still counts every program.
 
 **A grant's money is handed out in shares.** A share is a grant, a program *or* a project, and a
 whole-dollar amount. A grant can have any number of shares; what is left shows as "not yet
@@ -82,6 +83,30 @@ and projects scrolls in its own column and stays in view while the sheet beside 
 - A project that crosses two fiscal years counts its whole budget in each, for now. Splitting
   it between the years, by hand, is wanted later (`docs/ROADMAP.md`).
 
+**What General operating is** (October 2026, a follow-up to #49, built in #62): it becomes
+**Operations**, the office's own line, apart from the programs.
+
+- Operations is the office's running costs and unrestricted money: rent, salaries, insurance,
+  the office. It is not a program, and there is exactly one. It keeps everything General
+  operating had: a budget for each fiscal year, shares from grants, projects under it (an office
+  move, a new laptop), grants that name it, hours logged to it, and its rule on a grant's Reports
+  tab: a grant on it counts every program's numbers (`coversWholeStudio`).
+- Its id stays `general-operating`, so every saved grant, share, budget, project and time entry
+  that names it loads unchanged. It is called "Operations", short name "Operations". The id is
+  `OPERATIONS_ID` in core, which grants and timesheets share. `normalise` renames a saved
+  "General operating" (and puts back one that was archived or renamed before that was refused),
+  and gives a saved office without it one.
+- On the Programs page it sits apart from the programs: its own entry above the programs list,
+  with its own sheet (budget, "Paid for by", projects), and not counted in the "N programs" of
+  the page header, nor in Settings.
+- It can't be archived or renamed, and Add program never makes a second one: the store refuses
+  each, saying why. Who may change programs is unchanged (decision 0001, "Programs"). It is
+  there in a new office (decision 0004) as well as in the demo.
+- Wherever a program is chosen (Add grant, Edit record, the grants filter, Log hours, Add a
+  project, Give to a program or project), Operations is still offered, last, as "Operations".
+- Grant titles keep the funder's own words: the Herb Alpert grant is still "General operating
+  support 2026".
+
 ## What it means for the build
 
 - **#53 (built):** `Grant.programs` everywhere; Add grant, Grant details and Edit award record
@@ -95,7 +120,7 @@ and projects scrolls in its own column and stays in view while the sheet beside 
   made there: a grant's money counts once it reaches LOI (as "If awarded") and goes on counting
   when Closed; a program share with no grant period yet defaults to the year it is given in;
   giving again to the same program year or project adds to that share; a restricted grant
-  naming General operating is restricted to General operating like any other program.
+  naming Operations (then General operating) is restricted to it like any other program.
 - **#56 (built, the screens):** the Programs page lists each program's projects under it with
   what is funded against its budget for a chosen fiscal year; a program's and a project's sheet
   show the budget, the money from awarded grants and if pending grants come in, what is still
@@ -114,9 +139,6 @@ and projects scrolls in its own column and stays in view while the sheet beside 
 
 ## Still open
 
-- **What "General operating" is.** It stays an ordinary program until the client decides. One
-  option is to rename it Operations, as the place for unrestricted money that is not tied to any
-  program.
 - **Spending by program or project.** Likely, built later. Either tag each expense, or read a
   QuickBooks class or location from the sync. The schema leaves room for it
   (see [0005](0005-roadmap-items-that-shape-the-schema.md)).
