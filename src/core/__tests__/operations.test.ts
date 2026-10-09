@@ -5,6 +5,7 @@ import {
   isOperations,
   operations,
   programName,
+  classProgramOptions,
   programOptions,
   programProblem,
   programsList,
@@ -84,6 +85,26 @@ describe('Operations', () => {
     c.actions.archiveProgram('jazz-legacy');
     expect(programOptions(c.state(), 'jazz-legacy').at(-1)!.id).toBe(OPERATIONS_ID);
     expect(programOptions(c.state(), ['jazz-legacy']).map(p => p.id)).toContain('jazz-legacy');
+  });
+});
+
+describe('classes and students', () => {
+  it('are not offered Operations: nobody takes a class in the office’s running costs', () => {
+    const c = core();
+    const ids = classProgramOptions(c.state()).map(p => p.id);
+    expect(ids).not.toContain(OPERATIONS_ID);
+    expect(ids).toEqual(
+      programOptions(c.state())
+        .map(p => p.id)
+        .filter(id => id !== OPERATIONS_ID),
+    );
+  });
+
+  it('keep Operations when the record already names it, so nothing saved is lost', () => {
+    const c = core();
+    expect(classProgramOptions(c.state(), OPERATIONS_ID).map(p => p.id)).toContain(OPERATIONS_ID);
+    c.actions.archiveProgram('jazz-legacy');
+    expect(classProgramOptions(c.state(), 'jazz-legacy').map(p => p.id)).toContain('jazz-legacy');
   });
 });
 

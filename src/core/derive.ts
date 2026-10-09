@@ -159,6 +159,20 @@ export function programOptions(
 }
 
 /**
+ * The programs a class (an ensemble) or a student can be in: `programOptions`
+ * without Operations, since nobody takes a class in the office's running
+ * costs. A record that already names Operations keeps it, so nothing saved is lost.
+ */
+export function classProgramOptions(
+  state: PortalState,
+  keep?: ProgramId | readonly ProgramId[],
+): Program[] {
+  const kept: readonly ProgramId[] =
+    keep === undefined ? [] : typeof keep === 'string' ? [keep] : keep;
+  return programOptions(state, keep).filter(p => !isOperations(p.id) || kept.includes(p.id));
+}
+
+/**
  * The programs as the Programs page lists them: the current ones, then, with
  * `includeArchived`, the archived ones after them. Operations is not one of
  * them; the page shows it on its own (`operations`).
