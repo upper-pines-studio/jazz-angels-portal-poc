@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Button,
   Card,
-  Dialog,
   EmptyState,
   Icon,
   IconButton,
@@ -26,18 +25,11 @@ import {
   syncedLabel,
   transactionById,
   transactionCounts,
-  transactionSnapshot,
   transactionsByStatus,
 } from '../../domain';
-import type {
-  Allocation,
-  Expense,
-  Suggestion,
-  Transaction,
-  TransactionSnapshot,
-  TransactionStatus,
-} from '../../domain';
+import type { Allocation, Expense, Suggestion, Transaction, TransactionStatus } from '../../domain';
 import { SplitPanel } from './SplitPanel';
+import { useSendBack, useTransactionUndo } from './sendBack';
 import { TransactionRow } from './TransactionRow';
 import type { DraftSummary, RowHandlers } from './TransactionRow';
 import {
@@ -78,24 +70,6 @@ const EMPTY_TAB: Record<Tab, { title: string; message: string }> = {
   },
 };
 
-/** "Undo" inside a toast. It works once, then says so. */
-function UndoButton({ onUndo }: { onUndo: () => void }) {
-  const [done, setDone] = React.useState(false);
-  return (
-    <button
-      type="button"
-      className="tx-undo"
-      disabled={done}
-      onClick={() => {
-        setDone(true);
-        onUndo();
-      }}
-    >
-      {done ? 'Undone' : 'Undo'}
-    </button>
-  );
-}
-
 /**
  * Transactions: what QuickBooks sent, and where each one belongs. The
  * bookkeeper works the To assign tab down to nothing each week; a split opens
@@ -116,8 +90,6 @@ export default function Transactions() {
   const [changing, setChanging] = React.useState<Set<string>>(() => new Set());
   const [draft, setDraft] = React.useState<DraftSummary | undefined>();
   const { guard, panel: panelGuard } = usePanelGuard();
-  /** A send-back waiting on its confirm, because it would delete backup. */
-  const [sendingBack, setSendingBack] = React.useState<TransactionSnapshot | undefined>();
   const timer = React.useRef<number | undefined>();
   React.useEffect(() => () => window.clearTimeout(timer.current), []);
 
@@ -252,34 +224,21 @@ export default function Transactions() {
   );
 
   // --- Changes, each with a toast and an Undo -----------------------------------
-  const withUndo = (ids: string[], run: () => void, title: string, message: string) => {
-    const before = ids
-      .map(id => transactionSnapshot(state, id))
-      .filter((snap): snap is TransactionSnapshot => !!snap);
-    run();
+  const undoable = useTransactionUndo();
+  const doneChanging = (ids: string[]) =>
     setChanging(s => {
       const next = new Set(s);
       ids.forEach(id => next.delete(id));
       return next;
     });
-    toast({
-      title,
-      message: (
-        <span>
-          {message}{' '}
-          <UndoButton
-            onUndo={() => {
-              actions.grants.restoreTransactions(before);
-              toast({
-                tone: 'info',
-                title: ids.length > 1 ? 'Put back as they were' : 'Put back as it was',
-              });
-            }}
-          />
-        </span>
-      ),
-    });
+  const withUndo = (ids: string[], run: () => void, title: string, message: string) => {
+    undoable(ids, run, title, message);
+    doneChanging(ids);
   };
+  // Send back asks first when it would delete backup; the confirm is shared with the Expenses tab.
+  const { sendBack, dialog: sendBackDialog } = useSendBack({
+    onSent: tx => doneChanging([tx.id]),
+  });
 
   const describe = (tx: Transaction, parts: Allocation[]) =>
     parts.length === 1
@@ -294,14 +253,6 @@ export default function Transactions() {
       describe(tx, parts) + (note ? ` ${note}` : ''),
     );
   };
-
-  const sendBack = (tx: Transaction, backup = false) =>
-    withUndo(
-      [tx.id],
-      () => actions.grants.unassignTransaction(tx.id),
-      'Sent back to assign',
-      `${tx.payee}, ${money(tx.amount)} is waiting on the To assign tab again.${backup ? ' Its backup was removed.' : ''}`,
-    );
 
   // A split with unsaved edits stays open until the person decides.
   const open = (tx: Transaction) => {
@@ -348,13 +299,7 @@ export default function Transactions() {
         'Set aside as not grant-funded',
         `${tx.payee}, ${money(tx.amount)}. No grant pays for it.`,
       ),
-    sendBack: tx => {
-      // Send back deletes the backup, so ask first, as the Expenses tab does.
-      const snap = transactionSnapshot(state, tx.id);
-      if (snap && (snap.files.length || snap.expenses.some(e => e.backupNote?.trim())))
-        setSendingBack(snap);
-      else sendBack(tx);
-    },
+    sendBack,
     seeInGrant: expense => nav(`/grants/${expense.grantId}?tab=expenses&expense=${expense.id}`),
     setChanging: (tx, want) =>
       setChanging(s => {
@@ -409,21 +354,9 @@ export default function Transactions() {
     />
   );
 
-  const confirmTx = sendingBack && transactionById(state, sendingBack.id);
-
   return (
     <WithPanel panel={panel}>
-      {confirmTx && sendingBack && (
-        <SendBackDialog
-          tx={confirmTx}
-          snap={sendingBack}
-          onCancel={() => setSendingBack(undefined)}
-          onConfirm={() => {
-            setSendingBack(undefined);
-            sendBack(confirmTx, true);
-          }}
-        />
-      )}
+      {sendBackDialog}
       {!qb.connected && (
         <div className="tx-banner" role="status">
           <Icon name="unplug" size={18} />
@@ -619,50 +552,6 @@ export default function Transactions() {
         </div>
       </Card>
     </WithPanel>
-  );
-}
-
-/** "Send back" when it would delete backup: say what goes before it goes. */
-function SendBackDialog({
-  tx,
-  snap,
-  onCancel,
-  onConfirm,
-}: {
-  tx: Transaction;
-  snap: TransactionSnapshot;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const parts = snap.expenses.length;
-  const files = snap.files.length;
-  const notes = snap.expenses.filter(e => e.backupNote?.trim()).length;
-  const what = [
-    files ? (files === 1 ? 'its backup file' : `its ${files} backup files`) : '',
-    notes ? (notes === 1 ? 'its backup note' : `its ${notes} backup notes`) : '',
-  ].filter(Boolean);
-  return (
-    <Dialog
-      open
-      title="Send back to assign?"
-      onClose={onCancel}
-      footer={
-        <>
-          <Button variant="secondary" onClick={onCancel}>
-            Keep it
-          </Button>
-          <Button variant="danger" onClick={onConfirm}>
-            Send back
-          </Button>
-        </>
-      }
-    >
-      <p style={{ margin: 0 }}>
-        This takes {parts > 1 ? `all ${parts} parts of ${tx.ref}` : 'the expense'} from {tx.payee}{' '}
-        off the budget and deletes {joinWords(what)}. The transaction goes back to the To assign
-        tab. QuickBooks is not changed.
-      </p>
-    </Dialog>
   );
 }
 
