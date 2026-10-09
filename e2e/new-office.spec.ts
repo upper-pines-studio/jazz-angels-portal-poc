@@ -64,7 +64,9 @@ test('a new office adds a session, an ensemble and a class, and takes roll', asy
   await field(program, 'Short name').fill('Studio');
   await program.getByRole('button', { name: 'Add program' }).click();
   await expect(page).toHaveURL(/\/programs\/[^/]+$/);
-  await expect(main.getByRole('heading', { name: 'Studio Semester Sessions' })).toBeVisible();
+  await expect(
+    main.getByRole('heading', { name: 'Studio Semester Sessions', exact: true }),
+  ).toBeVisible();
 
   // A venue, on Partners.
   await page.goto('/partners');
