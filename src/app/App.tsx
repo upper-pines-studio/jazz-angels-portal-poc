@@ -55,6 +55,7 @@ const CORE_ELEMENTS: Record<string, React.ReactElement> = {
   '/': <Dashboard />,
   '/programs': <Programs />,
   '/programs/:id': <Programs />,
+  '/programs/projects/:projectId': <Programs />,
   '/partners': <Partners />,
   '/partners/organizations/:id': <OrganizationDetail />,
   '/partners/venues/:id': <VenueDetail />,

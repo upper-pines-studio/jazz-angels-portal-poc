@@ -13,6 +13,8 @@ export const CORE_REQUIRES: Array<Pick<ModuleRoute, 'path' | 'requires'>> = [
   // Anyone signed in may read the programs; changing them is `programs` Edit.
   { path: '/programs' },
   { path: '/programs/:id' },
+  // A project is "Program budgets and projects" (decision 0006): not for a Teacher.
+  { path: '/programs/projects/:projectId', requires: { subject: 'program-budgets' } },
   { path: '/partners', requires: { subject: 'partners' } },
   { path: '/partners/organizations/:id', requires: { subject: 'partners' } },
   { path: '/partners/venues/:id', requires: { subject: 'partners' } },
