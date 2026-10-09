@@ -347,9 +347,10 @@ toward one fiscal year.
   Program", for a restricted grant's money outside its programs, a project
   judged by its program), `project-outside-period` ("Runs past the grant
   period, which ends Jun 30, 2027"), `year-after-period` ("FY28 starts after
-  the grant period ends, Jun 30, 2027") and `over-given` ("$500 more than the
-  grant has", on the grant). `targetWarnings(state, grant, target)` gives the
-  first three for any target; `giveWarnings(state, { grantId, target, amount },
+  the grant period ends, Jun 30, 2027"), `year-before-period` ("FY26 ended
+  before the grant period starts, Jul 1, 2026") and `over-given` ("$500 more
+  than the grant has", on the grant). `targetWarnings(state, grant, target)`
+  gives the first four for any target; `giveWarnings(state, { grantId, target, amount },
   replacing?)` adds `over-given` as it would be after giving, for the Give form.
   A grant with no period dates yet has no period to fall outside.
 - **What is refused** is only what cannot be saved, with why (`giveProblem`,

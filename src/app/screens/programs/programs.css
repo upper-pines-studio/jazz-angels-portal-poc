@@ -107,6 +107,13 @@
   padding-top: var(--space-2);
   padding-bottom: var(--space-2);
 }
+/* A project outside the year shown: still on the list, greyed. */
+.ja-programs__item--other-year {
+  opacity: 0.6;
+}
+.ja-programs__item--other-year[aria-current='page'] {
+  opacity: 1;
+}
 
 /* The sheet: parts of one card, one under another, each with a rule above. */
 .ja-sheet {

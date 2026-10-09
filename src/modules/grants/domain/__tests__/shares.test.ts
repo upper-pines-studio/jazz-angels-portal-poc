@@ -208,6 +208,17 @@ describe('warnings, never refusals', () => {
     expect(targetWarnings(state, grant(HA), fy27('studio-sessions'))).toEqual([]);
   });
 
+  it('warns when a program’s year ended before the grant period starts', () => {
+    expect(
+      targetWarnings(state, grant(HA), { ...fy27('studio-sessions'), fiscalYear: 'FY26' }),
+    ).toEqual([
+      {
+        kind: 'year-before-period',
+        message: 'FY26 ended before the grant period starts, Jul 1, 2026',
+      },
+    ]);
+  });
+
   it('warns when more is given out than the grant has, before and after giving', () => {
     expect(giveWarnings(state, { grantId: HA, target: fy27('homeschool'), amount: 2000 })).toEqual(
       [],

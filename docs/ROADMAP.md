@@ -49,6 +49,7 @@ its Known gaps section, not here.
 | Idea | What it is | Builds on |
 | --- | --- | --- |
 | Restricted and unrestricted money | How much restricted money is still unspent and when it is released, in the form the bookkeeper and auditor need. | Budget vs. actual |
+| A project's budget split across years | For a project that crosses two fiscal years (the Summer Jazz Intensive runs June to August), the office splits its budget between them by hand, so each year's totals count only its part. Today each year counts the whole budget. | Programs page (decision 0006) |
 | Reliance on single funders | Each funder's share of revenue, and which programs depend on one grant. | Funders |
 | Board report | A one-page quarterly summary: pipeline, wins, spending pace, reports due. | Dashboard |
 | Calendar and email | Deadlines as a calendar feed; funder emails logged on the grant. | Deadlines, Activity tab |

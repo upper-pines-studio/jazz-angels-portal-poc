@@ -13,16 +13,19 @@ import { Button, Card, EmptyState, Icon, Select } from '../../../design-system';
 import {
   activeOnly,
   archivedOnly,
+  fiscalYearsOverlapping,
   isArchived,
   money,
   programBudget,
   programsList,
   projectById,
+  projectOverlaps,
   projectsInFiscalYear,
   useCan,
   useStore,
+  withArchived,
 } from '../../../core';
-import type { FiscalYear, FundingTarget, Program, Project } from '../../../core';
+import type { FiscalYear, FundingTarget, PortalState, Program, Project } from '../../../core';
 import { ProgramDialog } from './ProgramDialog';
 import type { ProgramDraft } from './ProgramDialog';
 import { BudgetDialog, ProjectDialog } from './ProjectDialog';
@@ -41,8 +44,8 @@ import './programs.css';
  * Who does what (decision 0001): Add program, Edit, Archive and Restore of a
  * program are Admin and Director ("Programs"). Budgets and projects are
  * "Program budgets and projects": Edit for Admin, Director, Office manager and
- * Bookkeeper, View for Office assistant and Read-only; a Teacher sees the
- * program names only. "Paid for by" on each sheet is the grants module's part,
+ * Bookkeeper, View for Office assistant and Read-only. A Teacher has neither,
+ * so the page is not theirs to open (`app/access.ts`). "Paid for by" on each sheet is the grants module's part,
  * through its manifest.
  *
  * A core screen, since programs, budgets and projects are core's nouns.
@@ -69,8 +72,16 @@ export default function Programs() {
   const current = activeOnly(state.core.programs).length;
   const archivedCount =
     archivedOnly(state.core.programs).length +
-    (mayMoney ? archivedOnly(projectsInFiscalYear(state, fy, true)).length : 0);
+    (mayMoney ? archivedOnly(state.core.projects).length : 0);
+  // The year's projects count in its totals; the list also shows the others,
+  // greyed, after them, so a project is never only reachable from its program.
   const projects = mayMoney ? projectsInFiscalYear(state, fy, showArchived) : [];
+  const listed = mayMoney
+    ? [
+        ...projects,
+        ...withArchived(state.core.projects, showArchived).filter(x => !projects.includes(x)),
+      ]
+    : [];
   // An archived program or project still opens from a link: it is history.
   const project = projectId && mayMoney ? projectById(state, projectId) : undefined;
   const program = projectId ? undefined : state.core.programs.find(p => p.id === id);
@@ -234,7 +245,7 @@ export default function Programs() {
           ) : (
             <ul className="ja-programs__list">
               {rows.map(p => {
-                const under = projects.filter(x => x.programId === p.id);
+                const under = listed.filter(x => x.programId === p.id);
                 return (
                   <li key={p.id}>
                     <ListItem
@@ -261,6 +272,7 @@ export default function Programs() {
                               current={selectedKey === `project:${x.id}`}
                               target={{ kind: 'project', projectId: x.id }}
                               fy={fy}
+                              otherYear={otherYearNote(state, x, fy)}
                               project
                             />
                           </li>
@@ -374,6 +386,7 @@ function ListItem({
   note,
   target,
   fy,
+  otherYear,
   project = false,
 }: {
   to: string;
@@ -384,6 +397,8 @@ function ListItem({
   note?: string;
   target?: FundingTarget;
   fy: FiscalYear;
+  /** For a project that does not run in the year shown: when it does. Greyed, with no bar. */
+  otherYear?: string;
   project?: boolean;
 }) {
   const { state, user } = useStore();
@@ -395,12 +410,20 @@ function ListItem({
   return (
     <Link
       to={to}
-      className={project ? 'ja-programs__item ja-programs__item--project' : 'ja-programs__item'}
+      className={[
+        'ja-programs__item',
+        project && 'ja-programs__item--project',
+        otherYear && 'ja-programs__item--other-year',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       aria-current={current ? 'page' : undefined}
     >
       <span className="ja-programs__name">{name}</span>
       {archived && <ArchivedBadge />}
-      {funding ? (
+      {otherYear ? (
+        <span className="ja-programs__short">{otherYear}</span>
+      ) : funding ? (
         <>
           <span className="ja-programs__short">{fundedLine(funding.summary, hasBudget)}</span>
           {(funding.summary.budget > 0 || funding.summary.funded > 0) && (
@@ -417,6 +440,21 @@ function ListItem({
       )}
     </Link>
   );
+}
+
+/**
+ * "Runs in FY28" or "Ran in FY26": when a project the year shown does not
+ * include does run, or undefined when it runs in that year.
+ */
+function otherYearNote(state: PortalState, project: Project, fy: FiscalYear): string | undefined {
+  if (projectOverlaps(project, fy)) return undefined;
+  const years = fiscalYearsOverlapping(
+    project.start,
+    project.end,
+    state.core.settings.fiscalYearStartMonth,
+  ).map(y => y.label);
+  const when = years.length > 1 ? `${years[0]} to ${years[years.length - 1]}` : years[0];
+  return project.end < fy.start ? `Ran in ${when}` : `Runs in ${when}`;
 }
 
 /** "$15,300 of $18,000 · $2,700 to find", "covered", "over", or no budget yet. */
