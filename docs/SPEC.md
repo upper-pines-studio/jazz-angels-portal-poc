@@ -489,15 +489,22 @@ before, keeping their backup (see Backup), marks it Assigned, and records who an
 
 **Set aside** (`markNotGrantFunded`): overhead no grant pays for. Removes any parts and their backup.
 **Send back** (`unassignTransaction`): back to To assign; removes its parts and their backup files.
-Neither writes an Activity row. On Transactions, when the parts have backup files or a backup note,
-Send back to assign first opens a confirm, as the Expenses tab does: it names the parts, the files
-and the note it deletes, says the transaction goes back to the To assign tab and that QuickBooks is
-not changed. With no backup it sends back at once.
+Neither writes an Activity row. Send back is offered on Transactions (Send back to assign) and on a
+grant's Expenses tab (Send back to Transactions), and both use one confirm and one Undo
+(`screens/money/sendBack.tsx`). When the parts have backup files or a backup note it first opens
+"Send back to assign?": "This takes the expense from Signal Hill Music Service off the budget and
+deletes its 2 backup files and its backup note. The transaction goes back to the To assign tab.
+QuickBooks is not changed." (from the Expenses tab: "...to the To assign tab on Transactions.");
+Send back / Keep it. For a split it says how many parts go ("all 2 parts of Bill 1047"), whichever
+part it was sent back from. With no backup it sends back at once. The toast is "Sent back to assign",
+"Signal Hill Music Service, $1,240 is waiting on the To assign tab again. Its backup was removed.",
+with Undo.
 
-**Undo**: every assign, accept, set aside and send back on Transactions shows a toast with **Undo**,
-which works once and puts the transactions back exactly as they were before the change
-(`transactionSnapshot`, `restoreTransactions`): status, who assigned them, the same expense ids,
-their backup notes and their backup files, including files a send back or set aside deleted.
+**Undo**: every assign, accept, set aside and send back on Transactions, and a send back from a
+grant's Expenses tab, shows a toast with **Undo**, which works once and puts the transactions back
+exactly as they were before the change (`transactionSnapshot`, `restoreTransactions`): status, who
+assigned them, the same expense ids, their backup notes and their backup files, including files a
+send back or set aside deleted.
 
 **Split rule** (`saveSplitRule`): "Always split Signal Hill Properties this way". Ticked when saving
 in the split panel, it stores the parts as percentages (to two decimals) for that payee, replacing
@@ -636,9 +643,14 @@ Every expense counted against this grant, with its backup.
   backup files (Open, Download, Remove with a confirm) and a drop zone; a **Note** kept with the
   backup, saved when the field loses focus or with Save, included in the download.
   - **Reassign**: move the expense to another line on the same grant. Only the line changes.
-  - **Send back to Transactions** (from QuickBooks): a confirm says it takes every part of the
-    transaction off the budget and deletes their backup, and that QuickBooks is not changed.
-  - **Delete** (by hand): a confirm, then the expense and its backup are gone.
+  - **Send back to Transactions** (from QuickBooks): the same confirm and Undo as Send back on
+    Transactions (4.9). With backup files or a note it asks first, saying how many parts the
+    transaction has ("all 2 parts of Bill 1047") and the files and notes it deletes, that the
+    transaction goes back to the To assign tab on Transactions and that QuickBooks is not changed;
+    with none it sends back at once. The toast's Undo puts the transaction, its expense ids, files
+    and notes back exactly. A split sends back every part, as on Transactions.
+  - **Delete** (by hand, no transaction to send back to): a confirm, then the expense and its
+    backup are gone, with no Undo.
 - Empty: "Nothing spent against this grant yet. Expenses arrive from QuickBooks…", with "Go to
   Transactions" and "Log an expense by hand". Missing filter with nothing missing: "Every expense
   has its backup", with "Show all expenses".

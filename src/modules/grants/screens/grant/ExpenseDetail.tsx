@@ -24,6 +24,7 @@ import {
   guessKind,
   rememberFile,
 } from '../money/files';
+import { useSendBack } from '../money/sendBack';
 import { fileSize } from '../../domain';
 import { ReassignDialog } from './ExpenseDialogs';
 import { expensesLabel, filesLabel, useExpenseView } from './expenseList';
@@ -145,6 +146,8 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
   const toast = useToast();
   const [reassigning, setReassigning] = React.useState(false);
   const [confirming, setConfirming] = React.useState(false);
+  // The same confirm and Undo as Send back on Transactions.
+  const { sendBack, dialog: sendBackDialog } = useSendBack({ away: true });
 
   const files = expenseFiles(state, expense.id);
   const line = lineById(state, expense.budgetLineId);
@@ -197,18 +200,6 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
     for (const f of state.grants.files) {
       if (f.expenseId && expenseIds.includes(f.expenseId)) forgetFile(f.id);
     }
-  };
-
-  const sendBack = () => {
-    if (!tx) return;
-    removeAll(parts.map(p => p.id));
-    view.select(null);
-    actions.grants.unassignTransaction(tx.id);
-    toast({
-      tone: 'success',
-      title: 'Sent back to Transactions',
-      message: `${tx.ref} from ${tx.payee}, ${money(tx.amount)}, is waiting to be assigned again.${files.length ? ' Its backup was removed.' : ''}`,
-    });
   };
 
   const deleteByHand = () => {
@@ -407,7 +398,7 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
                     variant="ghost"
                     size="sm"
                     iconLeft={<Icon name="undo-2" size={14} />}
-                    onClick={() => setConfirming(true)}
+                    onClick={() => sendBack(tx)}
                   >
                     Send back to Transactions
                   </Button>
@@ -427,30 +418,15 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
           ) : (
             <div className="ja-exp-aside__confirm" role="alert">
               <p>
-                {tx ? (
-                  <>
-                    This takes{' '}
-                    {parts.length > 1 ? `all ${parts.length} parts of ${tx.ref}` : 'the expense'}{' '}
-                    off the budget
-                    {files.length
-                      ? ` and deletes ${files.length === 1 ? 'its backup file' : `its ${files.length} backup files`}`
-                      : ''}
-                    . The transaction goes back to the To assign list on Transactions. QuickBooks is
-                    not changed.
-                  </>
-                ) : (
-                  <>
-                    This deletes the expense
-                    {files.length
-                      ? ` and ${files.length === 1 ? 'its backup file' : `its ${files.length} backup files`}`
-                      : ''}
-                    . It cannot be undone.
-                  </>
-                )}
+                This deletes the expense
+                {files.length
+                  ? ` and ${files.length === 1 ? 'its backup file' : `its ${files.length} backup files`}`
+                  : ''}
+                . It cannot be undone.
               </p>
               <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                <Button variant="danger" size="sm" onClick={tx ? sendBack : deleteByHand}>
-                  {tx ? 'Send back' : 'Delete expense'}
+                <Button variant="danger" size="sm" onClick={deleteByHand}>
+                  Delete expense
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => setConfirming(false)}>
                   Keep it
@@ -461,6 +437,7 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
         </div>
       )}
 
+      {sendBackDialog}
       {reassigning && mayEdit && (
         <ReassignDialog
           grant={grant}
