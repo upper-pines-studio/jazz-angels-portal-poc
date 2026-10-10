@@ -9,8 +9,9 @@ its Known gaps section, not here.
 
 ## Suggested order
 
-1. **Reusable application text and organization documents.** Saves time on every application,
-   stands alone, and needs no backend.
+1. **Reusable application text.** Saves time on every application, stands alone, and needs no
+   backend. Organization documents, the other half of this step, are built (#66, Office ›
+   Documents in `docs/FEATURES.md`); pointing a grant's register at them is #68.
 2. **Deliverables tracking.** Turns the program numbers already on the Reports tab into "are we
    keeping our promises", and leads straight into report drafting.
 3. **Renewals.** Small to build, and it matches how the office raises money: mostly the same
@@ -23,7 +24,6 @@ its Known gaps section, not here.
 | Idea | What it is | Builds on |
 | --- | --- | --- |
 | Reusable application text | A searchable library of the answers every application asks for: mission, program descriptions, outcomes, budget explanation, equity statement. Shows when each was last used and which grants it won. | |
-| Organization documents | One set of the files every funder asks for (IRS letter, audit, board list, insurance certificate, W-9, current budget), each with an expiry or "out of date" reminder. A grant's document register pulls the current version. | Documents tab |
 | Funder contact log | Calls, site visits, meetings with program officers, thank-you notes, concert invitations, recorded on the funder. | Funder detail |
 | Renewals | "Start next year's from this one": copy funder, program, budget shape, checklist and narrative, and open the next cycle in the pipeline on its own. | Add grant, Playbook |
 | Weighted pipeline | Each ask weighted by its chance of success, giving expected revenue by fiscal year and program, and the gap still to raise. | Pipeline card |

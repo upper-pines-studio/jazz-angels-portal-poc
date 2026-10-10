@@ -10,6 +10,10 @@ and stays in history, reports and the activity log. Sessions (terms) and program
 with #44, when they became editable: an archived session leaves the Schedule's session list and
 is no longer the current session, its classes untouched; an archived program leaves the pickers
 for new records, and every grant, student, ensemble and hour that names it keeps its name.
+Office documents joined them with #66 (decision
+[0005](0005-roadmap-items-that-shape-the-schema.md)): an archived document leaves Office ›
+Documents and the dashboard, and keeps every version; a new version never replaces an older one,
+which stays, read-only.
 
 ## Why
 
@@ -23,6 +27,7 @@ Done (#20) in the browser build. The database carries the same fields and the sa
 - Each of those records gets an archived date and who archived it: `archivedAt` (ISO date) and
   `archivedById` (staff id), both optional, read through one helper (`src/core/archive.ts`:
   `isArchived`, `activeOnly`, `withArchived`, `pickable`, `archiveFields`, `restoreFields`).
+  Office documents carry the same two fields; their versions are only ever added.
   Lists hide archived records by default and offer a way to show them: a "Show archived (n)"
   switch at the right of each list's filter bar or card header, shown once something is
   archived, with archived rows listed last under a neutral Archived badge.

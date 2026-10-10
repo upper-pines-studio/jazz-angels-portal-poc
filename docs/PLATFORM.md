@@ -81,9 +81,19 @@ export type FundingTarget =
   | { kind: 'program'; programId: ProgramId; fiscalYear: FiscalYearLabel }
   | { kind: 'project'; projectId: string };
 
+// A stored file's facts (not its contents). A grant's GrantFile builds on it.
+export type FileFormat = 'pdf' | 'jpg' | 'png' | 'heic';
+export interface FileFacts { name: string; format: FileFormat; sizeKb: number; pages?: number }
+
+// The office's documents (decision 0005): the papers every funder asks for, kept once. In code
+// "office documents", never "organization" (a partner). The newest version added is current.
+export type OfficeDocumentKind = 'irs-letter'|'financials'|'board-list'|'insurance-certificate'|'w9'|'organization-budget'|'other';
+export interface OfficeDocumentVersion extends FileFacts { id; addedAt; addedById; expires? }
+export interface OfficeDocument extends Archivable { id; kind: OfficeDocumentKind; name; versions: OfficeDocumentVersion[] }
+
 export interface AppSettings { fiscalYearStartMonth: number; enabledModules: string[] }
 export interface CoreState { staff: StaffMember[]; programs: Program[]; organizations: Organization[]; venues: Venue[];
-  programBudgets: ProgramBudget[]; projects: Project[]; settings: AppSettings }
+  programBudgets: ProgramBudget[]; projects: Project[]; officeDocuments: OfficeDocument[]; settings: AppSettings }
 
 /** Augmented by each module with `declare module`. */
 export interface PortalState { core: CoreState }
@@ -350,8 +360,22 @@ awaiting approval" as `info` when > 0; no panel.
   stat appears when a slot is free, otherwise as a footnote in the Attention header). Left column
   (2fr): **Attention** card, all modules' items merged, overdue first then by date, each row: date
   (mono), what, detail, a small `source` Badge (Grants / Teaching / Timesheets), owner avatar,
-  status Badge. Right column (1fr): each module's panels stacked. Empty attention: "Nothing needs
+  status Badge. Core adds its own rows for office documents out of date or expiring soon, to the
+  roles that may open Documents. The card's subtitle is "Overdue first, then what is coming up".
+  Right column (1fr): each module's panels stacked. Empty attention: "Nothing needs
   attention. The next deadline is <date>." Add-grant button stays in the top bar.
+- **Documents** `/documents`, `/documents/:id` — Core, Office in the rail before Partners
+  (decision 0005). One Card, "The organization's documents", with a table: Document, Kind,
+  Current version, Added, Expires ("Never" when none), Status Badge (Out of date in danger, Expires
+  soon in gold, Current in teal); with a document open the table keeps Document, Expires and
+  Status. Top bar: "6 documents · 1 to renew", Add document. A row opens a docked SidePanel: the
+  kind as eyebrow, the name, the status and "Expires Oct 1, 2026, in 18 days"; Current version
+  and Earlier versions, each a drawn page with the file name, its facts, "Added by … on …", the
+  expiry, Open (the viewer) and Download; footer Edit, Archive, Add version. Add document asks
+  kind, name (the kind's name until typed over), the file and Expires (blank means never); Add
+  version the file and Expires. The dashboard adds Out of date and Expires soon rows (source
+  Office, dated by the expiry, the status Badge in the document's words). Who: "Office documents"
+  in decision 0001; a Teacher does not see it.
 - **Partners** `/partners` — Core, because ensembles and meetings point at venues by id. Two
   tables: Venues (name, kind, organization, address, on-site contact; sorted by organization then
   name) and Organizations (name, kind, contact, its venues). Top-bar buttons Add organization and
@@ -395,8 +419,8 @@ awaiting approval" as `info` when > 0; no panel.
   (**Grants**: All grants, Deadlines, Funders, Playbook · **Operations**: Programs (core's own,
   placed right after Grants) · **Money**: Transactions, Budget vs.
   actual, Spend-down · **Teaching**: Schedule, Students ·
-  **Office**: Timesheets, Partners, Settings). Sections with the same name merge; "Office" is
-  where Timesheets and the core Partners and Settings screens meet. Badge counts come from
+  **Office**: Timesheets, Documents, Partners, Settings). Sections with the same name merge;
+  "Office" is where Timesheets and the core Documents, Partners and Settings screens meet. Badge counts come from
   `NavItem.badge`.
   Footer: signed-in person (Barry Cogert, Program Director) and Sign out.
 

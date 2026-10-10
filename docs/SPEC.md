@@ -141,11 +141,11 @@ interface SplitRule {      // "Always split Signal Hill Properties this way"
   parts: Array<{ grantId: string; budgetLineId: string; percent: number }>;
 }
 
-interface GrantFile {      // a file stored with a grant: the award letter, or the backup for one expense
+interface GrantFile extends FileFacts {  // a file stored with a grant: the award letter, or the backup for one expense
+  // FileFacts is core's: name, format ('pdf'|'jpg'|'png'|'heic'), sizeKb, pages?; office documents share it
   id: string; grantId: string;
   expenseId?: string;      // set when the file backs up one expense
   kind: 'award-letter'|'agreement'|'receipt'|'invoice'|'timesheet'|'other';
-  name: string; format: 'pdf'|'jpg'|'png'|'heic'; sizeKb: number; pages?: number;
   uploadedById: string; uploadedAt: string;
 }
 
@@ -686,7 +686,9 @@ Two lists:
   pre-award: "…such as the final proposal or a letter from the funder…".
 - **Application register**: the DataTable of what each application needs (name, kind, status Badge,
   updated, link icon), "Add document", row click edits (with Delete). Its rows link out to Drive or
-  Dropbox; it does not hold files. Empty: "No documents listed yet. The narrative, budget, IRS letter
+  Dropbox; it does not hold files. The IRS letter, board list and financials are also kept once
+  for the office, with versions and expiry, on Office › Documents (core, decision 0005,
+  `docs/PLATFORM.md` 2.4); a register row does not point at them yet (#68). Empty: "No documents listed yet. The narrative, budget, IRS letter
   and the rest of what an application needs show up here…" with "Add document".
 
 ### 4.11 Transactions  `/transactions`
