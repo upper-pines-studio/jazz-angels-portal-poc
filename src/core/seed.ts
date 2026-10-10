@@ -3,6 +3,7 @@ import { OPERATIONS_ID, operationsRecord } from './derive';
 import type {
   AppSettings,
   CoreState,
+  OfficeDocument,
   Organization,
   Program,
   ProgramBudget,
@@ -195,6 +196,125 @@ const PROJECTS: Project[] = [
   },
 ];
 
+/**
+ * The office's documents (decision 0005), as the demo's today (Sep 13, 2026)
+ * finds them: the insurance certificate expires in 18 days, and the audited
+ * financials have last year's version under this year's. File names and
+ * sizes are invented; the portal holds no contents.
+ */
+const OFFICE_DOCUMENTS: OfficeDocument[] = [
+  {
+    id: 'doc-irs-letter',
+    kind: 'irs-letter',
+    name: 'IRS determination letter',
+    versions: [
+      {
+        id: 'docv-irs-letter-1',
+        name: 'IRS determination letter 501(c)(3).pdf',
+        format: 'pdf',
+        sizeKb: 284,
+        pages: 2,
+        addedAt: '2025-08-04',
+        addedById: 's-denise',
+      },
+    ],
+  },
+  {
+    id: 'doc-financials',
+    kind: 'financials',
+    name: 'Audited financial statements',
+    versions: [
+      {
+        id: 'docv-financials-fy24',
+        name: 'Audited financial statements FY24.pdf',
+        format: 'pdf',
+        sizeKb: 1180,
+        pages: 14,
+        addedAt: '2024-11-18',
+        addedById: 's-denise',
+        expires: '2025-12-31',
+      },
+      {
+        id: 'docv-financials-fy25',
+        name: 'Audited financial statements FY25.pdf',
+        format: 'pdf',
+        sizeKb: 1240,
+        pages: 16,
+        addedAt: '2025-11-20',
+        addedById: 's-denise',
+        expires: '2026-12-31',
+      },
+    ],
+  },
+  {
+    id: 'doc-board-list',
+    kind: 'board-list',
+    name: 'Board of directors',
+    versions: [
+      {
+        id: 'docv-board-list-1',
+        name: 'Board of directors 2026-27.pdf',
+        format: 'pdf',
+        sizeKb: 96,
+        pages: 1,
+        addedAt: '2026-07-15',
+        addedById: 's-keisha',
+        expires: '2027-06-30',
+      },
+    ],
+  },
+  {
+    id: 'doc-insurance',
+    kind: 'insurance-certificate',
+    name: 'Certificate of liability insurance',
+    versions: [
+      {
+        id: 'docv-insurance-1',
+        name: 'Certificate of liability insurance 2025-26.pdf',
+        format: 'pdf',
+        sizeKb: 188,
+        pages: 1,
+        addedAt: '2025-10-01',
+        addedById: 's-keisha',
+        expires: '2026-10-01',
+      },
+    ],
+  },
+  {
+    id: 'doc-w9',
+    kind: 'w9',
+    name: 'W-9',
+    versions: [
+      {
+        id: 'docv-w9-1',
+        name: 'W-9 Jazz Angels signed.pdf',
+        format: 'pdf',
+        sizeKb: 142,
+        pages: 1,
+        addedAt: '2026-01-12',
+        addedById: 's-denise',
+      },
+    ],
+  },
+  {
+    id: 'doc-budget',
+    kind: 'organization-budget',
+    name: 'Organization budget',
+    versions: [
+      {
+        id: 'docv-budget-fy27',
+        name: 'Jazz Angels budget FY27.pdf',
+        format: 'pdf',
+        sizeKb: 210,
+        pages: 3,
+        addedAt: '2026-06-20',
+        addedById: 's-denise',
+        expires: '2027-06-30',
+      },
+    ],
+  },
+];
+
 /** Every module the office starts with switched on. */
 export const DEFAULT_ENABLED_MODULES = ['grants', 'teaching', 'timesheets'];
 
@@ -207,6 +327,7 @@ export function makeCoreSeed(): CoreState {
     venues: JSON.parse(JSON.stringify(VENUES)),
     programBudgets: JSON.parse(JSON.stringify(PROGRAM_BUDGETS)),
     projects: JSON.parse(JSON.stringify(PROJECTS)),
+    officeDocuments: JSON.parse(JSON.stringify(OFFICE_DOCUMENTS)),
     settings: defaultSettings(),
   };
 }
@@ -229,7 +350,7 @@ export function loginStaff(): StaffMember[] {
 /**
  * What a new office starts with when the demo is off (decision 0004): the
  * programs as editable configuration and Operations, the people the logins need, the default
- * settings, and no partners, venues, budgets or projects.
+ * settings, and no partners, venues, budgets, projects or office documents.
  */
 export function makeCoreEmpty(): CoreState {
   return {
@@ -239,6 +360,7 @@ export function makeCoreEmpty(): CoreState {
     venues: [],
     programBudgets: [],
     projects: [],
+    officeDocuments: [],
     settings: defaultSettings(),
   };
 }

@@ -162,6 +162,80 @@ export interface Venue extends Archivable {
   notes?: string;
 }
 
+/** The kinds of file the portal can store: what a picked file is turned into. */
+export type FileFormat = 'pdf' | 'jpg' | 'png' | 'heic';
+
+/**
+ * What the portal knows about a stored file: its name, format, size and pages.
+ * Not its contents, which the backend's storage will hold (decision 0005). A
+ * grant's file (`GrantFile`) and an office document's version build on it,
+ * each adding who stored it and when in their own words.
+ */
+export interface FileFacts {
+  /** "Certificate of liability insurance 2026.pdf" */
+  name: string;
+  format: FileFormat;
+  sizeKb: number;
+  /** Unknown until counted; a photo is one page. */
+  pages?: number;
+}
+
+/**
+ * The papers every funder asks for, kept once for the office (decision 0005).
+ * In code "office documents", never "organization", which means a partner.
+ */
+export type OfficeDocumentKind =
+  | 'irs-letter'
+  | 'financials'
+  | 'board-list'
+  | 'insurance-certificate'
+  | 'w9'
+  | 'organization-budget'
+  | 'other';
+
+/**
+ * One version of an office document: its file, when it was added and by whom,
+ * and when it stops being good, if it ever does. Versions are only ever
+ * added; an older one stays, read-only.
+ */
+export interface OfficeDocumentVersion extends FileFacts {
+  /** Stable, so a grant can point at the version it sent (#68). */
+  id: string;
+  /** ISO `YYYY-MM-DD`: the day it was added. The newest added is current. */
+  addedAt: string;
+  /** The staff id of whoever added it. */
+  addedById: string;
+  /** ISO `YYYY-MM-DD`: the day it expires. Unset means it never does. */
+  expires?: string;
+}
+
+/**
+ * One of the office's documents: the IRS determination letter, the board
+ * list, the insurance certificate. Archived (decision 0002), never deleted.
+ */
+export interface OfficeDocument extends Archivable {
+  id: string;
+  kind: OfficeDocumentKind;
+  /** "Certificate of liability insurance" */
+  name: string;
+  /** In the order they were added, oldest first. */
+  versions: OfficeDocumentVersion[];
+}
+
+/** What Add document collects: the document and its first version. */
+export interface OfficeDocumentInput {
+  kind: OfficeDocumentKind;
+  name: string;
+  file: FileFacts;
+  expires?: string;
+}
+
+/** What Add version collects. */
+export interface OfficeDocumentVersionInput {
+  file: FileFacts;
+  expires?: string;
+}
+
 export interface AppSettings {
   /** 1-12. Jazz Angels runs Jul 1 – Jun 30, so 7. */
   fiscalYearStartMonth: number;
@@ -178,6 +252,8 @@ export interface CoreState {
   programBudgets: ProgramBudget[];
   /** One-off work under a program (decision 0006). */
   projects: Project[];
+  /** The papers every funder asks for, kept once, with their versions (decision 0005). */
+  officeDocuments: OfficeDocument[];
   settings: AppSettings;
 }
 
@@ -237,6 +313,15 @@ export interface CoreActions {
   /** Archive a venue. Classes that met there keep it in their history. */
   archiveVenue(id: string): void;
   restoreVenue(id: string): void;
+  /** Add an office document with its first version. Returns the new id. */
+  addOfficeDocument(input: OfficeDocumentInput): string;
+  /** Change an office document's name or kind. Its versions stay as they are. */
+  updateOfficeDocument(id: string, patch: Partial<Pick<OfficeDocument, 'name' | 'kind'>>): void;
+  /** Add a new version to an office document; it becomes the current one. Returns its id. */
+  addOfficeDocumentVersion(id: string, input: OfficeDocumentVersionInput): string;
+  /** Archive an office document (decision 0002): it leaves the list and the dashboard. */
+  archiveOfficeDocument(id: string): void;
+  restoreOfficeDocument(id: string): void;
   updateSettings(patch: Partial<AppSettings>): void;
   /** Turn a module on or off. Its data stays either way. */
   setModuleEnabled(id: string, on: boolean): void;

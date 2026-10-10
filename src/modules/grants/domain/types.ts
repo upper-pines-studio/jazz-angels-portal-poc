@@ -1,5 +1,12 @@
 import type { Archivable } from '../../../core/archive';
-import type { FiscalYear, FiscalYearLabel, FundingTarget, ProgramId } from '../../../core/types';
+import type {
+  FileFacts,
+  FileFormat,
+  FiscalYear,
+  FiscalYearLabel,
+  FundingTarget,
+  ProgramId,
+} from '../../../core/types';
 
 export type { ProgramId };
 
@@ -324,23 +331,21 @@ export interface UsualShares {
 export type GrantFileKind =
   'award-letter' | 'agreement' | 'receipt' | 'invoice' | 'timesheet' | 'other';
 
-export type GrantFileFormat = 'pdf' | 'jpg' | 'png' | 'heic';
+/** Core's `FileFormat`, by the name the grants module has always used. */
+export type GrantFileFormat = FileFormat;
 
 /**
  * A file stored with a grant: the award letter, or the backup for one expense.
- * The POC keeps what describes the file; the bytes of a file added in this
- * session are held in memory only (see `screens/money/files.ts`).
+ * Its name, format, size and pages are core's `FileFacts`, shared with office
+ * documents. The POC keeps what describes the file; the bytes of a file added
+ * in this session are held in memory only (`app/components/files.tsx`).
  */
-export interface GrantFile {
+export interface GrantFile extends FileFacts {
   id: string;
   grantId: string;
   /** Set when the file backs up one expense. */
   expenseId?: string;
   kind: GrantFileKind;
-  name: string;
-  format: GrantFileFormat;
-  sizeKb: number;
-  pages?: number;
   uploadedById: string;
   uploadedAt: string;
 }
