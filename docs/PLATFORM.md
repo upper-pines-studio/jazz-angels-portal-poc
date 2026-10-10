@@ -181,8 +181,10 @@ Persistence writes only the slice that changed. Export/import produce `{ version
 slices: { core, grants, teaching, timesheets } }`; import accepts a file missing a slice and seeds
 it. "Reset demo data" reseeds every slice.
 
-Activity (the audit trail) stays inside the grants slice for now; a cross-module activity log is a
-later step.
+Activity (the audit trail) stays inside the grants slice for now, saved in the same change as what
+it describes. The schema will have one activity log for every module, each row naming its subject
+by kind and id; the grants rows move into it with the backend. See
+[decision 0005](decisions/0005-roadmap-items-that-shape-the-schema.md#one-activity-log).
 
 ### 1.5 Cross-module rules
 
