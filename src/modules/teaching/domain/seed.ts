@@ -6,6 +6,8 @@ import type {
   ClassMeeting,
   Ensemble,
   Mark,
+  PhotoRelease,
+  PhotoReleaseStatus,
   Student,
   TeachingState,
   Term,
@@ -291,6 +293,39 @@ const WAITLIST: Array<{ programId: ProgramId; student: SeedStudent }> = [
   { programId: 'in-school', student: ['Yasmin Farouk', 'Vocals', 0, 'Layla Farouk', ''] },
 ];
 
+/**
+ * Photo releases. Most guardians signed at registration; these did not.
+ * Omar Haddad and Beatriz Pena are in Big Band and Elena Petrova in Paramount
+ * MS, both Devon's, so a teacher's roll call shows the marker.
+ */
+const NOT_GIVEN = new Set(['Omar Haddad', 'Ruby Castellanos']);
+const NOT_ASKED = new Set([
+  'Beatriz Pena',
+  'Elena Petrova',
+  'Theo Bennett',
+  'Wren Callahan',
+  'Bram Hollis',
+  'Colby Renner',
+]);
+
+/** Fall registration day, when the office collected the forms. Returning students signed in spring. */
+const FALL_SIGN_UP = '2026-09-06';
+const SPRING_SIGN_UP = '2026-03-01';
+
+function seedRelease(name: string, yearsIn: number): PhotoRelease {
+  const status: PhotoReleaseStatus = NOT_GIVEN.has(name)
+    ? 'not-given'
+    : NOT_ASKED.has(name)
+      ? 'not-asked'
+      : 'given';
+  if (status === 'not-asked') return { status };
+  return {
+    status,
+    date: status === 'given' && yearsIn > 1 ? SPRING_SIGN_UP : FALL_SIGN_UP,
+    recordedById: 's-keisha',
+  };
+}
+
 function buildStudents(): Student[] {
   const out: Student[] = [];
   const id = () => `st-${String(out.length + 1).padStart(2, '0')}`;
@@ -307,6 +342,7 @@ function buildStudents(): Student[] {
         programId: group.programId,
         ensembleId: group.ensembleId,
         status: 'enrolled',
+        photoRelease: seedRelease(name, yearsIn),
       });
     }
   }
@@ -321,6 +357,7 @@ function buildStudents(): Student[] {
       guardianPhone: guardianPhone || undefined,
       programId: row.programId,
       status: 'waitlist',
+      photoRelease: seedRelease(name, yearsIn),
     });
   }
   return out;

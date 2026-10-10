@@ -10,7 +10,7 @@ import {
   withArchived,
 } from '../../../core';
 import type { PortalState, ProgramId, SignedInUser, StaffMember } from '../../../core';
-import { ENSEMBLE_TONES } from './types';
+import { ENSEMBLE_TONES, PHOTO_RELEASE_STATUSES } from './types';
 import type {
   AttendanceRecord,
   AttendanceSummary,
@@ -20,6 +20,9 @@ import type {
   EnsembleInput,
   EnsembleTone,
   Mark,
+  PhotoRelease,
+  PhotoReleaseInput,
+  PhotoReleaseStatus,
   Student,
   Term,
   TermInput,
@@ -271,7 +274,10 @@ export function markCounts(records: AttendanceRecord[]): MarkCounts {
  * The marks an open roll call shows. Everyone starts present; the teacher only
  * marks who is late or absent. Submitting writes the present marks down.
  */
-export function rollMarks(roster: Student[], records: AttendanceRecord[]): Map<string, Mark> {
+export function rollMarks(
+  roster: Array<Pick<Student, 'id'>>,
+  records: AttendanceRecord[],
+): Map<string, Mark> {
   const marks = new Map<string, Mark>();
   for (const s of roster)
     marks.set(s.id, records.find(r => r.studentId === s.id)?.mark ?? 'present');
@@ -574,18 +580,46 @@ export function maySeeGuardian(state: PortalState, user: SignedInUser, student: 
   );
 }
 
-/** A student as the roster shows them: the guardian fields only for those who may see them. */
-export type RosterStudent = Omit<Student, 'guardianName' | 'guardianPhone'> & {
+/**
+ * May this person read this student's photo release? It follows "Guardian
+ * contact details" (decision 0001): the office, and a teacher for their own
+ * classes. The Office assistant and Read-only do not see it.
+ */
+export function maySeePhotoRelease(
+  state: PortalState,
+  user: SignedInUser,
+  student: Student,
+): boolean {
+  return maySeeGuardian(state, user, student);
+}
+
+/**
+ * A student as the roster shows them: the guardian fields and the photo
+ * release only for those who may see them.
+ */
+export type RosterStudent = Omit<Student, 'guardianName' | 'guardianPhone' | 'photoRelease'> & {
   guardianName?: string;
   guardianPhone?: string;
+  photoRelease?: PhotoRelease;
 };
+
+/**
+ * One student as this person may read them. Guardian name, phone and photo
+ * release are left off the record, not just hidden, for anyone who may not
+ * see them, so they never reach the screen.
+ */
+export function asSeenBy(state: PortalState, user: SignedInUser, student: Student): RosterStudent {
+  if (maySeeGuardian(state, user, student)) return student;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { guardianName, guardianPhone, photoRelease, ...rest } = student;
+  return rest;
+}
 
 /**
  * The students this person may see, by name, archived ones only with
  * `includeArchived` (after the current ones): everyone for the office, a
  * teacher's own classes for a teacher, nobody for a role that sees counts or
- * nothing. Guardian name and phone are left off the record, not just hidden,
- * for anyone who may not see them, so they never reach the screen.
+ * nothing. Each is `asSeenBy` them.
  */
 export function rosterFor(
   state: PortalState,
@@ -594,10 +628,91 @@ export function rosterFor(
 ): RosterStudent[] {
   return withArchived(state.teaching.students, includeArchived)
     .filter(s => maySeeStudent(state, user, s))
-    .map(s => {
-      if (maySeeGuardian(state, user, s)) return s;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { guardianName, guardianPhone, ...rest } = s;
-      return rest;
-    });
+    .map(s => asSeenBy(state, user, s));
+}
+
+/**
+ * Who a roll call lists (`rollCallStudents`), each as this person may read
+ * them. On a submitted roll, a student who has since moved to another class
+ * keeps their guardian details and photo release only for someone who may
+ * still see them there.
+ */
+export function rollCallStudentsFor(
+  state: PortalState,
+  user: SignedInUser,
+  meeting: ClassMeeting,
+): RosterStudent[] {
+  return rollCallStudents(state, meeting).map(s => asSeenBy(state, user, s));
+}
+
+// ---------------------------------------------------------------------------
+// Photo releases (decision 0005)
+// ---------------------------------------------------------------------------
+
+/** What the screens call each answer. */
+export const PHOTO_RELEASE_LABEL: Record<PhotoReleaseStatus, string> = {
+  given: 'Given',
+  'not-given': 'Not given',
+  'not-asked': 'Not asked yet',
+};
+
+/** Where a student starts: nobody has asked yet. */
+export const NOT_ASKED: PhotoRelease = { status: 'not-asked' };
+
+/**
+ * True when the student has no photo release (Not given, or Not asked yet)
+ * and must stay out of photos. False when it is Given, and false when the
+ * release was left off the record because this person may not see it.
+ */
+export function hasNoPhotoRelease(student: { photoRelease?: PhotoRelease }): boolean {
+  return !!student.photoRelease && student.photoRelease.status !== 'given';
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * What is wrong with a photo release, in the words the card shows. Undefined
+ * when it can be saved. `today` is given by the screen, which knows the date;
+ * the store, which does not, checks the rest.
+ */
+export function photoReleaseRefusal(
+  input: Partial<PhotoReleaseInput> | undefined,
+  today?: string,
+): string | undefined {
+  if (!input?.status || !PHOTO_RELEASE_STATUSES.includes(input.status))
+    return 'Pick Given, Not given or Not asked yet.';
+  if (input.status === 'not-asked' || input.date === undefined) return undefined;
+  if (!ISO_DATE.test(input.date)) return 'Pick the date the guardian answered.';
+  if (today && input.date > today) return 'Pick a date on or before today.';
+  return undefined;
+}
+
+/**
+ * The release a student is saved with: Not asked yet carries no date and
+ * nobody; Given and Not given carry their date, today when none was sent, and
+ * the person recording it.
+ */
+export function photoReleaseFor(
+  input: PhotoReleaseInput | undefined,
+  recordedById: string,
+  today: string,
+): PhotoRelease {
+  if (!input || input.status === 'not-asked') return { ...NOT_ASKED };
+  return { status: input.status, date: input.date || today, recordedById };
+}
+
+/**
+ * A saved photo release made sound: an unknown answer, or none at all (a
+ * student saved before releases existed), loads as Not asked yet.
+ */
+export function normalisePhotoRelease(raw: unknown): PhotoRelease {
+  if (!raw || typeof raw !== 'object') return { ...NOT_ASKED };
+  const r = raw as Record<string, unknown>;
+  const status = r.status as PhotoReleaseStatus;
+  if (!PHOTO_RELEASE_STATUSES.includes(status) || status === 'not-asked') return { ...NOT_ASKED };
+  return {
+    status,
+    ...(typeof r.date === 'string' && ISO_DATE.test(r.date) ? { date: r.date } : {}),
+    ...(typeof r.recordedById === 'string' ? { recordedById: r.recordedById } : {}),
+  };
 }

@@ -28,35 +28,67 @@ import {
 import {
   activeOnly,
   cell,
+  dateLong,
   isArchived,
   pickable,
   placeLabel,
   programName,
+  staffById,
   useCan,
   useStore,
 } from '../../../core';
 import type { ProgramId } from '../../../core';
 import {
+  PHOTO_RELEASE_LABEL,
   attendanceRateForStudent,
   ensembleById,
   ensembleCount,
   enrolledCount,
+  hasNoPhotoRelease,
   leadsEnsemble,
   percent,
+  photoReleaseRefusal,
   rosterFor,
   termForDate,
   waitlistCount,
 } from '../domain';
-import type { Mark, RosterStudent } from '../domain';
+import type { Mark, PhotoRelease, PhotoReleaseInput, RosterStudent } from '../domain';
 import { MarkDots, TONE_COLOR } from './parts';
 import EnrollStudentDialog from './students/EnrollStudentDialog';
 import ImportStudentsDialog from './students/ImportStudentsDialog';
+import PhotoReleaseFields from './students/PhotoReleaseFields';
 
 const ALL = 'all';
 const WAITLIST = 'waitlist';
 
 const STATUS_TONE = { enrolled: 'teal', waitlist: 'neutral', alumni: 'blue' } as const;
 const STATUS_LABEL = { enrolled: 'Enrolled', waitlist: 'Waitlist', alumni: 'Alumni' } as const;
+
+/** The roster's photo release filter: everyone, or only who must stay out of photos. */
+const NO_RELEASE = 'no-release';
+
+/**
+ * A photo release as the roster and the card show it. Given is plain text;
+ * Not given and Not asked yet are badges, since those students must stay out
+ * of photos.
+ */
+function PhotoReleaseMark({ release }: { release: PhotoRelease }) {
+  if (release.status === 'given')
+    return <span style={{ color: 'var(--text-muted)' }}>{PHOTO_RELEASE_LABEL.given}</span>;
+  return (
+    <Badge tone={release.status === 'not-given' ? 'danger' : 'gold'} dot>
+      {PHOTO_RELEASE_LABEL[release.status]}
+    </Badge>
+  );
+}
+
+/** "Given · Sep 6, 2026", "Not given · Sep 6, 2026", or "Not asked yet". */
+function releaseSummary(release: PhotoRelease): string {
+  const label = PHOTO_RELEASE_LABEL[release.status];
+  return release.status !== 'not-asked' && release.date
+    ? `${label} · ${dateLong(release.date)}`
+    : label;
+}
 
 /**
  * The roster, as decision 0001 allows it: the office sees and edits every
@@ -89,6 +121,7 @@ function Roster() {
   const [tab, setTab] = React.useState<string>(ALL);
   const [q, setQ] = React.useState('');
   const [ensembleFilter, setEnsembleFilter] = React.useState(ALL);
+  const [releaseFilter, setReleaseFilter] = React.useState(ALL);
   const [selectedId, setSelectedId] = React.useState<string | undefined>();
   const [enrolling, setEnrolling] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
@@ -148,9 +181,16 @@ function Roster() {
 
   const needle = q.trim().toLowerCase();
   const archivedInTab = rosterFor(state, user, true).filter(s => isArchived(s) && inTab(s)).length;
+  const inEnsemble = (s: RosterStudent) =>
+    ensembleFilter === ALL || s.ensembleId === ensembleFilter;
+  // How many in this tab and ensemble have no release, for the filter's label.
+  const withoutRelease = students.filter(
+    s => inTab(s) && inEnsemble(s) && hasNoPhotoRelease(s),
+  ).length;
   const rows = students
     .filter(inTab)
-    .filter(s => ensembleFilter === ALL || s.ensembleId === ensembleFilter)
+    .filter(inEnsemble)
+    .filter(s => releaseFilter === ALL || hasNoPhotoRelease(s))
     .filter(
       s =>
         !needle ||
@@ -218,6 +258,20 @@ function Roster() {
                 style={{ width: '100%' }}
               />
             </div>
+            {showGuardian && (
+              <div className="ja-filter-bar__select">
+                <Select
+                  value={releaseFilter}
+                  onChange={e => setReleaseFilter(e.target.value)}
+                  aria-label="Photo release"
+                  options={[
+                    { value: ALL, label: 'All releases' },
+                    { value: NO_RELEASE, label: `No release (${withoutRelease})` },
+                  ]}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            )}
             <ShowArchivedSwitch
               count={archivedInTab}
               checked={showArchived}
@@ -228,14 +282,18 @@ function Roster() {
           {rows.length === 0 ? (
             <EmptyState
               icon={<Icon name="users" size={22} />}
-              title="Nobody here yet"
+              title={
+                releaseFilter === NO_RELEASE ? 'Everyone here has a release' : 'Nobody here yet'
+              }
               message={
-                mayEdit
-                  ? 'No students in this view yet. Enroll a student to add them to the roster.'
-                  : 'No students in this view yet.'
+                releaseFilter === NO_RELEASE
+                  ? 'Every student in this view has a photo release given, so anyone here can be in photos.'
+                  : mayEdit
+                    ? 'No students in this view yet. Enroll a student to add them to the roster.'
+                    : 'No students in this view yet.'
               }
               action={
-                mayEdit ? (
+                mayEdit && releaseFilter !== NO_RELEASE ? (
                   <Button
                     variant="primary"
                     size="sm"
@@ -248,7 +306,7 @@ function Roster() {
               }
             />
           ) : (
-            <TableScroll minWidth={880}>
+            <TableScroll minWidth={showGuardian ? 1010 : 880}>
               <DataTable
                 rows={rows}
                 onRowClick={(s: RosterStudent) => setSelectedId(s.id)}
@@ -300,6 +358,14 @@ function Roster() {
                             <span style={{ color: 'var(--text-muted)' }}>{s.guardianName}</span>
                           ),
                         },
+                        // The release follows guardian contacts (decision 0001).
+                        {
+                          key: 'photoRelease',
+                          label: 'Photo release',
+                          width: '130px',
+                          render: (s: RosterStudent) =>
+                            s.photoRelease ? <PhotoReleaseMark release={s.photoRelease} /> : null,
+                        },
                       ]
                     : []),
                   {
@@ -334,7 +400,11 @@ function Roster() {
         </Card>
 
         {selected ? (
-          <StudentCard student={selected} mayEdit={mayEdit} />
+          <StudentCard
+            student={selected}
+            mayEdit={mayEdit}
+            onKeep={() => setSelectedId(selected.id)}
+          />
         ) : (
           <Card padding="0">
             <EmptyState
@@ -370,7 +440,16 @@ function Roster() {
 
 const WAITLIST_OPTION = '__waitlist__';
 
-function StudentCard({ student, mayEdit }: { student: RosterStudent; mayEdit: boolean }) {
+function StudentCard({
+  student,
+  mayEdit,
+  onKeep,
+}: {
+  student: RosterStudent;
+  mayEdit: boolean;
+  /** Keep this student on the card when a change takes them out of the filtered list. */
+  onKeep: () => void;
+}) {
   const { state, today, actions } = useStore();
   const toast = useToast();
   const [archiving, setArchiving] = React.useState(false);
@@ -462,6 +541,9 @@ function StudentCard({ student, mayEdit }: { student: RosterStudent; mayEdit: bo
               <KV k="Phone" v={student.guardianPhone ?? 'Not on file'} />
             </>
           )}
+          {student.photoRelease && (
+            <KV k="Photo release" v={releaseSummary(student.photoRelease)} />
+          )}
           <KV k="Program" v={programName(state, student.programId)} />
           <KV k="Ensemble" v={ensemble?.name ?? 'Not placed'} />
           <KV k={term ? term.name : 'This session'} v={percent(thisTerm)} strong />
@@ -520,7 +602,102 @@ function StudentCard({ student, mayEdit }: { student: RosterStudent; mayEdit: bo
           </Field>
         </Card>
       )}
+
+      {mayEdit && !archived && student.photoRelease && (
+        <PhotoReleaseCard
+          key={student.id}
+          studentId={student.id}
+          name={student.name}
+          release={student.photoRelease}
+          onSave={onKeep}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Record a guardian's answer on photos: Given or Not given on a date, or back
+ * to Not asked yet. Shown to whoever may edit the student; the store stamps
+ * who recorded it.
+ */
+function PhotoReleaseCard({
+  studentId,
+  name,
+  release,
+  onSave,
+}: {
+  studentId: string;
+  name: string;
+  release: PhotoRelease;
+  onSave: () => void;
+}) {
+  const { state, today, actions, whenSaved } = useStore();
+  const toast = useToast();
+  const saved: PhotoReleaseInput = { status: release.status, date: release.date };
+  const [draft, setDraft] = React.useState<PhotoReleaseInput>(saved);
+  const [showErrors, setShowErrors] = React.useState(false);
+  const error = photoReleaseRefusal(draft, today);
+  const changed =
+    draft.status !== release.status ||
+    (draft.status !== 'not-asked' && (draft.date ?? today) !== release.date);
+  const recorder = staffById(state, release.recordedById);
+
+  const save = async () => {
+    if (error) {
+      setShowErrors(true);
+      return;
+    }
+    // A release given under "No photo release" takes them off the list; the card stays on them.
+    onSave();
+    actions.teaching.setPhotoRelease(studentId, draft);
+    if (!(await whenSaved())) return; // the store has said it could not save
+    setShowErrors(false);
+    toast({
+      tone: 'success',
+      title: 'Photo release saved',
+      message:
+        draft.status === 'given'
+          ? `${name} can be in photos for reports.`
+          : draft.status === 'not-given'
+            ? `${name} stays out of photos.`
+            : `${name} stays out of photos until a guardian answers.`,
+    });
+  };
+
+  return (
+    <Card
+      title="Photo release"
+      subtitle="Whether a guardian agreed to photos of this student in reports"
+      padding="var(--space-5)"
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        <PhotoReleaseFields
+          label="Guardian's answer"
+          value={draft}
+          onChange={setDraft}
+          today={today}
+          error={showErrors ? error : undefined}
+        />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+            justifyContent: 'space-between',
+          }}
+        >
+          <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
+            {release.status !== 'not-asked' && recorder
+              ? `Recorded by ${recorder.name}`
+              : 'No answer recorded yet.'}
+          </span>
+          <Button variant="primary" size="sm" disabled={!changed} onClick={save}>
+            Save release
+          </Button>
+        </div>
+      </div>
+    </Card>
   );
 }
 

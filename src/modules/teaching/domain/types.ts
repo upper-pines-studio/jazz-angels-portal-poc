@@ -21,6 +21,35 @@ export type Mark = 'present' | 'late' | 'absent';
 export type StudentStatus = 'enrolled' | 'waitlist' | 'alumni';
 
 /**
+ * A guardian's answer to photos of the student in reports (decision 0005):
+ * they agreed, they said no, or nobody has asked yet. Only Given lets a
+ * student be photographed.
+ */
+export type PhotoReleaseStatus = 'given' | 'not-given' | 'not-asked';
+
+/** Every answer, in the order the screens offer them. */
+export const PHOTO_RELEASE_STATUSES: readonly PhotoReleaseStatus[] = [
+  'given',
+  'not-given',
+  'not-asked',
+];
+
+/**
+ * A student's photo release. Protected like the guardian's name and phone
+ * (decision 0001): it reaches only the people who may see those.
+ */
+export interface PhotoRelease {
+  status: PhotoReleaseStatus;
+  /** ISO date the guardian gave or refused it. Unset while Not asked yet. */
+  date?: string;
+  /** Staff id of whoever recorded it, set by the store from the signed-in person. */
+  recordedById?: string;
+}
+
+/** What a screen or an import sends: the answer and its date, never who recorded it. */
+export type PhotoReleaseInput = Pick<PhotoRelease, 'status' | 'date'>;
+
+/**
  * A session: the eight weeks or so the office plans and reports on. The
  * screens call it a session ("Fall 2026 session"); the code calls it a term.
  * Archived (decision 0002) when it was entered by mistake or is no longer
@@ -103,7 +132,17 @@ export interface Student extends Archivable {
   /** Unset while a student is on the waitlist. */
   ensembleId?: string;
   status: StudentStatus;
+  /** A new student starts on Not asked yet; so does one saved before releases existed. */
+  photoRelease: PhotoRelease;
 }
+
+/**
+ * What enrolling or importing a student sends. The photo release is the
+ * answer alone; the store stamps who recorded it. Unset is Not asked yet.
+ */
+export type StudentInput = Omit<Student, 'id' | 'photoRelease'> & {
+  photoRelease?: PhotoReleaseInput;
+};
 
 export interface AttendanceRecord {
   id: string;
@@ -151,10 +190,16 @@ export interface TeachingActions {
   /** Reopen a submitted roll call so the marks can be edited again. */
   reopenRollCall(meetingId: string): void;
   /** Add a student to the roster or the waitlist. Returns the new student id. */
-  enrollStudent(input: Omit<Student, 'id'>): string;
-  updateStudent(id: string, patch: Partial<Student>): void;
+  enrollStudent(input: StudentInput): string;
+  /** Change a student's own fields or placement. The photo release has its own action. */
+  updateStudent(id: string, patch: Partial<Omit<Student, 'id' | 'photoRelease'>>): void;
+  /**
+   * Record a guardian's answer on photos: Given or Not given on a date (today
+   * when unset), or back to Not asked yet. The store stamps who recorded it.
+   */
+  setPhotoRelease(id: string, release: PhotoReleaseInput): void;
   /** Add many students in one change, as a CSV import does. Returns how many were added. */
-  importStudents(inputs: Omit<Student, 'id'>[]): number;
+  importStudents(inputs: StudentInput[]): number;
   /**
    * Archive a student: off the roster, the roll call and the counts. Their
    * status and ensemble stay as they were; their past attendance stays too.
