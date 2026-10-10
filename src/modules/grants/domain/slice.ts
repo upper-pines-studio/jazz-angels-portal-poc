@@ -6,6 +6,14 @@ import { programName, targetName } from '../../../core/derive';
 import { money } from '../../../core/format';
 import { acceptableSuggestions, backupCarry, isReportOpen, splitByPercent } from './money';
 import { inFlightRefusal } from './inflight';
+import {
+  renewInputProblem,
+  renewalRefusal,
+  renewalStartedText,
+  renewalTemplateId,
+  renewedAsText,
+  withRenewalLinks,
+} from './renewals';
 import { changeProblem, giveProblem, resolveTarget, shareTo } from './shares';
 import { availableTransitions, isPostAward, phaseLabel } from './phases';
 import { makeEmpty, makeSeed } from './seed';
@@ -27,6 +35,7 @@ import type {
   GiveShareInput,
   NewGrantInput,
   Payment,
+  RenewGrantInput,
   Phase,
   ReminderDefaults,
   ReminderPlan,
@@ -109,6 +118,8 @@ export type GrantsAction =
       activityId: string;
       at: string;
       whoId: string;
+      /** The activity row's text, when it is not "Grant added" (a renewal's). */
+      text?: string;
     }
   | {
       type: 'transition';
@@ -286,7 +297,9 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
             at: action.at,
             whoId: action.whoId,
             // One row for a grant brought in, never one per phase it passed.
-            text: grant.broughtIn ? broughtInText(grant.broughtIn.phase) : 'Grant added',
+            text:
+              action.text ??
+              (grant.broughtIn ? broughtInText(grant.broughtIn.phase) : 'Grant added'),
           },
         ],
       };
@@ -518,6 +531,16 @@ export interface GrantsActions {
    * portal at …" row, all in one change.
    */
   addGrant(input: NewGrantInput): string;
+  /**
+   * "Start next year's" (#67): a new grant at Prospect from this year's, which
+   * it names as the grant it renews. It copies the funder, programs (as the
+   * input gives them), restriction, owner, whether an LOI is needed and the
+   * budget's lines (category, planned amount, QuickBooks accounts; not the
+   * class), and gets the renewal checklist and the document register. Nothing
+   * else is copied. Both grants log a line, all in one change. Returns the
+   * new grant's id.
+   */
+  renewGrant(input: RenewGrantInput): string;
   updateGrant(id: string, patch: Partial<Grant>): void;
   /**
    * Archive a grant (decision 0002) and log "Archived": it leaves the pipeline,
@@ -757,6 +780,71 @@ function createActions(
         activityId: newId('act'),
         at: now(),
         whoId,
+      });
+      return grantId;
+    },
+    renewGrant(input) {
+      const state = getState().grants;
+      const last = state.grants.find(g => g.id === input.grantId);
+      if (!last) return '';
+      const grantId = newId('g');
+      const grant: Grant = {
+        id: grantId,
+        funderId: last.funderId,
+        title: input.title.trim(),
+        programs: [...input.programs],
+        restriction: last.restriction,
+        ownerId: input.ownerId,
+        phase: 'prospect',
+        loiRequired: last.loiRequired,
+        dates: { ...input.dates },
+        createdAt: today,
+        renewsGrantId: last.id,
+      };
+      if (input.amountRequested !== undefined) grant.amountRequested = input.amountRequested;
+      if (!grant.loiRequired) delete grant.dates.loiDue;
+      // The QuickBooks class names last year's grant, so the lines come without it.
+      const budgetLines: BudgetLine[] = state.budgetLines
+        .filter(l => l.grantId === last.id)
+        .map(l => {
+          const line: BudgetLine = {
+            id: newId('bl'),
+            grantId,
+            category: l.category,
+            planned: l.planned,
+          };
+          if (l.accountCodes) line.accountCodes = [...l.accountCodes];
+          return line;
+        });
+      // Two rows in one change: the renewal's a moment later, so it reads first, newest first.
+      const at = now();
+      const later = new Date(Date.parse(at) + 1).toISOString();
+      send({
+        type: 'batch',
+        actions: [
+          {
+            type: 'add-grant',
+            grant,
+            templateId: renewalTemplateId(state.templates),
+            includeDocumentRegister: true,
+            budgetLines,
+            activityId: newId('act'),
+            at: later,
+            whoId,
+            text: renewalStartedText(last.title),
+          },
+          {
+            type: 'insert',
+            key: 'activity',
+            item: {
+              id: newId('act'),
+              grantId: last.id,
+              at,
+              whoId,
+              text: renewedAsText(grant.title),
+            },
+          },
+        ],
       });
       return grantId;
     },
@@ -1183,6 +1271,15 @@ export function mayMoveTo(role: Role, to: Phase): boolean {
   return can(role, 'grants', 'edit') && (!isPostAward(to) || can(role, 'award', 'edit'));
 }
 
+/**
+ * May this role start next year's grant from this one (#67)? It adds a grant
+ * ("Grants" edit) with budget lines on it ("Award, budget, reports" edit):
+ * Admin, Director and Office manager. The button and the store both ask this.
+ */
+export function mayRenew(role: Role): boolean {
+  return can(role, 'grants', 'edit') && can(role, 'award', 'edit');
+}
+
 /** A file that backs up an expense is money; any other file goes with the grant. */
 function fileSubject(expenseId: string | undefined) {
   return expenseId ? 'award' : 'grants';
@@ -1221,6 +1318,11 @@ const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
     if (!input?.inFlight) return true;
     if (!can(user.role, 'award', 'edit')) return false;
     return inFlightRefusal(input) ?? true;
+  },
+  // A renewal is a new grant with last year's budget lines on it: both rows.
+  renewGrant: (user, state, input) => {
+    if (!mayRenew(user.role)) return false;
+    return renewalRefusal(state, input?.grantId) ?? renewInputProblem(state, input) ?? true;
   },
   archiveGrant: 'grants',
   restoreGrant: 'grants',
@@ -1397,7 +1499,8 @@ export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
     return {
       ...state,
       funders: state.funders.map(normaliseArchived),
-      grants: state.grants.map(g => normaliseArchived(withPrograms(g))),
+      // A renewal whose last year's grant is no longer saved loads as a plain grant.
+      grants: withRenewalLinks(state.grants.map(g => normaliseArchived(withPrograms(g)))),
       activity: state.activity.map(row => creditActivity(row, staff)),
       // Saved before shares existed: none (decision 0006).
       grantShares: Array.isArray(candidate.grantShares)
