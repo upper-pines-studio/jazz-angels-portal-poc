@@ -15,7 +15,7 @@ and the feature is built later.
 | Matching funds and in-kind gifts | An expense that does not come from QuickBooks | |
 | Restricted and unrestricted money | How money is grouped into funds or classes | |
 | Deliverables | A targets table tied to the grant and its award terms | |
-| Renewals | A grant points at last year's grant | |
+| Renewals | A grant points at last year's grant; see [Renewals](#renewals) | Yes: an optional link from a grant to the grant it renews |
 | Organization documents | Versioned files with expiry dates that grants point at; shapes file storage | |
 | Funder contact log, calendar and email | One activity log across every module, or one per module; see [One activity log](#one-activity-log) | Likely: one activity log in core for every module |
 | Photo releases | Guardian consent stored with the student; part of protecting student data | |
@@ -42,6 +42,21 @@ table, subject kind `grant`, when the backend comes (#22), where one transaction
 **Already built on it.** A funder's page shows Recent activity: the activity of its grants,
 newest first, each line naming its grant (`funderActivity` in the grants module), archived grants
 included (decision 0002).
+
+## Renewals
+
+Answered **yes** (#67). The office raises money mostly from the same funders every year. In the
+schema a grant has an optional link to the grant it renews (`renewsGrantId` today, a nullable
+foreign key to grants with the backend); a grant with none is not a renewal. A grant is renewed
+at most once, so at most one grant points at any other, and a chain of years is followed link by
+link. Nothing else changes shape: a renewal is a grant like any other, with its own checklist,
+documents and budget lines, copied from last year's when it is started.
+
+**Built on it.** "Start next year's" on an awarded grant makes the renewal at Prospect, prefilled
+from this year's (title with the year moved on, this year's award as the ask, last year's dates a
+year on), with the renewal checklist and last year's budget lines without the QuickBooks class.
+Both grants link each other, and the funder's grant history keeps each grant next to the one it
+renews. A link to a grant that is no longer saved is dropped on load.
 
 ## Can wait
 
