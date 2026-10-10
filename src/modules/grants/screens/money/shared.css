@@ -9,14 +9,25 @@
   grid-template-columns: repeat(var(--ja-figures, 4), minmax(0, 1fr));
   padding: var(--space-5) var(--space-6);
 }
-.ja-figures > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ja-figures > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
 .ja-figures > div + div {
   padding-left: var(--space-5);
   border-left: var(--border-width) solid var(--border-subtle);
 }
 @media (max-width: 760px) {
-  .ja-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-4); }
-  .ja-figures > div:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .ja-figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: var(--space-4);
+  }
+  .ja-figures > div:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
 }
 
 /* Spent so far, with a tick where an even pace would have it today. */
@@ -49,8 +60,15 @@
   font: var(--weight-medium) var(--text-xs)/1.3 var(--font-sans);
   color: var(--text-link);
 }
-.ja-link-button:hover { color: var(--text-link-hover); text-decoration: underline; }
-.ja-link-button:focus-visible { outline: 0; box-shadow: var(--focus-ring); border-radius: var(--radius-xs); }
+.ja-link-button:hover {
+  color: var(--text-link-hover);
+  text-decoration: underline;
+}
+.ja-link-button:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-xs);
+}
 
 /* "Undo" inside a toast (sendBack.tsx). */
 .ja-undo {
@@ -61,6 +79,16 @@
   font: var(--weight-semibold) var(--text-xs)/1.3 var(--font-sans);
   color: var(--text-link);
 }
-.ja-undo:hover { text-decoration: underline; }
-.ja-undo:disabled { color: var(--text-muted); cursor: default; text-decoration: none; }
-.ja-undo:focus-visible { outline: 0; box-shadow: var(--focus-ring); border-radius: var(--radius-xs); }
+.ja-undo:hover {
+  text-decoration: underline;
+}
+.ja-undo:disabled {
+  color: var(--text-muted);
+  cursor: default;
+  text-decoration: none;
+}
+.ja-undo:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-xs);
+}
