@@ -252,7 +252,6 @@ function OfficeCopyLine({ linked, mayOpen }: { linked: LinkedOfficeDocument; may
   const small: React.CSSProperties = {
     font: 'var(--type-body-sm)',
     fontSize: 'var(--text-xs)',
-    fontWeight: 'var(--weight-regular)' as any,
     color: 'var(--text-muted)',
   };
   return (
@@ -332,10 +331,19 @@ function DocumentDialog({
   if (kept && !choices.includes(kept)) choices.push(kept);
   const linked = kept?.id ?? '';
 
+  // Set when a change of kind lets go of the organization's copy, to say so under Kind.
+  const [dropped, setDropped] = React.useState<string | null>(null);
   const changeKind = (next: DocumentKind) => {
     setKind(next);
     const current = state.core.officeDocuments.find(d => d.id === officeId);
-    if (current && !kindsMatch(next, current)) setOfficeId('');
+    if (current && !kindsMatch(next, current)) {
+      setOfficeId('');
+      setDropped(current.name);
+    } else setDropped(null);
+  };
+  const choose = (id: string) => {
+    setOfficeId(id);
+    setDropped(null);
   };
 
   return (
@@ -389,7 +397,14 @@ function DocumentDialog({
             onChange={e => setName(e.target.value)}
           />
         </Field>
-        <Field label="Kind">
+        <Field
+          label="Kind"
+          hint={
+            dropped
+              ? `${dropped} is not this kind, so the row no longer uses it. Save to keep the change.`
+              : undefined
+          }
+        >
           <Select
             value={kind}
             options={KIND_OPTIONS}
@@ -420,7 +435,7 @@ function DocumentDialog({
                     value: d.id,
                     label: isArchived(d) ? `${d.name} (archived)` : d.name,
                   }))}
-                  onChange={e => setOfficeId(e.target.value)}
+                  onChange={e => choose(e.target.value)}
                 />
               </div>
               <Button variant="ghost" size="sm" onClick={() => setOfficeId('')}>
@@ -457,7 +472,7 @@ function DocumentDialog({
                   variant="secondary"
                   size="sm"
                   style={{ flex: '0 0 auto' }}
-                  onClick={() => setOfficeId(choices[0].id)}
+                  onClick={() => choose(choices[0].id)}
                 >
                   Use the organization's
                 </Button>
