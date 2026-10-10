@@ -22,7 +22,7 @@ import {
   Textarea,
 } from '../../../design-system';
 import { activeOnly, archivedOnly, useStore, useCan, money, dateShort } from '../../../core';
-import { funderTotals, fundersList, grantsByFunder } from '../domain';
+import { funderLastActivity, funderTotals, fundersList } from '../domain';
 import type { Funder, FunderType } from '../domain';
 
 export const FUNDER_TYPES: Array<{ value: FunderType; label: string }> = [
@@ -165,15 +165,9 @@ export default function Funders() {
     setAdding(true);
   }
 
-  function lastActivity(funderId: string): string | undefined {
-    const ids = new Set(grantsByFunder(state, funderId).map(g => g.id));
-    const dates = state.grants.activity.filter(a => ids.has(a.grantId)).map(a => a.at);
-    return dates.length ? dates.slice().sort().reverse()[0].slice(0, 10) : undefined;
-  }
-
   const rows = fundersList(state, showArchived).map(f => {
     const totals = funderTotals(state, f.id);
-    return { id: f.id, funder: f, totals, last: lastActivity(f.id) };
+    return { id: f.id, funder: f, totals, last: funderLastActivity(state, f.id) };
   });
   type Row = (typeof rows)[number];
 

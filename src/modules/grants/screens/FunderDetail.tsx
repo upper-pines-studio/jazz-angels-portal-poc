@@ -11,10 +11,12 @@ import {
   ArchivedNotice,
 } from '../../../app/components/archive';
 import { FunderFields, capitalise, type FunderDraft } from './Funders';
+import { ActivityTimeline } from './ActivityTimeline';
+import { LinkButton } from './money/shared';
 import { TableScroll } from '../../../app/components/TableScroll';
 import { Card, DataTable, Button, Icon, Dialog, EmptyState } from '../../../design-system';
 import { isArchived, useStore, useCan, money } from '../../../core';
-import { funderById, funderTotals, grantsByFunder } from '../domain';
+import { funderActivity, funderById, funderTotals, grantsByFunder } from '../domain';
 import type { Grant } from '../domain';
 
 export default function FunderDetail() {
@@ -29,6 +31,7 @@ export default function FunderDetail() {
   const [draft, setDraft] = React.useState<FunderDraft | null>(null);
   const [showErrors, setShowErrors] = React.useState(false);
   const [archiving, setArchiving] = React.useState(false);
+  const [allActivity, setAllActivity] = React.useState(false);
 
   usePageHeader({
     title: funder ? funder.name : 'Funder not found',
@@ -76,6 +79,8 @@ export default function FunderDetail() {
 
   const grants = grantsByFunder(state, funder.id);
   const totals = funderTotals(state, funder.id);
+  const activity = funderActivity(state, funder.id);
+  const shownActivity = allActivity ? activity : activity.slice(0, RECENT_ACTIVITY);
 
   function save() {
     if (!draft || !draft.name.trim()) {
@@ -139,95 +144,120 @@ export default function FunderDetail() {
           </div>
         </Card>
 
-        <Card title="Grant history" padding="0">
-          {grants.length === 0 ? (
-            <EmptyState
-              icon={<Icon name="landmark" size={22} />}
-              title="No grants with this funder yet"
-              message={
-                mayEdit
-                  ? `Every grant we ask ${funder.name} for shows up here, with its phase and what was awarded. Add a grant and choose this funder.`
-                  : `Every grant we ask ${funder.name} for shows up here, with its phase and what was awarded.`
-              }
-              action={
-                mayEdit && (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    iconLeft={<Icon name="plus" size={15} />}
-                    onClick={() => nav('/grants?add=1')}
-                  >
-                    Add grant
-                  </Button>
-                )
-              }
-            />
-          ) : (
-            <>
-              <div
-                style={{
-                  padding: 'var(--space-4) var(--space-5)',
-                  borderBottom: 'var(--border-width) solid var(--border-subtle)',
-                  font: 'var(--type-body-sm)',
-                  color: 'var(--text-muted)',
-                }}
-              >
-                {totals.grants} {totals.grants === 1 ? 'grant' : 'grants'} ·{' '}
-                {money(totals.requested)} requested · {money(totals.awarded)} awarded
-              </div>
-              <TableScroll minWidth={640}>
-                <DataTable
-                  rows={grants.map(g => ({ id: g.id, grant: g }))}
-                  onRowClick={(r: { id: string }) => nav(`/grants/${r.id}`)}
-                  columns={[
-                    {
-                      key: 'title',
-                      label: 'Grant',
-                      width: '2fr',
-                      strong: true,
-                      wrap: true,
-                      render: (r: { grant: Grant }) => (
-                        <ArchivedName name={r.grant.title} record={r.grant} />
-                      ),
-                    },
-                    {
-                      key: 'year',
-                      label: 'Year',
-                      width: '70px',
-                      mono: true,
-                      render: (r: { grant: Grant }) =>
-                        (r.grant.dates.applicationDue ?? r.grant.createdAt).slice(0, 4),
-                    },
-                    {
-                      key: 'phase',
-                      label: 'Phase',
-                      width: '120px',
-                      render: (r: { grant: Grant }) => <PhaseBadge phase={r.grant.phase} />,
-                    },
-                    {
-                      key: 'requested',
-                      label: 'Requested',
-                      width: '110px',
-                      align: 'right',
-                      mono: true,
-                      render: (r: { grant: Grant }) =>
-                        r.grant.amountRequested ? money(r.grant.amountRequested) : <Dash />,
-                    },
-                    {
-                      key: 'awarded',
-                      label: 'Awarded',
-                      width: '110px',
-                      align: 'right',
-                      mono: true,
-                      render: (r: { grant: Grant }) =>
-                        r.grant.amountAwarded ? money(r.grant.amountAwarded) : <Dash />,
-                    },
-                  ]}
-                />
-              </TableScroll>
-            </>
-          )}
-        </Card>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+          <Card title="Grant history" padding="0">
+            {grants.length === 0 ? (
+              <EmptyState
+                icon={<Icon name="landmark" size={22} />}
+                title="No grants with this funder yet"
+                message={
+                  mayEdit
+                    ? `Every grant we ask ${funder.name} for shows up here, with its phase and what was awarded. Add a grant and choose this funder.`
+                    : `Every grant we ask ${funder.name} for shows up here, with its phase and what was awarded.`
+                }
+                action={
+                  mayEdit && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      iconLeft={<Icon name="plus" size={15} />}
+                      onClick={() => nav('/grants?add=1')}
+                    >
+                      Add grant
+                    </Button>
+                  )
+                }
+              />
+            ) : (
+              <>
+                <div
+                  style={{
+                    padding: 'var(--space-4) var(--space-5)',
+                    borderBottom: 'var(--border-width) solid var(--border-subtle)',
+                    font: 'var(--type-body-sm)',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  {totals.grants} {totals.grants === 1 ? 'grant' : 'grants'} ·{' '}
+                  {money(totals.requested)} requested · {money(totals.awarded)} awarded
+                </div>
+                <TableScroll minWidth={640}>
+                  <DataTable
+                    rows={grants.map(g => ({ id: g.id, grant: g }))}
+                    onRowClick={(r: { id: string }) => nav(`/grants/${r.id}`)}
+                    columns={[
+                      {
+                        key: 'title',
+                        label: 'Grant',
+                        width: '2fr',
+                        strong: true,
+                        wrap: true,
+                        render: (r: { grant: Grant }) => (
+                          <ArchivedName name={r.grant.title} record={r.grant} />
+                        ),
+                      },
+                      {
+                        key: 'year',
+                        label: 'Year',
+                        width: '70px',
+                        mono: true,
+                        render: (r: { grant: Grant }) =>
+                          (r.grant.dates.applicationDue ?? r.grant.createdAt).slice(0, 4),
+                      },
+                      {
+                        key: 'phase',
+                        label: 'Phase',
+                        width: '120px',
+                        render: (r: { grant: Grant }) => <PhaseBadge phase={r.grant.phase} />,
+                      },
+                      {
+                        key: 'requested',
+                        label: 'Requested',
+                        width: '110px',
+                        align: 'right',
+                        mono: true,
+                        render: (r: { grant: Grant }) =>
+                          r.grant.amountRequested ? money(r.grant.amountRequested) : <Dash />,
+                      },
+                      {
+                        key: 'awarded',
+                        label: 'Awarded',
+                        width: '110px',
+                        align: 'right',
+                        mono: true,
+                        render: (r: { grant: Grant }) =>
+                          r.grant.amountAwarded ? money(r.grant.amountAwarded) : <Dash />,
+                      },
+                    ]}
+                  />
+                </TableScroll>
+              </>
+            )}
+          </Card>
+
+          <Card
+            title="Recent activity"
+            subtitle="What has happened on this funder's grants, newest first"
+          >
+            {activity.length === 0 ? (
+              <p style={{ margin: 0, font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
+                Nothing has happened on {funder.name}'s grants yet. Notes, phase changes and
+                payments on any of them show up here.
+              </p>
+            ) : (
+              <>
+                <ActivityTimeline lines={shownActivity} />
+                {activity.length > RECENT_ACTIVITY && (
+                  <div style={{ marginTop: 'var(--space-4)' }}>
+                    <LinkButton onClick={() => setAllActivity(a => !a)}>
+                      {allActivity ? 'Show the latest only' : `Show all ${activity.length}`}
+                    </LinkButton>
+                  </div>
+                )}
+              </>
+            )}
+          </Card>
+        </div>
       </div>
 
       {archiving && mayEdit && (
@@ -273,6 +303,9 @@ export default function FunderDetail() {
     </>
   );
 }
+
+/** How many activity rows Recent activity shows before Show all. */
+const RECENT_ACTIVITY = 8;
 
 function href(url: string): string {
   return /^https?:\/\//.test(url) ? url : `https://${url}`;

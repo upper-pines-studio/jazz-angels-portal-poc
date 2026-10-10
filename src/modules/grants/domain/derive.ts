@@ -376,3 +376,29 @@ export function grantActivity(state: PortalState, grantId: string) {
     .slice()
     .sort((a, b) => b.at.localeCompare(a.at));
 }
+
+/** One line of a funder's activity: the activity row and the grant it is about. */
+export interface FunderActivityLine {
+  row: Activity;
+  grant: Grant;
+}
+
+/**
+ * The activity of every grant with this funder, newest first, each row with
+ * its grant. Archived grants count: their activity is history (decision 0002).
+ * The funder's page shows it as Recent activity.
+ */
+export function funderActivity(state: PortalState, funderId: string): FunderActivityLine[] {
+  const grants = new Map(grantsByFunder(state, funderId).map(g => [g.id, g]));
+  const lines: FunderActivityLine[] = [];
+  for (const row of state.grants.activity) {
+    const grant = grants.get(row.grantId);
+    if (grant) lines.push({ row, grant });
+  }
+  return lines.sort((a, b) => b.row.at.localeCompare(a.row.at));
+}
+
+/** The day of a funder's newest activity row (`YYYY-MM-DD`), or undefined when it has none. */
+export function funderLastActivity(state: PortalState, funderId: string): string | undefined {
+  return funderActivity(state, funderId)[0]?.row.at.slice(0, 10);
+}

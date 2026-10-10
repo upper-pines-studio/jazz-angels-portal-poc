@@ -38,6 +38,11 @@ function GrantDetail() {
   and `grantShares`, how each grant's money is shared out.
   The people, the programs (with their budgets and projects) and the settings
   live in `state.core`.
+  `activity` is the module's log, one row per change on a grant, written in
+  the same change as what it describes so the two save or roll back together.
+  It stays here until the backend, where its rows become rows of the one
+  activity table every module shares, subject kind `grant` (decision 0005,
+  "One activity log").
 - `today: string` — today as `YYYY-MM-DD`. Pass it to every derive function
   rather than calling `new Date()` in a screen.
 - `actions.grants` — the only way to change anything here. Every change is
@@ -164,12 +169,15 @@ All pure, all take `state` first, none of them are stored.
 and on the money side `isTracked` (so `trackedGrants`, `trackedGrantsInFy`, `offPaceGrants`,
 `expensesMissingBackup`), `eligibleLines`, `reportsOwed` and so `nextReminder` leave archived grants
 out. History keeps them: `grantById`, `grantsByFunder`, `funderTotals` ("awarded all time"),
-`grantActivity`, `grantMoney`, and `trackedGrants(state, true)`, which Budget vs. actual's All and
+`grantActivity`, `funderActivity`, `grantMoney`, and `trackedGrants(state, true)`, which Budget vs. actual's All and
 last-year views read. `fundersList(state, includeArchived?)` is the Funders list.
 
 Lookup helpers, because every screen needs them: `grantById`, `funderById`,
 `grantsByFunder`, `grantsForProgram` (a grant is under each program it names), `programNames(state, grant, short?)` ("A, B and C"), `coversWholeStudio(grant)` (it names Operations, core's `OPERATIONS_ID`), `funderTotals`, `grantActivity` (newest
-first), `activityWho` (the name an activity row credits). `staffById`, `programName` and `fiscalYear` are core's.
+first), `funderActivity(state, funderId)` (every row on the funder's grants, archived grants
+included, newest first, each as `{ row, grant }`: a `FunderActivityLine`; the funder's Recent
+activity), `funderLastActivity(state, funderId)` (the day of its newest row, for the Funders list),
+`activityWho` (the name an activity row credits). `staffById`, `programName` and `fiscalYear` are core's.
 
 `funderShortName(name, tight?)` (`names.ts`) is the one way to shorten a
 funder's name, so a funder reads the same on every screen: "Herb Alpert
