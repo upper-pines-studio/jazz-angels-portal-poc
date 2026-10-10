@@ -16,8 +16,8 @@ import { LinkButton } from './money/shared';
 import { TableScroll } from '../../../app/components/TableScroll';
 import { Card, DataTable, Button, Icon, Dialog, EmptyState } from '../../../design-system';
 import { isArchived, useStore, useCan, money } from '../../../core';
-import { funderActivity, funderById, funderTotals, grantsByFunder } from '../domain';
-import type { Grant } from '../domain';
+import { funderActivity, funderById, funderGrantHistory, funderTotals } from '../domain';
+import type { GrantHistoryRow } from '../domain';
 
 export default function FunderDetail() {
   const { id = '' } = useParams();
@@ -77,7 +77,8 @@ export default function FunderDetail() {
     );
   }
 
-  const grants = grantsByFunder(state, funder.id);
+  // Newest first, each renewal just above the grant it renews.
+  const grants = funderGrantHistory(state, funder.id);
   const totals = funderTotals(state, funder.id);
   const activity = funderActivity(state, funder.id);
   const shownActivity = allActivity ? activity : activity.slice(0, RECENT_ACTIVITY);
@@ -183,7 +184,7 @@ export default function FunderDetail() {
                 </div>
                 <TableScroll minWidth={640}>
                   <DataTable
-                    rows={grants.map(g => ({ id: g.id, grant: g }))}
+                    rows={grants.map(r => ({ id: r.grant.id, ...r }))}
                     onRowClick={(r: { id: string }) => nav(`/grants/${r.id}`)}
                     columns={[
                       {
@@ -192,8 +193,22 @@ export default function FunderDetail() {
                         width: '2fr',
                         strong: true,
                         wrap: true,
-                        render: (r: { grant: Grant }) => (
-                          <ArchivedName name={r.grant.title} record={r.grant} />
+                        render: (r: GrantHistoryRow) => (
+                          <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <span>
+                              <ArchivedName name={r.grant.title} record={r.grant} />
+                            </span>
+                            {r.renews && (
+                              <span
+                                style={{
+                                  font: 'var(--type-body-sm)',
+                                  color: 'var(--text-muted)',
+                                }}
+                              >
+                                Renews {r.renews.title}
+                              </span>
+                            )}
+                          </span>
                         ),
                       },
                       {
@@ -201,14 +216,14 @@ export default function FunderDetail() {
                         label: 'Year',
                         width: '70px',
                         mono: true,
-                        render: (r: { grant: Grant }) =>
+                        render: (r: GrantHistoryRow) =>
                           (r.grant.dates.applicationDue ?? r.grant.createdAt).slice(0, 4),
                       },
                       {
                         key: 'phase',
                         label: 'Phase',
                         width: '120px',
-                        render: (r: { grant: Grant }) => <PhaseBadge phase={r.grant.phase} />,
+                        render: (r: GrantHistoryRow) => <PhaseBadge phase={r.grant.phase} />,
                       },
                       {
                         key: 'requested',
@@ -216,7 +231,7 @@ export default function FunderDetail() {
                         width: '110px',
                         align: 'right',
                         mono: true,
-                        render: (r: { grant: Grant }) =>
+                        render: (r: GrantHistoryRow) =>
                           r.grant.amountRequested ? money(r.grant.amountRequested) : <Dash />,
                       },
                       {
@@ -225,7 +240,7 @@ export default function FunderDetail() {
                         width: '110px',
                         align: 'right',
                         mono: true,
-                        render: (r: { grant: Grant }) =>
+                        render: (r: GrantHistoryRow) =>
                           r.grant.amountAwarded ? money(r.grant.amountAwarded) : <Dash />,
                       },
                     ]}

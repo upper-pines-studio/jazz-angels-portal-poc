@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { usePageHeader } from '../../../app/Shell';
 import { useToast } from '../../../app/ToastHost';
 import { ArchiveButton, ArchiveDialog, ArchivedNotice } from '../../../app/components/archive';
@@ -12,7 +12,11 @@ import {
   grantFiles,
   isPostAward,
   mayMoveTo,
+  mayRenew,
   programNames,
+  RENEWABLE_PHASES,
+  renewalOf,
+  renewedAs,
 } from '../domain';
 import type { Transition } from '../domain';
 import { PhaseStepper } from './grant/PhaseStepper';
@@ -28,6 +32,7 @@ import { ProgramNumbers } from './grant/ProgramNumbers';
 import { ActivityTab } from './grant/ActivityTab';
 import { WhereMoneyGoes } from './shares/WhereMoneyGoes';
 import { SideCards } from './grant/SideCards';
+import { RenewDialog } from './grant/RenewDialog';
 
 /** One grant: where it is, what is left to do, and — once awarded — where the money went. */
 
@@ -43,6 +48,7 @@ export default function GrantDetail() {
   const [params, setParams] = useSearchParams();
   const [pending, setPending] = React.useState<Transition | null>(null);
   const [archiving, setArchiving] = React.useState(false);
+  const [renewing, setRenewing] = React.useState(false);
 
   const grant = grantById(state, id);
   const funder = grant ? funderById(state, grant.funderId) : undefined;
@@ -52,18 +58,45 @@ export default function GrantDetail() {
   // also needs the award row. An archived grant is restored before it moves.
   const transitions =
     grant && !archived ? availableTransitions(grant).filter(t => mayMoveTo(user.role, t.to)) : [];
+  // Renewals (#67): last year's grant and next year's, linked both ways in the subtitle.
+  const lastYear = grant ? renewalOf(state, grant) : undefined;
+  const nextYear = grant ? renewedAs(state, grant.id) : undefined;
+  // Offered once, on an awarded grant, to the roles that may add a grant and its budget.
+  // Once renewed, "Renewed as …" in the subtitle takes its place.
+  const mayStartNext =
+    !!grant &&
+    !archived &&
+    !nextYear &&
+    RENEWABLE_PHASES.includes(grant.phase) &&
+    mayRenew(user.role);
 
   usePageHeader(
     grant
       ? {
           title: grant.title,
-          subtitle: [
-            funder && (isArchived(funder) ? `${funder.name} (archived funder)` : funder.name),
-            programNames(state, grant),
-            owner?.name,
-          ]
-            .filter(Boolean)
-            .join(' · '),
+          subtitle: (
+            <>
+              {[
+                funder && (isArchived(funder) ? `${funder.name} (archived funder)` : funder.name),
+                programNames(state, grant),
+                owner?.name,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              {lastYear && (
+                <>
+                  {' · Renews '}
+                  <Link to={`/grants/${lastYear.id}`}>{lastYear.title}</Link>
+                </>
+              )}
+              {nextYear && (
+                <>
+                  {' · Renewed as '}
+                  <Link to={`/grants/${nextYear.id}`}>{nextYear.title}</Link>
+                </>
+              )}
+            </>
+          ),
           crumbs: [{ label: 'Grants', href: '/grants' }, { label: funder?.name ?? 'Grant' }],
           actions: (
             <div className="ja-actions">
@@ -86,6 +119,16 @@ export default function GrantDetail() {
                     {t.label}
                   </Button>
                 ))}
+              {mayStartNext && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  iconLeft={<Icon name="copy-plus" size={15} />}
+                  onClick={() => setRenewing(true)}
+                >
+                  Start next year's
+                </Button>
+              )}
               {mayEdit && !archived && <ArchiveButton onClick={() => setArchiving(true)} />}
             </div>
           ),
@@ -224,6 +267,7 @@ export default function GrantDetail() {
           onClose={() => setArchiving(false)}
         />
       )}
+      {renewing && mayStartNext && <RenewDialog grant={grant} onClose={() => setRenewing(false)} />}
       {pending && transitions.some(t => t.to === pending.to) && (
         <TransitionDialog grant={grant} transition={pending} onClose={() => setPending(null)} />
       )}

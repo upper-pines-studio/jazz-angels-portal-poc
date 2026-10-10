@@ -73,6 +73,7 @@ Add/update actions that create something return its new id.
 | `archiveFunder(id)` / `restoreFunder(id)` | Archives a funder (off the Funders list and the Add grant picker; its grants untouched) or restores it. Needs the pipeline row. |
 | `archiveGrant(id)` / `restoreGrant(id)` | Archives a grant, or restores it, and logs "Archived" / "Restored" in the same change. Needs the pipeline row. |
 | `addGrant(input: NewGrantInput)` | Creates the grant, its checklist from the chosen template, the standard document register, and a "Grant added" activity row. Returns the grant id. With `input.inFlight` it brings in a grant already under way instead (see below). |
+| `renewGrant(input: RenewGrantInput)` | "Start next year's" (#67): a new grant at Prospect that names this one in `renewsGrantId`. See "Renewals" below. Returns the new grant id. |
 | `updateGrant(id, patch)` | Patches a grant, `dates` included (pass the whole `dates` object). |
 | `transition(grantId, to, payload?)` | Moves the phase, writes the dates that phase implies, logs activity. `payload: { date?, amountAwarded?, periodStart?, periodEnd?, reason? }`. |
 | `addTask(input)` / `updateTask(id, patch)` / `deleteTask(id)` | Checklist rows. |
@@ -146,6 +147,45 @@ inFlight: {
   `inFlightRefusal(input)` objects to (Closed or a pre-award phase, no award or cents on it,
   an end before the start, a budget line with no category or a repeated one ignoring case,
   a payment without a name, amount or expected date, a sent date on a report not sent).
+
+### Renewals (`renewals.ts`, decision 0005, #67)
+
+`renewGrant({ grantId, title, amountRequested?, dates, ownerId, programs })` writes, in one
+change (a `batch` of one `add-grant` and one activity insert, so one save):
+
+- a grant at `'prospect'` with last year's `funderId`, `restriction` and `loiRequired`, the
+  input's title, amount, owner and programs, the input's dates through `renewalDates` (only
+  `RENEWAL_DATE_KEYS`: LOI due, application due, expected decision, period start and end, start
+  working by; never submitted or decided), `createdAt: today` and
+  `renewsGrantId: grantId`. No award, notes, submitted or decided date;
+- the checklist from `renewalTemplateId(templates)`: "Renewal (returning funder)", else Add
+  grant's default, else the first template, else none; and the document register, `needed`;
+- a copy of each of last year's budget lines: `category`, `planned` and `accountCodes`, not
+  `classId` (the QuickBooks class names last year's grant);
+- `renewalStartedText(last.title)`, "Started as the renewal of …", on the renewal, and
+  `renewedAsText(next.title)`, "Renewed as …", on last year's grant, the renewal's a
+  millisecond later so it reads first. `phaseEnteredOn` skips both (`isRenewalLine` in
+  `phases.ts`), so a title such as "Withdrawn-youth fund 2026" never dates a phase.
+
+Nothing else is copied: no expenses, payments, reports, award terms, files, reminder plans,
+split rules or grant shares.
+
+The rule needs `mayRenew(role)` ("Grants" and "Award, budget, reports" edit: Admin, Director,
+Office manager), then refuses with `renewalRefusal(state, grantId)` (a grant that is gone,
+archived, not in `RENEWABLE_PHASES` (Awarded, Active, Reporting, Closed), already renewed, or
+whose funder is archived) or `renewInputProblem(state, input)` (a blank title, no program, an
+archived program or owner, an amount that is not whole dollars). A grant is renewed at most once.
+
+Helpers: `nextYearTitle(title)` moves every year on by one ("2026" → "2027", "FY26-27" →
+"FY27-28", "2026-27" → "2027-28"; no year, no change); `nextYearDates(dates)` moves `loiDue`,
+`applicationDue`, `decisionExpected`, `periodStart` and `periodEnd` on a year, blanks staying
+blank; `suggestedStartBy(applicationDue)` is 45 days before it, as Add grant suggests;
+`renewalDraft(state, grant)` is what the dialog opens with (the award, else the request; an
+archived owner or program left blank and named so it is picked again); `renewalOf(state,
+grant)` and `renewedAs(state, grantId)` follow the link either way; `funderGrantHistory(state,
+funderId)` is the funder's grant history, newest first, each grant just above the one it renews,
+as `{ grant, renews? }` rows. On load, `withRenewalLinks` drops a link to a grant that is not
+saved (or to itself); saved data without renewals loads unchanged.
 
 ---
 
