@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge, Avatar } from '../../design-system';
 import { initials, staffById, useStore } from '../../core';
-import type { AttentionItem } from '../../core';
+import type { AttentionItem, OfficeDocumentStatus } from '../../core';
 
 /** The small pieces every module's screens share. Module-specific badges live in the module. */
 
@@ -19,6 +19,28 @@ export function AttentionStatusBadge({
   if (status === 'overdue') return <Badge tone="danger">{label ?? 'Overdue'}</Badge>;
   if (status === 'due-soon') return <Badge tone="gold">{label ?? 'Due soon'}</Badge>;
   return <Badge tone="neutral">{label ?? 'Note'}</Badge>;
+}
+
+/** The words for an office document's status (core decides it: `versionStatus`). */
+export const OFFICE_DOCUMENT_STATUS_LABEL: Record<OfficeDocumentStatus, string> = {
+  'out-of-date': 'Out of date',
+  'expires-soon': 'Expires soon',
+  current: 'Current',
+};
+
+/** Danger for out of date, gold (the attention colour) for expiring soon, teal for current. */
+export const OFFICE_DOCUMENT_STATUS_TONE: Record<OfficeDocumentStatus, 'danger' | 'gold' | 'teal'> =
+  {
+    'out-of-date': 'danger',
+    'expires-soon': 'gold',
+    current: 'teal',
+  };
+
+/** An office document's status, on Office › Documents and on a grant's register row. */
+export function OfficeDocumentStatusBadge({ status }: { status: OfficeDocumentStatus }) {
+  return (
+    <Badge tone={OFFICE_DOCUMENT_STATUS_TONE[status]}>{OFFICE_DOCUMENT_STATUS_LABEL[status]}</Badge>
+  );
 }
 
 /** Which module a dashboard row came from. */

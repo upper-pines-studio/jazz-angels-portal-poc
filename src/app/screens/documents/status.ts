@@ -4,6 +4,7 @@ import {
   relativeDays,
   versionStatus,
 } from '../../../core';
+import { OFFICE_DOCUMENT_STATUS_LABEL } from '../../components/badges';
 import type {
   AttentionItem,
   OfficeDocumentStatus,
@@ -17,18 +18,11 @@ import type {
  * (`versionStatus`); this is how the screens say it.
  */
 
-export const STATUS_LABEL: Record<OfficeDocumentStatus, string> = {
-  'out-of-date': 'Out of date',
-  'expires-soon': 'Expires soon',
-  current: 'Current',
-};
-
-/** Danger for out of date, gold (the attention colour) for expiring soon, teal for current. */
-export const STATUS_TONE: Record<OfficeDocumentStatus, 'danger' | 'gold' | 'teal'> = {
-  'out-of-date': 'danger',
-  'expires-soon': 'gold',
-  current: 'teal',
-};
+/** The status words and tones, shared with a grant's register (`app/components/badges.tsx`). */
+export {
+  OFFICE_DOCUMENT_STATUS_LABEL as STATUS_LABEL,
+  OFFICE_DOCUMENT_STATUS_TONE as STATUS_TONE,
+} from '../../components/badges';
 
 /**
  * One line on when a version runs out: "Expired on Oct 1, 2026", "Expires Oct
@@ -65,7 +59,7 @@ export function officeDocumentAttention(state: PortalState, today: string): Atte
         ? `${expiryLine(version, today)}. Add the new version before it goes to a funder.`
         : `${expiryLine(version, today)}. Add the new version when it comes.`,
     status: status === 'out-of-date' ? 'overdue' : 'due-soon',
-    statusLabel: STATUS_LABEL[status],
+    statusLabel: OFFICE_DOCUMENT_STATUS_LABEL[status],
     href: `/documents/${document.id}`,
     ownerId: version?.addedById,
     source: 'Office',
