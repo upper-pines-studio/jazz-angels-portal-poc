@@ -688,8 +688,9 @@ Two lists:
   updated, link icon), "Add document", row click edits (with Delete). Its rows link out to Drive or
   Dropbox; it does not hold files. The IRS letter, board list and financials are also kept once
   for the office, with versions and expiry, on Office › Documents (core, decision 0005,
-  `docs/PLATFORM.md` 2.4); a register row does not point at them yet (#68). Empty: "No documents listed yet. The narrative, budget, IRS letter
-  and the rest of what an application needs show up here…" with "Add document".
+  `docs/PLATFORM.md` 2.4); a register row does not point at them yet (#68). Empty: "No documents
+  listed yet. The narrative, budget, IRS letter and the rest of what an application needs show up
+  here…" with "Add document".
 
 ### 4.11 Transactions  `/transactions`
 What QuickBooks sent, and where each one belongs. The bookkeeper works the To assign tab down to
