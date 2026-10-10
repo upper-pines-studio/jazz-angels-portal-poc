@@ -199,7 +199,8 @@ const PROJECTS: Project[] = [
 /**
  * The office's documents (decision 0005), as the demo's today (Sep 13, 2026)
  * finds them: the insurance certificate expires in 18 days, and the audited
- * financials have last year's version under this year's. File names and
+ * financials and the board list have last year's version under this year's
+ * (a grant submitted last year shows the older one, #68). File names and
  * sizes are invented; the portal holds no contents.
  */
 const OFFICE_DOCUMENTS: OfficeDocument[] = [
@@ -251,6 +252,16 @@ const OFFICE_DOCUMENTS: OfficeDocument[] = [
     kind: 'board-list',
     name: 'Board of directors',
     versions: [
+      {
+        id: 'docv-board-list-2025',
+        name: 'Board of directors 2025-26.pdf',
+        format: 'pdf',
+        sizeKb: 92,
+        pages: 1,
+        addedAt: '2025-07-10',
+        addedById: 's-keisha',
+        expires: '2026-06-30',
+      },
       {
         id: 'docv-board-list-1',
         name: 'Board of directors 2026-27.pdf',

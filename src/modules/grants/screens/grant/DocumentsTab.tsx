@@ -26,10 +26,13 @@ import './award.css';
 
 const KIND_LABEL: Record<DocumentKind, string> = {
   narrative: 'Narrative',
-  budget: 'Budget',
+  budget: 'Project budget',
   'irs-letter': 'IRS letter',
   'board-list': 'Board list',
   financials: 'Financials',
+  'insurance-certificate': 'Insurance',
+  w9: 'W-9',
+  'organization-budget': 'Organization budget',
   'award-letter': 'Award letter',
   agreement: 'Agreement',
   report: 'Report',

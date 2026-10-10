@@ -6,6 +6,7 @@ import { programName, targetName } from '../../../core/derive';
 import { money } from '../../../core/format';
 import { acceptableSuggestions, backupCarry, isReportOpen, splitByPercent } from './money';
 import { inFlightRefusal } from './inflight';
+import { newRegisterLinks, officeLinkProblem } from './officeDocuments';
 import { changeProblem, giveProblem, resolveTarget, shareTo } from './shares';
 import { availableTransitions, isPostAward, phaseLabel } from './phases';
 import { makeEmpty, makeSeed } from './seed';
@@ -15,6 +16,7 @@ import type {
   Activity,
   Allocation,
   AwardTerm,
+  DocumentKind,
   BudgetLine,
   ChecklistTemplate,
   Expense,
@@ -103,6 +105,8 @@ export type GrantsAction =
       templateId?: string | null;
       excludeTemplateItemIds?: string[];
       includeDocumentRegister: boolean;
+      /** By kind, the office document a register row uses (#68): see `newRegisterLinks`. */
+      officeDocumentLinks?: Partial<Record<DocumentKind, string>>;
       budgetLines?: BudgetLine[];
       payments?: Payment[];
       reports?: Report[];
@@ -263,6 +267,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
             grant.id,
             grant.createdAt,
             grant.broughtIn ? 'submitted' : 'needed',
+            action.officeDocumentLinks,
           ).map((doc, index) => ({
             ...doc,
             id: `${grant.id}-d${index + 1}`,
@@ -538,6 +543,10 @@ export interface GrantsActions {
   addDocument(input: Omit<GrantDocument, 'id' | 'updatedAt'> & { updatedAt?: string }): string;
   updateDocument(id: string, patch: Partial<GrantDocument>): void;
   deleteDocument(id: string): void;
+  /** Point a register row at an office document (#68): it shows that document's version instead of its own link. */
+  linkDocument(id: string, officeDocumentId: string): void;
+  /** Stop a register row using an office document; its own link shows again. */
+  unlinkDocument(id: string): void;
 
   addPayment(input: Omit<Payment, 'id'>): string;
   updatePayment(id: string, patch: Partial<Payment>): void;
@@ -631,7 +640,7 @@ export interface GrantsActions {
 
 function createActions(
   dispatch: (action: AnyAction) => void,
-  getState: () => { grants: GrantsState },
+  getState: () => PortalState,
   ctx: SliceContext,
 ): GrantsActions {
   const { today, newId, user } = ctx;
@@ -732,6 +741,7 @@ function createActions(
         templateId: input.templateId,
         excludeTemplateItemIds: input.excludeTemplateItemIds,
         includeDocumentRegister: input.includeDocumentRegister ?? true,
+        officeDocumentLinks: newRegisterLinks(getState()),
         budgetLines: flight?.budgetLines?.map(line => ({
           id: newId('bl'),
           grantId,
@@ -827,6 +837,12 @@ function createActions(
     },
     deleteDocument(id) {
       remove('documents', id);
+    },
+    linkDocument(id, officeDocumentId) {
+      update('documents', id, { updatedAt: today, officeDocumentId });
+    },
+    unlinkDocument(id) {
+      update('documents', id, { updatedAt: today, officeDocumentId: undefined });
     },
 
     addPayment(input) {
@@ -1235,9 +1251,31 @@ const rules: ModuleSlice<GrantsState, GrantsActions>['rules'] = {
   toggleTask: 'grants',
   deleteTask: 'grants',
 
-  addDocument: 'grants',
-  updateDocument: 'grants',
+  // A row may use an office document of its kind, or any one when it is Other (#68).
+  addDocument: (user, state, input) =>
+    can(user.role, 'grants', 'edit') &&
+    (officeLinkProblem(state, input.kind, input.officeDocumentId) ?? true),
+  updateDocument: (user, state, id, patch) => {
+    if (!can(user.role, 'grants', 'edit')) return false;
+    const row = state.grants.documents.find(d => d.id === id);
+    if (!row) return true;
+    const officeDocumentId =
+      'officeDocumentId' in patch ? patch.officeDocumentId : row.officeDocumentId;
+    if (officeDocumentId === row.officeDocumentId && (patch.kind ?? row.kind) === row.kind)
+      return true;
+    return (
+      officeLinkProblem(state, patch.kind ?? row.kind, officeDocumentId, row.officeDocumentId) ??
+      true
+    );
+  },
   deleteDocument: 'grants',
+  linkDocument: (user, state, id, officeDocumentId) => {
+    if (!can(user.role, 'grants', 'edit')) return false;
+    const row = state.grants.documents.find(d => d.id === id);
+    if (!row) return true;
+    return officeLinkProblem(state, row.kind, officeDocumentId, row.officeDocumentId) ?? true;
+  },
+  unlinkDocument: 'grants',
 
   addPayment: 'award',
   updatePayment: 'award',
