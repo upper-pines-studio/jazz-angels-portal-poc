@@ -402,6 +402,37 @@ describe('a new grant’s register', () => {
     expect(p.refused).toEqual([]);
   });
 
+  it('links a grant brought in under way only where a version was on file when it went in', () => {
+    const p = portal();
+    const id = p.grants.addGrant({
+      ...input,
+      phase: 'active',
+      dates: { submitted: '2025-03-10', decided: '2025-06-01' },
+      inFlight: { amountAwarded: 8000 },
+    });
+    expect(p.refused).toEqual([]);
+    const rows = p.state().grants.documents.filter(d => d.grantId === id);
+    expect(rows.every(r => r.status === 'submitted')).toBe(true);
+    // Only last year's financials were on file on Mar 10, 2025; the IRS letter and the board
+    // list came later, so those rows stay rows of their own.
+    expect(rows.filter(r => r.officeDocumentId).map(r => r.kind)).toEqual(['financials']);
+    const financials = rows.find(r => r.kind === 'financials')!;
+    expect(p.shown(financials.id)?.version?.id).toBe('docv-financials-fy24');
+  });
+
+  it('links nothing for a grant brought in that went in before any document was added', () => {
+    const p = portal();
+    const id = p.grants.addGrant({
+      ...input,
+      phase: 'awarded',
+      dates: { submitted: '2024-06-01' },
+      inFlight: { amountAwarded: 8000 },
+    });
+    const rows = p.state().grants.documents.filter(d => d.grantId === id);
+    expect(rows).toHaveLength(5);
+    expect(rows.some(r => r.officeDocumentId)).toBe(false);
+  });
+
   it('links nothing in a new office with no documents', () => {
     expect(newRegisterLinks(stateOf(makeCoreEmpty(), makeEmpty()))).toEqual({});
   });

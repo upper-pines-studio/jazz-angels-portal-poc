@@ -116,13 +116,19 @@ export function linkedOfficeDocument(
 /**
  * The office documents a new grant's register links to, by kind: for the IRS
  * letter, the board list and the financials, the first current office
- * document of that kind. A kind with none stays unlinked.
+ * document of that kind. A kind with none stays unlinked, and so does one
+ * whose document had no version on file by the grant's submitted date (a
+ * grant brought in under way, decision 0004): it would only read "No version
+ * on file when it went in".
  */
-export function newRegisterLinks(state: PortalState): Partial<Record<DocumentKind, string>> {
+export function newRegisterLinks(
+  state: PortalState,
+  grant: Pick<Grant, 'dates'> = { dates: {} },
+): Partial<Record<DocumentKind, string>> {
   const links: Partial<Record<DocumentKind, string>> = {};
   for (const kind of NEW_GRANT_LINKED_KINDS) {
     const doc = officeDocumentsList(state).find(d => d.kind === kind);
-    if (doc) links[kind] = doc.id;
+    if (doc && versionShown(doc, grant)) links[kind] = doc.id;
   }
   return links;
 }

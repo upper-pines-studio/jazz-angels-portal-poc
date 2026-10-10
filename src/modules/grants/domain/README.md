@@ -72,7 +72,7 @@ Add/update actions that create something return its new id.
 | `updateFunder(id, patch)` | Patches a funder. |
 | `archiveFunder(id)` / `restoreFunder(id)` | Archives a funder (off the Funders list and the Add grant picker; its grants untouched) or restores it. Needs the pipeline row. |
 | `archiveGrant(id)` / `restoreGrant(id)` | Archives a grant, or restores it, and logs "Archived" / "Restored" in the same change. Needs the pipeline row. |
-| `addGrant(input: NewGrantInput)` | Creates the grant, its checklist from the chosen template, the standard document register, and a "Grant added" activity row. Returns the grant id. The register's IRS letter, board list and financials rows use the office's documents of those kinds when there are any (`newRegisterLinks`, #68). With `input.inFlight` it brings in a grant already under way instead (see below). |
+| `addGrant(input: NewGrantInput)` | Creates the grant, its checklist from the chosen template, the standard document register, and a "Grant added" activity row. Returns the grant id. The register's IRS letter, board list and financials rows use the office's documents of those kinds when there are any and a version was on file by the grant's submitted date, if it has one (`newRegisterLinks`, #68). With `input.inFlight` it brings in a grant already under way instead (see below). |
 | `renewGrant(input: RenewGrantInput)` | "Start next year's" (#67): a new grant at Prospect that names this one in `renewsGrantId`. See "Renewals" below. Its register gets the same office-document links as a new grant's (#68). Returns the new grant id. |
 | `updateGrant(id, patch)` | Patches a grant, `dates` included (pass the whole `dates` object). |
 | `transition(grantId, to, payload?)` | Moves the phase, writes the dates that phase implies, logs activity. `payload: { date?, amountAwarded?, periodStart?, periodEnd?, reason? }`. |
@@ -488,9 +488,12 @@ the next `syncQuickBooks()`, and nothing is ever written back.
     `warning` (before submission, Out of date or Expires soon against today;
     after, only Out of date, when the version had expired by the submitted
     date). Undefined for an unlinked row or a document no longer there.
-  - `newRegisterLinks(state)`: the first current office document of each of
-    `NEW_GRANT_LINKED_KINDS` (IRS letter, board list, financials), which
-    `addGrant` puts on the `add-grant` change as `officeDocumentLinks`.
+  - `newRegisterLinks(state, grant?)`: the first current office document of
+    each of `NEW_GRANT_LINKED_KINDS` (IRS letter, board list, financials),
+    which `addGrant` and `renewGrant` put on the `add-grant` change as
+    `officeDocumentLinks`. A grant brought in with a submitted date links only
+    where `versionShown` finds a version on file by then; the rest stay rows of
+    their own.
   - `officeLinkProblem(state, kind, id, previousId?)`: why a row may not use
     that document, the words the store refuses with.
   A register saved before this loads unchanged, its rows unlinked.

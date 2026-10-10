@@ -765,7 +765,7 @@ function createActions(
         templateId: input.templateId,
         excludeTemplateItemIds: input.excludeTemplateItemIds,
         includeDocumentRegister: input.includeDocumentRegister ?? true,
-        officeDocumentLinks: newRegisterLinks(getState()),
+        officeDocumentLinks: newRegisterLinks(getState(), grant),
         budgetLines: flight?.budgetLines?.map(line => ({
           id: newId('bl'),
           grantId,
@@ -839,7 +839,7 @@ function createActions(
             grant,
             templateId: renewalTemplateId(state.templates),
             includeDocumentRegister: true,
-            officeDocumentLinks: newRegisterLinks(getState()),
+            officeDocumentLinks: newRegisterLinks(getState(), grant),
             budgetLines,
             activityId: newId('act'),
             at: later,
