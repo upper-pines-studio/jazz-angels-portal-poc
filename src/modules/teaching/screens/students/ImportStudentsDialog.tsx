@@ -3,6 +3,7 @@ import { Badge, Button, DataTable, Dialog, Icon, Select } from '../../../../desi
 import { useToast } from '../../../../app/ToastHost';
 import { activeOnly, classProgramOptions, programName, useCan, useStore } from '../../../../core';
 import {
+  PHOTO_RELEASE_LABEL,
   ensembleById,
   parseStudentsCsv,
   studentsCsvTemplate,
@@ -39,7 +40,7 @@ export default function ImportStudentsDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const { state, actions } = useStore();
+  const { state, today, actions } = useStore();
   const allowed = useCan();
   const toast = useToast();
   // Everyone who may import may see guardian contacts today; the check keeps it so.
@@ -58,6 +59,8 @@ export default function ImportStudentsDialog({
     // included, still counts as already in the portal.
     ensembles: activeOnly(state.teaching.ensembles),
     students: state.teaching.students,
+    // A "yes" or "no" in the Photo release column is dated the import day.
+    today,
   };
 
   const read = async (file: File | undefined) => {
@@ -208,9 +211,10 @@ export default function ImportStudentsDialog({
             </div>
           )}
           <div style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
-            The columns are Name, Instrument, Years in, Guardian name, Guardian phone, Program and
-            Ensemble, in any order. A student with an ensemble is enrolled in it; one without goes
-            on the program&rsquo;s waitlist. Other columns are left out.
+            The columns are Name, Instrument, Years in, Guardian name, Guardian phone, Program,
+            Ensemble and Photo release, in any order. A student with an ensemble is enrolled in it;
+            one without goes on the program&rsquo;s waitlist. Photo release is yes, no or blank for
+            not asked yet. Other columns are left out.
           </div>
           <div>
             <Button
@@ -318,7 +322,7 @@ function Preview({
       )}
 
       <div className="ja-import-preview">
-        <div style={{ minWidth: 900 }}>
+        <div style={{ minWidth: showGuardian ? 1000 : 900 }}>
           <DataTable
             rows={rows.map(r => ({ ...r, id: `line-${r.line}` }))}
             columns={[
@@ -341,6 +345,24 @@ function Preview({
                       label: 'Guardian',
                       width: '1.3fr',
                       render: (r: ImportRow) => twoLines(r.guardianName || '—', r.guardianPhone),
+                    },
+                    // The release follows guardian contacts (decision 0001).
+                    {
+                      key: 'photoRelease',
+                      label: 'Photo release',
+                      width: '112px',
+                      render: (r: ImportRow) => (
+                        <span
+                          style={{
+                            color:
+                              r.photoRelease.status === 'given'
+                                ? 'var(--text-body)'
+                                : 'var(--text-muted)',
+                          }}
+                        >
+                          {PHOTO_RELEASE_LABEL[r.photoRelease.status]}
+                        </span>
+                      ),
                     },
                   ]
                 : []),

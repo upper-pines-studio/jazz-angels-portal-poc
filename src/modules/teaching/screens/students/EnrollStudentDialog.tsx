@@ -3,7 +3,9 @@ import { Button, Dialog, Field, Input, Select } from '../../../../design-system'
 import { useToast } from '../../../../app/ToastHost';
 import { activeOnly, classProgramOptions, placeLabel, useStore } from '../../../../core';
 import type { ProgramId } from '../../../../core';
-import { ensembleById } from '../../domain';
+import { ensembleById, photoReleaseRefusal } from '../../domain';
+import type { PhotoReleaseInput } from '../../domain';
+import PhotoReleaseFields from './PhotoReleaseFields';
 
 const WAITLIST = '__waitlist__';
 
@@ -24,7 +26,7 @@ export default function EnrollStudentDialog({
   defaultEnsembleId?: string;
   onEnrolled?: (id: string) => void;
 }) {
-  const { state, actions } = useStore();
+  const { state, today, actions } = useStore();
   const toast = useToast();
 
   const [name, setName] = React.useState('');
@@ -38,12 +40,17 @@ export default function EnrollStudentDialog({
     programs.find(p => p.id === defaultProgramId)?.id ?? programs[0]?.id ?? '',
   );
   const [ensembleId, setEnsembleId] = React.useState(defaultEnsembleId ?? WAITLIST);
+  // A new student starts on Not asked yet unless the guardian has already answered.
+  const [photoRelease, setPhotoRelease] = React.useState<PhotoReleaseInput>({
+    status: 'not-asked',
+  });
   const [showErrors, setShowErrors] = React.useState(false);
 
   const nameError = !name.trim() ? 'Give the student a name.' : undefined;
   const instrumentError = !instrument.trim() ? 'Name the instrument they play.' : undefined;
   const guardianError = !guardianName.trim() ? 'Name the guardian we call.' : undefined;
-  const valid = !nameError && !instrumentError && !guardianError;
+  const releaseError = photoReleaseRefusal(photoRelease, today);
+  const valid = !nameError && !instrumentError && !guardianError && !releaseError;
 
   // The ensembles that belong to the chosen program, plus the waitlist.
   const ensembles = activeOnly(state.teaching.ensembles).filter(e => e.programId === programId);
@@ -64,6 +71,7 @@ export default function EnrollStudentDialog({
       programId,
       ensembleId: waiting ? undefined : chosen,
       status: waiting ? 'waitlist' : 'enrolled',
+      photoRelease,
     });
     toast({
       title: waiting ? 'Student added to the waitlist' : 'Student enrolled',
@@ -130,6 +138,14 @@ export default function EnrollStudentDialog({
             />
           </Field>
         </div>
+
+        <PhotoReleaseFields
+          value={photoRelease}
+          onChange={setPhotoRelease}
+          today={today}
+          error={showErrors ? releaseError : undefined}
+          hint="Whether a guardian agreed to photos of them in reports. Leave it on Not asked yet until they answer."
+        />
 
         <Field label="Program" required>
           <Select

@@ -18,7 +18,7 @@ and the feature is built later.
 | Renewals | A grant points at last year's grant; see [Renewals](#renewals) | Yes: an optional link from a grant to the grant it renews |
 | Organization documents | Versioned files with expiry dates that grants point at; shapes file storage | |
 | Funder contact log, calendar and email | One activity log across every module, or one per module; see [One activity log](#one-activity-log) | Likely: one activity log in core for every module |
-| Photo releases | Guardian consent stored with the student; part of protecting student data | |
+| Photo releases | Guardian consent stored with the student; part of protecting student data. Built (#65): three columns on the student, `photo_release` (Given, Not given, Not asked yet), the date it was given or refused, and the staff member who recorded it, under the same row-level protection as the guardian's name and phone (decision [0001](0001-roles-and-permissions.md)). The signed form itself is not stored | Yes |
 | Spending by program or project | An expense (or a QuickBooks class or location) names a program or project; the schema leaves room for it (see [0006](0006-programs-projects-and-shares.md)) | Likely |
 
 ## One activity log
