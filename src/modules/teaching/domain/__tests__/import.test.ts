@@ -221,6 +221,7 @@ describe('importStudents', () => {
   function harness(role: Role) {
     let state: TeachingState = makeSeed();
     let n = 0;
+    const refused: string[] = [];
     const dispatch = (action: AnyAction) => {
       state = teachingSlice.reducer(state, action);
     };
@@ -235,8 +236,9 @@ describe('importStudents', () => {
       teachingSlice.rules,
       getState,
       user,
+      m => refused.push(m),
     );
-    return { actions, students: () => state.students };
+    return { actions, refused, students: () => state.students };
   }
 
   it('adds every student in one change and says how many', () => {
@@ -293,6 +295,33 @@ describe('importStudents', () => {
       { status: 'not-given', date: SEED_TODAY, recordedById: 's-keisha' },
       { status: 'not-asked' },
     ]);
+  });
+
+  it('refuses an import carrying a release that is not sound, and adds nobody', () => {
+    const h = harness('office-manager');
+    const before = h.students().length;
+    const row = {
+      name: 'Ana Ruiz',
+      instrument: 'Sax',
+      yearsIn: 1,
+      guardianName: 'Rosa Ruiz',
+      programId: 'studio-sessions',
+      status: 'waitlist' as const,
+    };
+    expect(
+      h.actions.importStudents([
+        { ...row, photoRelease: { status: 'given' } },
+        { ...row, name: 'Bo Lin', photoRelease: { status: 'maybe' as never } },
+      ]),
+    ).toBeUndefined();
+    expect(
+      h.actions.importStudents([{ ...row, photoRelease: { status: 'given', date: 'Sept 12' } }]),
+    ).toBeUndefined();
+    expect(h.refused).toEqual([
+      'Pick Given, Not given or Not asked yet.',
+      'Pick the date the guardian answered.',
+    ]);
+    expect(h.students()).toHaveLength(before);
   });
 });
 

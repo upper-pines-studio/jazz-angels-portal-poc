@@ -408,7 +408,15 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     // Whoever may edit the student records the release; seeing it follows guardian contacts.
     setPhotoRelease: (user, _state, _id, release) =>
       can(user.role, 'students', 'edit') && (photoReleaseRefusal(release) ?? true),
-    importStudents: 'students',
+    // Each release is checked as Enroll checks one; one bad row refuses the import, saying why.
+    importStudents: (user, _state, inputs) => {
+      if (!can(user.role, 'students', 'edit')) return false;
+      for (const input of inputs) {
+        const problem = input.photoRelease && photoReleaseRefusal(input.photoRelease);
+        if (problem) return problem;
+      }
+      return true;
+    },
     // Whoever may edit the record may archive and restore it (decision 0002).
     archiveStudent: 'students',
     restoreStudent: 'students',

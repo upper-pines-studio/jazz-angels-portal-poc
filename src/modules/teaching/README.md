@@ -40,7 +40,8 @@ screen, `PHOTO_RELEASE_LABEL`). Given and Not given carry the date the guardian 
 staff id of whoever recorded it; Not asked yet carries neither. A new student starts on Not asked
 yet, and `normalise` loads a student saved before releases (or with an answer it does not know)
 as Not asked yet. Only Given lets a student be in photos: `hasNoPhotoRelease` is true for the
-other two. The release is guardian data: it reaches the same people as the guardian's name and
+other two. Setting a release back to Not asked yet clears the date and the
+recorder; who did it will belong in the activity log once there is one. The release is guardian data: it reaches the same people as the guardian's name and
 phone (`maySeePhotoRelease`), and `asSeenBy` leaves all three off the record for anyone else.
 
 Dates are ISO `YYYY-MM-DD`; times are 24-hour `HH:MM` and are read back through
@@ -95,12 +96,13 @@ plus the display helpers `timeLabel`, `timeRange` and `percent`.
 ## Importing a roster
 
 `import.ts` turns a roster CSV into rows to check: `parseStudentsCsv(text, { programs,
-ensembles, students })` matches columns by header in any order and case, lists the ones it
-ignores, and gives each row its problems in plain sentences, the closest program or ensemble
-where one is near, and the student each choice would add (`add`, `closest`, `waitlist`). The optional Photo release
-column (also "Photo consent" or "Photos") reads yes as Given and no as Not given, both dated the
-import day (`today` in the context); blank, or no column, is Not asked yet, and any other value is
-too, with a note on the row.
+ensembles, students, today })` matches columns by header in any order and case, lists the ones
+it ignores, and gives each row its problems in plain sentences, the closest program or ensemble
+where one is near, and the student each choice would add (`add`, `closest`, `waitlist`). The
+optional Photo release column (also "Photo consent" or "Photos") reads yes as Given and no as
+Not given, both dated the import day (`today`); blank, or no column, is Not asked yet, and any
+other value is too, with a note on the row. `importStudents` checks each release as Enroll does
+and refuses the whole import, saying why, if one is not sound.
 `studentsToImport(rows, choices)` is what Import hands `importStudents`;
 `studentsCsvTemplate` writes the blank template. `readCsv` and `writeCsv` are the small CSV
 reader and writer behind them.
