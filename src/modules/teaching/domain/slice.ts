@@ -8,7 +8,14 @@ import {
   normaliseArchived,
   restoreFields,
 } from '../../../core';
-import { ensembleRefusal, mayTakeRoll, termRefusal } from './derive';
+import {
+  ensembleRefusal,
+  mayTakeRoll,
+  normalisePhotoRelease,
+  photoReleaseFor,
+  photoReleaseRefusal,
+  termRefusal,
+} from './derive';
 import { makeEmpty, makeSeed } from './seed';
 import type {
   AttendanceRecord,
@@ -16,6 +23,7 @@ import type {
   Ensemble,
   EnsembleInput,
   Student,
+  StudentInput,
   TeachingActions,
   TeachingState,
   Term,
@@ -135,7 +143,9 @@ export function describeChange(action: TeachingAction): string | undefined {
             ? 'the roll call'
             : 'the class';
         case 'students':
-          return 'the student';
+          return action.type === 'update' && 'photoRelease' in action.patch
+            ? 'the photo release'
+            : 'the student';
         case 'ensembles':
           return 'the ensemble';
         case 'terms':
@@ -187,6 +197,12 @@ function createActions(
     patch: Partial<Collections[K]>,
   ): TeachingAction => ({ type: 'update', key, id, patch }) as TeachingAction;
   const meetingOf = (id: string) => getState().teaching.meetings.find(m => m.id === id);
+  /** A new student as saved: an id, and the photo release stamped with who recorded it. */
+  const newStudent = (input: StudentInput): Student => ({
+    ...input,
+    id: newId('st'),
+    photoRelease: photoReleaseFor(input.photoRelease, user.id, today),
+  });
 
   return {
     addMeeting(input) {
@@ -249,16 +265,23 @@ function createActions(
       send(update('meetings', meetingId, { rollSubmittedAt: undefined }));
     },
     enrollStudent(input) {
-      const id = newId('st');
-      send(insert('students', { ...input, id }));
-      return id;
+      const student = newStudent(input);
+      send(insert('students', student));
+      return student.id;
     },
     updateStudent(id, patch) {
-      send(update('students', id, patch));
+      // The photo release is recorded through setPhotoRelease, which says who recorded it.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { photoRelease, id: _id, ...rest } = patch as Partial<Student>;
+      send(update('students', id, rest));
+    },
+    setPhotoRelease(id, release) {
+      if (!getState().teaching.students.some(s => s.id === id)) return;
+      send(update('students', id, { photoRelease: photoReleaseFor(release, user.id, today) }));
     },
     importStudents(inputs) {
       if (inputs.length === 0) return 0;
-      const students = inputs.map(input => ({ ...input, id: newId('st') }));
+      const students = inputs.map(newStudent);
       send({ type: 'batch', actions: students.map(s => insert('students', s)) });
       return students.length;
     },
@@ -378,8 +401,13 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     submitRollCall: (user, state, meetingId) => mayTakeRoll(state, user, meetingId),
     reopenRollCall: (user, state, meetingId) => mayTakeRoll(state, user, meetingId),
     // The roster changes with "Students: Edit"; a teacher's "Own classes" is to see it.
-    enrollStudent: 'students',
+    enrollStudent: (user, _state, input) =>
+      can(user.role, 'students', 'edit') &&
+      ((input.photoRelease && photoReleaseRefusal(input.photoRelease)) || true),
     updateStudent: 'students',
+    // Whoever may edit the student records the release; seeing it follows guardian contacts.
+    setPhotoRelease: (user, _state, _id, release) =>
+      can(user.role, 'students', 'edit') && (photoReleaseRefusal(release) ?? true),
     importStudents: 'students',
     // Whoever may edit the record may archive and restore it (decision 0002).
     archiveStudent: 'students',
@@ -416,6 +444,8 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
         ...s,
         status: s.status ?? 'enrolled',
         yearsIn: s.yearsIn ?? 1,
+        // Saved before photo releases existed: Not asked yet.
+        photoRelease: normalisePhotoRelease(s.photoRelease),
       }),
     );
     const ensembles = (candidate.ensembles as Ensemble[]).map(e => normaliseArchived(withVenue(e)));

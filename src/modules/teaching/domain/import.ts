@@ -1,5 +1,5 @@
 import type { Program, ProgramId } from '../../../core';
-import type { Ensemble, Student, StudentStatus } from './types';
+import type { Ensemble, PhotoReleaseInput, Student, StudentInput, StudentStatus } from './types';
 
 /**
  * Bringing a term's roster in from a spreadsheet (decision 0004): a small CSV
@@ -96,7 +96,14 @@ export function writeCsv(rows: Array<Array<string | number | undefined>>): strin
 // ---------------------------------------------------------------------------
 
 type Column =
-  'name' | 'instrument' | 'yearsIn' | 'guardianName' | 'guardianPhone' | 'program' | 'ensemble';
+  | 'name'
+  | 'instrument'
+  | 'yearsIn'
+  | 'guardianName'
+  | 'guardianPhone'
+  | 'program'
+  | 'ensemble'
+  | 'photoRelease';
 
 /** The header row of the template, in order. */
 export const STUDENT_CSV_COLUMNS: Array<{ column: Column; header: string }> = [
@@ -107,6 +114,7 @@ export const STUDENT_CSV_COLUMNS: Array<{ column: Column; header: string }> = [
   { column: 'guardianPhone', header: 'Guardian phone' },
   { column: 'program', header: 'Program' },
   { column: 'ensemble', header: 'Ensemble' },
+  { column: 'photoRelease', header: 'Photo release' },
 ];
 
 /** Every header a column answers to, after `simplify`. */
@@ -118,6 +126,7 @@ const HEADER_NAMES: Record<Column, string[]> = {
   guardianPhone: ['guardian phone', 'phone'],
   program: ['program'],
   ensemble: ['ensemble'],
+  photoRelease: ['photo release', 'photo consent', 'photos'],
 };
 
 /** Lower case, punctuation to spaces, single spaces: "Big-Band!" and "big band" compare equal. */
@@ -192,12 +201,14 @@ export interface StudentImportContext {
   ensembles: Ensemble[];
   /** The students already in the portal, to flag a name that is there already. */
   students: Array<Pick<Student, 'name' | 'status'>>;
+  /** The import day, which a "yes" or "no" in the Photo release column is dated. */
+  today: string;
 }
 
 /** What the person can do with one row. */
 export type ImportChoice = 'add' | 'closest' | 'waitlist' | 'skip';
 
-export type NewStudent = Omit<Student, 'id'>;
+export type NewStudent = StudentInput;
 
 export interface ImportRow {
   /** The line of the file the row starts on; the header is line 1. */
@@ -208,6 +219,8 @@ export interface ImportRow {
   guardianName: string;
   /** Unset when blank, or when it did not look like a phone number. */
   guardianPhone?: string;
+  /** Given or Not given dated the import day for "yes" or "no"; Not asked yet otherwise. */
+  photoRelease: PhotoReleaseInput;
   /** The Program and Ensemble cells as written. */
   program: string;
   ensemble: string;
@@ -346,6 +359,18 @@ export function parseStudentsCsv(text: string, ctx: StudentImportContext): Stude
       else problems.push(`Phone "${phoneText}" looks wrong; it will be left off`);
     }
 
+    // Yes or no, in any case; blank is Not asked yet, and so is anything else, with a note.
+    const releaseText = get('photoRelease');
+    const releaseWord = simplify(releaseText);
+    const photoRelease: PhotoReleaseInput =
+      releaseWord === 'yes'
+        ? { status: 'given', date: ctx.today }
+        : releaseWord === 'no'
+          ? { status: 'not-given', date: ctx.today }
+          : { status: 'not-asked' };
+    if (releaseText && releaseWord !== 'yes' && releaseWord !== 'no')
+      problems.push(`Photo release "${releaseText}" is not yes or no; it will be Not asked yet`);
+
     if (name) {
       const key = simplify(name);
       const status = existing.get(key);
@@ -419,6 +444,7 @@ export function parseStudentsCsv(text: string, ctx: StudentImportContext): Stude
       programId: ensembleFor?.programId ?? programFor,
       ...(ensembleFor ? { ensembleId: ensembleFor.id } : {}),
       status: ensembleFor ? 'enrolled' : 'waitlist',
+      photoRelease,
     });
 
     const outcomes: ImportRow['outcomes'] = {};
@@ -454,6 +480,7 @@ export function parseStudentsCsv(text: string, ctx: StudentImportContext): Stude
       yearsIn,
       guardianName,
       ...(guardianPhone ? { guardianPhone } : {}),
+      photoRelease,
       program,
       ensemble,
       ...(programId ? { programId } : {}),
@@ -498,6 +525,7 @@ export function studentsCsvTemplate(ctx: Pick<StudentImportContext, 'programs' |
     guardianPhone: '(562) 555-0148',
     program: program?.name ?? '',
     ensemble: ensemble?.name ?? '',
+    photoRelease: 'yes',
   };
   return writeCsv([
     STUDENT_CSV_COLUMNS.map(c => c.header),

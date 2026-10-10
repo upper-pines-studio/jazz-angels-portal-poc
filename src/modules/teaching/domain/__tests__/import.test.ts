@@ -21,11 +21,15 @@ const ctx: StudentImportContext = {
   programs: core.programs,
   ensembles: teaching.ensembles,
   students: teaching.students,
+  today: SEED_TODAY,
 };
 const BIG_BAND = teaching.ensembles.find(e => e.name === 'Big Band')!;
 const EXISTING = teaching.students.find(s => s.status === 'enrolled')!;
 
-const HEADER = 'Name,Instrument,Years in,Guardian name,Guardian phone,Program,Ensemble';
+const HEADER =
+  'Name,Instrument,Years in,Guardian name,Guardian phone,Program,Ensemble,Photo release';
+/** The columns before Photo release, for the files written before it existed. */
+const OLD_HEADER = 'Name,Instrument,Years in,Guardian name,Guardian phone,Program,Ensemble';
 
 describe('readCsv', () => {
   it('reads quoted cells with commas, doubled quotes and line breaks, and CRLF', () => {
@@ -75,6 +79,7 @@ describe('parseStudentsCsv: headers', () => {
       programId: BIG_BAND.programId,
       ensembleId: BIG_BAND.id,
       status: 'enrolled',
+      photoRelease: { status: 'not-asked' },
     });
   });
 
@@ -202,6 +207,7 @@ describe('studentsCsvTemplate', () => {
       name: 'Maya Robinson',
       ensembleId: teaching.ensembles[0].id,
       status: 'enrolled',
+      photoRelease: { status: 'given', date: SEED_TODAY },
     });
   });
 
@@ -237,7 +243,7 @@ describe('importStudents', () => {
     const h = harness('office-manager');
     const before = h.students().length;
     const { rows } = parseStudentsCsv(
-      `${HEADER}\nAna Ruiz,Sax,1,Rosa Ruiz,,Studio Semester Sessions,Big Band\nBo Lin,Bass,1,Mei Lin,,Homeschool Program,`,
+      `${OLD_HEADER}\nAna Ruiz,Sax,1,Rosa Ruiz,,Studio Semester Sessions,Big Band\nBo Lin,Bass,1,Mei Lin,,Homeschool Program,`,
       ctx,
     );
     expect(h.actions.importStudents(studentsToImport(rows, {}))).toBe(2);
@@ -263,5 +269,73 @@ describe('importStudents', () => {
       ]),
     ).toBeUndefined();
     expect(h.students()).toHaveLength(before);
+  });
+
+  it('stamps who recorded a yes or a no, and leaves a blank on Not asked yet', () => {
+    const h = harness('office-manager');
+    const { rows } = parseStudentsCsv(
+      [
+        HEADER,
+        'Ana Ruiz,Sax,1,Rosa Ruiz,,Studio Semester Sessions,Big Band,yes',
+        'Bo Lin,Bass,1,Mei Lin,,Homeschool Program,,No',
+        'Cy Moss,Drums,1,Di Moss,,Homeschool Program,,',
+      ].join('\n'),
+      ctx,
+    );
+    h.actions.importStudents(studentsToImport(rows, {}));
+    expect(
+      h
+        .students()
+        .slice(-3)
+        .map(s => s.photoRelease),
+    ).toEqual([
+      { status: 'given', date: SEED_TODAY, recordedById: 's-keisha' },
+      { status: 'not-given', date: SEED_TODAY, recordedById: 's-keisha' },
+      { status: 'not-asked' },
+    ]);
+  });
+});
+
+describe('parseStudentsCsv: the Photo release column', () => {
+  const parse = (cell: string, header = HEADER) =>
+    parseStudentsCsv(
+      `${header}\nAna Ruiz,Sax,1,Rosa Ruiz,,Studio Semester Sessions,Big Band,${cell}`,
+      ctx,
+    ).rows[0];
+
+  it('reads yes as Given and no as Not given, dated the import day, in any case', () => {
+    expect(parse('yes').photoRelease).toEqual({ status: 'given', date: SEED_TODAY });
+    expect(parse(' YES ').outcomes.add?.photoRelease).toEqual({
+      status: 'given',
+      date: SEED_TODAY,
+    });
+    expect(parse('No').photoRelease).toEqual({ status: 'not-given', date: SEED_TODAY });
+    expect(parse('yes').problems).toEqual([]);
+  });
+
+  it('reads a blank, or no column at all, as Not asked yet', () => {
+    expect(parse('').photoRelease).toEqual({ status: 'not-asked' });
+    expect(parse('').problems).toEqual([]);
+    const old = parseStudentsCsv(
+      `${OLD_HEADER}\nAna Ruiz,Sax,1,Rosa Ruiz,,Studio Semester Sessions,Big Band`,
+      ctx,
+    ).rows[0];
+    expect(old.photoRelease).toEqual({ status: 'not-asked' });
+    expect(old.problems).toEqual([]);
+  });
+
+  it('imports any other answer as Not asked yet, with a note, and still adds the row', () => {
+    const row = parse('maybe');
+    expect(row.photoRelease).toEqual({ status: 'not-asked' });
+    expect(row.problems).toEqual([
+      'Photo release "maybe" is not yes or no; it will be Not asked yet',
+    ]);
+    expect(row.defaultChoice).toBe('add');
+  });
+
+  it('answers to "Photo consent" and "Photos" as well', () => {
+    const header = OLD_HEADER + ',Photo consent';
+    expect(parse('yes', header).photoRelease.status).toBe('given');
+    expect(parse('yes', OLD_HEADER + ',Photos').photoRelease.status).toBe('given');
   });
 });
