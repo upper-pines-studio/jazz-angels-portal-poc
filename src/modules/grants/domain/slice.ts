@@ -8,6 +8,7 @@ import { acceptableSuggestions, backupCarry, isReportOpen, splitByPercent } from
 import { inFlightRefusal } from './inflight';
 import {
   renewInputProblem,
+  renewalDates,
   renewalRefusal,
   renewalStartedText,
   renewalTemplateId,
@@ -797,7 +798,8 @@ function createActions(
         ownerId: input.ownerId,
         phase: 'prospect',
         loiRequired: last.loiRequired,
-        dates: { ...input.dates },
+        // Only the deadlines, the period and when to start: never a submitted or decided date.
+        dates: renewalDates(input.dates),
         createdAt: today,
         renewsGrantId: last.id,
       };

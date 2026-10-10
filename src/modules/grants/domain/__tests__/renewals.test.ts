@@ -3,14 +3,17 @@ import type { AnyAction } from '../../../../core/module';
 import { makeCoreSeed } from '../../../../core/seed';
 import { guardActions } from '../../../../core/store';
 import type { PortalState, Role, SignedInUser } from '../../../../core/types';
-import { ENTERED, phaseEnteredOn } from '../phases';
+import { ENTERED, isRenewalLine, phaseEnteredOn } from '../phases';
 import {
   funderGrantHistory,
   nextYearDates,
   nextYearTitle,
   renewalDraft,
+  renewalDates,
   renewalOf,
   renewalRefusal,
+  renewalStartedText,
+  renewedAsText,
   renewalTemplateId,
   renewedAs,
   withRenewalLinks,
@@ -79,6 +82,14 @@ describe('nextYearTitle', () => {
 
   it('moves every year in the title', () => {
     expect(nextYearTitle('2026 tour and 2027 showcase')).toBe('2027 tour and 2028 showcase');
+    expect(nextYearTitle('Spring 2026 residency, fall 2026 concerts')).toBe(
+      'Spring 2027 residency, fall 2027 concerts',
+    );
+  });
+
+  it('moves a fiscal year on its own', () => {
+    expect(nextYearTitle('FY26')).toBe('FY27');
+    expect(nextYearTitle('Operating support FY 26')).toBe('Operating support FY 27');
   });
 
   it('keeps a title with no year as it is', () => {
@@ -281,6 +292,87 @@ describe('renewGrant', () => {
     const rows = after.activity.filter(a => a.grantId === next.id);
     expect(phaseEnteredOn(next, 'prospect', rows)).toBe('2026-10-10');
     expect(phaseEnteredOn(next, 'applying', rows)).toBeUndefined();
+  });
+
+  it('never dates a phase from a renewal line, whatever the title says', () => {
+    const titles = [
+      'Withdrawn-youth fund 2026',
+      'Grant added support 2026',
+      'Start application fund 2026',
+      'Agreement signed series 2026',
+      'Award recorded fund 2026',
+      'Record award 2026',
+      'Mark submitted 2026',
+      'Start report 2026',
+      'Grant closed 2026',
+      'Record decline 2026',
+      'Start LOI 2026',
+    ];
+    const grant = {
+      createdAt: '2026-10-10',
+      dates: {},
+    };
+    for (const title of titles) {
+      const rows = [
+        { at: '2026-10-12T10:00:00.000Z', text: renewedAsText(nextYearTitle(title)) },
+        { at: '2026-10-12T10:00:00.001Z', text: renewalStartedText(title) },
+      ];
+      for (const row of rows) expect(isRenewalLine(row.text)).toBe(true);
+      for (const phase of Object.keys(ENTERED) as Array<keyof typeof ENTERED>) {
+        const day = phaseEnteredOn(grant, phase, rows);
+        // Only the fallbacks: Prospect from the day it was added, nothing else.
+        expect(day).toBe(phase === 'prospect' ? '2026-10-10' : undefined);
+      }
+    }
+  });
+
+  it('still reads a real phase line next to a renewal line', () => {
+    const rows = [
+      { at: '2026-10-12T10:00:00.000Z', text: renewedAsText('Withdrawn-youth fund 2027') },
+      { at: '2026-03-02T10:00:00.000Z', text: 'Withdraw — not a fit this year' },
+    ];
+    expect(phaseEnteredOn({ createdAt: '2026-01-01', dates: {} }, 'withdrawn', rows)).toBe(
+      '2026-03-02',
+    );
+  });
+
+  it('keeps only the dates a renewal may start with', () => {
+    const h = harness();
+    const id = h.actions.renewGrant(
+      input(h.portal(), HA, {
+        dates: {
+          applicationDue: '2027-04-30',
+          startBy: '2027-03-16',
+          submitted: '2027-04-28',
+          decided: '2027-07-06',
+          periodEnd: '',
+        },
+      }),
+    );
+    expect(h.grants().grants.find(g => g.id === id)!.dates).toEqual({
+      applicationDue: '2027-04-30',
+      startBy: '2027-03-16',
+    });
+    expect(
+      renewalDates({
+        loiDue: '2027-01-15',
+        applicationDue: '2027-04-30',
+        decisionExpected: '2027-06-30',
+        periodStart: '2027-07-01',
+        periodEnd: '2028-06-30',
+        startBy: '2027-03-16',
+        submitted: '2027-04-28',
+        decided: '2027-07-06',
+      }),
+    ).toEqual({
+      loiDue: '2027-01-15',
+      applicationDue: '2027-04-30',
+      decisionExpected: '2027-06-30',
+      periodStart: '2027-07-01',
+      periodEnd: '2028-06-30',
+      startBy: '2027-03-16',
+    });
+    expect(renewalDates(undefined)).toEqual({});
   });
 
   it('uses the default checklist when the renewal one has been deleted', () => {

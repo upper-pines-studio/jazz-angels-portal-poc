@@ -154,7 +154,9 @@ inFlight: {
 change (a `batch` of one `add-grant` and one activity insert, so one save):
 
 - a grant at `'prospect'` with last year's `funderId`, `restriction` and `loiRequired`, the
-  input's title, amount, dates, owner and programs, `createdAt: today` and
+  input's title, amount, owner and programs, the input's dates through `renewalDates` (only
+  `RENEWAL_DATE_KEYS`: LOI due, application due, expected decision, period start and end, start
+  working by; never submitted or decided), `createdAt: today` and
   `renewsGrantId: grantId`. No award, notes, submitted or decided date;
 - the checklist from `renewalTemplateId(templates)`: "Renewal (returning funder)", else Add
   grant's default, else the first template, else none; and the document register, `needed`;
@@ -162,7 +164,8 @@ change (a `batch` of one `add-grant` and one activity insert, so one save):
   `classId` (the QuickBooks class names last year's grant);
 - `renewalStartedText(last.title)`, "Started as the renewal of …", on the renewal, and
   `renewedAsText(next.title)`, "Renewed as …", on last year's grant, the renewal's a
-  millisecond later so it reads first. Neither matches a stepper `ENTERED` pattern.
+  millisecond later so it reads first. `phaseEnteredOn` skips both (`isRenewalLine` in
+  `phases.ts`), so a title such as "Withdrawn-youth fund 2026" never dates a phase.
 
 Nothing else is copied: no expenses, payments, reports, award terms, files, reminder plans,
 split rules or grant shares.

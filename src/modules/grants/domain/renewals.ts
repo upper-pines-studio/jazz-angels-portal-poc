@@ -4,7 +4,7 @@ import { programById, programName, staffById } from '../../../core/derive';
 import { toDate, toISO } from '../../../core/format';
 import type { PortalState, ProgramId } from '../../../core/types';
 import { grantsByFunder } from './derive';
-import { POST_AWARD_PHASES } from './phases';
+import { POST_AWARD_PHASES, RENEWAL_STARTED_PREFIX, RENEWED_AS_PREFIX } from './phases';
 import { DEFAULT_TEMPLATE_ID, RENEWAL_TEMPLATE_ID } from './templates';
 import type { ChecklistTemplate, Grant, GrantDates, Phase, RenewGrantInput } from './types';
 
@@ -171,14 +171,40 @@ export function renewalDraft(state: PortalState, grant: Grant): RenewalDraft {
   };
 }
 
-/** The activity row on the renewal. Not a phase change: the stepper reads none from it. */
+/**
+ * The activity row on the renewal. Not a phase change: the stepper skips it
+ * (`isRenewalLine`), whatever the title says.
+ */
 export function renewalStartedText(lastYearTitle: string): string {
-  return `Started as the renewal of ${lastYearTitle}`;
+  return `${RENEWAL_STARTED_PREFIX}${lastYearTitle}`;
 }
 
-/** The activity row on last year's grant. */
+/** The activity row on last year's grant. The stepper skips it too. */
 export function renewedAsText(nextYearTitle: string): string {
-  return `Renewed as ${nextYearTitle}`;
+  return `${RENEWED_AS_PREFIX}${nextYearTitle}`;
+}
+
+/** The grant dates a renewal may be given: the deadlines, the period and when to start. */
+export const RENEWAL_DATE_KEYS = [
+  'loiDue',
+  'applicationDue',
+  'decisionExpected',
+  'periodStart',
+  'periodEnd',
+  'startBy',
+] as const satisfies ReadonlyArray<keyof GrantDates>;
+
+/**
+ * Only the dates a renewal may start with, and only set ones. What happened
+ * last year (submitted, decided) never comes across, whatever a caller passes.
+ */
+export function renewalDates(dates: GrantDates | undefined): GrantDates {
+  const out: GrantDates = {};
+  for (const key of RENEWAL_DATE_KEYS) {
+    const value = dates?.[key];
+    if (typeof value === 'string' && value) out[key] = value;
+  }
+  return out;
 }
 
 /** One row of a funder's grant history. */
