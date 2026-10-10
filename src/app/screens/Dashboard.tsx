@@ -9,10 +9,13 @@ import { can, dateShort, fiscalYear, meetsAny, toDate, useStore } from '../../co
 import type { AttentionItem, StatSpec } from '../../core';
 import { MODULES } from '../../modules';
 import { mayOpen } from '../access';
+import { officeDocumentAttention } from './documents/status';
 
 /**
  * The dashboard is composed, not written: every enabled module contributes its
- * stats, its attention rows and its panels. Core only arranges them.
+ * stats, its attention rows and its panels, and core arranges them. Core's one
+ * contribution of its own is the office's documents that are out of date or
+ * expire soon (decision 0005), added here for the roles that may open them.
  */
 
 /** Overdue first, then by date, then by what it is. */
@@ -39,8 +42,11 @@ export default function Dashboard() {
   const stats: StatSpec[] = enabled
     .flatMap(m => m.dashboard?.stats?.(state, today) ?? [])
     .filter(visible);
-  const attention = enabled
-    .flatMap(m => m.dashboard?.attention?.(state, today) ?? [])
+  const mayDocuments = can(user.role, 'office-documents');
+  const attention = [
+    ...enabled.flatMap(m => m.dashboard?.attention?.(state, today) ?? []),
+    ...(mayDocuments ? officeDocumentAttention(state, today) : []),
+  ]
     .filter(visible)
     .sort(byUrgency);
   const panels = enabled
@@ -106,7 +112,7 @@ export default function Dashboard() {
         <Card
           title="Attention"
           subtitle={
-            spare ? `${spare.label}: ${spare.value}` : 'Overdue and due in the next 14 days'
+            spare ? `${spare.label}: ${spare.value}` : 'Overdue first, then what is coming up'
           }
           padding="0"
         >
@@ -114,7 +120,12 @@ export default function Dashboard() {
             <EmptyState
               icon={<Icon name="check" size={22} />}
               title="Nothing needs attention"
-              message="Deadlines, reports, roll calls and hours waiting for approval show up here when they are overdue or due in the next 14 days."
+              message={
+                'Deadlines, reports, roll calls and hours waiting for approval show up here when they are overdue or due in the next 14 days.' +
+                (mayDocuments
+                  ? ' So do office documents that are out of date or expire within 30 days.'
+                  : '')
+              }
             />
           ) : (
             <TableScroll minWidth={680}>
@@ -160,7 +171,9 @@ export default function Dashboard() {
                     key: 'status',
                     label: 'Status',
                     width: '110px',
-                    render: (d: AttentionItem) => <AttentionStatusBadge status={d.status} />,
+                    render: (d: AttentionItem) => (
+                      <AttentionStatusBadge status={d.status} label={d.statusLabel} />
+                    ),
                   },
                 ]}
               />

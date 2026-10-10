@@ -15,6 +15,9 @@ export const CORE_REQUIRES: Array<Pick<ModuleRoute, 'path' | 'requires'>> = [
   { path: '/programs', requires: { subject: 'program-budgets' } },
   { path: '/programs/:id', requires: { subject: 'program-budgets' } },
   { path: '/programs/projects/:projectId', requires: { subject: 'program-budgets' } },
+  // The office's documents (decision 0005): "Office documents", everyone but a Teacher.
+  { path: '/documents', requires: { subject: 'office-documents' } },
+  { path: '/documents/:id', requires: { subject: 'office-documents' } },
   { path: '/partners', requires: { subject: 'partners' } },
   { path: '/partners/organizations/:id', requires: { subject: 'partners' } },
   { path: '/partners/venues/:id', requires: { subject: 'partners' } },

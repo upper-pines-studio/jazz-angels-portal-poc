@@ -5,11 +5,20 @@ import type { AttentionItem } from '../../core';
 
 /** The small pieces every module's screens share. Module-specific badges live in the module. */
 
-/** Overdue / Due soon / a note. Gold is rationed to attention states. */
-export function AttentionStatusBadge({ status }: { status: AttentionItem['status'] }) {
-  if (status === 'overdue') return <Badge tone="danger">Overdue</Badge>;
-  if (status === 'due-soon') return <Badge tone="gold">Due soon</Badge>;
-  return <Badge tone="neutral">Note</Badge>;
+/**
+ * Overdue / Due soon / a note, or the row's own words for them ("Out of date",
+ * "Expires soon"). Gold is rationed to attention states.
+ */
+export function AttentionStatusBadge({
+  status,
+  label,
+}: {
+  status: AttentionItem['status'];
+  label?: string;
+}) {
+  if (status === 'overdue') return <Badge tone="danger">{label ?? 'Overdue'}</Badge>;
+  if (status === 'due-soon') return <Badge tone="gold">{label ?? 'Due soon'}</Badge>;
+  return <Badge tone="neutral">{label ?? 'Note'}</Badge>;
 }
 
 /** Which module a dashboard row came from. */

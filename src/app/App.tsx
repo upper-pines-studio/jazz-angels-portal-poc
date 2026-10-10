@@ -11,6 +11,7 @@ import Dashboard from './screens/Dashboard';
 import Login from './screens/Login';
 import NoAccess from './screens/NoAccess';
 import Settings from './screens/Settings';
+import Documents from './screens/documents/Documents';
 import Programs from './screens/programs/Programs';
 import Partners from './screens/partners/Partners';
 import OrganizationDetail from './screens/partners/OrganizationDetail';
@@ -56,6 +57,8 @@ const CORE_ELEMENTS: Record<string, React.ReactElement> = {
   '/programs': <Programs />,
   '/programs/:id': <Programs />,
   '/programs/projects/:projectId': <Programs />,
+  '/documents': <Documents />,
+  '/documents/:id': <Documents />,
   '/partners': <Partners />,
   '/partners/organizations/:id': <OrganizationDetail />,
   '/partners/venues/:id': <VenueDetail />,

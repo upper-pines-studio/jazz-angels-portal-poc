@@ -42,7 +42,7 @@ interface RailItem {
  * The rail: Overview first, then every enabled module's section in registry
  * order (sections with the same name merge), then core's own screens, so they
  * stay whichever modules are on: Programs in Operations right after Grants, and
- * Partners and Settings at the end of Office.
+ * Documents, Partners and Settings at the end of Office.
  *
  * An item the role may not open is left out (an item's own `requires`, else
  * its route's), and a section left with nothing in it goes too.
@@ -94,6 +94,12 @@ function buildNav(state: PortalState, today: string, user: SignedInUser): RailIt
   }
 
   const office = sectionFor('Office');
+  if (mayOpen(user, '/documents', state))
+    office.items.push({
+      id: '/documents',
+      label: 'Documents',
+      icon: <Icon name="file-text" size={16} />,
+    });
   if (mayOpen(user, '/partners', state))
     office.items.push({
       id: '/partners',
