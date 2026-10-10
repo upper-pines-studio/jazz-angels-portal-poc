@@ -17,9 +17,7 @@
 }
 
 @media (max-width: 640px) {
-  .ja-grant-steps {
-    gap: var(--space-2);
-  }
+  .ja-grant-steps { gap: var(--space-2); }
 }
 
 /* A budget line in the in-flight path: category, approved amount, remove. */
@@ -31,7 +29,5 @@
 }
 
 @media (max-width: 640px) {
-  .ja-inflight-line {
-    grid-template-columns: minmax(0, 1fr) 110px 14px;
-  }
+  .ja-inflight-line { grid-template-columns: minmax(0, 1fr) 110px 14px; }
 }

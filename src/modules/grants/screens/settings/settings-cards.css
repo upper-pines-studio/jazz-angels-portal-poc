@@ -15,9 +15,7 @@
   text-transform: uppercase;
   color: var(--text-muted);
 }
-.ja-qb-accounts__row + .ja-qb-accounts__head {
-  border-top: var(--border-width) solid var(--border-subtle);
-}
+.ja-qb-accounts__row + .ja-qb-accounts__head { border-top: var(--border-width) solid var(--border-subtle); }
 .ja-qb-accounts__row {
   display: grid;
   grid-template-columns: 48px minmax(120px, 0.8fr) minmax(0, 1.6fr);
@@ -27,56 +25,30 @@
   font: var(--type-body-sm);
   font-size: var(--text-xs);
 }
-.ja-qb-accounts__row + .ja-qb-accounts__row {
-  border-top: var(--border-width) solid var(--border-subtle);
-}
-.ja-qb-accounts__code {
-  font: var(--type-numeric);
-  font-size: var(--text-xs);
-  color: var(--text-strong);
-  display: inline-flex;
-  color: var(--text-muted);
-}
-.ja-qb-accounts__name {
-  color: var(--text-strong);
-}
-.ja-qb-accounts__used {
-  color: var(--text-muted);
-}
+.ja-qb-accounts__row + .ja-qb-accounts__row { border-top: var(--border-width) solid var(--border-subtle); }
+.ja-qb-accounts__code { font: var(--type-numeric); font-size: var(--text-xs); color: var(--text-strong); display: inline-flex; color: var(--text-muted); }
+.ja-qb-accounts__name { color: var(--text-strong); }
+.ja-qb-accounts__used { color: var(--text-muted); }
 @media (max-width: 640px) {
-  .ja-qb-accounts__row {
-    grid-template-columns: 48px minmax(0, 1fr);
-  }
-  .ja-qb-accounts__used {
-    grid-column: 2;
-  }
+  .ja-qb-accounts__row { grid-template-columns: 48px minmax(0, 1fr); }
+  .ja-qb-accounts__used { grid-column: 2; }
 }
 
 /* The inline "Disconnect QuickBooks?" band. */
 .ja-qb-confirm {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  flex-wrap: wrap;
+  display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-sm);
   background: var(--danger-50);
   font: var(--type-body-sm);
   color: var(--text-body);
 }
-.ja-qb-confirm p {
-  flex: 1 1 260px;
-}
+.ja-qb-confirm p { flex: 1 1 260px; }
 
 /* Reports that have their own reminder plan. */
 .ja-rm-own {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
+  display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
   padding: 10px 0;
   font: var(--type-body-sm);
 }
-.ja-rm-own + .ja-rm-own {
-  border-top: var(--border-width) solid var(--border-subtle);
-}
+.ja-rm-own + .ja-rm-own { border-top: var(--border-width) solid var(--border-subtle); }

@@ -22,9 +22,7 @@
   text-transform: uppercase;
   color: var(--text-muted);
 }
-.ja-cal-weekday__short {
-  display: none;
-}
+.ja-cal-weekday__short { display: none; }
 
 .ja-cal-cell {
   min-height: 110px;
@@ -65,12 +63,8 @@
     padding: var(--space-2) 0;
     text-align: center;
   }
-  .ja-cal-weekday__full {
-    display: none;
-  }
-  .ja-cal-weekday__short {
-    display: inline;
-  }
+  .ja-cal-weekday__full { display: none; }
+  .ja-cal-weekday__short { display: inline; }
 
   .ja-cal-cell {
     min-height: 64px;
@@ -84,16 +78,12 @@
     border-left-width: 0;
     background: var(--chip-color);
   }
-  .ja-cal-chip__text {
-    display: none;
-  }
+  .ja-cal-chip__text { display: none; }
 
   .ja-cal-more {
     padding-left: 0;
     text-align: center;
     font-size: var(--text-3xs);
   }
-  .ja-cal-more__word {
-    display: none;
-  }
+  .ja-cal-more__word { display: none; }
 }
