@@ -1,3 +1,4 @@
+import React from 'react';
 import { Field, Input, RadioGroup } from '../../../../design-system';
 import { PHOTO_RELEASE_LABEL, PHOTO_RELEASE_STATUSES } from '../../domain';
 import type { PhotoReleaseInput, PhotoReleaseStatus } from '../../domain';
@@ -9,12 +10,15 @@ import type { PhotoReleaseInput, PhotoReleaseStatus } from '../../domain';
  * takes the signed-in person.
  */
 export default function PhotoReleaseFields({
+  label = 'Photo release',
   value,
   onChange,
   today,
   error,
   hint,
 }: {
+  /** The radios' label; the student's card, already titled Photo release, asks for the answer. */
+  label?: string;
   value: PhotoReleaseInput;
   onChange: (next: PhotoReleaseInput) => void;
   today: string;
@@ -23,11 +27,13 @@ export default function PhotoReleaseFields({
   hint?: string;
 }) {
   const answered = value.status !== 'not-asked';
+  // Enroll can open over the student's card, so each group of radios gets its own name.
+  const name = React.useId();
   return (
     <>
-      <Field label="Photo release" hint={hint}>
+      <Field label={label} hint={hint}>
         <RadioGroup
-          name="photo-release"
+          name={name}
           direction="row"
           value={value.status}
           onChange={status =>

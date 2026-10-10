@@ -265,8 +265,8 @@ function Roster() {
                   onChange={e => setReleaseFilter(e.target.value)}
                   aria-label="Photo release"
                   options={[
-                    { value: ALL, label: 'All photo releases' },
-                    { value: NO_RELEASE, label: `No photo release (${withoutRelease})` },
+                    { value: ALL, label: 'All releases' },
+                    { value: NO_RELEASE, label: `No release (${withoutRelease})` },
                   ]}
                   style={{ width: '100%' }}
                 />
@@ -673,6 +673,7 @@ function PhotoReleaseCard({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <PhotoReleaseFields
+          label="Guardian's answer"
           value={draft}
           onChange={setDraft}
           today={today}
@@ -689,7 +690,7 @@ function PhotoReleaseCard({
           <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
             {release.status !== 'not-asked' && recorder
               ? `Recorded by ${recorder.name}`
-              : 'Nobody has recorded an answer yet.'}
+              : 'No answer recorded yet.'}
           </span>
           <Button variant="primary" size="sm" disabled={!changed} onClick={save}>
             Save release
