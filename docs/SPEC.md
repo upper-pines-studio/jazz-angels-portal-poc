@@ -84,9 +84,12 @@ interface Task {           // checklist item on a grant, usually created from a 
 
 interface Document {       // register of the files that live in the grant folder
   id: string; grantId: string; name: string;
-  kind: 'narrative'|'budget'|'irs-letter'|'board-list'|'financials'|'award-letter'|'agreement'|'report'|'other';
+  kind: 'narrative'|'budget'|'irs-letter'|'board-list'|'financials'
+      |'insurance-certificate'|'w9'|'organization-budget'   // 'budget' is the grant's own project budget
+      |'award-letter'|'agreement'|'report'|'other';
   status: 'needed'|'drafting'|'final'|'submitted';
   url?: string;            // link to Drive/Dropbox; the POC does not upload files
+  officeDocumentId?: string; // uses the office's copy instead (#68); the version shown is worked out
   updatedAt: string;
 }
 
@@ -340,7 +343,7 @@ Footer shows the signed-in person (Barry Cogert, Program Director).
 ### 4.3 Add grant (onboarding)  dialog over `/grants`, 3 steps
 1. **Funder & program** — funder (Select of existing + "New funder…" that reveals name/type/contact fields), grant title, Jazz Angels program, restriction, owner.
 2. **Amount & dates** — amount requested, LOI required (Switch) → LOI due, application due, expected decision, grant period start/end, "Start working by" (defaults to 45 days before application due).
-3. **Checklist** — pick a template (default "Foundation grant — standard"); preview the tasks with computed due dates; uncheck any that don't apply. "Create grant" creates the grant in `prospect` (or `loi`/`applying` if the user says they've already started) plus the tasks and the standard document register (narrative, budget, IRS letter, board list, financials as `needed`).
+3. **Checklist** — pick a template (default "Foundation grant — standard"); preview the tasks with computed due dates; uncheck any that don't apply. "Create grant" creates the grant in `prospect` (or `loi`/`applying` if the user says they've already started) plus the tasks and the standard document register (narrative, budget, IRS letter, board list, financials as `needed`; the last three use the office's documents of those kinds when there are any, #68).
 
 **A grant already under way** (decision 0004, #21). Step 1 offers "This grant is already under way" to the roles that may edit the award, with "Where it is now": Awarded, Active or Reporting. The dialog then has five steps: **Funder & program**; **Award & dates** (amount awarded, required; amount requested, date awarded, grant period; and, before the award, the LOI switch with LOI due, application due and submitted on, any of them blank); **Budget** (category and approved amount per line); **Payments & reports** (each installment with its expected and received dates; each report with its kind, due date, status and submitted date); **Checklist** (only the tasks for the starting phase and later; ones already past due read "Was due …"). "Bring in grant" writes it all in one change, with the document register as `submitted` and one activity row, "Brought into the portal at Active".
 
@@ -686,11 +689,32 @@ Two lists:
   pre-award: "…such as the final proposal or a letter from the funder…".
 - **Application register**: the DataTable of what each application needs (name, kind, status Badge,
   updated, link icon), "Add document", row click edits (with Delete). Its rows link out to Drive or
-  Dropbox; it does not hold files. The IRS letter, board list and financials are also kept once
-  for the office, with versions and expiry, on Office › Documents (core, decision 0005,
-  `docs/PLATFORM.md` 2.4); a register row does not point at them yet (#68). Empty: "No documents
-  listed yet. The narrative, budget, IRS letter and the rest of what an application needs show up
-  here…" with "Add document".
+  Dropbox; it does not hold files. Empty: "No documents listed yet. The narrative, budget, IRS
+  letter and the rest of what an application needs show up here…" with "Add document".
+- **The organization's copy** (#68). The IRS letter, financials, board list, insurance
+  certificate, W-9 and organization budget are also kept once for the office, with versions and
+  expiry, on Office › Documents (core, decision 0005, `docs/PLATFORM.md` 2.4). A register row may
+  use one instead of a link of its own (`officeDocumentId`):
+  - The row's dialog offers "Use the organization's" when Office › Documents keeps a current
+    document of the row's kind, or any document on Other ("Office › Documents keeps the
+    organization's <name>, with its versions."). Linked, the Link field gives way to
+    "Organization's copy" (a picker of those documents) with "Use its own link"; the row's own
+    link is kept, hidden, for when it is unlinked. With no office documents nothing is offered.
+  - A linked row keeps its own status (needed to submitted). Under its name: the office
+    document's name, linking to it, and the version it shows. Which version is worked out, never
+    stored: the current one until the grant has a submitted date ("Current version, added Jul 15,
+    2026"), then the newest added on or before that date ("Added Nov 18, 2024 · went in on Mar 10,
+    2025", with "Older version" when a newer one was added since; "No version on file when it
+    went in on …" when none had been). A grant with no submitted date shows the current version.
+  - Warnings: before submission, Expires soon or Out of date against today; after, only "Out of
+    date when submitted" when the version had already expired that day. A document archived since
+    still shows, marked Archived.
+  - A new grant's register (Add grant, a grant brought in, and a renewal) links its IRS letter,
+    board list and financials rows to the first current office document of each kind; a grant
+    brought in with a submitted date only where a version was on file by then. Saved rows load
+    unlinked. The demo links the seeded rows where the version that went in is on file: LA County
+    (submitted Mar 2025) shows last year's financials, and the Port of Long Beach lists the
+    insurance certificate, expiring soon.
 
 ### 4.11 Transactions  `/transactions`
 What QuickBooks sent, and where each one belongs. The bookkeeper works the To assign tab down to

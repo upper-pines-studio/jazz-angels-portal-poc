@@ -13,5 +13,6 @@ export * from './money';
 export * from './shares';
 export * from './seed';
 export * from './inflight';
+export * from './officeDocuments';
 export * from './renewals';
 export * from './slice';

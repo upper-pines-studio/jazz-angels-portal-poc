@@ -17,7 +17,7 @@ and the feature is built later.
 | Restricted and unrestricted money | How money is grouped into funds or classes | |
 | Deliverables | A targets table tied to the grant and its award terms | |
 | Renewals | A grant points at last year's grant; see [Renewals](#renewals) | Yes: an optional link from a grant to the grant it renews |
-| Organization documents | Versioned files with expiry dates that grants point at; shapes file storage | **Yes** (#66): an office documents table (kind, name, archive fields), a versions table (the document, the file's name, format, size and pages, added on and by, expires; rows only ever added), file contents in storage keyed by version, and a grant's register row linking to a version (#68) |
+| Organization documents | Versioned files with expiry dates that grants point at; shapes file storage | **Yes** (#66): an office documents table (kind, name, archive fields), a versions table (the document, the file's name, format, size and pages, added on and by, expires; rows only ever added), file contents in storage keyed by version, and a grant's register row linking to a document, the version it sent read from the grant's submitted date (#68) |
 | Funder contact log, calendar and email | One activity log across every module, or one per module; see [One activity log](#one-activity-log) | Likely: one activity log in core for every module |
 | Photo releases | Guardian consent stored with the student; part of protecting student data. Built (#65): three columns on the student, `photo_release` (Given, Not given, Not asked yet), the date it was given or refused, and the staff member who recorded it, under the same row-level protection as the guardian's name and phone (decision [0001](0001-roles-and-permissions.md)). The signed form itself is not stored | Yes |
 | Spending by program or project | An expense (or a QuickBooks class or location) names a program or project; the schema leaves room for it (see [0006](0006-programs-projects-and-shares.md)) | Likely |
@@ -77,8 +77,10 @@ each with versions and an optional expiry. Built in the browser on Office › Do
   [0001](0001-roles-and-permissions.md)).
 - What the schema does: a documents table and a versions table, the version rows only ever
   inserted; the file contents in storage, keyed by the version's id, which the browser build does
-  not store (a known gap); and a grant's register row pointing at a document, read as the version
-  current at the grant's submitted date (`currentVersion(doc, on)`), which is #68.
+  not store (a known gap); and a grant's register row pointing at a document (#68), read as the
+  version current at the grant's submitted date (`currentVersion(doc, on)`). The register row
+  stores the document, not the version: the version is worked out, so a grant not yet submitted
+  follows each new version and one submitted keeps what went in, with nothing to update.
 - A save from before office documents loads with none, demo or not, as budgets did (decision
   [0006](0006-programs-projects-and-shares.md)); Reset demo data seeds the six.
 

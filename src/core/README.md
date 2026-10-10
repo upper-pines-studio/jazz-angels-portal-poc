@@ -197,7 +197,9 @@ See `src/modules/README.md` for how to add a module.
 The papers every funder asks for, kept once for the office (decision 0005, #66). In code they
 are "office documents", never "organization documents": an `Organization` is a partner. They
 live in `state.core.officeDocuments`; each `OfficeDocument` holds its versions, in the order they
-were added, and every document and version has a stable id, so a grant can point at one (#68).
+were added, and every document and version has a stable id, so a grant can point at one. A
+grant's register row points at a document, and the grants module works out the version it shows
+from the grant's submitted date (`linkedOfficeDocument`, #68).
 
 | Export | What it does |
 | --- | --- |

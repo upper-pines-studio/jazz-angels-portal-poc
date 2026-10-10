@@ -377,7 +377,8 @@ awaiting approval" as `info` when > 0; no panel.
   kind, name (the kind's name until typed over), the file and Expires (blank means never); Add
   version the file and Expires. The dashboard adds Out of date and Expires soon rows (source
   Office, dated by the expiry, the status Badge in the document's words). Who: "Office documents"
-  in decision 0001; a Teacher does not see it.
+  in decision 0001; a Teacher does not see it. A grant's register rows may use these documents
+  (#68, `docs/SPEC.md` 4.10.5): the grants module reads them through core's public derives.
 - **Partners** `/partners` — Core, because ensembles and meetings point at venues by id. Two
   tables: Venues (name, kind, organization, address, on-site contact; sorted by organization then
   name) and Organizations (name, kind, contact, its venues). Top-bar buttons Add organization and

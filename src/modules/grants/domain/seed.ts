@@ -1,6 +1,7 @@
 import { OPERATIONS_ID } from '../../../core/derive';
-import { SEED_PROJECT_IDS, SEED_TODAY } from '../../../core/seed';
+import { SEED_PROJECT_IDS, SEED_TODAY, makeCoreSeed } from '../../../core/seed';
 import type { FundingTarget } from '../../../core/types';
+import { versionShown } from './officeDocuments';
 import { PHASE_ORDER } from './phases';
 import { DEFAULT_TEMPLATE_ID, defaultTemplates, instantiateTemplate } from './templates';
 import {
@@ -18,6 +19,7 @@ import type {
   Expense,
   Funder,
   Grant,
+  DocumentKind,
   GrantDocument,
   GrantShare,
   GrantsState,
@@ -424,17 +426,48 @@ function registerKeyFor(grant: Grant): keyof typeof REGISTER_FOR_PHASE {
   }
 }
 
+/** Rows a grant lists beyond its phase's: the Port asks for the insurance certificate. */
+const EXTRA_ROWS: Record<string, DocSeed[]> = {
+  'g-port-of-long-beach-2026': [['Certificate of insurance', 'insurance-certificate', 'final']],
+};
+
+/** The office's documents a seeded row uses (#68), by the row's kind: core's seeded ids. */
+const OFFICE_DOCUMENT_FOR: Partial<Record<DocumentKind, string>> = {
+  'irs-letter': 'doc-irs-letter',
+  'board-list': 'doc-board-list',
+  financials: 'doc-financials',
+  'insurance-certificate': 'doc-insurance',
+};
+
+/**
+ * The office document a seeded row uses: the one of its kind, when a version
+ * of it was on file by the grant's submitted date. So the Wells Fargo grant,
+ * submitted before any of them was added, keeps rows of its own, and the LA
+ * County grant (Mar 2025) uses only the financials, showing last year's.
+ */
+const SEEDED_OFFICE_DOCUMENTS = makeCoreSeed().officeDocuments;
+
+function seededLink(grant: Grant, kind: DocumentKind): string | undefined {
+  const doc = SEEDED_OFFICE_DOCUMENTS.find(d => d.id === OFFICE_DOCUMENT_FOR[kind]);
+  if (!doc) return undefined;
+  return versionShown(doc, grant) ? doc.id : undefined;
+}
+
 function seedDocuments(grant: Grant): GrantDocument[] {
-  const rows = REGISTER_FOR_PHASE[registerKeyFor(grant)];
+  const rows = [...REGISTER_FOR_PHASE[registerKeyFor(grant)], ...(EXTRA_ROWS[grant.id] ?? [])];
   const updatedAt = grant.dates.decided ?? grant.dates.submitted ?? grant.createdAt;
-  return rows.map((row, index) => ({
-    id: `${grant.id}-d${index + 1}`,
-    grantId: grant.id,
-    name: row[0],
-    kind: row[1],
-    status: row[2],
-    updatedAt,
-  }));
+  return rows.map((row, index) => {
+    const officeDocumentId = seededLink(grant, row[1]);
+    return {
+      id: `${grant.id}-d${index + 1}`,
+      grantId: grant.id,
+      name: row[0],
+      kind: row[1],
+      status: row[2],
+      ...(officeDocumentId ? { officeDocumentId } : {}),
+      updatedAt,
+    };
+  });
 }
 
 // --- Money ------------------------------------------------------------------

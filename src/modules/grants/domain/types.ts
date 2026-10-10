@@ -166,12 +166,20 @@ export interface Task {
   order: number;
 }
 
+/**
+ * What a register row is. `budget` is the grant's own project budget; the
+ * organization's budget is `organization-budget`, one of the six kinds the
+ * office also keeps once (`OfficeDocumentKind` in core, the same ids).
+ */
 export type DocumentKind =
   | 'narrative'
   | 'budget'
   | 'irs-letter'
   | 'board-list'
   | 'financials'
+  | 'insurance-certificate'
+  | 'w9'
+  | 'organization-budget'
   | 'award-letter'
   | 'agreement'
   | 'report'
@@ -189,8 +197,15 @@ export interface GrantDocument {
   name: string;
   kind: DocumentKind;
   status: DocumentStatus;
-  /** Link to Drive/Dropbox; the POC does not upload files. */
+  /** Link to Drive/Dropbox; the POC does not upload files. Hidden while the row uses an office document. */
   url?: string;
+  /**
+   * The office document this row uses instead of a file of its own (#68). The
+   * version it shows is worked out, not stored: the current one until the
+   * grant has a submitted date, then the one current on that day
+   * (`linkedOfficeDocument`). The row keeps its own status.
+   */
+  officeDocumentId?: string;
   updatedAt: string;
 }
 

@@ -11,7 +11,7 @@ its Known gaps section, not here.
 
 1. **Reusable application text.** Saves time on every application, stands alone, and needs no
    backend. Organization documents, the other half of this step, are built (#66, Office ›
-   Documents in `docs/FEATURES.md`); pointing a grant's register at them is #68.
+   Documents in `docs/FEATURES.md`), and a grant's register uses them (#68).
 2. **Deliverables tracking.** Turns the program numbers already on the Reports tab into "are we
    keeping our promises", and leads straight into report drafting.
 3. **Charging staff pay to grants from timesheets.** The most valuable link between modules, but

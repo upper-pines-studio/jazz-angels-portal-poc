@@ -282,16 +282,25 @@ export const DEFAULT_DOCUMENT_REGISTER: Array<{ name: string; kind: DocumentKind
   { name: 'Financial statements', kind: 'financials' },
 ];
 
+/**
+ * `officeDocumentLinks` names, by kind, the office document a row uses
+ * instead of a file of its own (#68; `newRegisterLinks` works them out).
+ */
 export function instantiateDocumentRegister(
   grantId: string,
   updatedAt: string,
   status: DocumentStatus = 'needed',
+  officeDocumentLinks: Partial<Record<DocumentKind, string>> = {},
 ): Array<Omit<GrantDocument, 'id'>> {
-  return DEFAULT_DOCUMENT_REGISTER.map(doc => ({
-    grantId,
-    name: doc.name,
-    kind: doc.kind,
-    status,
-    updatedAt,
-  }));
+  return DEFAULT_DOCUMENT_REGISTER.map(doc => {
+    const officeDocumentId = officeDocumentLinks[doc.kind];
+    return {
+      grantId,
+      name: doc.name,
+      kind: doc.kind,
+      status,
+      ...(officeDocumentId ? { officeDocumentId } : {}),
+      updatedAt,
+    };
+  });
 }

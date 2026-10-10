@@ -122,7 +122,7 @@ describe('status', () => {
 });
 
 describe('the demo and a new office', () => {
-  it('seeds the six documents, one expiring soon and one with an older version', () => {
+  it('seeds the six documents, one expiring soon and two with an older version', () => {
     const state = stateOf(makeCoreSeed());
     const docs = officeDocumentsList(state);
     expect(docs.map(d => d.kind)).toEqual([
@@ -141,7 +141,10 @@ describe('the demo and a new office', () => {
       'current',
       'current',
     ]);
-    expect(docs.filter(d => d.versions.length > 1).map(d => d.kind)).toEqual(['financials']);
+    expect(docs.filter(d => d.versions.length > 1).map(d => d.kind)).toEqual([
+      'financials',
+      'board-list',
+    ]);
     // Every seeded version names someone on the staff.
     const staff = new Set(state.core.staff.map(s => s.id));
     for (const d of docs) for (const v of d.versions) expect(staff.has(v.addedById)).toBe(true);
