@@ -25,6 +25,7 @@ export type Subject =
   | 'timesheets-log'
   | 'timesheets-approve'
   | 'partners'
+  | 'office-documents'
   | 'staff'
   | 'programs'
   | 'modules'
@@ -57,6 +58,7 @@ export const PERMISSION_TABLE: ReadonlyArray<readonly [Subject, string, Row]> = 
   ['timesheets-log',     'Timesheets: log hours',                  ['Own',  'Own',   'Own',   'Own',   'Own',         'Own',   '–']],
   ['timesheets-approve', 'Timesheets: approve',                    ['Yes',  'Yes',   'Yes',   'Yes',   '–',           '–',     '–']],
   ['partners',           'Partners and venues',                    ['Edit', 'Edit',  'Edit',  'View',  'View',        'View',  'View']],
+  ['office-documents',   'Office documents',                       ['Edit', 'Edit',  'Edit',  'Edit',  '–',           'View',  'View']],
   ['staff',              'Staff and roles',                        ['Yes',  'Yes',   '–',     '–',     '–',           '–',     '–']],
   ['programs',           'Programs: add, rename, archive',         ['Yes',  'Yes',   '–',     '–',     '–',           '–',     '–']],
   ['modules',            'Modules, import, export',                ['Yes',  '–',     '–',     '–',     '–',           '–',     '–']],
