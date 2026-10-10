@@ -101,3 +101,11 @@ director's role and gets a teacher's view of their own classes on top.
   (`leadsEnsemble` and `mayTakeRoll` in `modules/teaching/domain/derive.ts`). Guardian name and
   phone are left off a student's record before it reaches the screen for anyone who may not see
   them (`rosterFor`).
+- A student's photo release (decision [0005](0005-roadmap-items-that-shape-the-schema.md), #65)
+  follows "Guardian contact details": the same people see it (a teacher for their own classes;
+  the Office assistant, the Bookkeeper and Read-only never), and it is left off the record with
+  the guardian's name and phone (`maySeePhotoRelease`, `asSeenBy`, `rollCallStudentsFor`). On a
+  submitted roll call, a student who has since moved to another class keeps it only for someone
+  who may still see their guardian details. Changing it follows "Students: names, attendance":
+  whoever may edit the student (`setPhotoRelease` needs Students: Edit), and the store records
+  who changed it.

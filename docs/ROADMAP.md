@@ -53,4 +53,3 @@ its Known gaps section, not here.
 | Reliance on single funders | Each funder's share of revenue, and which programs depend on one grant. | Funders |
 | Board report | A one-page quarterly summary: pipeline, wins, spending pace, reports due. | Dashboard |
 | Calendar and email | Deadlines as a calendar feed; funder emails logged on the grant. | Deadlines, Activity tab |
-| Photo releases | Guardian consent for student photos used in reports, kept with the student. | Teaching students |
