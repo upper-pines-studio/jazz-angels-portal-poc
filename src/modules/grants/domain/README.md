@@ -67,12 +67,13 @@ Add/update actions that create something return its new id.
 | `updateFunder(id, patch)` | Patches a funder. |
 | `archiveFunder(id)` / `restoreFunder(id)` | Archives a funder (off the Funders list and the Add grant picker; its grants untouched) or restores it. Needs the pipeline row. |
 | `archiveGrant(id)` / `restoreGrant(id)` | Archives a grant, or restores it, and logs "Archived" / "Restored" in the same change. Needs the pipeline row. |
-| `addGrant(input: NewGrantInput)` | Creates the grant, its checklist from the chosen template, the standard document register, and a "Grant added" activity row. Returns the grant id. With `input.inFlight` it brings in a grant already under way instead (see below). |
+| `addGrant(input: NewGrantInput)` | Creates the grant, its checklist from the chosen template, the standard document register, and a "Grant added" activity row. Returns the grant id. The register's IRS letter, board list and financials rows use the office's documents of those kinds when there are any (`newRegisterLinks`, #68). With `input.inFlight` it brings in a grant already under way instead (see below). |
 | `updateGrant(id, patch)` | Patches a grant, `dates` included (pass the whole `dates` object). |
 | `transition(grantId, to, payload?)` | Moves the phase, writes the dates that phase implies, logs activity. `payload: { date?, amountAwarded?, periodStart?, periodEnd?, reason? }`. |
 | `addTask(input)` / `updateTask(id, patch)` / `deleteTask(id)` | Checklist rows. |
 | `toggleTask(id)` | Flips `done` and stamps/clears `doneAt`. |
-| `addDocument(input)` / `updateDocument(id, patch)` / `deleteDocument(id)` | Document register. `updatedAt` is stamped for you. |
+| `addDocument(input)` / `updateDocument(id, patch)` / `deleteDocument(id)` | Document register. `updatedAt` is stamped for you. An `officeDocumentId` in the input or patch is checked as `linkDocument` checks it. |
+| `linkDocument(id, officeDocumentId)` / `unlinkDocument(id)` | Point a register row at an office document, or stop (#68). Refused, with why, for a document of another kind (any is fine on Other), an archived one, or one no longer there; a link to a document archived since is kept while the row changes. The row's own `url` stays, hidden, for when it is unlinked. |
 | `addPayment(input)` / `updatePayment(id, patch)` / `deletePayment(id)` | Installments from the funder. A payment that has arrived is not deleted (`PAYMENT_RECEIVED_REFUSAL`); clear its received date first if it was a mistake. |
 | `markPaymentReceived(id, date)` | Stamps `receivedDate` and logs activity. |
 | `addBudgetLine(input)` / `updateBudgetLine(id, patch)` / `deleteBudgetLine(id)` | Award allocation. A line with expenses on it is not removed (`LINE_IN_USE_REFUSAL`); `moveExpenses` first. |
@@ -269,8 +270,9 @@ them, for the demo and a new office alike. Live templates are in `state.template
 - `templatePlan(…same arguments)` → `{ item, task }[]`, the kept items paired with
   their tasks, for the Add grant checklist preview.
 - `timingLabel(item)` → "21 days before application due" for the Playbook screen.
-- `DEFAULT_DOCUMENT_REGISTER` / `instantiateDocumentRegister(grantId, updatedAt, status?)`
-  — narrative, budget, IRS letter, board list, financials, all `needed` (or `status`).
+- `DEFAULT_DOCUMENT_REGISTER` / `instantiateDocumentRegister(grantId, updatedAt, status?, officeDocumentLinks?)`
+  — narrative, budget, IRS letter, board list, financials, all `needed` (or `status`);
+  `officeDocumentLinks` names, by kind, the office document a row uses.
 
 ---
 
@@ -301,6 +303,13 @@ staff id (`whoId`); a new row is credited to whoever is signed in
 (decision 0004): every collection empty but the playbook, QuickBooks not
 connected, the default reminder schedule. The playbook is `defaultTemplates()`,
 the same four templates the demo has (#47); a saved slice keeps its own. See `src/core/demo.ts`.
+
+The seeded register rows for the IRS letter, board list and financials use
+core's seeded office documents where a version was on file by the grant's
+submitted date (`seededLink`): the LA County grant (submitted Mar 2025) shows
+last year's financials, the Herb Alpert grant last year's board list, and the
+Wells Fargo grant (Nov 2024) keeps rows of its own. The Port of Long Beach
+lists the insurance certificate, which expires soon.
 
 Funder contact names, emails and phone numbers are invented for the demo —
 plausible-looking, but none of them is a real person or address.
@@ -411,12 +420,32 @@ the next `syncQuickBooks()`, and nothing is ever written back.
   `fileSize` is core's, re-exported here. The screens' file pieces that are not
   about grants live in `app/components/files.tsx`; `screens/money/files.tsx`
   keeps the grant kinds and the page drawn from a grant or an expense.
-- **Office documents are not the register.** The IRS letter, the board list
-  and the financials a grant's register lists (`DocumentKind` `irs-letter`,
-  `board-list`, `financials`) are also kept once for the office, with versions
-  and expiry, in core (`OfficeDocument`, Office › Documents). The register does
-  not point at them yet; linking a register row to an office document and the
-  version current at the grant's submitted date is #68.
+- **The register and the office's documents** (`officeDocuments.ts`, #68).
+  The IRS letter, financials, board list, insurance certificate, W-9 and
+  organization budget are also kept once for the office, with versions and
+  expiry, in core (`OfficeDocument`, Office › Documents). `DocumentKind` has
+  the same six ids (`OFFICE_KINDS`); `budget` stays the grant's own project
+  budget, apart from `organization-budget`. A register row may use one
+  (`GrantDocument.officeDocumentId`) and keeps its own status.
+  - `officeDocumentsFor(state, kind)`: the current office documents a row of
+    that kind may use (every one on Other); empty means nothing is offered.
+    `kindsMatch(kind, doc)` is the test.
+  - `versionShown(doc, grant)`: `currentVersion(doc, grant.dates.submitted)`,
+    so the current version until the grant has a submitted date, then the
+    newest added on or before it (a version added that day counts), or none.
+    Worked out, never stored: a new version changes an unsubmitted grant's row
+    and not a submitted one's.
+  - `linkedOfficeDocument(state, row, grant, today)`: what a linked row shows:
+    the document, `version`, `submittedOn`, `isCurrent`, `archived`, and
+    `warning` (before submission, Out of date or Expires soon against today;
+    after, only Out of date, when the version had expired by the submitted
+    date). Undefined for an unlinked row or a document no longer there.
+  - `newRegisterLinks(state)`: the first current office document of each of
+    `NEW_GRANT_LINKED_KINDS` (IRS letter, board list, financials), which
+    `addGrant` puts on the `add-grant` change as `officeDocumentLinks`.
+  - `officeLinkProblem(state, kind, id, previousId?)`: why a row may not use
+    that document, the words the store refuses with.
+  A register saved before this loads unchanged, its rows unlinked.
 - **Reminders.** A report follows `reminderDefaults` until it is given its own
   `ReminderPlan`. `planSchedule` (any plan, a draft included) and
   `reminderSchedule` (the saved one) date each reminder and say which have
