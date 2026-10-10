@@ -105,6 +105,13 @@ export interface Grant extends Archivable {
    * for them. Unset on a grant added at Prospect, LOI or Applying.
    */
   broughtIn?: { phase: Phase; on: string };
+  /**
+   * The grant this one renews: last year's grant from the same funder, which
+   * "Start next year's" started it from (decision 0005, #67). A grant is
+   * renewed at most once, so at most one grant names any other. Unset on a
+   * grant that is not a renewal.
+   */
+  renewsGrantId?: string;
 }
 
 /**
@@ -511,6 +518,23 @@ export interface NewGrantInput {
    * happened. See `inFlightRefusal` for what is accepted.
    */
   inFlight?: InFlightInput;
+}
+
+/**
+ * What "Start next year's" collects (#67). Everything else on the renewal is
+ * copied from last year's grant (`renewGrant`).
+ */
+export interface RenewGrantInput {
+  /** Last year's grant: the one being renewed. */
+  grantId: string;
+  title: string;
+  amountRequested?: number;
+  /** loiDue, applicationDue, decisionExpected, periodStart, periodEnd and startBy; the rest stay blank. */
+  dates: GrantDates;
+  /** A current staff member. */
+  ownerId: string;
+  /** Current programs, at least one. */
+  programs: ProgramId[];
 }
 
 /** The phases a grant already under way may be brought in at. Closed is not one. */

@@ -384,6 +384,24 @@ describe('a new grant’s register', () => {
     expect(rows.map(r => r.kind)).toEqual(['irs-letter']);
   });
 
+  it('links a renewal’s register the same way', () => {
+    const p = portal();
+    const id = p.grants.renewGrant({
+      grantId: HA,
+      title: 'General operating support 2027',
+      dates: {},
+      ownerId: 's-barry',
+      programs: ['general-operating'],
+    });
+    const rows = p.state().grants.documents.filter(d => d.grantId === id && d.officeDocumentId);
+    expect(rows.map(r => r.officeDocumentId).sort()).toEqual([
+      'doc-board-list',
+      'doc-financials',
+      'doc-irs-letter',
+    ]);
+    expect(p.refused).toEqual([]);
+  });
+
   it('links nothing in a new office with no documents', () => {
     expect(newRegisterLinks(stateOf(makeCoreEmpty(), makeEmpty()))).toEqual({});
   });

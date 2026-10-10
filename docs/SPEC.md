@@ -709,7 +709,7 @@ Two lists:
   - Warnings: before submission, Expires soon or Out of date against today; after, only "Out of
     date when submitted" when the version had already expired that day. A document archived since
     still shows, marked Archived.
-  - A new grant's register (Add grant, and a grant brought in) links its IRS letter, board list
+  - A new grant's register (Add grant, a grant brought in, and a renewal) links its IRS letter, board list
     and financials rows to the first current office document of each kind. Saved rows load
     unlinked. The demo links the seeded rows where the version that went in is on file: LA County
     (submitted Mar 2025) shows last year's financials, and the Port of Long Beach lists the

@@ -108,6 +108,20 @@ export const ENTERED: Record<Phase, RegExp | undefined> = {
 };
 
 /**
+ * How the two renewal lines begin (#67): "Started as the renewal of <title>" on
+ * the renewal and "Renewed as <title>" on last year's grant. They name a
+ * grant, and a title can say anything ("Withdrawn-youth fund 2026"), so the
+ * stepper never reads a phase from them.
+ */
+export const RENEWAL_STARTED_PREFIX = 'Started as the renewal of ';
+export const RENEWED_AS_PREFIX = 'Renewed as ';
+
+/** Whether an activity line is one of the two renewal lines, which date no phase. */
+export function isRenewalLine(text: string): boolean {
+  return text.startsWith(RENEWAL_STARTED_PREFIX) || text.startsWith(RENEWED_AS_PREFIX);
+}
+
+/**
  * The grant date a brought-in grant shows under each step it passed before it
  * came into the portal: only the dates that say when it entered the phase.
  * Prospect and Reporting have none, and the LOI and application due dates are
@@ -123,6 +137,7 @@ const BROUGHT_IN_DATE: Partial<Record<Phase, keyof GrantDates>> = {
 /**
  * The day this grant reached `phase`, for the stepper: the activity row that
  * says so (the latest, given `activity` oldest first), else the key date.
+ * A renewal line never counts, whatever the title in it says (`isRenewalLine`).
  * A grant brought in already under way never takes its created date for
  * Prospect: the phases it passed elsewhere show only a submitted, decided or
  * period-start date it was given.
@@ -133,7 +148,9 @@ export function phaseEnteredOn(
   activity: Pick<Activity, 'at' | 'text'>[],
 ): string | undefined {
   const pattern = ENTERED[phase];
-  const hit = pattern ? activity.filter(a => pattern.test(a.text)).slice(-1)[0] : undefined;
+  const hit = pattern
+    ? activity.filter(a => !isRenewalLine(a.text) && pattern.test(a.text)).slice(-1)[0]
+    : undefined;
   if (hit) {
     // `at` is an ISO date-time in UTC; the day we show is the reader's day.
     const when = new Date(hit.at);

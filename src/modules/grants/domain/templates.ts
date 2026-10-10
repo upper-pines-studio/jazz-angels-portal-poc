@@ -190,6 +190,9 @@ export function defaultTemplates(): ChecklistTemplate[] {
 /** The template the "Add grant" dialog pre-selects. */
 export const DEFAULT_TEMPLATE_ID = STANDARD_ID;
 
+/** "Renewal (returning funder)": the checklist "Start next year's" gives a renewal (#67). */
+export const RENEWAL_TEMPLATE_ID = RENEWAL_ID;
+
 /**
  * The template items a grant keeps, each with the task it becomes, in order.
  *
