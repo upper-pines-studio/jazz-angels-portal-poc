@@ -728,10 +728,8 @@ export function expensesMissingBackup(state: PortalState): Expense[] {
   return state.grants.expenses.filter(e => open.has(e.grantId) && !backed.has(e.id));
 }
 
-/** 412 → "412 KB", 1229 → "1.2 MB". */
-export function fileSize(sizeKb: number): string {
-  return sizeKb >= 1000 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${Math.round(sizeKb)} KB`;
-}
+/** 412 → "412 KB", 1229 → "1.2 MB". Core's now, since office documents use it too. */
+export { fileSize } from '../../../core/format';
 
 // ---------------------------------------------------------------------------
 // Reports and reminders

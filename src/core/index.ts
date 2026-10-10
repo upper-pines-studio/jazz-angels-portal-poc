@@ -12,6 +12,7 @@ export * from './store';
 export * from './roles';
 export * from './permissions';
 export * from './archive';
+export * from './documents';
 export {
   DEFAULT_ENABLED_MODULES,
   PARAMOUNT_MS_VENUE_ID,

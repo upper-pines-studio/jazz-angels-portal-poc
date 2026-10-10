@@ -76,6 +76,11 @@ export function daysUntil(iso: string, today: string): number {
   return differenceInCalendarDays(parseISO(iso), parseISO(today));
 }
 
+/** 412 → "412 KB", 1229 → "1.2 MB". */
+export function fileSize(sizeKb: number): string {
+  return sizeKb >= 1000 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${Math.round(sizeKb)} KB`;
+}
+
 /** "Barry Cogert" → "BC". Single words give one letter. */
 export function initials(name: string): string {
   const parts = name

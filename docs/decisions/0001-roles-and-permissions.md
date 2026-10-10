@@ -34,6 +34,7 @@ director's role and gets a teacher's view of their own classes on top.
 | Timesheets: log hours | Own | Own | Own | Own | Own | Own | – |
 | Timesheets: approve | Yes | Yes | Yes | Yes | – | – | – |
 | Partners and venues | Edit | Edit | Edit | View | View | View | View |
+| Office documents | Edit | Edit | Edit | Edit | – | View | View |
 | Staff and roles | Yes | Yes | – | – | – | – | – |
 | Programs: add, rename, archive | Yes | Yes | – | – | – | – | – |
 | Modules, import, export | Yes | – | – | – | – | – | – |
@@ -85,6 +86,16 @@ director's role and gets a teacher's view of their own classes on top.
   read them: `setProgramBudget` and the project actions need "Program budgets and projects",
   `giveShare`, `changeShare` and `takeBackShare` need "Grant shares"; the screens come with #56. Adding, renaming and archiving a program stays on the Programs row, which
   moves with the Programs page (#54) but does not change who may do it.
+- The Office documents row was added with #66, when the office's documents (decision
+  [0005](0005-roadmap-items-that-shape-the-schema.md)) became a core screen, Office › Documents:
+  proposed as Edit for Admin, Director, Office manager and Bookkeeper, who send these papers to
+  funders and keep them current; View for Office assistant and Read-only, who may open and
+  download them but not add a document or a version, edit, archive or restore one; nothing for a
+  Teacher, whose rail leaves the page out. Not final until the client reviews it. The row is
+  `office-documents` in `permissions.ts`; the store's `addOfficeDocument`,
+  `updateOfficeDocument`, `addOfficeDocumentVersion`, `archiveOfficeDocument` and
+  `restoreOfficeDocument` need its Edit, and the dashboard shows a document that is out of date
+  or expires soon only to a role that may open it.
 - Beyond the table, only an Admin or a Director makes someone an Admin, adds someone as an
   Admin, or edits, archives or restores an Admin's record (`mayChangeStaff`, `ADMIN_MAKERS`).
   Changed with #47: it was the Admin alone. A role given "Staff and roles" later does not get

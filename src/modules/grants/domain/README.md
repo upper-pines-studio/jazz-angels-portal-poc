@@ -453,7 +453,18 @@ the next `syncQuickBooks()`, and nothing is ever written back.
   forward: `runsOutOn`, `projectedUnspent`, `perMonthNeeded`. A grant is off
   pace at ten points either way; a line, being lumpier, warns at twenty-five.
 - **Files** are described in `files`; an expense's backup carries its
-  `expenseId`. `backupSummary` counts what is attached and what is missing.
+  `expenseId`. `backupSummary` counts what is attached and what is missing. A
+  `GrantFile` builds on core's `FileFacts` (name, format, size, pages), which
+  office documents share (#66); `GrantFileFormat` is core's `FileFormat` and
+  `fileSize` is core's, re-exported here. The screens' file pieces that are not
+  about grants live in `app/components/files.tsx`; `screens/money/files.tsx`
+  keeps the grant kinds and the page drawn from a grant or an expense.
+- **Office documents are not the register.** The IRS letter, the board list
+  and the financials a grant's register lists (`DocumentKind` `irs-letter`,
+  `board-list`, `financials`) are also kept once for the office, with versions
+  and expiry, in core (`OfficeDocument`, Office › Documents). The register does
+  not point at them yet; linking a register row to an office document and the
+  version current at the grant's submitted date is #68.
 - **Reminders.** A report follows `reminderDefaults` until it is given its own
   `ReminderPlan`. `planSchedule` (any plan, a draft included) and
   `reminderSchedule` (the saved one) date each reminder and say which have

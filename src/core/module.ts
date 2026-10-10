@@ -136,6 +136,11 @@ export interface AttentionItem {
   label: string;
   detail: string;
   status: 'overdue' | 'due-soon' | 'info';
+  /**
+   * The status Badge's words, when "Overdue" or "Due soon" would not fit:
+   * a document is "Out of date" or "Expires soon". The tone still follows `status`.
+   */
+  statusLabel?: string;
   href: string;
   ownerId?: string;
   /** The module label, shown as a Badge on the row. */

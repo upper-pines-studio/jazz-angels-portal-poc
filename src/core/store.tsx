@@ -12,6 +12,13 @@ import {
   projectFields,
   projectProblem,
 } from './derive';
+import {
+  newOfficeDocumentProblem,
+  normaliseOfficeDocument,
+  officeDocumentProblem,
+  officeDocumentVersionProblem,
+  versionFields,
+} from './documents';
 import { toISO } from './format';
 import type { ActionRules, AnyAction, ModuleSlice } from './module';
 import { OWN_ROLE_REFUSAL, can, mayChangeStaff } from './permissions';
@@ -28,6 +35,8 @@ import type {
   AppSettings,
   CoreActions,
   CoreState,
+  OfficeDocument,
+  OfficeDocumentVersion,
   Organization,
   PortalActions,
   Program,
@@ -70,6 +79,9 @@ type CoreAction =
   | { type: 'core/set-program-budget'; budget: ProgramBudget }
   | { type: 'core/add-project'; project: Project }
   | { type: 'core/update-project'; id: string; patch: Partial<Project> }
+  | { type: 'core/add-office-document'; document: OfficeDocument }
+  | { type: 'core/update-office-document'; id: string; patch: Partial<OfficeDocument> }
+  | { type: 'core/add-office-document-version'; id: string; version: OfficeDocumentVersion }
   | { type: 'core/update-settings'; patch: Partial<AppSettings> };
 
 function withId<T extends { id: string }>(rows: T[], id: string, patch: Partial<T>): T[] {
@@ -107,6 +119,21 @@ function coreReducer(state: CoreState, raw: AnyAction): CoreState {
       return { ...state, projects: [...state.projects, action.project] };
     case 'core/update-project':
       return { ...state, projects: withId(state.projects, action.id, action.patch) };
+    case 'core/add-office-document':
+      if (state.officeDocuments.some(d => d.id === action.document.id)) return state;
+      return { ...state, officeDocuments: [...state.officeDocuments, action.document] };
+    case 'core/update-office-document':
+      return {
+        ...state,
+        officeDocuments: withId(state.officeDocuments, action.id, action.patch),
+      };
+    case 'core/add-office-document-version':
+      return {
+        ...state,
+        officeDocuments: state.officeDocuments.map(d =>
+          d.id === action.id ? { ...d, versions: [...d.versions, action.version] } : d,
+        ),
+      };
     case 'core/update-settings':
       return { ...state, settings: { ...state.settings, ...action.patch } };
     default:
@@ -173,6 +200,9 @@ function normaliseBudget(raw: Partial<ProgramBudget>): ProgramBudget | undefined
   return { programId: raw.programId, fiscalYear: raw.fiscalYear, amount: Math.round(raw.amount) };
 }
 
+/** What the store says to a change on a document that is not there any more. */
+const GONE_DOCUMENT = 'That document is no longer in the portal.';
+
 /** Why a person may not archive this record, or true when they may. */
 function mayArchiveStaff(user: SignedInUser, state: PortalState, id: string): boolean | string {
   if (id === user.id) return "You can't archive yourself. Ask someone else who manages staff.";
@@ -202,6 +232,11 @@ export function describeCoreChange(action: AnyAction): string | undefined {
     case 'core/add-project':
     case 'core/update-project':
       return 'the project';
+    case 'core/add-office-document':
+    case 'core/update-office-document':
+      return 'the document';
+    case 'core/add-office-document-version':
+      return 'the new version';
     case 'core/update-settings':
       return 'the settings';
   }
@@ -309,6 +344,32 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       restoreVenue(id) {
         dispatch({ type: 'core/update-venue', id, patch: restoreFields() });
       },
+      addOfficeDocument(input) {
+        const id = ctx.newId('doc');
+        const version = versionFields(ctx.newId('docv'), input, ctx.today, ctx.user.id);
+        dispatch({
+          type: 'core/add-office-document',
+          document: { id, kind: input.kind, name: input.name.trim(), versions: [version] },
+        });
+        return id;
+      },
+      updateOfficeDocument(id, patch) {
+        const fields: Partial<OfficeDocument> = {};
+        if (patch.name !== undefined) fields.name = patch.name.trim();
+        if (patch.kind !== undefined) fields.kind = patch.kind;
+        dispatch({ type: 'core/update-office-document', id, patch: fields });
+      },
+      addOfficeDocumentVersion(id, input) {
+        const version = versionFields(ctx.newId('docv'), input, ctx.today, ctx.user.id);
+        dispatch({ type: 'core/add-office-document-version', id, version });
+        return version.id;
+      },
+      archiveOfficeDocument(id) {
+        dispatch({ type: 'core/update-office-document', id, patch: archived() });
+      },
+      restoreOfficeDocument(id) {
+        dispatch({ type: 'core/update-office-document', id, patch: restoreFields() });
+      },
       updateSettings(patch) {
         dispatch({ type: 'core/update-settings', patch });
       },
@@ -377,6 +438,26 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     updateVenue: 'partners',
     archiveVenue: 'partners',
     restoreVenue: 'partners',
+    // The office's documents (decision 0005): "Office documents", Edit for
+    // Admin, Director, Office manager and Bookkeeper (decision 0001, #66).
+    addOfficeDocument: (user, _state, input) =>
+      can(user.role, 'office-documents', 'edit') && (newOfficeDocumentProblem(input) ?? true),
+    updateOfficeDocument: (user, state, id, patch) => {
+      if (!can(user.role, 'office-documents', 'edit')) return false;
+      const current = state.core.officeDocuments.find(d => d.id === id);
+      if (!current) return GONE_DOCUMENT;
+      if (isArchived(current)) return 'Restore the document before editing it.';
+      return officeDocumentProblem({ ...current, ...patch }) ?? true;
+    },
+    addOfficeDocumentVersion: (user, state, id, input) => {
+      if (!can(user.role, 'office-documents', 'edit')) return false;
+      const current = state.core.officeDocuments.find(d => d.id === id);
+      if (!current) return GONE_DOCUMENT;
+      if (isArchived(current)) return 'Restore the document before adding a version.';
+      return officeDocumentVersionProblem(input) ?? true;
+    },
+    archiveOfficeDocument: 'office-documents',
+    restoreOfficeDocument: 'office-documents',
     // The fiscal year and the module switches are the system's own settings,
     // so they go with "Modules, import, export".
     updateSettings: 'modules',
@@ -414,6 +495,10 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
         ? c.programBudgets.flatMap(b => normaliseBudget(b) ?? [])
         : [],
       projects: Array.isArray(c.projects) ? c.projects.map(normaliseArchived) : [],
+      // Saved before office documents existed: none, demo or not (decision 0005).
+      officeDocuments: Array.isArray(c.officeDocuments)
+        ? c.officeDocuments.flatMap(d => normaliseOfficeDocument(d) ?? [])
+        : [],
       settings: {
         fiscalYearStartMonth: settings.fiscalYearStartMonth ?? 7,
         enabledModules: settings.enabledModules ?? [...DEFAULT_ENABLED_MODULES],
