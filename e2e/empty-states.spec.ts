@@ -58,6 +58,8 @@ const EMPTY: Record<string, unknown> = {
 
 const ROUTES = [
   '/',
+  '/documents',
+  '/documents/none',
   '/partners',
   '/partners/organizations/none',
   '/partners/venues/none',
