@@ -238,10 +238,17 @@ export function DocumentsTab({ grant }: { grant: Grant }) {
  */
 function OfficeCopyLine({ linked, mayOpen }: { linked: LinkedOfficeDocument; mayOpen: boolean }) {
   const { document, version, submittedOn, isCurrent, warning, archived } = linked;
-  let line = '';
-  if (!submittedOn) line = version ? `Current version, added ${dateLong(version.addedAt)}` : '';
-  else if (!version) line = `No version on file when it went in on ${dateLong(submittedOn)}`;
-  else line = `Added ${dateLong(version.addedAt)} · went in on ${dateLong(submittedOn)}`;
+  // Each date stays on one line.
+  const day = (iso: string) => <span style={{ whiteSpace: 'nowrap' }}>{dateLong(iso)}</span>;
+  let line: React.ReactNode = null;
+  if (!submittedOn) line = version && <>Current version, added {day(version.addedAt)}</>;
+  else if (!version) line = <>No version on file when it went in on {day(submittedOn)}</>;
+  else
+    line = (
+      <>
+        Added {day(version.addedAt)} · went in on {day(submittedOn)}
+      </>
+    );
   const small: React.CSSProperties = {
     font: 'var(--type-body-sm)',
     fontSize: 'var(--text-xs)',
