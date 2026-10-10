@@ -235,14 +235,5 @@ export function toCsv(rows: Array<Array<string | number | undefined | null>>): s
   return rows.map(r => r.map(cell).join(',')).join('\n');
 }
 
-/** Hand the browser a file to save. */
-export function downloadText(filename: string, text: string, mime = 'text/csv;charset=utf-8') {
-  const url = URL.createObjectURL(new Blob([text], { type: mime }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+/** Hand the browser a file to save. Shared with the office's documents. */
+export { downloadText } from '../../../../app/components/files';

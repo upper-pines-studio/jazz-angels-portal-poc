@@ -2,6 +2,7 @@ import React from 'react';
 import { Input, Select } from '../../../../design-system';
 import { useStore } from '../../../../core';
 import type { GrantFile, GrantFileKind } from '../../domain';
+import { countPdfPages } from '../../../../app/components/files';
 import { describeFile, FILE_KIND_LABEL, forgetFile, rememberFile } from '../money/files';
 
 /**
@@ -23,17 +24,6 @@ export function guessGrantKind(name: string, hasLetter: boolean): GrantFileKind 
   if (/award|notice/.test(n) && !hasLetter) return 'award-letter';
   if (/agreement|contract|signed/.test(n)) return 'agreement';
   return !hasLetter && /letter/.test(n) ? 'award-letter' : 'other';
-}
-
-/** Count the pages of a PDF by its page objects. Good enough for a POC; undefined when unsure. */
-async function countPdfPages(file: File): Promise<number | undefined> {
-  try {
-    const text = await file.text();
-    const n = (text.match(/\/Type\s*\/Page(?![s\w])/g) ?? []).length;
-    return n > 0 ? n : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 /**
