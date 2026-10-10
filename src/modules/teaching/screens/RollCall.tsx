@@ -16,15 +16,17 @@ import { Eyebrow, KV, OwnerAvatar } from '../../../app/components/badges';
 import { useToast } from '../../../app/ToastHost';
 import { dateShort, placeLabel, staffById, toDate, useStore, venueById } from '../../../core';
 import {
+  PHOTO_RELEASE_LABEL,
   attendanceForMeeting,
   ensembleById,
   ensembleTrend,
+  hasNoPhotoRelease,
   markCounts,
   meetingById,
   percent,
   rollCounts,
   rollMarks,
-  rollCallStudents,
+  rollCallStudentsFor,
   timeLabel,
   timeRange,
 } from '../domain';
@@ -43,13 +45,15 @@ export default function RollCall() {
   const { meetingId = '' } = useParams();
   const nav = useNavigate();
   const toast = useToast();
-  const { state, today, actions, whenSaved } = useStore();
+  const { state, today, user, actions, whenSaved } = useStore();
 
   const meeting = meetingById(state, meetingId);
   const ensemble = ensembleById(state, meeting?.ensembleId);
   const venue = venueById(state, meeting?.venueId);
   // An open roll is today's roster; a submitted one is who was marked, archived students included.
-  const roster = meeting ? rollCallStudents(state, meeting) : [];
+  // Each student's guardian details and photo release are there only for someone who may see them.
+  const roster = meeting ? rollCallStudentsFor(state, user, meeting) : [];
+  const noPhotos = roster.filter(hasNoPhotoRelease).length;
   const records = meeting ? attendanceForMeeting(state, meeting.id) : [];
   const submitted = Boolean(meeting?.rollSubmittedAt);
 
@@ -191,8 +195,19 @@ export default function RollCall() {
               <div key={student.id} className="ja-roll-row">
                 <Avatar name={student.name} size={32} />
                 <span className="ja-roll-who">
-                  <span className="ja-roll-name" style={{ display: 'block' }}>
-                    {student.name}
+                  <span className="ja-roll-name-line">
+                    <span className="ja-roll-name">{student.name}</span>
+                    {student.photoRelease && hasNoPhotoRelease(student) && (
+                      <span
+                        title={`Photo release: ${PHOTO_RELEASE_LABEL[student.photoRelease.status]}`}
+                      >
+                        <Badge
+                          tone={student.photoRelease.status === 'not-given' ? 'danger' : 'gold'}
+                        >
+                          No photos
+                        </Badge>
+                      </span>
+                    )}
                   </span>
                   <span className="ja-roll-meta">
                     {`${student.instrument} · year ${student.yearsIn}`}
@@ -260,6 +275,12 @@ export default function RollCall() {
               <KV
                 k="On site"
                 v={[venue.contactName, venue.contactPhone].filter(Boolean).join(' · ')}
+              />
+            )}
+            {noPhotos > 0 && (
+              <KV
+                k="No photos"
+                v={`${noPhotos} ${noPhotos === 1 ? 'student' : 'students'} without a release`}
               />
             )}
             <KV
