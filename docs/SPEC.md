@@ -389,7 +389,7 @@ Every transition writes an Activity row.
 
 ### 4.6 Funders  `/funders` and `/funders/:id`
 - List: DataTable — name, type, contact, grants (count), total awarded (mono), last activity. "Add funder".
-- Detail: contact card + history table of every grant with this funder (title, year, phase, requested, awarded).
+- Detail: contact card + history table of every grant with this funder (title, year, phase, requested, awarded), and under it Recent activity: the activity of its grants, archived ones too, newest first, each line naming its grant and linking to its Activity tab (#64).
 
 ### 4.7 Playbook  `/playbook`
 The checklist templates. Left: list of templates. Right: the selected template's items grouped by
