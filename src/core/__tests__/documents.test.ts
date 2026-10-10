@@ -309,6 +309,21 @@ describe('the rules', () => {
     expect(c.sent).toEqual([]);
   });
 
+  it('refuses renaming or re-kinding an archived document until it is restored', () => {
+    const c = core();
+    c.actions.archiveOfficeDocument('doc-w9');
+    c.actions.updateOfficeDocument('doc-w9', { name: 'W-9 (2026)' });
+    c.actions.updateOfficeDocument('doc-w9', { kind: 'other' });
+    expect(c.refused).toEqual([
+      'Restore the document before editing it.',
+      'Restore the document before editing it.',
+    ]);
+    c.actions.restoreOfficeDocument('doc-w9');
+    c.actions.updateOfficeDocument('doc-w9', { name: 'W-9 (2026)' });
+    const d = c.state().core.officeDocuments.find(x => x.id === 'doc-w9')!;
+    expect(d).toMatchObject({ name: 'W-9 (2026)', kind: 'w9' });
+  });
+
   it('refuses a version on an archived document, or one that is gone, or a bad expiry', () => {
     const c = core();
     c.actions.archiveOfficeDocument('doc-w9');

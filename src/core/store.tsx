@@ -446,6 +446,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       if (!can(user.role, 'office-documents', 'edit')) return false;
       const current = state.core.officeDocuments.find(d => d.id === id);
       if (!current) return GONE_DOCUMENT;
+      if (isArchived(current)) return 'Restore the document before editing it.';
       return officeDocumentProblem({ ...current, ...patch }) ?? true;
     },
     addOfficeDocumentVersion: (user, state, id, input) => {
