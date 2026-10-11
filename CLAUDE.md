@@ -22,7 +22,6 @@ per module.
 - `docs/ROADMAP.md` — grant-management ideas that are not built or decided. When one is built, its row moves to `docs/FEATURES.md`.
 - `docs/decisions/` — choices made with the client before the backend: roles, archiving, switch-over. Follow them; edit the file when one changes.
 - `docs/PLATFORM.md` — the platform spec: architecture, the modules, the core screens. Read it before changing structure.
-- `docs/SCHEMA.md` — the schema the backend starts from: every table, link, archive column and row-level rule, and what each decision 0005 answer does to it. Update it when a stored type changes.
 - `docs/SPEC.md` — the product spec for the grants module: phases, domain model, seed data, every screen.
 - `docs/design-system.md` — brand rules. Read VISUAL FOUNDATIONS and CONTENT FUNDAMENTALS before adding UI.
 - `src/design-system/` — the 27 shared components (JSX + `.d.ts`). Import from the barrel: `import { Card, Button } from '../design-system'`. Do not edit these; they are shared with the staff-portal POC.
