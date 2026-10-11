@@ -138,14 +138,14 @@ describe('the rules on Operations', () => {
   });
 
   it('leaves the "Programs" row of decision 0001 as it was', () => {
-    for (const role of ['office-manager', 'bookkeeper', 'teacher', 'assistant'] as Role[]) {
+    for (const role of ['bookkeeper', 'teacher', 'assistant'] as Role[]) {
       const c = core(as(role));
       c.actions.archiveProgram(OPERATIONS_ID);
       c.actions.addProgram({ name: 'Summer Jazz Camp', short: 'Camp' });
       expect(c.sent, role).toEqual([]);
       expect(c.refused[1], role).toMatch(/^You can't do that as/);
     }
-    for (const role of ['admin', 'director'] as Role[]) {
+    for (const role of ['admin', 'director', 'office-manager'] as Role[]) {
       const c = core(as(role));
       c.actions.addProgram({ name: 'Summer Jazz Camp', short: 'Camp' });
       c.actions.archiveProgram('jazz-legacy');

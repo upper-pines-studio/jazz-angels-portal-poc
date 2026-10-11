@@ -166,7 +166,7 @@ function RecordActions({
 
 /**
  * A program's sheet: its budget for the fiscal year and what pays for it, its
- * projects, and its name. Edit and Archive are for Admin and Director
+ * projects, and its name. Edit and Archive are for Admin, Director and Office manager
  * ("Programs"); the budget and the projects for the roles with "Program
  * budgets and projects" Edit. A role without "Program budgets and projects"
  * sees the name only.

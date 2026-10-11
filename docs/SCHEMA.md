@@ -69,13 +69,17 @@ erDiagram
     text title
     text role "admin | director | office-manager | bookkeeper | teacher | assistant | read-only"
     bool teaches
+    text email "null; where a sign-in invitation goes (not on the type yet)"
     date archived_at "null"
     text archived_by FK "null; staff"
   }
   logins {
     text username PK "lowercase"
     text staff_id FK
-    uuid auth_user_id UK "the auth provider's user; credentials live there"
+    uuid auth_user_id UK "null until accepted; the auth provider's user, credentials live there"
+    text invited_by FK "staff"
+    timestamptz invited_at
+    timestamptz accepted_at "null"
   }
   programs {
     text id PK "general-operating is Operations"
@@ -161,6 +165,7 @@ erDiagram
   }
 
   staff ||--o{ logins : "signs in as"
+  staff ||--o{ logins : "invited"
   programs ||--o{ program_budgets : "costs, per year"
   programs ||--o{ projects : "has"
   organizations |o--o{ venues : "owns"
@@ -639,8 +644,8 @@ decision 0005 says of the photo release, held one-to-one beside the student. The
 | Table | Who may read | Who may write | Row in 0001 |
 | --- | --- | --- | --- |
 | `staff` | Everyone signed in (names show everywhere) | Admin, Director; nobody changes their own role, and only an Admin or a Director touches an Admin's row | Staff and roles |
-| `logins` | Admin, Director | Admin, Director; creating an account needs its own rule (0001: a Director could add an Admin and a login they control) | Staff and roles |
-| `programs` | Everyone signed in | Admin, Director; Operations is never archived or renamed | Programs: add, rename, archive |
+| `logins` | Admin, Director | By invitation only (0001, "Sign-ins are by invitation"): Admin, Director invite a current staff record; only an Admin invites for an Admin's record; nobody sets another's password, and every new sign-in shows to every Admin | Staff and roles |
+| `programs` | Everyone signed in | Admin, Director, Office manager; Operations is never archived or renamed | Programs: add, rename, archive |
 | `program_budgets`, `projects` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper | Program budgets and projects |
 | `organizations`, `venues` | Everyone signed in | Admin, Director, Office manager | Partners and venues |
 | `office_documents`, `office_document_versions` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper (versions: insert only) | Office documents |
@@ -656,14 +661,13 @@ decision 0005 says of the photo release, held one-to-one beside the student. The
 | `students` | Admin, Director, Office manager, Office assistant; Teacher: own classes. Read-only: counts only, through a counting function, never the rows. Bookkeeper: none | Admin, Director, Office manager | Students: names, attendance |
 | `student_private` | Admin, Director, Office manager; Teacher: own classes. Never the Office assistant, the Bookkeeper or Read-only | Admin, Director, Office manager (whoever edits the student); `photo_release_recorded_by` is always the person writing | Guardian contact details |
 | `attendance` | Admin, Director, Office manager, Office assistant; Teacher: own classes. Read-only: counts only | Admin, Director, Office manager (any class); Teacher: own classes; none once the meeting's roll is submitted | Roll call |
-| `time_entries` | Own hours, for every role but Read-only; all rows for Admin, Director, Office manager, Bookkeeper | Insert, submit and delete: own hours, drafts only. Approve: Admin, Director, Office manager, Bookkeeper, never their own | Timesheets: log hours, Timesheets: approve |
-| `time_charges` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper (proposed: it is grant money, as "Award, budget, reports"; 0001 has no row for it yet) | None yet |
+| `time_entries` | Own hours, for every role but Read-only; all rows for Admin, Director, Office manager, Bookkeeper | Insert, submit and delete: own hours, whatever the status. Approve: Admin, Director, Office manager, Bookkeeper, never their own | Timesheets: log hours, Timesheets: approve |
+| `time_charges` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper: it is grant money, as "Award, budget, reports" (0001, answered October 2026) | Award, budget, reports |
 
-Three cells are proposals, recorded in decision 0001 until the client reviews them: the
-`time_charges` row, and two that go a step past today's store, on purpose: deleting a time entry is limited to drafts
-(the store allows deleting any of your own entries, though no screen offers it), and attendance
-is fixed once the roll is submitted (the store ignores a mark then; reopening the roll is the way
-to change it).
+The client answered the schema's questions in October 2026 (decision 0001): `time_charges`
+follows "Award, budget, reports"; a person may delete any of their own time entries, as the
+store allows today; and attendance is fixed once the roll is submitted (the store ignores a mark
+then; reopening the roll is the way to change it).
 
 ## The eleven roadmap items (decision 0005)
 
@@ -687,7 +691,7 @@ to change it).
   dates and outcome: every date, both amounts and the notes are nullable, and `brought_in_phase`
   with `brought_in_on` says it arrived mid-life. It still needs an owner, at least one program
   and a restriction, which the person entering it chooses.
-- **Who did it.** Every "by" column (`archived_by`, `assigned_by`, `approved_by`, `added_by`,
+- **Who did it.** Every "by" column (`archived_by`, `assigned_by`, `approved_by`, `added_by`, `invited_by`,
   `uploaded_by`, `charged_by`, `photo_release_recorded_by`, `activity.who_id`) is set by the
   database from the signed-in person, never sent by the screen (decision 0001: every change
   records who made it).

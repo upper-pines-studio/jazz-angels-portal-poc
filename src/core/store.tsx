@@ -396,8 +396,8 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       const role = state.core.staff.find(s => s.id === id)?.role;
       return mayChangeStaff(user.role, role, role);
     },
-    // Programs are the office's own configuration, so they go with "Staff and
-    // roles": Admin and Director (decision 0001, "Programs" row, proposed in #44).
+    // Programs are the office's own configuration: Admin, Director and Office
+    // manager (decision 0001, "Programs" row, confirmed by the client).
     addProgram: (user, state, input) =>
       can(user.role, 'programs', 'edit') && (programProblem(state.core.programs, input) ?? true),
     updateProgram: (user, state, id, patch) => {

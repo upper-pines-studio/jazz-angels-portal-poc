@@ -44,7 +44,7 @@ import './programs.css';
  * unset) and `?archived=1` Show archived.
  *
  * Who does what (decision 0001): Add program, Edit, Archive and Restore of a
- * program are Admin and Director ("Programs"). Budgets and projects are
+ * program are Admin, Director and Office manager ("Programs"). Budgets and projects are
  * "Program budgets and projects": Edit for Admin, Director, Office manager and
  * Bookkeeper, View for Office assistant and Read-only. A Teacher has neither,
  * so the page is not theirs to open (`app/access.ts`). "Paid for by" on each sheet is the grants module's part,
@@ -192,7 +192,7 @@ export default function Programs() {
             message={
               mayEdit
                 ? 'Studio sessions, in-school classes and the other programs a grant, a student or an ensemble belongs to show up here. Add one to start.'
-                : 'Studio sessions, in-school classes and the other programs a grant, a student or an ensemble belongs to show up here, once an admin or a director adds them.'
+                : 'Studio sessions, in-school classes and the other programs a grant, a student or an ensemble belongs to show up here, once an admin, a director or the office manager adds them.'
             }
             action={
               mayEdit ? (
@@ -298,7 +298,7 @@ export default function Programs() {
                   {none
                     ? mayEdit
                       ? 'No programs yet. Studio sessions, in-school classes and the other programs a grant, a student or an ensemble belongs to show up here.'
-                      : 'No programs yet. Studio sessions, in-school classes and the other programs show up here once an admin or a director adds them.'
+                      : 'No programs yet. Studio sessions, in-school classes and the other programs show up here once an admin, a director or the office manager adds them.'
                     : 'Every program is archived. Show archived lists them.'}
                 </p>
                 {mayEdit && none && (
