@@ -2,7 +2,10 @@
 
 Ideas for the grants module that are not built and not yet decided. Nothing here is a commitment
 or a spec. When a feature is picked up, write its spec, build it, add its row to
-`docs/FEATURES.md`, and remove it from this file.
+`docs/FEATURES.md`, and remove it from this file. Six of them were answered before the schema
+was written (budget changes, staff pay, deposits, matching funds, restricted money,
+deliverables); they stay here until built, and decision
+[0005](decisions/0005-roadmap-items-that-shape-the-schema.md) says what each answer was.
 
 What already exists is in `docs/FEATURES.md`; what is broken or missing in a built feature is in
 its Known gaps section, not here.

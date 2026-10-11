@@ -1,7 +1,9 @@
 # 0005 Roadmap items that shape the schema
 
-**Status:** Open. Needs a yes, no or likely on each item below from the client. Answered so far:
-organization documents (yes, #66).
+**Status:** Answered, October 2026. Organization documents (#66), renewals (#67), the activity
+log (#64) and photo releases (#65) were answered as they were built; the other six in #22, each
+explained under [The six answered for the schema](#the-six-answered-for-the-schema). The schema
+(`docs/SCHEMA.md`, #22) follows these answers.
 
 The ideas in `docs/ROADMAP.md` are not commitments. Most can be added later as new tables. These
 eleven change the shape of tables that exist from day one, or how they link, so each needs a yes,
@@ -10,12 +12,12 @@ and the feature is built later.
 
 | Idea | What it changes | Answer |
 | --- | --- | --- |
-| Budget changes | Budget lines get versions; budget vs. actual measures against the current one | |
-| Staff pay charged to grants | A time entry carries a program or a grant; the QuickBooks sync brings in payroll | |
-| Payments matched to deposits | The QuickBooks sync brings in deposits as well as expenses | |
-| Matching funds and in-kind gifts | An expense that does not come from QuickBooks | |
-| Restricted and unrestricted money | How money is grouped into funds or classes | |
-| Deliverables | A targets table tied to the grant and its award terms | |
+| Budget changes | Budget lines get versions; budget vs. actual measures against the current one | Yes: budget lines are versioned from day one |
+| Staff pay charged to grants | A time entry carries a program or a grant; the QuickBooks sync brings in payroll | Yes, optional: hours are recorded first and charged to a grant later, one grant per entry for now; payroll waits for the QuickBooks integration |
+| Payments matched to deposits | The QuickBooks sync brings in deposits as well as expenses | Yes, later: with the QuickBooks integration, not phase 1; the schema leaves room |
+| Matching funds and in-kind gifts | An expense that does not come from QuickBooks | Likely: not built; the schema leaves room |
+| Restricted and unrestricted money | How money is grouped into funds or classes | Likely: not in the first version; the schema leaves room |
+| Deliverables | A targets table tied to the grant and its award terms | Yes, optional: a grant may have targets or none |
 | Renewals | A grant points at last year's grant; see [Renewals](#renewals) | Yes: an optional link from a grant to the grant it renews |
 | Organization documents | Versioned files with expiry dates that grants point at; shapes file storage | **Yes** (#66): an office documents table (kind, name, archive fields), a versions table (the document, the file's name, format, size and pages, added on and by, expires; rows only ever added), file contents in storage keyed by version, and a grant's register row linking to a document, the version it sent read from the grant's submitted date (#68) |
 | Funder contact log, calendar and email | One activity log across every module, or one per module; see [One activity log](#one-activity-log) | Likely: one activity log in core for every module |
@@ -83,6 +85,35 @@ each with versions and an optional expiry. Built in the browser on Office › Do
   follows each new version and one submitted keeps what went in, with nothing to update.
 - A save from before office documents loads with none, demo or not, as budgets did (decision
   [0006](0006-programs-projects-and-shares.md)); Reset demo data seeds the six.
+
+## The six answered for the schema
+
+Answered in #22, October 2026. Each says what the schema does about it; "leaves room" means a
+nullable column or link now and the table or screen later, with nothing existing changing shape.
+
+- **Budget changes: yes.** A grant's budget has versions from day one: a budget line belongs to a
+  version, a new version is added when the funder approves moving money, and older versions stay,
+  read-only. Budget vs. actual measures against the current version. The portal keeps one budget
+  per grant until the feature is built; that budget becomes the grant's first version.
+- **Staff pay charged to grants: yes, optional.** Recording hours comes first and stands alone: a
+  time entry needs no grant. Charging hours to a grant is a separate, later step, done only when
+  someone needs it. The schema keeps charges in their own table (the time entry, the grant, the
+  hours), at most one charge per entry for now, held by a unique rule on the entry. One entry
+  split across several grants may be asked for later; lifting the rule allows it, with no data
+  moved. Bringing payroll in from QuickBooks waits for the QuickBooks integration.
+- **Payments matched to deposits: yes, later.** Built with the QuickBooks integration, not in
+  phase 1. The schema leaves room: a payment gets a nullable link to a deposit, and the deposits
+  table comes with the integration. Until then a payment is marked received by hand, as today.
+- **Matching funds and in-kind gifts: likely.** Not built. The schema leaves room: an expense's
+  QuickBooks transaction is already optional (an expense typed in by hand has none), and a kind
+  column on the expense (grant spending, cash match, in-kind) can be added when the feature is.
+- **Restricted and unrestricted money: likely.** Not in the first version. The schema leaves
+  room: the restriction a grant carries today (restricted or unrestricted) stays a column on the
+  grant, so grants can be grouped into funds later without changing it. No funds table yet.
+- **Deliverables: yes, optional.** A targets table tied to the grant, each target with an
+  optional link to the award term it comes from; a grant may have none, and nothing asks the
+  office to fill them in. Progress is counted from roll call and timesheets, not stored. Reading
+  targets out of the award letter is not part of it.
 
 ## Can wait
 
