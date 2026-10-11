@@ -108,6 +108,11 @@ director's role and gets a teacher's view of their own classes on top.
 - For the backend (#22): once real accounts exist, a Director could add an Admin record and give
   it a login they control. The self-role rule does not stop that, so creating an account needs
   its own rule.
+- Proposed with the schema (#22, `docs/SCHEMA.md`), not final until the client reviews them:
+  charging hours to a grant (decision [0005](0005-roadmap-items-that-shape-the-schema.md))
+  follows "Award, budget, reports", since it is grant money; a time entry is deleted only while
+  it is a draft (the store allows any of your own today, though no screen offers it); and a
+  student's mark is fixed once the roll is submitted, changed by reopening the roll.
 - "Own classes" means the ensembles the teacher is assigned to teach: `Ensemble.leadStaffId`
   (`leadsEnsemble` and `mayTakeRoll` in `modules/teaching/domain/derive.ts`). Guardian name and
   phone are left off a student's record before it reaches the screen for anyone who may not see
