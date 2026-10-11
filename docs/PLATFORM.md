@@ -410,7 +410,7 @@ awaiting approval" as `info` when > 0; no panel.
   - **Project sheet**: the same figures and bar over all the project's dates ("Runs Jun 21 – Jul
     30, 2027, so it counts in FY27 and FY28."), Paid for by, and Details (name, part of, dates,
     budget). Edit, Archive and Restore on the sheet.
-  - Who does what: Add program, Edit, Archive and Restore of a program are Admin and Director
+  - Who does what: Add program, Edit, Archive and Restore of a program are Admin, Director and Office manager
     ("Programs"); budgets and projects are "Program budgets and projects" and the shares "Grant
     shares" (Edit for Admin, Director, Office manager, Bookkeeper; View for Office assistant and
     Read-only). A Teacher sees the names only, and a project's page is closed to them. With no

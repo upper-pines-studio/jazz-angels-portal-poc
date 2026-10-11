@@ -1,6 +1,6 @@
 // Operations › Programs: open it from the rail, add a program, edit it, archive it and restore it.
 // Operations, the office's running costs, sits on its own above the programs (decision 0006).
-// Gwen (Admin) manages programs; Keisha (Office manager) has no Programs rights and only reads;
+// Gwen (Admin) manages programs; Walt (Bookkeeper) has no Programs rights and only reads;
 // Devon (Teacher) has no "Program budgets and projects" and does not see the page.
 import { expect, test } from '@playwright/test';
 import { dialog, field, freshStart } from './support';
@@ -91,7 +91,7 @@ test('Operations sits above the programs, apart from them, and keeps its name', 
 test('a role without program rights reads the programs and cannot change them', async ({
   page,
 }) => {
-  await freshStart(page, 'keisha');
+  await freshStart(page, 'walt');
   await page.goto('/programs');
   const main = page.locator('main');
   await expect(page).toHaveURL(/\/programs\/[^/]+$/);

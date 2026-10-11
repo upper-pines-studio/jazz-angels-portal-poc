@@ -60,7 +60,7 @@ export const PERMISSION_TABLE: ReadonlyArray<readonly [Subject, string, Row]> = 
   ['partners',           'Partners and venues',                    ['Edit', 'Edit',  'Edit',  'View',  'View',        'View',  'View']],
   ['office-documents',   'Office documents',                       ['Edit', 'Edit',  'Edit',  'Edit',  '–',           'View',  'View']],
   ['staff',              'Staff and roles',                        ['Yes',  'Yes',   '–',     '–',     '–',           '–',     '–']],
-  ['programs',           'Programs: add, rename, archive',         ['Yes',  'Yes',   '–',     '–',     '–',           '–',     '–']],
+  ['programs',           'Programs: add, rename, archive',         ['Yes',  'Yes',   'Yes',     '–',     '–',           '–',     '–']],
   ['modules',            'Modules, import, export',                ['Yes',  '–',     '–',     '–',     '–',           '–',     '–']],
   ['quickbooks-connect', 'QuickBooks: connect',                    ['Yes',  '–',     '–',     '–',     '–',           '–',     '–']],
   ['quickbooks-sync',    'QuickBooks: sync',                       ['Yes',  'Yes',   'Yes',   'Yes',   '–',           '–',     '–']],

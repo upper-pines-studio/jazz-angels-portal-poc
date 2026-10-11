@@ -36,7 +36,7 @@ director's role and gets a teacher's view of their own classes on top.
 | Partners and venues | Edit | Edit | Edit | View | View | View | View |
 | Office documents | Edit | Edit | Edit | Edit | – | View | View |
 | Staff and roles | Yes | Yes | – | – | – | – | – |
-| Programs: add, rename, archive | Yes | Yes | – | – | – | – | – |
+| Programs: add, rename, archive | Yes | Yes | Yes | – | – | – | – |
 | Modules, import, export | Yes | – | – | – | – | – | – |
 | QuickBooks: connect | Yes | – | – | – | – | – | – |
 | QuickBooks: sync | Yes | Yes | Yes | Yes | – | – | – |
@@ -73,8 +73,9 @@ director's role and gets a teacher's view of their own classes on top.
   refuse anyway.
 - The Programs row was added with #44, when programs became editable in Settings: proposed as
   Admin and Director, the same people as "Staff and roles", since programs are the office's own
-  configuration and a grant or a report is filed under them. Not final until the client reviews
-  it; the open question is whether the Office manager should have it too.
+  configuration and a grant or a report is filed under them. The client answered in October
+  2026: the Office manager has it too, so Admin, Director and Office manager. Staff and roles
+  stays with the Admin and Director.
 - Who may open the Programs page follows "Program budgets and projects": everyone but the
   Teacher. Confirmed by the client in October 2026 (#49).
 - The Program budgets and projects and Grant shares rows were added with decision
@@ -91,7 +92,7 @@ director's role and gets a teacher's view of their own classes on top.
   proposed as Edit for Admin, Director, Office manager and Bookkeeper, who send these papers to
   funders and keep them current; View for Office assistant and Read-only, who may open and
   download them but not add a document or a version, edit, archive or restore one; nothing for a
-  Teacher, whose rail leaves the page out. Not final until the client reviews it. The row is
+  Teacher, whose rail leaves the page out. Confirmed by the client in October 2026. The row is
   `office-documents` in `permissions.ts`; the store's `addOfficeDocument`,
   `updateOfficeDocument`, `addOfficeDocumentVersion`, `archiveOfficeDocument` and
   `restoreOfficeDocument` need its Edit, and the dashboard shows a document that is out of date
@@ -103,16 +104,25 @@ director's role and gets a teacher's view of their own classes on top.
   nobody changes their own role, the Admin included: the Edit dialog shows your own role as
   text, and the store refuses the change ("You can't change your own role. Ask someone else who
   manages staff."). The rest of your own record (name, title, teaches) you may still change.
-  Nobody archives themself either. Open question: may a Director demote or archive the last
-  Admin, which leaves nobody with "Modules, import, export"? Built as allowed, per #47.
-- For the backend (#22): once real accounts exist, a Director could add an Admin record and give
-  it a login they control. The self-role rule does not stop that, so creating an account needs
-  its own rule.
-- Proposed with the schema (#22, `docs/SCHEMA.md`), not final until the client reviews them:
-  charging hours to a grant (decision [0005](0005-roadmap-items-that-shape-the-schema.md))
-  follows "Award, budget, reports", since it is grant money; a time entry is deleted only while
-  it is a draft (the store allows any of your own today, though no screen offers it); and a
-  student's mark is fixed once the roll is submitted, changed by reopening the roll.
+  Nobody archives themself either. A Director may demote or archive the last Admin, which
+  leaves nobody with "Modules, import, export" until one is made again: confirmed by the client
+  in October 2026, as built in #47.
+- **Sign-ins are by invitation** (decided October 2026, for the backend; nothing is built in the
+  browser, where the logins are fixed). Once real accounts exist, a Director could otherwise add
+  an Admin record and give it a login they control, which the self-role rule does not stop. So:
+  - Nobody sets or knows another person's password. Giving someone a sign-in sends an
+    invitation to their email, and they choose their own password. Whoever has "Staff and
+    roles" may send one, for a current (not archived) staff record.
+  - Only an Admin sends the invitation for an Admin's record. A Director may still make someone
+    an Admin; an Admin invites them.
+  - Every new sign-in shows to every Admin, with who sent the invitation: a row in the activity
+    log and a line on their dashboard.
+  - A staff record needs an email for this, which it does not have today (`docs/SCHEMA.md`).
+- Answered by the client in October 2026, from the schema (#22, `docs/SCHEMA.md`): charging hours
+  to a grant (decision [0005](0005-roadmap-items-that-shape-the-schema.md)) follows "Award,
+  budget, reports", since it is grant money; a person may delete any of their own time entries,
+  whatever its status, as the store allows today; and a student's mark is fixed once the roll is
+  submitted, changed by reopening the roll.
 - "Own classes" means the ensembles the teacher is assigned to teach: `Ensemble.leadStaffId`
   (`leadsEnsemble` and `mayTakeRoll` in `modules/teaching/domain/derive.ts`). Guardian name and
   phone are left off a student's record before it reaches the screen for anyone who may not see

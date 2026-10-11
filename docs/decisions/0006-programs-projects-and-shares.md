@@ -65,7 +65,7 @@ show as "If awarded", with hatched bars, and count separately from awarded money
 **Where it lives.** A new **Operations** section in the rail, right after Grants, with
 **Programs** in it. Programs are managed there: Add program, Edit (name and short name),
 Archive, Restore and Show archived move from Settings › Programs (built in #44). Who may change
-programs stays as it is: Admin and Director (decision 0001, "Programs"). The list of programs
+programs stays as it is: Admin and Director (decision 0001, "Programs"; the Office manager joined them later). The list of programs
 and projects scrolls in its own column and stays in view while the sheet beside it scrolls.
 
 **Answered after the build** (October 2026, from the questions in #57 to #60):

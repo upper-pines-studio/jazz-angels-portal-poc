@@ -79,8 +79,8 @@ describe('adding and renaming a program', () => {
     ).toBe(undefined);
   });
 
-  it('is for Admin and Director only (decision 0001, "Programs")', () => {
-    for (const role of ['admin', 'director'] as Role[]) {
+  it('is for Admin, Director and Office manager only (decision 0001, "Programs")', () => {
+    for (const role of ['admin', 'director', 'office-manager'] as Role[]) {
       const c = core(as(role));
       c.actions.addProgram({ name: 'Summer Jazz Camp', short: 'Camp' });
       c.actions.updateProgram('in-school', { short: 'Schools' });
@@ -88,13 +88,7 @@ describe('adding and renaming a program', () => {
       c.actions.restoreProgram('jazz-legacy');
       expect(c.refused, role).toEqual([]);
     }
-    for (const role of [
-      'office-manager',
-      'bookkeeper',
-      'teacher',
-      'assistant',
-      'read-only',
-    ] as Role[]) {
+    for (const role of ['bookkeeper', 'teacher', 'assistant', 'read-only'] as Role[]) {
       const c = core(as(role));
       c.actions.addProgram({ name: 'Summer Jazz Camp', short: 'Camp' });
       c.actions.updateProgram('in-school', { short: 'Schools' });
