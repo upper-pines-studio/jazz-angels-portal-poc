@@ -5,6 +5,8 @@ office workflow. Grants is the first module. Teaching (schedule, roll call, stud
 Timesheets are the second and third, ported from the sibling staff-portal POC
 (`../jazz-angels-portal-poc`). `docs/SPEC.md` remains the product spec for the grants module and
 is unchanged in substance; this document is the source of truth for everything above it.
+`docs/SCHEMA.md` is the schema the backend starts from: every table, link, archive column and
+row-level rule, derived from the types described here.
 
 Today in the demo story is still **2026-09-13** (a Sunday, the first Sunday of the Fall session).
 

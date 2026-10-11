@@ -148,8 +148,8 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 
 | Gap | Where |
 | --- | --- |
-| No backend. Everything is localStorage behind the `Repository` interface; sign-in is a hash check in the browser. | `core/repository.ts`, `core/auth.ts` |
-| Permissions are checked in the browser only; anyone with the dev tools can change their role. Row-level security comes with the backend (#22). | `core/permissions.ts` |
+| No backend. Everything is localStorage behind the `Repository` interface; sign-in is a hash check in the browser. The schema the backend starts from is `docs/SCHEMA.md` (#22). | `core/repository.ts`, `core/auth.ts` |
+| Permissions are checked in the browser only; anyone with the dev tools can change their role. Row-level security comes with the backend; `docs/SCHEMA.md` lists it table by table (#22). | `core/permissions.ts` |
 | Rail badges count for everyone: a teacher sees the office's "awaiting approval" count on Timesheets, Read-only the roll calls due on Schedule. | `timesheets/manifest.tsx`, `teaching/manifest.tsx` (`badge`) |
 | QuickBooks is simulated. No real connection, and a sync brings new transactions only once. | `grants/domain/seed-money.ts` (`INCOMING`), `slice.ts` (`sync`) |
 | The student import adds new students only. A name already in the portal is flagged and starts on Skip; nothing updates an existing student from a file, and a guardian email or address column is ignored. | `teaching/domain/import.ts` |
