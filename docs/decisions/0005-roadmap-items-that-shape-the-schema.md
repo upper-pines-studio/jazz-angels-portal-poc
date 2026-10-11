@@ -12,7 +12,7 @@ and the feature is built later.
 
 | Idea | What it changes | Answer |
 | --- | --- | --- |
-| Budget changes | Budget lines get versions; budget vs. actual measures against the current one | Yes: budget lines are versioned from day one |
+| Budget changes | Budget lines get versions; budget vs. actual measures against the current one | Yes: each line's planned amount is versioned from day one |
 | Staff pay charged to grants | A time entry carries a program or a grant; the QuickBooks sync brings in payroll | Yes, optional: hours are recorded first and charged to a grant later, one grant per entry for now; payroll waits for the QuickBooks integration |
 | Payments matched to deposits | The QuickBooks sync brings in deposits as well as expenses | Yes, later: with the QuickBooks integration, not phase 1; the schema leaves room |
 | Matching funds and in-kind gifts | An expense that does not come from QuickBooks | Likely: not built; the schema leaves room |
@@ -91,10 +91,12 @@ each with versions and an optional expiry. Built in the browser on Office › Do
 Answered in #22, October 2026. Each says what the schema does about it; "leaves room" means a
 nullable column or link now and the table or screen later, with nothing existing changing shape.
 
-- **Budget changes: yes.** A grant's budget has versions from day one: a budget line belongs to a
-  version, a new version is added when the funder approves moving money, and older versions stay,
-  read-only. Budget vs. actual measures against the current version. The portal keeps one budget
-  per grant until the feature is built; that budget becomes the grant's first version.
+- **Budget changes: yes.** A grant's budget has versions from day one. A grant's budget lines
+  stay the same lines throughout, so spending keeps pointing at them; what a version holds is
+  each line's planned amount. A new version is added when the funder approves moving money, and
+  older versions stay, read-only. Budget vs. actual measures against the current version. The
+  portal keeps one budget per grant until the feature is built; that budget becomes the grant's
+  first version.
 - **Staff pay charged to grants: yes, optional.** Recording hours comes first and stands alone: a
   time entry needs no grant. Charging hours to a grant is a separate, later step, done only when
   someone needs it. The schema keeps charges in their own table (the time entry, the grant, the
