@@ -7,9 +7,9 @@ import {
   mayTakeRoll,
   recentAttendance,
   rollCallsDueFor,
+  currentSessions,
   sessionWeekLabel,
   teachingSlice,
-  termForDate,
   timeLabel,
   unsubmittedRollCalls,
 } from './domain';
@@ -19,7 +19,15 @@ import RollCall from './screens/RollCall';
 import Students from './screens/Students';
 
 function stats(state: PortalState, today: string): StatSpec[] {
-  const term = termForDate(state, today);
+  // Enrolled counts every program, so the footnote names the session of each
+  // line: one name, or how many sessions there are when programs keep their own.
+  const sessions = currentSessions(state, today);
+  const session =
+    sessions.length === 0
+      ? 'No session scheduled'
+      : sessions.length === 1
+        ? sessions[0].term.name
+        : `${sessions.length} sessions`;
   const ensembles = activeOnly(state.teaching.ensembles).length;
 
   const enrolled: StatSpec = {
@@ -28,7 +36,7 @@ function stats(state: PortalState, today: string): StatSpec[] {
     value: String(enrolledCount(state)),
     accent: 'var(--blue-500)',
     href: '/students',
-    footnote: `${term?.name ?? 'No session scheduled'} · ${ensembles === 0 ? 'no ensembles yet' : `${ensembles} ${ensembles === 1 ? 'ensemble' : 'ensembles'}`}`,
+    footnote: `${session} · ${ensembles === 0 ? 'no ensembles yet' : `${ensembles} ${ensembles === 1 ? 'ensemble' : 'ensembles'}`}`,
   };
 
   // Week 1 of a session has one roll call in it, so the figure comes from the

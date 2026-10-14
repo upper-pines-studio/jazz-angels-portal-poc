@@ -21,7 +21,7 @@ actions.teaching.setMark(meetingId, studentId, 'present');
 
 | Noun | What it is |
 | --- | --- |
-| `Term` | A session (the screens' word): eight weeks or so the office plans and reports on, with `meetingsPlanned`, how many times each ensemble meets ("week 1 of 8"). Archived when entered by mistake or no longer wanted: it leaves the session list and is no longer the current session (`termForDate`); its classes and roll calls stay. |
+| `Term` | A session (the screens' word): eight weeks or so the office plans and reports on, with `meetingsPlanned`, how many times each ensemble meets ("week 1 of 8"). `programId` set means it is one program's (an in-school term); unset, it is for all programs (the studio sessions). That is its line (below). Archived when entered by mistake or no longer wanted: it leaves the session list, is no longer a current session (`termForProgram`) and counts toward no overlap; its classes and roll calls stay. |
 | `Ensemble` | A standing group: same students, same place, same hour each week. `venueId` is a core `Venue`; `room` is the space inside it. Archived when it stops meeting: its classes on and after `archivedAt` leave the schedule (`isScheduled`); the ones before stay, roll calls and all. |
 | `ClassMeeting` | One class on one date. `rollSubmittedAt` set means roll is closed. |
 | `Student` | On a roster, on the waitlist, or an alum. `ensembleId` is unset while waiting. `guardianName` is needed; `guardianPhone`, `guardianEmail` and `guardianAddress` (core's `Address`, all four parts or none) are optional (below). `photoRelease` is the guardian's answer on photos (below). |
@@ -69,15 +69,28 @@ up** — that is the one rule every rate in here follows.
 | `importStudents(inputs)` | Adds many students in one change, as the CSV import does, each release stamped like Enroll's. Returns how many. |
 | `archiveStudent(id)` / `restoreStudent(id)` | Archives a student (off the roster, the roll call and the counts; status untouched) or restores them. Needs Students: Edit. |
 | `archiveEnsemble(id)` / `restoreEnsemble(id)` | Archives an ensemble from today (its classes from then on leave the schedule; its students stay placed) or restores it. Needs Schedule: Edit. |
-| `addTerm(input)` / `updateTerm(id, patch)` | Adds a session (name, start, end, `meetingsPlanned`) or changes one. Returns the new id. Needs Schedule: Edit, and is refused with what is wrong (`termRefusal`): no name, no dates, an end on or before the start, fewer than one class. |
-| `archiveTerm(id)` / `restoreTerm(id)` | Archives a session or restores it. Needs Schedule: Edit. |
+| `addTerm(input)` / `updateTerm(id, patch)` | Adds a session (name, `programId` or none for all programs, start, end, `meetingsPlanned`) or changes one. Returns the new id. Needs Schedule: Edit, and is refused with what is wrong (`termRefusal`): no name, no dates, an end on or before the start, fewer than one class, a program that does not exist, or dates that overlap another current session on its line, naming that session. An edit back to All programs clears `programId`. |
+| `archiveTerm(id)` / `restoreTerm(id)` | Archives a session or restores it. Needs Schedule: Edit. Restoring one that would overlap a current session on its line is refused, naming it (`restoreTermRefusal`). |
 | `addEnsemble(input)` / `updateEnsemble(id, patch)` | Adds an ensemble (name, program, lead, venue, room, tone) or changes one. Needs Schedule: Edit, and is refused with what is wrong (`ensembleRefusal`): no name or one a current ensemble has, or a program, lead or venue that does not exist. A new venue or room moves its classes from today on that met at the old place and have no roll in, in the same change; past ones keep theirs. |
 
 ## Derived data
 
-`termForDate` (the current or next session), `sessionWeekLabel` and `recentAttendance`'s last
-finished term leave out archived sessions; `termsList` lists them earliest first, archived ones
-only with `includeArchived`. For the session and ensemble dialogs: `termProblems` and
+**Sessions per program** (decision 0007, #83). A session's *line* is its program, or all
+programs when it has none (`lineOf`). Two current sessions on one line never overlap, both ends
+counting (`termClash`); sessions on different lines may. A program follows its own line once it
+has a current session of its own, and the line for all programs until then (`lineForProgram`).
+`termForProgram(state, programId, date)` is a program's current session: the one on its line the
+day falls in, or between sessions the next one to start; `undefined` asks for the line for all
+programs. `termForEnsemble` is the same for an ensemble's classes. `currentSessions(state, date)`
+is every line's current or next session, all programs first, for the screens that show every
+line at once; `lineLabel` names a line on screen ("All programs", "In-school"), and with more
+than one line each heading uses it. `sessionWeekLabel` (the dashboard's "Fall session week 1")
+names each line when more than one is running. The roll calls due do not read a session.
+
+`termForProgram`, `currentSessions`, `sessionWeekLabel` and `recentAttendance`'s last finished
+session (for all programs, since it covers every program) leave out archived sessions;
+`termsList` lists them earliest first, archived ones only with `includeArchived`. For the
+session and ensemble dialogs: `termProblems` and
 `ensembleProblems` (what is wrong, field by field, in the words the dialog shows),
 `weeksBetween` (the classes a new session plans until typed), `leadOptions` (the current staff
 who teach, plus the lead already chosen) and `nextTone` (the first colour no current ensemble
@@ -137,7 +150,7 @@ evidence a grant report can quote.
 
 | Route | Screen |
 | --- | --- |
-| `/schedule` | Week grid (Sun–Thu) and the term view. `?view=term` opens the second tab: the current session, the Sessions list and the Ensembles list, with Add session and Add ensemble (`screens/schedule/TermDialog.tsx`, `EnsembleDialog.tsx`) next to Add class. |
+| `/schedule` | Week grid (Sun–Thu) and the term view. `?view=term` opens the second tab: the current session of each line (decision 0007), the Sessions list and the Ensembles list, with Add session and Add ensemble (`screens/schedule/TermDialog.tsx`, `EnsembleDialog.tsx`) next to Add class. |
 | `/roll/:meetingId` | Roll call: roster, marks, notes, trend. Read-only once submitted. |
 | `/students` | Roster by program plus the waitlist, with the selected student beside it. |
 

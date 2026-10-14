@@ -37,20 +37,26 @@ import {
   useStore,
 } from '../../../core';
 import {
+  currentSessions,
   ensembleById,
   ensembleCount,
   ensemblesList,
   isScheduled,
+  lineForProgram,
+  lineLabel,
+  lineOf,
   mayTakeRoll,
   meetingsForWeek,
-  termForDate,
+  restoreTermRefusal,
+  termForEnsemble,
   termWeek,
   termsList,
   timeLabel,
   timeRange,
   weekStart,
 } from '../domain';
-import type { ClassMeeting, Ensemble, Term } from '../domain';
+import type { PortalState } from '../../../core';
+import type { ClassMeeting, Ensemble, LineSession, Term } from '../domain';
 import { RollBadge, TONE_COLOR } from './parts';
 import AddClassDialog from './schedule/AddClassDialog';
 import EnsembleDialog from './schedule/EnsembleDialog';
@@ -116,6 +122,17 @@ function RowActions({
 /** Sunday through Thursday: the five days Jazz Angels teaches on. */
 const DAYS = [0, 1, 2, 3, 4];
 
+/**
+ * A session as a heading names it. With one line running it reads as it
+ * always has; with more than one, each says whose it is (decision 0007):
+ * "All programs: Fall 2026 session", "In-school: Fall term".
+ */
+function sessionTitle(state: PortalState, session: LineSession, several: boolean): string {
+  return several
+    ? `${lineLabel(state, session.programId)}: ${session.term.name}`
+    : session.term.name;
+}
+
 export default function Schedule() {
   const { state, today } = useStore();
   // An archived ensemble cannot have a class added, so only the current ones count.
@@ -132,13 +149,17 @@ export default function Schedule() {
   const [term, setTerm] = React.useState<Editing<Term>>(null);
   const [ensemble, setEnsemble] = React.useState<Editing<Ensemble>>(null);
 
-  const current = termForDate(state, today);
-  const week = termWeek(current, today);
+  // Each line's session: one for the studio, plus one for each program on its own calendar.
+  const sessions = currentSessions(state, today);
+  const several = sessions.length > 1;
 
   usePageHeader({
     title: 'Schedule',
     subtitle: [
-      current && `${current.name}${week ? ` · week ${week} of ${current.meetingsPlanned}` : ''}`,
+      ...sessions.map(s => {
+        const week = termWeek(s.term, today);
+        return `${sessionTitle(state, s, several)}${week ? ` · week ${week} of ${s.term.meetingsPlanned}` : ''}`;
+      }),
       ensembles === 0
         ? 'No ensembles yet'
         : `${ensembles} ${ensembles === 1 ? 'ensemble' : 'ensembles'}`,
@@ -243,8 +264,8 @@ function WeekGrid({
 
   const meetings = meetingsForWeek(state, start);
   const end = toISO(addDays(toDate(start), 6));
-  const term = termForDate(state, start);
-  const week = termWeek(term, start);
+  // A badge for each line whose session this week falls in.
+  const running = currentSessions(state, start).filter(s => termWeek(s.term, start));
 
   // Rows are the hours this week actually uses, so an empty hour never shows.
   const slots = [...new Set(meetings.map(m => m.start))].sort();
@@ -283,7 +304,15 @@ function WeekGrid({
         >
           {dateRange(start, end)}
         </div>
-        {term && week && <Badge tone="blue">{`${term.name} · week ${week}`}</Badge>}
+        {running.length > 0 && (
+          <span className="ja-actions">
+            {running.map(s => (
+              <Badge key={s.term.id} tone="blue">
+                {`${sessionTitle(state, s, running.length > 1)} · week ${termWeek(s.term, start)}`}
+              </Badge>
+            ))}
+          </span>
+        )}
       </div>
 
       {slots.length === 0 && activeOnly(state.teaching.ensembles).length === 0 ? (
@@ -428,7 +457,8 @@ function TermView({
   const { state, today, actions } = useStore();
   const mayEdit = useCan()('schedule', 'edit');
   const toast = useToast();
-  const term = termForDate(state, today);
+  // One card for each line's current or next session (decision 0007).
+  const sessions = currentSessions(state, today);
   // ?archived=1 lists the archived ensembles after the current ones; the
   // sessions card has its own switch, held on the card.
   const [showArchived, setShowArchived] = useArchivedParam();
@@ -440,8 +470,8 @@ function TermView({
 
   return (
     <>
-      {term ? (
-        <SessionCard term={term} />
+      {sessions.length > 0 ? (
+        sessions.map(s => <SessionCard key={s.term.id} session={s} several={sessions.length > 1} />)
       ) : (
         <Card padding="0">
           <EmptyState
@@ -467,12 +497,18 @@ function TermView({
 
       {state.teaching.terms.length > 0 && (
         <SessionsCard
-          current={term}
+          current={sessions.map(s => s.term)}
           showArchived={showArchivedTerms}
           onShowArchived={setShowArchivedTerms}
           onEdit={onEditTerm}
           onArchive={setArchivingTerm}
           onRestore={t => {
+            // One that would overlap a current session on its line stays archived, saying which.
+            const refusal = restoreTermRefusal(state, t.id);
+            if (refusal) {
+              toast({ tone: 'warning', title: 'Session not restored', message: refusal });
+              return;
+            }
             actions.teaching.restoreTerm(t.id);
             toast({
               tone: 'success',
@@ -484,7 +520,6 @@ function TermView({
       )}
 
       <EnsemblesCard
-        term={term}
         showArchived={showArchived}
         onShowArchived={setShowArchived}
         onEdit={onEditEnsemble}
@@ -534,12 +569,19 @@ function TermView({
   );
 }
 
-/** The current session: its weeks as a row of dots, each filled once its roll call is in. */
-function SessionCard({ term }: { term: Term }) {
+/**
+ * One line's current session: its weeks as a row of dots, each filled once
+ * its roll call is in. With more than one line, the title says whose it is.
+ */
+function SessionCard({ session, several }: { session: LineSession; several: boolean }) {
   const { state, today } = useStore();
+  const { term } = session;
 
-  // The session's weeks, taken from the first current ensemble's meetings.
-  const first = activeOnly(state.teaching.ensembles)[0] ?? state.teaching.ensembles[0];
+  // The session's weeks, taken from the meetings of the first current ensemble that follows it.
+  const following = state.teaching.ensembles.filter(
+    e => lineForProgram(state, e.programId) === session.programId,
+  );
+  const first = activeOnly(following)[0] ?? following[0];
   const weeks = state.teaching.meetings
     .filter(m => m.ensembleId === first?.id && m.date >= term.start && m.date <= term.end)
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -550,7 +592,7 @@ function SessionCard({ term }: { term: Term }) {
 
   return (
     <Card
-      title={term.name}
+      title={sessionTitle(state, session, several)}
       subtitle={[
         dateRange(term.start, term.end),
         planned,
@@ -598,7 +640,11 @@ function SessionCard({ term }: { term: Term }) {
   );
 }
 
-/** Every session: its dates and classes planned, with Edit, Archive and Restore for the office. */
+/**
+ * Every session: who it is for, its dates and classes planned, with Edit,
+ * Archive and Restore for the office. Each line's current session is marked
+ * Now, or Next between sessions.
+ */
 function SessionsCard({
   current,
   showArchived,
@@ -607,7 +653,7 @@ function SessionsCard({
   onArchive,
   onRestore,
 }: {
-  current: Term | undefined;
+  current: Term[];
   showArchived: boolean;
   onShowArchived: (next: boolean) => void;
   onEdit?: (term?: Term) => void;
@@ -620,7 +666,7 @@ function SessionsCard({
   return (
     <Card
       title="Sessions"
-      subtitle="Each session's dates, and how many classes each ensemble meets for"
+      subtitle="Who each session is for, its dates, and how many classes each ensemble meets for"
       padding="0"
       action={
         <ShowArchivedSwitch
@@ -645,9 +691,22 @@ function SessionsCard({
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}
                 >
                   <ArchivedName name={t.name} record={t} />
-                  {t.id === current?.id && (
+                  {current.some(c => c.id === t.id) && (
                     <Badge tone="blue">{t.start <= today ? 'Now' : 'Next'}</Badge>
                   )}
+                </span>
+              ),
+            },
+            {
+              key: 'program',
+              label: 'For',
+              width: '1fr',
+              render: (t: Term) => (
+                <span
+                  style={{ color: 'var(--text-muted)' }}
+                  title={lineOf(t) ? programName(state, lineOf(t)!) : undefined}
+                >
+                  {lineLabel(state, lineOf(t))}
                 </span>
               ),
             },
@@ -693,14 +752,12 @@ function SessionsCard({
 
 /** The ensembles: who meets when, where and with whom, and how many are on each roster. */
 function EnsemblesCard({
-  term,
   showArchived,
   onShowArchived,
   onEdit,
   onArchive,
   onRestore,
 }: {
-  term: Term | undefined;
   showArchived: boolean;
   onShowArchived: (next: boolean) => void;
   onEdit?: (ensemble?: Ensemble) => void;
@@ -711,9 +768,10 @@ function EnsemblesCard({
   const { state, today, user } = useStore();
   const allowed = useCan();
 
-  // With no session, every class counts.
-  const inRange = (m: ClassMeeting) => !term || (m.date >= term.start && m.date <= term.end);
   const rows = ensemblesList(state, showArchived).map(e => {
+    // Each ensemble reads from its own program's session; with none, every class counts.
+    const term = termForEnsemble(state, e.id, today);
+    const inRange = (m: ClassMeeting) => !term || (m.date >= term.start && m.date <= term.end);
     const meetings = state.teaching.meetings
       .filter(m => m.ensembleId === e.id && inRange(m))
       .sort((a, b) => a.date.localeCompare(b.date));
