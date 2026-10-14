@@ -120,8 +120,10 @@ director's role and gets a teacher's view of their own classes on top.
   - A staff record needs an email for this, which it does not have today (`docs/SCHEMA.md`).
 - Answered by the client in October 2026, from the schema (#22, `docs/SCHEMA.md`): charging hours
   to a grant (decision [0005](0005-roadmap-items-that-shape-the-schema.md)) follows "Award,
-  budget, reports", since it is grant money; a person may delete any of their own time entries,
-  whatever its status, as the store allows today; and a student's mark is fixed once the roll is
+  budget, reports", since it is grant money; a person may delete their own time entries while
+  they are drafts, and recall their own submitted ones to a draft until they are approved (#80;
+  the first answer was any of their own, whatever the status, but an approved entry is money,
+  decision [0002](0002-archive-not-delete.md)); and a student's mark is fixed once the roll is
   submitted, changed by reopening the roll.
 - "Own classes" means the ensembles the teacher is assigned to teach: `Ensemble.leadStaffId`
   (`leadsEnsemble` and `mayTakeRoll` in `modules/teaching/domain/derive.ts`). Guardian name and

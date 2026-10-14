@@ -597,8 +597,8 @@ restrict`.
 Smaller rows that are mistakes rather than history may still be deleted, with the checks the
 store makes today (decision 0002): a checklist task, a register row, a payment not yet received,
 a budget line with no expenses, an expense, a file, an award term, a report not yet sent, a split
-rule, a checklist template, a grant share (Take back), a time entry, and a transaction's parts
-when it is sent back or reassigned. A file that backs up an expense goes with its expense, in the
+rule, a checklist template, a grant share (Take back), a time entry while it is a draft, and a
+transaction's parts when it is sent back or reassigned. A file that backs up an expense goes with its expense, in the
 same change, with its stored contents; that is the change doing it, not a cascade.
 `office_document_versions` and `activity` are insert-only.
 
@@ -669,13 +669,14 @@ core's `Address`, so it becomes four columns, all four or none, as on a venue.
 | `students` | Admin, Director, Office manager, Office assistant; Teacher: own classes. Read-only: counts only, through a counting function, never the rows. Bookkeeper: none | Admin, Director, Office manager | Students: names, attendance |
 | `student_private` | Admin, Director, Office manager; Teacher: own classes. Never the Office assistant, the Bookkeeper or Read-only | Admin, Director, Office manager (whoever edits the student); `photo_release_recorded_by` is always the person writing | Guardian contact details |
 | `attendance` | Admin, Director, Office manager, Office assistant; Teacher: own classes. Read-only: counts only | Admin, Director, Office manager (any class); Teacher: own classes; none once the meeting's roll is submitted | Roll call |
-| `time_entries` | Own hours, for every role but Read-only; all rows for Admin, Director, Office manager, Bookkeeper | Insert, submit and delete: own hours, whatever the status. Approve: Admin, Director, Office manager, Bookkeeper, never their own | Timesheets: log hours, Timesheets: approve |
+| `time_entries` | Own hours, for every role but Read-only; all rows for Admin, Director, Office manager, Bookkeeper | Insert: own hours, as a draft. Change and delete: own hours, only while a draft. Submit (draft to submitted) and recall (submitted to draft): own hours. Approve (submitted to approved): Admin, Director, Office manager, Bookkeeper, never their own. Nobody changes or deletes an approved entry | Timesheets: log hours, Timesheets: approve |
 | `time_charges` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper: it is grant money, as "Award, budget, reports" (0001, answered October 2026) | Award, budget, reports |
 
 The client answered the schema's questions in October 2026 (decision 0001): `time_charges`
-follows "Award, budget, reports"; a person may delete any of their own time entries, as the
-store allows today; and attendance is fixed once the roll is submitted (the store ignores a mark
-then; reopening the roll is the way to change it).
+follows "Award, budget, reports"; a person may delete their own time entries while they are
+drafts, and recall their own submitted ones until they are approved (#80, which replaced the
+first answer, any of their own whatever the status); and attendance is fixed once the roll is
+submitted (the store ignores a mark then; reopening the roll is the way to change it).
 
 ## The eleven roadmap items (decision 0005)
 
