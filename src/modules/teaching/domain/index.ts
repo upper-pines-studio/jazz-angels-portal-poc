@@ -5,6 +5,7 @@
 
 export * from './types';
 export * from './derive';
+export * from './guardian';
 export * from './import';
 export * from './seed';
 export * from './slice';

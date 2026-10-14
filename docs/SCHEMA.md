@@ -506,6 +506,11 @@ erDiagram
     text student_id PK, FK
     text guardian_name
     text guardian_phone "null"
+    text guardian_email "null"
+    text guardian_street "null; the address is all four or none"
+    text guardian_city "null"
+    text guardian_state "null"
+    text guardian_zip "null"
     text photo_release "given | not-given | not-asked"
     date photo_release_date "null; unset while not-asked"
     text photo_release_recorded_by FK "null; staff"
@@ -633,13 +638,15 @@ table's own words; "Read" is any of View, View all, Edit, Yes, Any class, Own, O
   Nobody approves their own: an approval sets `approved_by` and is refused when it equals
   `staff_id`.
 
-**Guardian columns.** A student's guardian name and phone and their photo release
+**Guardian columns.** A student's guardian name, phone, email and address and their photo release
 (`photo_release`, its date, who recorded it) are the most protected data in the portal. They sit
 in their own table, `student_private`, one row per student, so a row rule can protect them: the
 `Student` type keeps them on the student, and the backend joins them in only for someone allowed
 (today `asSeenBy` and `rosterFor` leave them off). They are still the student's columns, as
 decision 0005 says of the photo release, held one-to-one beside the student. The rows of
 `students` themselves carry no guardian data.
+The guardian's email and address are optional (decision 0004, #82); `Student.guardianAddress` is
+core's `Address`, so it becomes four columns, all four or none, as on a venue.
 
 | Table | Who may read | Who may write | Row in 0001 |
 | --- | --- | --- | --- |

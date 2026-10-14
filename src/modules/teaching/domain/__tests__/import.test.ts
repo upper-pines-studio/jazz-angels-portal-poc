@@ -28,6 +28,9 @@ const EXISTING = teaching.students.find(s => s.status === 'enrolled')!;
 
 const HEADER =
   'Name,Instrument,Years in,Guardian name,Guardian phone,Program,Ensemble,Photo release';
+/** The template's header: the guardian's email and address after the phone. */
+const TEMPLATE_HEADER =
+  'Name,Instrument,Years in,Guardian name,Guardian phone,Guardian email,Street,City,State,ZIP,Program,Ensemble,Photo release';
 /** The columns before Photo release, for the files written before it existed. */
 const OLD_HEADER = 'Name,Instrument,Years in,Guardian name,Guardian phone,Program,Ensemble';
 
@@ -65,7 +68,7 @@ describe('parseStudentsCsv: headers', () => {
     ].join('\n');
     const result = parseStudentsCsv(text, ctx);
     expect(result.problems).toEqual([]);
-    expect(result.unknownColumns).toEqual(['email', 'Notes']);
+    expect(result.unknownColumns).toEqual(['Notes']);
     expect(result.rows).toHaveLength(1);
     const [row] = result.rows;
     expect(row.problems).toEqual([]);
@@ -76,6 +79,7 @@ describe('parseStudentsCsv: headers', () => {
       yearsIn: 2,
       guardianName: 'Rosa Ruiz',
       guardianPhone: '562-555-0101',
+      guardianEmail: 'ana@example.com',
       programId: BIG_BAND.programId,
       ensembleId: BIG_BAND.id,
       status: 'enrolled',
@@ -197,7 +201,7 @@ describe('parseStudentsCsv: rows', () => {
 describe('studentsCsvTemplate', () => {
   it('round-trips through the parser as one clean row', () => {
     const template = studentsCsvTemplate(ctx);
-    expect(template.split('\r\n')[0]).toBe(HEADER);
+    expect(template.split('\r\n')[0]).toBe(TEMPLATE_HEADER);
     const result = parseStudentsCsv(template, { ...ctx, students: [] });
     expect(result.problems).toEqual([]);
     expect(result.unknownColumns).toEqual([]);
@@ -205,6 +209,8 @@ describe('studentsCsvTemplate', () => {
     expect(result.rows[0].problems).toEqual([]);
     expect(result.rows[0].outcomes.add).toMatchObject({
       name: 'Maya Robinson',
+      guardianEmail: 'lorraine.robinson@example.com',
+      guardianAddress: { street: '1520 E 7th St', city: 'Long Beach', state: 'CA', zip: '90813' },
       ensembleId: teaching.ensembles[0].id,
       status: 'enrolled',
       photoRelease: { status: 'given', date: SEED_TODAY },
@@ -213,34 +219,35 @@ describe('studentsCsvTemplate', () => {
 
   it('still writes the header when there are no programs or ensembles', () => {
     const template = studentsCsvTemplate({ programs: [], ensembles: [] });
-    expect(readCsv(template)[0].cells.join(',')).toBe(HEADER);
+    expect(readCsv(template)[0].cells.join(',')).toBe(TEMPLATE_HEADER);
   });
 });
 
-describe('importStudents', () => {
-  function harness(role: Role) {
-    let state: TeachingState = makeSeed();
-    let n = 0;
-    const refused: string[] = [];
-    const dispatch = (action: AnyAction) => {
-      state = teachingSlice.reducer(state, action);
-    };
-    const getState = () => ({ core, teaching: state }) as unknown as PortalState;
-    const user = { id: 's-keisha', name: 'Keisha', role };
-    const actions = guardActions(
-      teachingSlice.createActions(dispatch, getState, {
-        today: SEED_TODAY,
-        newId: (prefix: string) => `${prefix}-new-${(n += 1)}`,
-        user,
-      }),
-      teachingSlice.rules,
-      getState,
+/** The teaching slice behind its real rules, signed in as `role`. */
+function harness(role: Role) {
+  let state: TeachingState = makeSeed();
+  let n = 0;
+  const refused: string[] = [];
+  const dispatch = (action: AnyAction) => {
+    state = teachingSlice.reducer(state, action);
+  };
+  const getState = () => ({ core, teaching: state }) as unknown as PortalState;
+  const user = { id: 's-keisha', name: 'Keisha', role };
+  const actions = guardActions(
+    teachingSlice.createActions(dispatch, getState, {
+      today: SEED_TODAY,
+      newId: (prefix: string) => `${prefix}-new-${(n += 1)}`,
       user,
-      m => refused.push(m),
-    );
-    return { actions, refused, students: () => state.students };
-  }
+    }),
+    teachingSlice.rules,
+    getState,
+    user,
+    m => refused.push(m),
+  );
+  return { actions, refused, students: () => state.students };
+}
 
+describe('importStudents', () => {
   it('adds every student in one change and says how many', () => {
     const h = harness('office-manager');
     const before = h.students().length;
@@ -366,5 +373,117 @@ describe('parseStudentsCsv: the Photo release column', () => {
     const header = OLD_HEADER + ',Photo consent';
     expect(parse('yes', header).photoRelease.status).toBe('given');
     expect(parse('yes', OLD_HEADER + ',Photos').photoRelease.status).toBe('given');
+  });
+});
+
+describe('parseStudentsCsv: the guardian email and address columns', () => {
+  const ROW = 'Ana Ruiz,Sax,1,Rosa Ruiz,,Studio Semester Sessions,Big Band';
+  const parse = (extraHeader: string, extraCells: string) =>
+    parseStudentsCsv(`${OLD_HEADER},${extraHeader}\n${ROW},${extraCells}`, ctx).rows[0];
+  const PARAMOUNT = { street: '8500 Contreras St', city: 'Paramount', state: 'CA', zip: '90723' };
+
+  it('reads an email and the four address columns onto the student and the preview row', () => {
+    const row = parse(
+      'Guardian email,Street,City,State,ZIP',
+      'rosa@example.com,8500 Contreras St,Paramount,CA,90723',
+    );
+    expect(row.problems).toEqual([]);
+    expect(row.guardianEmail).toBe('rosa@example.com');
+    expect(row.guardianAddress).toEqual(PARAMOUNT);
+    expect(row.outcomes.add).toMatchObject({
+      guardianEmail: 'rosa@example.com',
+      guardianAddress: PARAMOUNT,
+    });
+  });
+
+  it('reads the address from one Address column, state and ZIP together or apart', () => {
+    expect(parse('Address', '"8500 Contreras St, Paramount, CA 90723"').guardianAddress).toEqual(
+      PARAMOUNT,
+    );
+    expect(parse('Address', '"8500 Contreras St, Paramount, ca, 90723"').guardianAddress).toEqual(
+      PARAMOUNT,
+    );
+    expect(
+      parse('Guardian address', '"8500 Contreras St, Apt 4, Paramount, CA 90723"').guardianAddress
+        ?.street,
+    ).toBe('8500 Contreras St, Apt 4');
+  });
+
+  it('leaves both off, with no note, when the file has neither or they are blank', () => {
+    const none = parseStudentsCsv(`${OLD_HEADER}\n${ROW}`, ctx).rows[0];
+    expect(none.problems).toEqual([]);
+    expect(none.outcomes.add).not.toHaveProperty('guardianEmail');
+    expect(none.outcomes.add).not.toHaveProperty('guardianAddress');
+    const blank = parse('Email,Street,City,State,ZIP,Address', ',,,,,');
+    expect(blank.problems).toEqual([]);
+    expect(blank.guardianEmail).toBeUndefined();
+    expect(blank.guardianAddress).toBeUndefined();
+  });
+
+  it('flags a bad email on its row, leaves it off, and still adds the row', () => {
+    const text = [
+      `${OLD_HEADER},Email`,
+      `${ROW},rosa at example`,
+      'Bo Lin,Bass,1,Mei Lin,,Homeschool Program,,mei@example.com',
+    ].join('\n');
+    const result = parseStudentsCsv(text, ctx);
+    expect(result.problems).toEqual([]);
+    const [bad, good] = result.rows;
+    expect(bad.problems).toEqual(['Email "rosa at example" looks wrong; it will be left off']);
+    expect(bad.guardianEmail).toBeUndefined();
+    expect(bad.outcomes.add).not.toHaveProperty('guardianEmail');
+    expect(bad.defaultChoice).toBe('add');
+    expect(good.problems).toEqual([]);
+    expect(good.guardianEmail).toBe('mei@example.com');
+  });
+
+  it('takes an address only with all four parts, and says which are missing', () => {
+    const row = parse('Street,City,State,ZIP', '8500 Contreras St,,CA,');
+    expect(row.problems).toEqual(['Address is missing the city and ZIP; it will be left off']);
+    expect(row.guardianAddress).toBeUndefined();
+    expect(row.outcomes.add).not.toHaveProperty('guardianAddress');
+    expect(row.defaultChoice).toBe('add');
+  });
+
+  it('flags one Address column it cannot read as street, city, state and ZIP', () => {
+    const row = parse('Address', '"8500 Contreras St, Paramount"');
+    expect(row.problems).toEqual([
+      'Address "8500 Contreras St, Paramount" is not street, city, state and ZIP; it will be left off',
+    ]);
+    expect(row.guardianAddress).toBeUndefined();
+  });
+
+  it('carries the email and address through Import, and refuses an unsound one sent directly', () => {
+    const h = harness('office-manager');
+    const { rows } = parseStudentsCsv(
+      `${OLD_HEADER},Email,Address\n${ROW},rosa@example.com,"8500 Contreras St, Paramount, CA 90723"`,
+      ctx,
+    );
+    h.actions.importStudents(studentsToImport(rows, {}));
+    expect(h.students().at(-1)).toMatchObject({
+      guardianEmail: 'rosa@example.com',
+      guardianAddress: PARAMOUNT,
+    });
+
+    const before = h.students().length;
+    const student = {
+      name: 'Cy Moss',
+      instrument: 'Drums',
+      yearsIn: 1,
+      guardianName: 'Di Moss',
+      programId: 'homeschool',
+      status: 'waitlist' as const,
+    };
+    expect(h.actions.importStudents([{ ...student, guardianEmail: 'di@' }])).toBeUndefined();
+    expect(
+      h.actions.importStudents([
+        { ...student, guardianAddress: { street: '1 Main St', city: '', state: 'CA', zip: '' } },
+      ]),
+    ).toBeUndefined();
+    expect(h.refused).toEqual([
+      'Check the email. It should look like name@example.com.',
+      'Add the city and ZIP, or leave the address blank.',
+    ]);
+    expect(h.students()).toHaveLength(before);
   });
 });

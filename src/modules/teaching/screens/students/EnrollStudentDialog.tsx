@@ -5,6 +5,8 @@ import { activeOnly, classProgramOptions, placeLabel, useStore } from '../../../
 import type { ProgramId } from '../../../../core';
 import { ensembleById, photoReleaseRefusal } from '../../domain';
 import type { PhotoReleaseInput } from '../../domain';
+import GuardianFields, { guardianDraft, guardianErrors, guardianFields } from './GuardianFields';
+import type { GuardianDraft } from './GuardianFields';
 import PhotoReleaseFields from './PhotoReleaseFields';
 
 const WAITLIST = '__waitlist__';
@@ -31,8 +33,7 @@ export default function EnrollStudentDialog({
 
   const [name, setName] = React.useState('');
   const [instrument, setInstrument] = React.useState('');
-  const [guardianName, setGuardianName] = React.useState('');
-  const [guardianPhone, setGuardianPhone] = React.useState('');
+  const [guardian, setGuardian] = React.useState<GuardianDraft>(() => guardianDraft());
   // A new student is offered the current programs only, not Operations; an archived program's
   // tab still opens this, and it starts on the first current one instead.
   const programs = classProgramOptions(state);
@@ -48,7 +49,7 @@ export default function EnrollStudentDialog({
 
   const nameError = !name.trim() ? 'Give the student a name.' : undefined;
   const instrumentError = !instrument.trim() ? 'Name the instrument they play.' : undefined;
-  const guardianError = !guardianName.trim() ? 'Name the guardian we call.' : undefined;
+  const guardianError = Object.values(guardianErrors(guardian)).some(Boolean);
   const releaseError = photoReleaseRefusal(photoRelease, today);
   const valid = !nameError && !instrumentError && !guardianError && !releaseError;
 
@@ -66,8 +67,7 @@ export default function EnrollStudentDialog({
       name: name.trim(),
       instrument: instrument.trim(),
       yearsIn: 1,
-      guardianName: guardianName.trim(),
-      guardianPhone: guardianPhone.trim() || undefined,
+      ...guardianFields(guardian),
       programId,
       ensembleId: waiting ? undefined : chosen,
       status: waiting ? 'waitlist' : 'enrolled',
@@ -120,24 +120,7 @@ export default function EnrollStudentDialog({
           />
         </Field>
 
-        <div className="ja-grid-2">
-          <Field label="Guardian" required error={showErrors ? guardianError : undefined}>
-            <Input
-              value={guardianName}
-              onChange={e => setGuardianName(e.target.value)}
-              placeholder="Lorraine Robinson"
-              style={{ width: '100%' }}
-            />
-          </Field>
-          <Field label="Guardian phone">
-            <Input
-              value={guardianPhone}
-              onChange={e => setGuardianPhone(e.target.value)}
-              placeholder="(562) 555-0148"
-              style={{ width: '100%' }}
-            />
-          </Field>
-        </div>
+        <GuardianFields value={guardian} onChange={setGuardian} showErrors={showErrors} />
 
         <PhotoReleaseFields
           value={photoRelease}

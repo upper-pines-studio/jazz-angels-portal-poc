@@ -1,7 +1,14 @@
 import React from 'react';
 import { Badge, Button, DataTable, Dialog, Icon, Select } from '../../../../design-system';
 import { useToast } from '../../../../app/ToastHost';
-import { activeOnly, classProgramOptions, programName, useCan, useStore } from '../../../../core';
+import {
+  activeOnly,
+  addressLine,
+  classProgramOptions,
+  programName,
+  useCan,
+  useStore,
+} from '../../../../core';
 import {
   PHOTO_RELEASE_LABEL,
   ensembleById,
@@ -211,10 +218,12 @@ export default function ImportStudentsDialog({
             </div>
           )}
           <div style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
-            The columns are Name, Instrument, Years in, Guardian name, Guardian phone, Program,
-            Ensemble and Photo release, in any order. A student with an ensemble is enrolled in it;
-            one without goes on the program&rsquo;s waitlist. Photo release is yes, no or blank for
-            not asked yet. Other columns are left out.
+            The columns are Name, Instrument, Years in, Guardian name, Guardian phone, Guardian
+            email, Street, City, State, ZIP, Program, Ensemble and Photo release, in any order. A
+            student with an ensemble is enrolled in it; one without goes on the program&rsquo;s
+            waitlist. The guardian&rsquo;s email and address can be blank; the address can also be
+            one Address column. Photo release is yes, no or blank for not asked yet. Other columns
+            are left out.
           </div>
           <div>
             <Button
@@ -343,8 +352,24 @@ function Preview({
                     {
                       key: 'guardian',
                       label: 'Guardian',
-                      width: '1.3fr',
-                      render: (r: ImportRow) => twoLines(r.guardianName || '—', r.guardianPhone),
+                      width: '1.6fr',
+                      render: (r: ImportRow) => {
+                        // Phone, email and address, one to a line, as far as the row has them.
+                        const contacts = [
+                          r.guardianPhone,
+                          r.guardianEmail,
+                          addressLine(r.guardianAddress),
+                        ].filter(Boolean);
+                        return twoLines(
+                          r.guardianName || '—',
+                          contacts.length > 0 &&
+                            contacts.map(line => (
+                              <span key={line} style={{ display: 'block' }}>
+                                {line}
+                              </span>
+                            )),
+                        );
+                      },
                     },
                     // The release follows guardian contacts (decision 0001).
                     {
