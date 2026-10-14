@@ -2,9 +2,15 @@ import React from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, EmptyState, Icon } from '../../../../design-system';
 import { dateLong, money, useCan, useStore } from '../../../../core';
-import { awardLetter, grantLines, isMapped, lineMatched, linePaces } from '../../domain';
+import {
+  awardLetter,
+  grantLines,
+  isMapped,
+  lineMatched,
+  linePaces,
+  usualBudgetLines,
+} from '../../domain';
 import type { BudgetLine, Grant } from '../../domain';
-import { CATEGORY_ACCOUNTS } from '../../domain/seed-money';
 import { useToast } from '../../../../app/ToastHost';
 import { Figures, PaceMark } from '../money/shared';
 import { BudgetLineEditor } from './BudgetLineEditor';
@@ -31,7 +37,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
  * marks it as this grant's. Lines are edited in place, one at a time.
  */
 export function BudgetTab({ grant }: { grant: Grant }) {
-  const { state, today, actions } = useStore();
+  const { state, today, actions, demo } = useStore();
   // Budget lines are award records.
   const mayEdit = useCan()('award', 'edit');
   const toast = useToast();
@@ -110,18 +116,15 @@ export function BudgetTab({ grant }: { grant: Grant }) {
   };
 
   const startFromUsual = () => {
-    for (const [category, codes] of Object.entries(CATEGORY_ACCOUNTS)) {
-      actions.grants.addBudgetLine({
-        grantId: grant.id,
-        category,
-        planned: 0,
-        accountCodes: [...codes],
-      });
+    for (const { category, accountCodes } of usualBudgetLines(demo)) {
+      actions.grants.addBudgetLine({ grantId: grant.id, category, planned: 0, accountCodes });
     }
     toast({
       tone: 'success',
       title: 'Five lines added',
-      message: 'Set the approved amount on each, then pick the QuickBooks class this grant uses.',
+      message: demo
+        ? 'Set the approved amount on each, then pick the QuickBooks class this grant uses.'
+        : 'Set the approved amount on each, then pick the QuickBooks accounts and class this grant uses.',
     });
   };
 
