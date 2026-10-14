@@ -3,6 +3,7 @@ import { staffById } from '../../core';
 import type { AttentionItem, ModuleManifest, PortalState, Requirement, StatSpec } from '../../core';
 import {
   awaitingApproval,
+  awaitingApprovalFor,
   formatHours,
   hoursThisMonth,
   teachersThisMonth,
@@ -11,11 +12,6 @@ import {
 import Timesheets from './screens/Timesheets';
 
 const APPROVE: Requirement = { subject: 'timesheets-approve' };
-
-/** The number on the rail and the one thing this module puts on the dashboard. */
-function awaitingCount(state: PortalState): number {
-  return awaitingApproval(state).length;
-}
 
 function stats(state: PortalState, today: string): StatSpec[] {
   const teachers = teachersThisMonth(state, today);
@@ -69,7 +65,7 @@ export const manifest: ModuleManifest = {
         path: '/timesheets',
         label: 'Timesheets',
         icon: 'clock',
-        badge: state => awaitingCount(state),
+        badge: (state, _today, user) => awaitingApprovalFor(state, user).length,
         // The rail item opens for anyone who logs hours or approves them.
         requires: [{ subject: 'timesheets-log' }, APPROVE],
       },

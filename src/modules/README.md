@@ -88,6 +88,14 @@ one record an "Own" cell limits adds `allows(user, state, params)`. Screens ask
 `useCan()` and leave out (not disable) what the role may not do. See
 `src/core/permissions.ts` and decision 0001.
 
+**Rail badges.** A rail item's `badge(state, today, user)` is given the
+signed-in person and counts only what they can act on there, not everything
+the screen shows: the entries they may approve (never their own hours), the
+roll calls they may take (a teacher's own classes), the transactions they may
+assign. The module decides it in its `domain/`, with `can` and its own-record
+helpers (`mayApprove`, `mayTakeRoll`), so it has a test per role. A role that
+may only look sees no badge; zero shows nothing.
+
 `dashboard.subtitle(state, today)` is the few words the module adds to the
 dashboard's page subtitle, after core's date and fiscal year.
 

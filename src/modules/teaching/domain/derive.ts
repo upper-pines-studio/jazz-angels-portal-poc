@@ -254,6 +254,19 @@ export function unsubmittedRollCalls(state: PortalState, today: string): ClassMe
     .sort(byClock);
 }
 
+/**
+ * The roll calls due that this person may take: every one for a role that
+ * takes roll in any class, a teacher's own classes, none for the rest. The
+ * number on the Schedule rail item.
+ */
+export function rollCallsDueFor(
+  state: PortalState,
+  today: string,
+  user: SignedInUser,
+): ClassMeeting[] {
+  return unsubmittedRollCalls(state, today).filter(m => mayTakeRoll(state, user, m.id));
+}
+
 // --- Attendance -------------------------------------------------------------
 
 export interface MarkCounts {

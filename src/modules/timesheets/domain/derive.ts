@@ -88,6 +88,14 @@ export function awaitingApproval(state: PortalState): TimeEntry[] {
 }
 
 /**
+ * The entries awaiting approval that this person may approve: none for a role
+ * that does not approve, and never their own. The number on the rail.
+ */
+export function awaitingApprovalFor(state: PortalState, user: SignedInUser): TimeEntry[] {
+  return awaitingApproval(state).filter(e => mayApprove(user, e));
+}
+
+/**
  * Hours per program over an inclusive range, biggest first. Programs with
  * nothing logged are left out, so the bars never show an empty row.
  */

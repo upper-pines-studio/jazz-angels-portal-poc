@@ -7,7 +7,8 @@ import {
   staffById,
 } from '../../../core/derive';
 import { daysUntil } from '../../../core/format';
-import type { PortalState, ProgramId } from '../../../core/types';
+import { can } from '../../../core/permissions';
+import type { PortalState, ProgramId, SignedInUser } from '../../../core/types';
 import { PHASE_ORDER, POST_AWARD_PHASES, PRE_AWARD_PHASES, isTerminal, phaseIndex } from './phases';
 import type {
   Activity,
@@ -156,6 +157,16 @@ export function deadlines(state: PortalState, today: string): Deadline[] {
       KIND_RANK[a.kind] - KIND_RANK[b.kind] ||
       a.label.localeCompare(b.label),
   );
+}
+
+/**
+ * The overdue and due-soon deadlines this person can act on: the number on the
+ * Deadlines rail item. Only a role that edits grants, so nothing for one that
+ * only views them (decision 0001).
+ */
+export function deadlinesDueFor(state: PortalState, today: string, user: SignedInUser): Deadline[] {
+  if (!can(user.role, 'grants', 'edit')) return [];
+  return deadlines(state, today).filter(d => d.status !== 'upcoming');
 }
 
 export function grantDeadlines(state: PortalState, grantId: string, today: string): Deadline[] {

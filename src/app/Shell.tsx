@@ -72,7 +72,7 @@ function buildNav(state: PortalState, today: string, user: SignedInUser): RailIt
           ? meetsAny(user.role, item.requires)
           : mayOpen(user, item.path, state);
         if (!open) continue;
-        const count = item.badge?.(state, today);
+        const count = item.badge?.(state, today, user);
         target.items.push({
           id: item.path,
           label: item.label,

@@ -2,7 +2,8 @@ import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { isArchived } from '../../../core/archive';
 import { fiscalYear } from '../../../core/derive';
 import { dateLong, money } from '../../../core/format';
-import type { PortalState } from '../../../core/types';
+import { can } from '../../../core/permissions';
+import type { PortalState, SignedInUser } from '../../../core/types';
 import type {
   Allocation,
   BackupCarry,
@@ -327,12 +328,20 @@ export function paceDriver(
   return undefined;
 }
 
-/** Grants that are spending fast or slow: the number on the Spend-down rail item. */
+/** Grants that are spending fast or slow, for the dashboard. The rail counts `offPaceGrantsFor`. */
 export function offPaceGrants(state: PortalState, today: string): Grant[] {
   return trackedGrants(state).filter(g => {
     const status = grantPace(state, g.id, today).status;
     return status === 'spending-fast' || status === 'spending-slow';
   });
+}
+
+/**
+ * The off-pace grants this person can act on: the number on the Spend-down
+ * rail item. Only a role that edits the award and budget (decision 0001).
+ */
+export function offPaceGrantsFor(state: PortalState, today: string, user: SignedInUser): Grant[] {
+  return can(user.role, 'award', 'edit') ? offPaceGrants(state, today) : [];
 }
 
 /**
@@ -441,6 +450,14 @@ export function transactionCounts(state: PortalState): Record<TransactionStatus 
   };
   for (const t of state.grants.transactions) counts[t.status] += 1;
   return counts;
+}
+
+/**
+ * How many transactions wait for this person to assign them: the number on the
+ * Transactions rail item. None for a role that may only look (decision 0001).
+ */
+export function toAssignFor(state: PortalState, user: SignedInUser): number {
+  return can(user.role, 'transactions', 'edit') ? transactionCounts(state)['to-assign'] : 0;
 }
 
 /** Where an assigned transaction went: one part, or several when it was split. */
