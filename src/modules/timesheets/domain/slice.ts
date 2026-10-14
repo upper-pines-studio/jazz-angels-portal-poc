@@ -1,6 +1,8 @@
 import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import type { PortalState } from '../../../core/types';
 import {
+  APPROVED_REFUSAL,
+  DRAFT_ONLY_REFUSAL,
   OWN_HOURS_REFUSAL,
   entriesForWeek,
   mayApprove,
@@ -32,8 +34,8 @@ declare module '../../../core/types' {
 
 /**
  * Every change the timesheets slice makes: an entry added, changed or taken
- * away. Which changes are allowed (only a draft is submitted, an approval
- * stands) is decided in `createActions`, which reads the state first, so one
+ * away. Which changes are allowed (only a draft is submitted or deleted, only
+ * a submitted entry is recalled, an approval stands) is decided in `createActions`, which reads the state first, so one
  * repository `apply` covers every module.
  */
 export type TimesheetsAction =
@@ -147,7 +149,14 @@ function createActions(
         patch: { status: 'approved', approvedBy: user.id, approvedAt: today },
       });
     },
+    recallEntry(id) {
+      // Only a submitted entry comes back; a draft is already back, an approval stands.
+      if (entryOf(id)?.status !== 'submitted') return;
+      send({ type: 'update', key: 'entries', id, patch: { status: 'draft' } });
+    },
     deleteEntry(id) {
+      // Only a draft is a mistake to take away; submitted and approved hours stay.
+      if (entryOf(id)?.status !== 'draft') return;
       send({ type: 'remove', key: 'entries', id });
     },
   };
@@ -187,9 +196,17 @@ export const timesheetsSlice: ModuleSlice<TimesheetsState, TimesheetsActions> = 
     },
     // The action itself takes only the signed-in person's drafts.
     submitWeek: user => mayLogFor(user, user.id),
+    // Your own, while it is still a draft (decision 0002: approved hours are money).
     deleteEntry: (user, state, id) => {
       const entry = state.timesheets.entries.find(e => e.id === id);
-      return !!entry && mayLogFor(user, entry.staffId);
+      if (!entry || !mayLogFor(user, entry.staffId)) return false;
+      return entry.status === 'draft' ? true : DRAFT_ONLY_REFUSAL;
+    },
+    // Your own, until the office approves it.
+    recallEntry: (user, state, id) => {
+      const entry = state.timesheets.entries.find(e => e.id === id);
+      if (!entry || !mayLogFor(user, entry.staffId)) return false;
+      return entry.status === 'approved' ? APPROVED_REFUSAL : true;
     },
     approveEntry: (user, state, id) => {
       const entry = state.timesheets.entries.find(e => e.id === id);

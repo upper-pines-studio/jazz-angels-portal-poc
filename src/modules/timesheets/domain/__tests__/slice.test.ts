@@ -4,11 +4,15 @@ import { makeCoreSeed } from '../../../../core/seed';
 import { guardActions } from '../../../../core/store';
 import type { PortalState, Role, SignedInUser } from '../../../../core/types';
 import {
+  APPROVED_REFUSAL,
+  DRAFT_ONLY_REFUSAL,
   OWN_HOURS_REFUSAL,
   awaitingApproval,
   entriesForWeek,
   mayApprove,
+  mayDeleteEntry,
   mayLogFor,
+  mayRecall,
   ownDrafts,
 } from '../derive';
 import { SEED_TODAY, makeSeed } from '../seed';
@@ -143,6 +147,15 @@ describe('logHours and deleteEntry', () => {
     expect(h.state().entries).toHaveLength(makeSeed().entries.length);
   });
 
+  it('leaves a submitted or approved entry where it is', () => {
+    const h = harness();
+    const kept = h.state().entries.filter(e => e.status !== 'draft');
+    const before = h.state();
+    for (const entry of kept) h.actions.deleteEntry(entry.id);
+    expect(h.state()).toBe(before);
+    expect(h.sent).toEqual([]);
+  });
+
   it('never rounds an entry down to nothing', () => {
     expect(toQuarterHours(0.1)).toBe(0.25);
     expect(toQuarterHours(2)).toBe(2);
@@ -162,9 +175,11 @@ describe('the generic actions', () => {
     });
     h.actions.submitEntry(id);
     h.actions.approveEntry(submitted().id);
+    h.actions.recallEntry(id);
     h.actions.deleteEntry(id);
     expect(h.sent.map(a => `${a.type} ${a.key}`)).toEqual([
       'timesheets/insert entries',
+      'timesheets/update entries',
       'timesheets/update entries',
       'timesheets/update entries',
       'timesheets/remove entries',
@@ -173,6 +188,7 @@ describe('the generic actions', () => {
       'the hours',
       'the hours',
       'the approval',
+      'the hours',
       'the hours',
     ]);
   });
@@ -248,6 +264,28 @@ describe('the slice', () => {
       ],
     });
     expect(filled!.entries[0].status).toBe('draft');
+  });
+});
+
+describe('recallEntry', () => {
+  it('takes a submitted entry back to a draft, off the queue', () => {
+    const h = harness();
+    const entry = submitted();
+    h.actions.recallEntry(entry.id);
+    expect(h.state().entries.find(e => e.id === entry.id)!.status).toBe('draft');
+    expect(awaitingApproval(portal(h.state()))).toHaveLength(1);
+    expect(timesheetsSlice.describe!(h.sent[0])).toBe('the hours');
+  });
+
+  it('leaves a draft or an approved entry alone', () => {
+    const h = harness();
+    const before = h.state();
+    for (const status of ['draft', 'approved']) {
+      h.actions.recallEntry(h.state().entries.find(e => e.status === status)!.id);
+    }
+    h.actions.recallEntry('nope');
+    expect(h.state()).toBe(before);
+    expect(h.sent).toEqual([]);
   });
 });
 
@@ -445,5 +483,84 @@ describe('submitting through the store', () => {
     expect(ro.actions.submitWeek(SEP_7)).toBeUndefined();
     expect(ro.refused).toHaveLength(1);
     expect(ro.state()).toBe(before);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Deleting and recalling (decision 0001: log hours, own; decision 0002)
+// ---------------------------------------------------------------------------
+
+describe('deleting through the store', () => {
+  it('lets a teacher delete their own draft', () => {
+    const h = guarded(DEVON);
+    const id = h.actions.logHours(hours('s-devon'));
+    const entry = h.state().entries.find(e => e.id === id)!;
+    expect(mayDeleteEntry(DEVON, entry)).toBe(true);
+    h.actions.deleteEntry(id);
+    expect(h.refused).toEqual([]);
+    expect(h.state().entries.some(e => e.id === id)).toBe(false);
+  });
+
+  it('refuses their own submitted or approved hours, with the reason', () => {
+    const h = guarded(DEVON);
+    const id = h.actions.logHours(hours('s-devon'));
+    h.actions.submitEntry(id);
+    h.actions.deleteEntry(id);
+    expect(h.refused).toEqual([DRAFT_ONLY_REFUSAL]);
+
+    const approved = makeSeed().entries.find(
+      e => e.staffId === 's-devon' && e.status === 'approved',
+    )!;
+    expect(mayDeleteEntry(DEVON, approved)).toBe(false);
+    h.actions.deleteEntry(approved.id);
+    expect(h.refused).toEqual([DRAFT_ONLY_REFUSAL, DRAFT_ONLY_REFUSAL]);
+    expect(h.state().entries.find(e => e.id === id)?.status).toBe('submitted');
+    expect(h.state().entries.some(e => e.id === approved.id)).toBe(true);
+  });
+
+  it("refuses somebody else's draft, even for the office", () => {
+    const h = guarded(KEISHA);
+    const theirs = h.state().entries.find(e => e.staffId !== 's-keisha' && e.status === 'draft')!;
+    expect(mayDeleteEntry(KEISHA, theirs)).toBe(false);
+    h.actions.deleteEntry(theirs.id);
+    expect(h.refused).toHaveLength(1);
+    expect(h.state().entries.some(e => e.id === theirs.id)).toBe(true);
+  });
+});
+
+describe('recalling through the store', () => {
+  it('lets a teacher recall their own submitted entry until it is approved', () => {
+    const h = guarded(DEVON);
+    const id = h.actions.logHours(hours('s-devon'));
+    h.actions.submitEntry(id);
+    expect(
+      mayRecall(
+        DEVON,
+        h.state().entries.find(e => e.id === id)!,
+      ),
+    ).toBe(true);
+    h.actions.recallEntry(id);
+    expect(h.refused).toEqual([]);
+    expect(h.state().entries.find(e => e.id === id)?.status).toBe('draft');
+  });
+
+  it('refuses an approved entry, with the reason', () => {
+    const h = guarded(DEVON);
+    const approved = h
+      .state()
+      .entries.find(e => e.staffId === 's-devon' && e.status === 'approved')!;
+    expect(mayRecall(DEVON, approved)).toBe(false);
+    h.actions.recallEntry(approved.id);
+    expect(h.refused).toEqual([APPROVED_REFUSAL]);
+    expect(h.state().entries.find(e => e.id === approved.id)?.status).toBe('approved');
+  });
+
+  it("refuses somebody else's submitted entry, even for the office", () => {
+    const entry = submitted();
+    const h = guarded(KEISHA);
+    expect(mayRecall(KEISHA, entry)).toBe(false);
+    h.actions.recallEntry(entry.id);
+    expect(h.refused).toHaveLength(1);
+    expect(h.state().entries.find(e => e.id === entry.id)?.status).toBe('submitted');
   });
 });
