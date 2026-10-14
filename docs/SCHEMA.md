@@ -463,8 +463,8 @@ erDiagram
   terms {
     text id PK
     text name
-    text program_id FK "null; set when one program's"
-    date start_date
+    text program_id FK "null; set when one program's; its line (0007)"
+    date start_date "no overlap on its line while current"
     date end_date
     int meetings_planned
     date archived_at "null"
@@ -707,6 +707,13 @@ then; reopening the roll is the way to change it).
   the grants slice where a change and its activity line save together (decision 0005, "One
   activity log"). With the backend, a change and its `activity` row are written in one
   transaction.
+- **Sessions on one line never overlap (decision 0007, #83).** A term's line is its `program_id`,
+  with null (a session for all programs) treated as one value of its own. Two current terms on
+  one line may not share a day; terms on different lines may. An archived term counts toward no
+  overlap, so restoring one is checked again. With `btree_gist`:
+  `exclude using gist (coalesce(program_id, '') with =, daterange(start_date, end_date, '[]')
+  with &&) where (archived_at is null)`. The store refuses the same three ways today (add,
+  change, restore), naming the session it clashes with.
 - **The QuickBooks columns are read-only.** The sync writes `transactions`, `qb_accounts` and
   `qb_classes`; people change only a transaction's status and who assigned it, and its parts
   are `expenses` rows. Nothing is written back to QuickBooks.

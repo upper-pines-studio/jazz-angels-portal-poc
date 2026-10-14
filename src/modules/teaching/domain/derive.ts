@@ -3,6 +3,7 @@ import {
   activeOnly,
   archivedBy,
   can,
+  dateRange,
   isArchived,
   pickable,
   toDate,
@@ -48,12 +49,95 @@ export function meetingById(state: PortalState, id: string | undefined): ClassMe
   return id ? state.teaching.meetings.find(m => m.id === id) : undefined;
 }
 
-/** The term `dateISO` falls inside, or the next one to start. An archived term is neither. */
-export function termForDate(state: PortalState, dateISO: string): Term | undefined {
-  const terms = activeOnly(state.teaching.terms).sort((a, b) => a.start.localeCompare(b.start));
+// --- Sessions and their lines (decision 0007) --------------------------------
+
+/**
+ * A session's line: the program it belongs to, or undefined for a session
+ * that spans all programs (the studio sessions). Sessions on one line never
+ * overlap; sessions on different lines may.
+ */
+export function lineOf(term: Pick<Term, 'programId'>): ProgramId | undefined {
+  return term.programId || undefined;
+}
+
+/** The current (not archived) sessions on one line, earliest first. */
+export function termsOnLine(state: PortalState, programId: ProgramId | undefined): Term[] {
+  const line = programId || undefined;
+  return activeOnly(state.teaching.terms)
+    .filter(t => lineOf(t) === line)
+    .sort((a, b) => a.start.localeCompare(b.start));
+}
+
+/**
+ * The line a program's classes follow: its own once it has a session of its
+ * own, else the all-programs line. Undefined is the all-programs line.
+ */
+export function lineForProgram(
+  state: PortalState,
+  programId: ProgramId | undefined,
+): ProgramId | undefined {
+  return programId && termsOnLine(state, programId).length > 0 ? programId : undefined;
+}
+
+/**
+ * The current session for a program's classes on a day (decision 0007): the
+ * session on its line that `dateISO` falls inside, or between sessions the
+ * next one on that line to start. A program with no sessions of its own
+ * follows the all-programs sessions, and so does an unset `programId`. An
+ * archived session is never current.
+ */
+export function termForProgram(
+  state: PortalState,
+  programId: ProgramId | undefined,
+  dateISO: string,
+): Term | undefined {
+  const terms = termsOnLine(state, lineForProgram(state, programId));
   return (
     terms.find(t => dateISO >= t.start && dateISO <= t.end) ?? terms.find(t => t.start > dateISO)
   );
+}
+
+/** The current session for one ensemble's classes on a day: its program's, by the rule above. */
+export function termForEnsemble(
+  state: PortalState,
+  ensembleId: string | undefined,
+  dateISO: string,
+): Term | undefined {
+  return termForProgram(state, ensembleById(state, ensembleId)?.programId, dateISO);
+}
+
+/** One line's current or next session, for the screens that show every line at once. */
+export interface LineSession {
+  /** Unset for the all-programs line. */
+  programId?: ProgramId;
+  term: Term;
+}
+
+/**
+ * Every line's current session on a day, or the next one where a line is
+ * between sessions: the all-programs line first, then each program with
+ * sessions of its own in the order core lists them. A line with nothing
+ * current or coming is left out.
+ */
+export function currentSessions(state: PortalState, dateISO: string): LineSession[] {
+  const terms = activeOnly(state.teaching.terms);
+  const order = new Map(state.core.programs.map((p, i) => [p.id, i]));
+  const rank = (id: ProgramId) => order.get(id) ?? state.core.programs.length;
+  const programs = [...new Set(terms.map(lineOf).filter((id): id is ProgramId => !!id))].sort(
+    (a, b) => rank(a) - rank(b),
+  );
+  const lines = [...(terms.some(t => !lineOf(t)) ? [undefined] : []), ...programs];
+  return lines.flatMap(programId => {
+    const term = termForProgram(state, programId, dateISO);
+    return term ? [{ ...(programId ? { programId } : {}), term }] : [];
+  });
+}
+
+/** What the screens call a line: "All programs", or the program's short name. */
+export function lineLabel(state: PortalState, programId: ProgramId | undefined): string {
+  if (!programId) return 'All programs';
+  const program = state.core.programs.find(p => p.id === programId);
+  return program?.short ?? program?.name ?? programId;
 }
 
 /** Which week of the term `dateISO` is, counting from 1. Undefined outside a term. */
@@ -63,12 +147,20 @@ export function termWeek(term: Term | undefined, dateISO: string): number | unde
   return Math.floor(days / 7) + 1;
 }
 
-/** "Fall 2026 session" in week 1 reads "Fall session week 1". Undefined outside a term. */
+/**
+ * "Fall 2026 session" in week 1 reads "Fall session week 1". With more than
+ * one line running, each says which it is: "Fall session week 1 (all
+ * programs) · Fall term week 3 (In-school)". Undefined outside every session.
+ */
 export function sessionWeekLabel(state: PortalState, today: string): string | undefined {
-  const term = termForDate(state, today);
-  const week = termWeek(term, today);
-  if (!term || !week) return undefined;
-  return `${term.name.replace(/ \d{4}/, '')} week ${week}`;
+  const running = currentSessions(state, today).filter(s => termWeek(s.term, today));
+  if (running.length === 0) return undefined;
+  const label = ({ term }: LineSession) =>
+    `${term.name.replace(/ \d{4}/, '')} week ${termWeek(term, today)}`;
+  if (running.length === 1) return label(running[0]);
+  return running
+    .map(s => `${label(s)} (${s.programId ? lineLabel(state, s.programId) : 'all programs'})`)
+    .join(' · ');
 }
 
 // --- Setting up sessions and ensembles ---------------------------------------
@@ -92,12 +184,58 @@ export function weeksBetween(start: string, end: string): number {
   return Math.max(1, Math.round(days / 7));
 }
 
-/** What is wrong with a session, field by field. Empty when it can be saved. */
-export type TermProblems = Partial<Record<keyof TermInput, string>>;
+/**
+ * What is wrong with a session, field by field. Empty when it can be saved.
+ * `dates` is a clash: another current session on the same line that the
+ * dates overlap (decision 0007).
+ */
+export type TermProblems = Partial<Record<keyof TermInput | 'dates', string>>;
 
-export function termProblems(input: Partial<TermInput>): TermProblems {
+/**
+ * The current session on the same line as `input` that its dates overlap,
+ * if any. Both ends count: a session that ends the day another starts
+ * overlaps it. `id` is the session being edited or restored, which never
+ * clashes with itself.
+ */
+export function termClash(
+  state: PortalState,
+  input: Partial<Pick<TermInput, 'programId' | 'start' | 'end'>>,
+  id?: string,
+): Term | undefined {
+  const { start, end } = input;
+  if (!start || !end || end < start) return undefined;
+  return termsOnLine(state, input.programId).find(
+    t => t.id !== id && t.start <= end && start <= t.end,
+  );
+}
+
+/** Who a line is for, in a sentence: "all programs", or the program's full name. */
+function lineInWords(state: PortalState, programId: ProgramId | undefined): string {
+  return programId
+    ? (state.core.programs.find(p => p.id === programId)?.name ?? programId)
+    : 'all programs';
+}
+
+/** "Fall 2026 session (Sep 13 – Nov 8, 2026), another session for all programs". */
+function clashInWords(state: PortalState, clash: Term): string {
+  return `${clash.name} (${dateRange(clash.start, clash.end)}), another session for ${lineInWords(state, lineOf(clash))}`;
+}
+
+/**
+ * A session needs a name, its dates (the end after the start), at least one
+ * class planned, a program that exists when it names one, and dates that
+ * overlap no other current session on its line. `id` is the session being
+ * edited.
+ */
+export function termProblems(
+  state: PortalState,
+  input: Partial<TermInput>,
+  id?: string,
+): TermProblems {
   const problems: TermProblems = {};
   if (!input.name?.trim()) problems.name = 'Give the session a name.';
+  if (input.programId && !state.core.programs.some(p => p.id === input.programId))
+    problems.programId = 'Pick the program it belongs to, or All programs.';
   if (!input.start) problems.start = 'Pick the day the session starts.';
   if (!input.end) problems.end = 'Pick the day the session ends.';
   else if (input.start && input.end <= input.start)
@@ -105,12 +243,31 @@ export function termProblems(input: Partial<TermInput>): TermProblems {
   const planned = input.meetingsPlanned;
   if (planned === undefined || !Number.isInteger(planned) || planned < 1)
     problems.meetingsPlanned = 'Plan at least one class for each ensemble.';
+  const clash = !problems.end && termClash(state, input, id);
+  if (clash)
+    problems.dates = `The dates overlap ${clashInWords(state, clash)}. Pick dates outside it.`;
   return problems;
 }
 
 /** The first thing wrong with a session, for the store to refuse it with. */
-export function termRefusal(input: Partial<TermInput>): string | undefined {
-  return Object.values(termProblems(input))[0];
+export function termRefusal(
+  state: PortalState,
+  input: Partial<TermInput>,
+  id?: string,
+): string | undefined {
+  return Object.values(termProblems(state, input, id))[0];
+}
+
+/**
+ * Why an archived session cannot be restored: it would overlap a current
+ * session on its line. Undefined when it can come back.
+ */
+export function restoreTermRefusal(state: PortalState, id: string): string | undefined {
+  const term = state.teaching.terms.find(t => t.id === id);
+  if (!term || !isArchived(term)) return undefined;
+  const clash = termClash(state, term, id);
+  if (!clash) return undefined;
+  return `${term.name} can't come back: its dates overlap ${clashInWords(state, clash)}. Archive that one or change its dates first.`;
 }
 
 /** What is wrong with an ensemble, field by field. Empty when it can be saved. */
@@ -409,9 +566,12 @@ export interface AttendanceHeadline {
   footnote: string;
 }
 
-/** The current term that finished most recently before `dateISO`. */
+/**
+ * The all-programs session that finished most recently before `dateISO`. The
+ * figure covers every program, so one program's own session does not answer.
+ */
 function lastFinishedTerm(state: PortalState, dateISO: string): Term | undefined {
-  return activeOnly(state.teaching.terms)
+  return termsOnLine(state, undefined)
     .filter(t => t.end < dateISO)
     .sort((a, b) => a.end.localeCompare(b.end))
     .pop();

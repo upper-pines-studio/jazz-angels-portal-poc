@@ -12,3 +12,4 @@ change; do not leave a stale one behind.
 | [0004](0004-switch-over-and-real-data.md) | Each module switches over on its own date; history comes later | Decided, history open |
 | [0005](0005-roadmap-items-that-shape-the-schema.md) | Roadmap items to settle before the schema is written | Answered |
 | [0006](0006-programs-projects-and-shares.md) | Programs, projects and how a grant's money is shared | Decided, spending by program open |
+| [0007](0007-sessions-per-program.md) | Sessions for one program never overlap; each program has its own current session | Decided |
