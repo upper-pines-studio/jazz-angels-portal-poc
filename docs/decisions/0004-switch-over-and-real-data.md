@@ -61,3 +61,9 @@ for what has been brought into it.
 - A grant record must tolerate missing history, so past grants can be entered later with only
   funder, amount, dates and outcome.
 - A student CSV import is worth building; a grants import is not, until history is decided.
+- What is kept about a guardian, answered by the client in October 2026 (#82): their name (needed),
+  and optionally their phone, their email and their address (street, city, state and ZIP, all
+  four or none, as on a venue). One guardian per student. All of it is entered on the student or
+  read from the roster CSV (a Guardian email column, and the address as Street, City, State and
+  ZIP or as one Address column); a malformed email or half an address is left off its row with a
+  note, not a reason to refuse the file. Nothing is emailed or mailed to families from the portal.

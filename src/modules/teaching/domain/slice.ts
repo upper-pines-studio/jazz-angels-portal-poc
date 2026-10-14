@@ -16,6 +16,7 @@ import {
   photoReleaseRefusal,
   termRefusal,
 } from './derive';
+import { guardianRefusal, tidyAddress } from './guardian';
 import { makeEmpty, makeSeed } from './seed';
 import type {
   AttendanceRecord,
@@ -197,9 +198,14 @@ function createActions(
     patch: Partial<Collections[K]>,
   ): TeachingAction => ({ type: 'update', key, id, patch }) as TeachingAction;
   const meetingOf = (id: string) => getState().teaching.meetings.find(m => m.id === id);
+  /** An address of four blanks is no address. */
+  const withAddress = <T extends Partial<Student>>(fields: T): T =>
+    'guardianAddress' in fields
+      ? { ...fields, guardianAddress: tidyAddress(fields.guardianAddress) }
+      : fields;
   /** A new student as saved: an id, and the photo release stamped with who recorded it. */
   const newStudent = (input: StudentInput): Student => ({
-    ...input,
+    ...withAddress(input),
     id: newId('st'),
     photoRelease: photoReleaseFor(input.photoRelease, user.id, today),
   });
@@ -273,7 +279,7 @@ function createActions(
       // The photo release is recorded through setPhotoRelease, which says who recorded it.
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { photoRelease, id: _id, ...rest } = patch as Partial<Student>;
-      send(update('students', id, rest));
+      send(update('students', id, withAddress(rest)));
     },
     setPhotoRelease(id, release) {
       if (!getState().teaching.students.some(s => s.id === id)) return;
@@ -401,18 +407,23 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     submitRollCall: (user, state, meetingId) => mayTakeRoll(state, user, meetingId),
     reopenRollCall: (user, state, meetingId) => mayTakeRoll(state, user, meetingId),
     // The roster changes with "Students: Edit"; a teacher's "Own classes" is to see it.
+    // A guardian email or address that is not sound is refused, saying why.
     enrollStudent: (user, _state, input) =>
       can(user.role, 'students', 'edit') &&
-      ((input.photoRelease && photoReleaseRefusal(input.photoRelease)) || true),
-    updateStudent: 'students',
+      ((input.photoRelease && photoReleaseRefusal(input.photoRelease)) ||
+        guardianRefusal(input) ||
+        true),
+    updateStudent: (user, _state, _id, patch) =>
+      can(user.role, 'students', 'edit') && (guardianRefusal(patch) ?? true),
     // Whoever may edit the student records the release; seeing it follows guardian contacts.
     setPhotoRelease: (user, _state, _id, release) =>
       can(user.role, 'students', 'edit') && (photoReleaseRefusal(release) ?? true),
-    // Each release is checked as Enroll checks one; one bad row refuses the import, saying why.
+    // Each release and guardian is checked as Enroll checks one; one bad row refuses the import, saying why.
     importStudents: (user, _state, inputs) => {
       if (!can(user.role, 'students', 'edit')) return false;
       for (const input of inputs) {
-        const problem = input.photoRelease && photoReleaseRefusal(input.photoRelease);
+        const problem =
+          (input.photoRelease && photoReleaseRefusal(input.photoRelease)) || guardianRefusal(input);
         if (problem) return problem;
       }
       return true;

@@ -1,4 +1,5 @@
-import type { Program, ProgramId } from '../../../core';
+import type { Address, Program, ProgramId } from '../../../core';
+import { looksLikeEmail, missingAddressParts, partsList, readAddressLine } from './guardian';
 import type { Ensemble, PhotoReleaseInput, Student, StudentInput, StudentStatus } from './types';
 
 /**
@@ -101,17 +102,31 @@ type Column =
   | 'yearsIn'
   | 'guardianName'
   | 'guardianPhone'
+  | 'guardianEmail'
+  | 'address'
+  | 'street'
+  | 'city'
+  | 'state'
+  | 'zip'
   | 'program'
   | 'ensemble'
   | 'photoRelease';
 
-/** The header row of the template, in order. */
-export const STUDENT_CSV_COLUMNS: Array<{ column: Column; header: string }> = [
+/**
+ * The header row of the template, in order. The guardian's address is four
+ * columns here; a file may hold it in one Address column instead.
+ */
+export const STUDENT_CSV_COLUMNS: Array<{ column: Exclude<Column, 'address'>; header: string }> = [
   { column: 'name', header: 'Name' },
   { column: 'instrument', header: 'Instrument' },
   { column: 'yearsIn', header: 'Years in' },
   { column: 'guardianName', header: 'Guardian name' },
   { column: 'guardianPhone', header: 'Guardian phone' },
+  { column: 'guardianEmail', header: 'Guardian email' },
+  { column: 'street', header: 'Street' },
+  { column: 'city', header: 'City' },
+  { column: 'state', header: 'State' },
+  { column: 'zip', header: 'ZIP' },
   { column: 'program', header: 'Program' },
   { column: 'ensemble', header: 'Ensemble' },
   { column: 'photoRelease', header: 'Photo release' },
@@ -124,6 +139,12 @@ const HEADER_NAMES: Record<Column, string[]> = {
   yearsIn: ['years in', 'years'],
   guardianName: ['guardian name', 'guardian'],
   guardianPhone: ['guardian phone', 'phone'],
+  guardianEmail: ['guardian email', 'email', 'e mail', 'guardian e mail'],
+  address: ['address', 'guardian address', 'home address'],
+  street: ['street', 'street address', 'guardian street'],
+  city: ['city', 'guardian city'],
+  state: ['state', 'guardian state'],
+  zip: ['zip', 'zip code', 'postal code', 'guardian zip'],
   program: ['program'],
   ensemble: ['ensemble'],
   photoRelease: ['photo release', 'photo consent', 'photos'],
@@ -219,6 +240,10 @@ export interface ImportRow {
   guardianName: string;
   /** Unset when blank, or when it did not look like a phone number. */
   guardianPhone?: string;
+  /** Unset when blank, or when it did not look like an email. */
+  guardianEmail?: string;
+  /** Unset when blank, or when it was not all four parts. */
+  guardianAddress?: Address;
   /** Given or Not given dated the import day for "yes" or "no"; Not asked yet otherwise. */
   photoRelease: PhotoReleaseInput;
   /** The Program and Ensemble cells as written. */
@@ -359,6 +384,40 @@ export function parseStudentsCsv(text: string, ctx: StudentImportContext): Stude
       else problems.push(`Phone "${phoneText}" looks wrong; it will be left off`);
     }
 
+    const emailText = get('guardianEmail');
+    let guardianEmail: string | undefined;
+    if (emailText) {
+      if (looksLikeEmail(emailText)) guardianEmail = emailText;
+      else problems.push(`Email "${emailText}" looks wrong; it will be left off`);
+    }
+
+    // The address in its four columns, or in one; the four win when the file has both.
+    let guardianAddress: Address | undefined;
+    const fourColumns = (['street', 'city', 'state', 'zip'] as const).some(
+      c => at[c] !== undefined,
+    );
+    if (fourColumns) {
+      const parts = {
+        street: get('street'),
+        city: get('city'),
+        state: get('state'),
+        zip: get('zip'),
+      };
+      const missing = missingAddressParts(parts);
+      if (missing.length === 0) guardianAddress = parts;
+      else if (missing.length < 4)
+        problems.push(`Address is missing the ${partsList(missing)}; it will be left off`);
+    } else {
+      const addressText = get('address');
+      if (addressText) {
+        guardianAddress = readAddressLine(addressText);
+        if (!guardianAddress)
+          problems.push(
+            `Address "${addressText}" is not street, city, state and ZIP; it will be left off`,
+          );
+      }
+    }
+
     // Yes or no, in any case; blank is Not asked yet, and so is anything else, with a note.
     const releaseText = get('photoRelease');
     const releaseWord = simplify(releaseText);
@@ -441,6 +500,8 @@ export function parseStudentsCsv(text: string, ctx: StudentImportContext): Stude
       yearsIn,
       guardianName,
       ...(guardianPhone ? { guardianPhone } : {}),
+      ...(guardianEmail ? { guardianEmail } : {}),
+      ...(guardianAddress ? { guardianAddress } : {}),
       programId: ensembleFor?.programId ?? programFor,
       ...(ensembleFor ? { ensembleId: ensembleFor.id } : {}),
       status: ensembleFor ? 'enrolled' : 'waitlist',
@@ -480,6 +541,8 @@ export function parseStudentsCsv(text: string, ctx: StudentImportContext): Stude
       yearsIn,
       guardianName,
       ...(guardianPhone ? { guardianPhone } : {}),
+      ...(guardianEmail ? { guardianEmail } : {}),
+      ...(guardianAddress ? { guardianAddress } : {}),
       photoRelease,
       program,
       ensemble,
@@ -517,12 +580,17 @@ export function studentsToImport(
 export function studentsCsvTemplate(ctx: Pick<StudentImportContext, 'programs' | 'ensembles'>) {
   const ensemble = ctx.ensembles[0];
   const program = ctx.programs.find(p => p.id === ensemble?.programId) ?? ctx.programs[0];
-  const example: Record<Column, string | number> = {
+  const example: Record<Exclude<Column, 'address'>, string | number> = {
     name: 'Maya Robinson',
     instrument: 'Trumpet',
     yearsIn: 1,
     guardianName: 'Lorraine Robinson',
     guardianPhone: '(562) 555-0148',
+    guardianEmail: 'lorraine.robinson@example.com',
+    street: '1520 E 7th St',
+    city: 'Long Beach',
+    state: 'CA',
+    zip: '90813',
     program: program?.name ?? '',
     ensemble: ensemble?.name ?? '',
     photoRelease: 'yes',

@@ -27,6 +27,7 @@ import {
 } from '../../../app/components/archive';
 import {
   activeOnly,
+  addressLine,
   cell,
   dateLong,
   isArchived,
@@ -55,6 +56,12 @@ import {
 import type { Mark, PhotoRelease, PhotoReleaseInput, RosterStudent } from '../domain';
 import { MarkDots, TONE_COLOR } from './parts';
 import EnrollStudentDialog from './students/EnrollStudentDialog';
+import GuardianFields, {
+  guardianDraft,
+  guardianErrors,
+  guardianFields,
+} from './students/GuardianFields';
+import type { GuardianDraft } from './students/GuardianFields';
 import ImportStudentsDialog from './students/ImportStudentsDialog';
 import PhotoReleaseFields from './students/PhotoReleaseFields';
 
@@ -539,6 +546,8 @@ function StudentCard({
             <>
               <KV k="Guardian" v={student.guardianName} />
               <KV k="Phone" v={student.guardianPhone ?? 'Not on file'} />
+              <KV k="Email" v={student.guardianEmail ?? 'Not on file'} />
+              <KV k="Address" v={addressLine(student.guardianAddress) || 'Not on file'} />
             </>
           )}
           {student.photoRelease && (
@@ -603,6 +612,11 @@ function StudentCard({
         </Card>
       )}
 
+      {mayEdit && !archived && student.guardianName !== undefined && (
+        // Keyed apart from the Photo release card beside it, so each starts afresh per student.
+        <GuardianCard key={`guardian-${student.id}`} student={student} />
+      )}
+
       {mayEdit && !archived && student.photoRelease && (
         <PhotoReleaseCard
           key={student.id}
@@ -613,6 +627,49 @@ function StudentCard({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Change who we call about a student: the guardian's name, phone, email and
+ * address. Shown to whoever may edit the student and see guardian contacts.
+ */
+function GuardianCard({ student }: { student: RosterStudent }) {
+  const { actions, whenSaved } = useStore();
+  const toast = useToast();
+  const [draft, setDraft] = React.useState<GuardianDraft>(() => guardianDraft(student));
+  const [showErrors, setShowErrors] = React.useState(false);
+  const invalid = Object.values(guardianErrors(draft)).some(Boolean);
+  const fields = guardianFields(draft);
+  const saved = guardianFields(guardianDraft(student));
+  const changed = JSON.stringify(fields) !== JSON.stringify(saved);
+
+  const save = async () => {
+    if (invalid) {
+      setShowErrors(true);
+      return;
+    }
+    actions.teaching.updateStudent(student.id, fields);
+    if (!(await whenSaved())) return; // the store has said it could not save
+    setShowErrors(false);
+    toast({
+      tone: 'success',
+      title: 'Guardian saved',
+      message: `${student.name}'s guardian details are up to date.`,
+    });
+  };
+
+  return (
+    <Card title="Guardian" subtitle="Who we call about this student" padding="var(--space-5)">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        <GuardianFields value={draft} onChange={setDraft} showErrors={showErrors} />
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button variant="primary" size="sm" disabled={!changed} onClick={save}>
+            Save guardian
+          </Button>
+        </div>
+      </div>
+    </Card>
   );
 }
 

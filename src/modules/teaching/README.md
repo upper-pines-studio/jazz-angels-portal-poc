@@ -24,7 +24,7 @@ actions.teaching.setMark(meetingId, studentId, 'present');
 | `Term` | A session (the screens' word): eight weeks or so the office plans and reports on, with `meetingsPlanned`, how many times each ensemble meets ("week 1 of 8"). Archived when entered by mistake or no longer wanted: it leaves the session list and is no longer the current session (`termForDate`); its classes and roll calls stay. |
 | `Ensemble` | A standing group: same students, same place, same hour each week. `venueId` is a core `Venue`; `room` is the space inside it. Archived when it stops meeting: its classes on and after `archivedAt` leave the schedule (`isScheduled`); the ones before stay, roll calls and all. |
 | `ClassMeeting` | One class on one date. `rollSubmittedAt` set means roll is closed. |
-| `Student` | On a roster, on the waitlist, or an alum. `ensembleId` is unset while waiting. `photoRelease` is the guardian's answer on photos (below). |
+| `Student` | On a roster, on the waitlist, or an alum. `ensembleId` is unset while waiting. `guardianName` is needed; `guardianPhone`, `guardianEmail` and `guardianAddress` (core's `Address`, all four parts or none) are optional (below). `photoRelease` is the guardian's answer on photos (below). |
 | `AttendanceRecord` | One mark, `present` / `late` / `absent`, for one student at one meeting. |
 
 **Archived is not alumni.** `status` says where a student is with Jazz Angels: enrolled, on the
@@ -44,6 +44,13 @@ other two. Setting a release back to Not asked yet clears the date and the
 recorder; who did it will belong in the activity log once there is one. The release is guardian data: it reaches the same people as the guardian's name and
 phone (`maySeePhotoRelease`), and `asSeenBy` leaves all three off the record for anyone else.
 
+**Guardian email and address** (decisions 0004 and 0001, #82). Both optional, and guardian
+contact details like the phone: `asSeenBy` leaves them off with it. `guardian.ts` checks them for
+the screens and the store alike: `guardianEmailRefusal` (blank is fine; otherwise it must read
+like name@example.com), `guardianAddressRefusal` (all four parts or none, naming the missing
+ones), `tidyAddress` (trimmed, and no address when every part is blank), and `readAddressLine`
+(one line, "8500 Contreras St, Paramount, CA 90723", back into its four parts, for the import).
+
 Dates are ISO `YYYY-MM-DD`; times are 24-hour `HH:MM` and are read back through
 `timeLabel('16:00') === '4:00pm'`. **Present and late both count as turning
 up** — that is the one rule every rate in here follows.
@@ -56,8 +63,8 @@ up** — that is the one rule every rate in here follows.
 | `setMark(meetingId, studentId, mark)` | Records a mark. Ignored while the roll is submitted. |
 | `submitRollCall(meetingId, notes?)` | Marks everyone on the roster not yet marked as present, stamps `rollSubmittedAt` and keeps the rehearsal notes. |
 | `reopenRollCall(meetingId)` | Clears the stamp so the marks can be edited again. |
-| `enrollStudent(input)` | Adds a student to a roster or the waitlist, with an optional `photoRelease` answer (`{ status, date? }`; Not asked yet when unset). Returns the new id. |
-| `updateStudent(id, patch)` | Patches a student, their placement included. Never the photo release. |
+| `enrollStudent(input)` | Adds a student to a roster or the waitlist, with an optional `photoRelease` answer (`{ status, date? }`; Not asked yet when unset). Returns the new id. Refused, saying why, with a guardian email that is not an email or half an address (`guardianRefusal`). |
+| `updateStudent(id, patch)` | Patches a student, their placement and guardian included. Never the photo release. Refused like Enroll for a bad guardian email or address; an address of four blanks is saved as none. |
 | `setPhotoRelease(id, { status, date? })` | Records the guardian's answer: Given or Not given on a date (today when unset), or back to Not asked yet. The store stamps `recordedById` from the signed-in person; a screen never sends it. Needs Students: Edit, and is refused with what is wrong (`photoReleaseRefusal`): an answer that is not one of the three, or a date that is not a date. |
 | `importStudents(inputs)` | Adds many students in one change, as the CSV import does, each release stamped like Enroll's. Returns how many. |
 | `archiveStudent(id)` / `restoreStudent(id)` | Archives a student (off the roster, the roll call and the counts; status untouched) or restores them. Needs Students: Edit. |
@@ -101,8 +108,11 @@ it ignores, and gives each row its problems in plain sentences, the closest prog
 where one is near, and the student each choice would add (`add`, `closest`, `waitlist`). The
 optional Photo release column (also "Photo consent" or "Photos") reads yes as Given and no as
 Not given, both dated the import day (`today`); blank, or no column, is Not asked yet, and any
-other value is too, with a note on the row. `importStudents` checks each release as Enroll does
-and refuses the whole import, saying why, if one is not sound.
+other value is too, with a note on the row. The optional Guardian email column (also "Email")
+and the address, as Street, City, State and ZIP or as one Address column, are read onto the row
+and its student; a bad email, half an address or an Address line that is not street, city, state
+and ZIP is left off with a note on the row, which still goes in. `importStudents` checks each
+release and guardian as Enroll does and refuses the whole import, saying why, if one is not sound.
 `studentsToImport(rows, choices)` is what Import hands `importStudents`;
 `studentsCsvTemplate` writes the blank template. `readCsv` and `writeCsv` are the small CSV
 reader and writer behind them.

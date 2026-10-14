@@ -127,6 +127,9 @@ director's role and gets a teacher's view of their own classes on top.
   (`leadsEnsemble` and `mayTakeRoll` in `modules/teaching/domain/derive.ts`). Guardian name and
   phone are left off a student's record before it reaches the screen for anyone who may not see
   them (`rosterFor`).
+- The guardian's email and address (decision [0004](0004-switch-over-and-real-data.md), #82) are
+  "Guardian contact details" too: the same people see them as the phone, and `asSeenBy` leaves
+  them off the record with it. Changing them follows "Students: names, attendance".
 - A student's photo release (decision [0005](0005-roadmap-items-that-shape-the-schema.md), #65)
   follows "Guardian contact details": the same people see it (a teacher for their own classes;
   the Office assistant, the Bookkeeper and Read-only never), and it is left off the record with

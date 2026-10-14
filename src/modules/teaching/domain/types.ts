@@ -1,4 +1,4 @@
-import type { Archivable, ProgramId } from '../../../core';
+import type { Address, Archivable, ProgramId } from '../../../core';
 
 /**
  * The teaching module's nouns: a term, the ensembles that meet inside it, the
@@ -128,6 +128,10 @@ export interface Student extends Archivable {
   yearsIn: number;
   guardianName: string;
   guardianPhone?: string;
+  /** Optional (decision 0004). Protected like the phone (decision 0001). */
+  guardianEmail?: string;
+  /** Optional, all four parts or none, as on a venue. Protected like the phone. */
+  guardianAddress?: Address;
   programId: ProgramId;
   /** Unset while a student is on the waitlist. */
   ensembleId?: string;

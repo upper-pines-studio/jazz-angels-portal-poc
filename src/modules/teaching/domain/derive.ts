@@ -570,7 +570,7 @@ export function maySeeStudent(state: PortalState, user: SignedInUser, student: S
   return can(user.role, 'students', 'view', leadsEnsemble(state, user, student.ensembleId));
 }
 
-/** May this person read this student's guardian name and phone? */
+/** May this person read this student's guardian name, phone, email and address? */
 export function maySeeGuardian(state: PortalState, user: SignedInUser, student: Student): boolean {
   return can(
     user.role,
@@ -597,21 +597,27 @@ export function maySeePhotoRelease(
  * A student as the roster shows them: the guardian fields and the photo
  * release only for those who may see them.
  */
-export type RosterStudent = Omit<Student, 'guardianName' | 'guardianPhone' | 'photoRelease'> & {
+export type RosterStudent = Omit<
+  Student,
+  'guardianName' | 'guardianPhone' | 'guardianEmail' | 'guardianAddress' | 'photoRelease'
+> & {
   guardianName?: string;
   guardianPhone?: string;
+  guardianEmail?: string;
+  guardianAddress?: Student['guardianAddress'];
   photoRelease?: PhotoRelease;
 };
 
 /**
- * One student as this person may read them. Guardian name, phone and photo
- * release are left off the record, not just hidden, for anyone who may not
- * see them, so they never reach the screen.
+ * One student as this person may read them. Guardian name, phone, email,
+ * address and photo release are left off the record, not just hidden, for
+ * anyone who may not see them, so they never reach the screen.
  */
 export function asSeenBy(state: PortalState, user: SignedInUser, student: Student): RosterStudent {
   if (maySeeGuardian(state, user, student)) return student;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { guardianName, guardianPhone, photoRelease, ...rest } = student;
+  const { guardianName, guardianPhone, guardianEmail, guardianAddress, photoRelease, ...rest } =
+    student;
   return rest;
 }
 
