@@ -21,6 +21,8 @@ import {
   activeOnly,
   dateRange,
   dateShort,
+  inSchoolProgramIds,
+  isInSchool,
   programById,
   programName,
   staffById,
@@ -29,12 +31,11 @@ import {
   useCan,
   useStore,
 } from '../../../core';
-import type { ProgramId } from '../../../core';
 import {
   entriesForWeek,
   formatHours,
   hoursByProgram,
-  hoursForProgram,
+  hoursForPrograms,
   hoursThisMonth,
   mayApprove,
   monthLabel,
@@ -62,8 +63,8 @@ const STATUS: Record<TimeEntryStatus, { label: string; tone: 'neutral' | 'gold' 
  * they carry in the stat row. Every other program shares the lead blue: the
  * bars compare one measure, and the name tells them apart.
  */
-function barColor(programId: ProgramId): string {
-  return programId === 'in-school' ? 'var(--teal-500)' : 'var(--blue-500)';
+function barColor(inSchool: boolean): string {
+  return inSchool ? 'var(--teal-500)' : 'var(--blue-500)';
 }
 
 export default function Timesheets() {
@@ -98,7 +99,7 @@ export default function Timesheets() {
   const month = monthRange(today);
   const monthHours = hoursThisMonth(scoped, today);
   const teachers = teachersThisMonth(scoped, today);
-  const inSchool = hoursForProgram(scoped, 'in-school', month.from, month.to);
+  const inSchool = hoursForPrograms(scoped, inSchoolProgramIds(state), month.from, month.to);
   // The current teaching artists. Someone archived keeps their hours (they still
   // count below) and stays in the teacher filter for a week they logged in.
   const teachingStaff = activeOnly(state.core.staff).filter(s => s.teaches);
@@ -380,7 +381,7 @@ export default function Timesheets() {
                   <ProgressBar
                     value={hours}
                     max={Math.max(biggest, 0.25)}
-                    color={barColor(programId)}
+                    color={barColor(isInSchool(state, programId))}
                   />
                 </div>
                 <span

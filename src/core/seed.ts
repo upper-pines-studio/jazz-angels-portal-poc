@@ -85,11 +85,11 @@ const STAFF: StaffMember[] = [
  * (decision 0006), which is not a program but lives beside them.
  */
 const PROGRAMS: Program[] = [
-  { id: 'studio-sessions', name: 'Studio Semester Sessions', short: 'Studio' },
-  { id: 'in-school', name: 'In-School Program', short: 'In-school' },
-  { id: 'homeschool', name: 'Homeschool Program', short: 'Homeschool' },
-  { id: 'jazz-legacy', name: 'Jazz Legacy Program', short: 'Jazz Legacy' },
-  { id: 'advanced-workshop', name: 'Advanced Jazz Workshop', short: 'Workshop' },
+  { id: 'studio-sessions', name: 'Studio Semester Sessions', short: 'Studio', inSchool: false },
+  { id: 'in-school', name: 'In-School Program', short: 'In-school', inSchool: true },
+  { id: 'homeschool', name: 'Homeschool Program', short: 'Homeschool', inSchool: false },
+  { id: 'jazz-legacy', name: 'Jazz Legacy Program', short: 'Jazz Legacy', inSchool: false },
+  { id: 'advanced-workshop', name: 'Advanced Jazz Workshop', short: 'Workshop', inSchool: false },
   operationsRecord(),
 ];
 

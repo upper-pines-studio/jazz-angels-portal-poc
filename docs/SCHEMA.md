@@ -85,6 +85,7 @@ erDiagram
     text id PK "general-operating is Operations"
     text name
     text short
+    bool in_school "false on Operations"
     date archived_at "null"
     text archived_by FK "null; staff"
   }
@@ -645,7 +646,7 @@ decision 0005 says of the photo release, held one-to-one beside the student. The
 | --- | --- | --- | --- |
 | `staff` | Everyone signed in (names show everywhere) | Admin, Director; nobody changes their own role, and only an Admin or a Director touches an Admin's row | Staff and roles |
 | `logins` | Admin, Director | By invitation only (0001, "Sign-ins are by invitation"): Admin, Director invite a current staff record; only an Admin invites for an Admin's record; nobody sets another's password, and every new sign-in shows to every Admin | Staff and roles |
-| `programs` | Everyone signed in | Admin, Director, Office manager; Operations is never archived or renamed | Programs: add, rename, archive |
+| `programs` | Everyone signed in | Admin, Director, Office manager; Operations is never archived, renamed or in-school | Programs: add, rename, archive |
 | `program_budgets`, `projects` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper | Program budgets and projects |
 | `organizations`, `venues` | Everyone signed in | Admin, Director, Office manager | Partners and venues |
 | `office_documents`, `office_document_versions` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper (versions: insert only) | Office documents |
