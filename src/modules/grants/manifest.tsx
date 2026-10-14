@@ -4,6 +4,7 @@ import type { AttentionItem, ModuleManifest, PortalState, Requirement, StatSpec 
 import {
   aboutMoney,
   deadlines,
+  deadlinesDueFor,
   expensesMissingBackup,
   funderById,
   funderShortName,
@@ -14,6 +15,8 @@ import {
   grantsSlice,
   isPreAward,
   offPaceGrants,
+  offPaceGrantsFor,
+  toAssignFor,
   transactionCounts,
 } from './domain';
 import type { Phase } from './domain';
@@ -38,7 +41,7 @@ const AWARD: Requirement = { subject: 'award' };
 /** Phases whose award money actually landed (declined/withdrawn never count). */
 const WON_PHASES: Phase[] = ['awarded', 'active', 'reporting', 'closed'];
 
-/** Overdue and due-soon deadlines: the number on the rail and on the dashboard. */
+/** Overdue and due-soon deadlines, for the dashboard. The rail counts `deadlinesDueFor`. */
 function needsAttention(state: PortalState, today: string) {
   return deadlines(state, today).filter(d => d.status !== 'upcoming');
 }
@@ -177,7 +180,7 @@ export const manifest: ModuleManifest = {
           path: '/deadlines',
           label: 'Deadlines',
           icon: 'calendar-days',
-          badge: (state, today) => needsAttention(state, today).length,
+          badge: (state, today, user) => deadlinesDueFor(state, today, user).length,
         },
         { path: '/funders', label: 'Funders', icon: 'building-2' },
         { path: '/playbook', label: 'Playbook', icon: 'book-open' },
@@ -190,14 +193,14 @@ export const manifest: ModuleManifest = {
           path: '/transactions',
           label: 'Transactions',
           icon: 'receipt',
-          badge: state => transactionCounts(state)['to-assign'],
+          badge: (state, _today, user) => toAssignFor(state, user),
         },
         { path: '/budget', label: 'Budget vs. actual', icon: 'chart-bar-big' },
         {
           path: '/spend-down',
           label: 'Spend-down',
           icon: 'gauge',
-          badge: (state, today) => offPaceGrants(state, today).length,
+          badge: (state, today, user) => offPaceGrantsFor(state, today, user).length,
         },
       ],
     },

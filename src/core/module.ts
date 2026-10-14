@@ -89,7 +89,12 @@ export interface NavItem {
   label: string;
   /** Lucide icon name, e.g. 'landmark'. */
   icon: string;
-  badge?(state: PortalState, today: string): number;
+  /**
+   * The number on the rail: what the signed-in person can act on there, and
+   * nothing they could only look at. The module decides it with `can` and its
+   * own-record helpers, so a role with nothing to do there sees no badge.
+   */
+  badge?(state: PortalState, today: string, user: SignedInUser): number;
   /** Hidden from a role that does not meet it. Defaults to the route's own `requires`. */
   requires?: Requires;
 }
