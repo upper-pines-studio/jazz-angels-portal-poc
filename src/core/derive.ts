@@ -123,7 +123,7 @@ export const OPERATIONS_NAME = 'Operations';
 
 /** Operations as a fresh record, for the seed and for a saved office without it. */
 export function operationsRecord(): Program {
-  return { id: OPERATIONS_ID, name: OPERATIONS_NAME, short: OPERATIONS_NAME };
+  return { id: OPERATIONS_ID, name: OPERATIONS_NAME, short: OPERATIONS_NAME, inSchool: false };
 }
 
 /** True when the id is Operations' rather than a program's. */
@@ -184,10 +184,26 @@ export function programsList(state: PortalState, includeArchived = false): Progr
   );
 }
 
-/** A program's name and short name, tidied: trimmed, the short name falling back to the name. */
-export function programFields(input: Partial<Pick<Program, 'name' | 'short'>>) {
+/**
+ * A program's name, short name and in-school flag, tidied: trimmed, the short
+ * name falling back to the name, not in-school unless said.
+ */
+export function programFields(input: Partial<Pick<Program, 'name' | 'short' | 'inSchool'>>) {
   const name = input.name?.trim() ?? '';
-  return { name, short: input.short?.trim() || name };
+  return { name, short: input.short?.trim() || name, inSchool: input.inSchool === true };
+}
+
+/**
+ * True when the program is taught in schools, so its hours are "In-school
+ * hours". An archived one still is: the hours logged on it stay in-school.
+ */
+export function isInSchool(state: PortalState, id: ProgramId): boolean {
+  return programById(state, id)?.inSchool === true;
+}
+
+/** Every in-school program's id, archived ones too: the programs "In-school hours" adds up. */
+export function inSchoolProgramIds(state: PortalState): ProgramId[] {
+  return state.core.programs.filter(p => p.inSchool).map(p => p.id);
 }
 
 /** What adding or renaming a program to "Operations" is refused with. */
@@ -200,6 +216,10 @@ export const OPERATIONS_ARCHIVE_REFUSAL =
 
 /** What renaming Operations is refused with. */
 export const OPERATIONS_RENAME_REFUSAL = "Operations can't be renamed.";
+
+/** What marking Operations in-school is refused with. */
+export const OPERATIONS_IN_SCHOOL_REFUSAL =
+  "Operations can't be in-school. It is the office's running costs, not a program.";
 
 /** Why a program cannot be saved with this name, or undefined when it can. */
 export function programProblem(

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AnyAction } from '../module';
 import {
   OPERATIONS_ID,
+  isInSchool,
   isOperations,
   operations,
   programName,
@@ -46,7 +47,12 @@ function core(user: SignedInUser = as('admin', 's-gwen'), start: CoreState = mak
   return { actions, refused, sent, state: () => state };
 }
 
-const OPERATIONS = { id: 'general-operating', name: 'Operations', short: 'Operations' };
+const OPERATIONS = {
+  id: 'general-operating',
+  name: 'Operations',
+  short: 'Operations',
+  inSchool: false,
+};
 
 describe('Operations', () => {
   it('keeps the id General operating had', () => {
@@ -127,6 +133,16 @@ describe('the rules on Operations', () => {
     expect(operations(c.state())).toEqual(OPERATIONS);
   });
 
+  it('refuses marking it in-school, saying why', () => {
+    const c = core();
+    c.actions.updateProgram(OPERATIONS_ID, { inSchool: true });
+    expect(c.sent).toEqual([]);
+    expect(c.refused).toEqual([
+      "Operations can't be in-school. It is the office's running costs, not a program.",
+    ]);
+    expect(isInSchool(c.state(), OPERATIONS_ID)).toBe(false);
+  });
+
   it('refuses a second Operations, added or renamed into', () => {
     const c = core();
     expect(c.actions.addProgram({ name: ' operations ', short: '' })).toBeUndefined();
@@ -179,19 +195,20 @@ describe('loading a saved office', () => {
       false,
     )!;
     expect(loaded.programs).toEqual([
-      { id: 'p-camp', name: 'Summer Jazz Camp', short: 'Camp' },
+      { id: 'p-camp', name: 'Summer Jazz Camp', short: 'Camp', inSchool: false },
       OPERATIONS,
     ]);
     expect(coreSlice.normalise!(saved([]), true)!.programs).toEqual([OPERATIONS]);
   });
 
-  it('brings back an Operations that was archived or renamed before it could not be', () => {
+  it('brings back an Operations that was archived, renamed or marked in-school before it could not be', () => {
     const loaded = coreSlice.normalise!(
       saved([
         {
           id: OPERATIONS_ID,
           name: 'Unrestricted',
           short: 'Unr.',
+          inSchool: true,
           archivedAt: '2026-09-01',
           archivedById: 's-gwen',
         },

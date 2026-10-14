@@ -13,7 +13,8 @@ import type { Archivable } from './archive';
  * A program's id. An ordinary string: the Jazz Angels programs keep the ids
  * they were seeded with ('studio-sessions', 'in-school', …), and a program
  * added on the Programs page gets a generated one (`p-…`), so renaming it
- * breaks nothing. Operations, which is not a program, keeps General
+ * breaks nothing. No id means anything: what kind of program it is lives in
+ * its fields (`inSchool`). Operations, which is not a program, keeps General
  * operating's id (`OPERATIONS_ID`, decision 0006).
  */
 export type ProgramId = string;
@@ -59,6 +60,11 @@ export interface Program extends Archivable {
   name: string;
   /** Column-width name: "Studio", "In-school". */
   short: string;
+  /**
+   * Taught in schools: its hours are Timesheets' "In-school hours", the number
+   * a grant report asks for. Set on the program's dialog; Operations never is.
+   */
+  inSchool: boolean;
 }
 
 /**
@@ -282,10 +288,13 @@ export interface CoreActions {
   archiveStaff(id: string): void;
   /** Put an archived person back on the staff list; they can sign in again. */
   restoreStaff(id: string): void;
-  /** Add a program: its name and short name. Returns the new id. */
-  addProgram(input: Pick<Program, 'name' | 'short'>): string;
-  /** Rename a program. Its id stays, so every grant, student and ensemble still names it. */
-  updateProgram(id: string, patch: Partial<Pick<Program, 'name' | 'short'>>): void;
+  /** Add a program: its name, short name and whether it is in-school (not unless said). Returns the new id. */
+  addProgram(input: Pick<Program, 'name' | 'short'> & Partial<Pick<Program, 'inSchool'>>): string;
+  /**
+   * Rename a program, or mark it in-school or not. Its id stays, so every
+   * grant, student and ensemble still names it.
+   */
+  updateProgram(id: string, patch: Partial<Pick<Program, 'name' | 'short' | 'inSchool'>>): void;
   /**
    * Archive a program: it leaves the pickers for new records. The grants,
    * students, ensembles and hours that name it keep it: nothing cascades.

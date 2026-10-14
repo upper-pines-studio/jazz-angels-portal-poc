@@ -3,6 +3,7 @@ import { archiveFields, isArchived, normaliseArchived, restoreFields } from './a
 import { DEMO_TODAY_KEY, demoTodayFrom, demoTodayToStore, isDemo } from './demo';
 import {
   OPERATIONS_ARCHIVE_REFUSAL,
+  OPERATIONS_IN_SCHOOL_REFUSAL,
   OPERATIONS_RENAME_REFUSAL,
   isOperations,
   operationsRecord,
@@ -168,17 +169,27 @@ function normaliseStaff(raw: Partial<StaffMember>, seeded: StaffMember[]): Staff
 }
 
 /**
+ * The id the In-School Program was seeded with. Only loading reads it: a save
+ * from before programs carried `inSchool` marks that program in-school, so its
+ * hours still count as "In-school hours".
+ */
+const SEEDED_IN_SCHOOL_ID = 'in-school';
+
+/**
  * A program as saved, brought up to date. Its id is kept as it was, whatever
  * it is: the seeded ones and the generated ones are all just strings now. A
- * missing short name takes the full one.
+ * missing short name takes the full one; a missing in-school flag is false,
+ * but for the seeded In-School Program.
  */
 function normaliseProgram(raw: Partial<Program>): Program {
   const name = String(raw.name ?? raw.id ?? '');
+  const id = String(raw.id ?? '');
   return normaliseArchived({
     ...raw,
-    id: String(raw.id ?? ''),
+    id,
     name,
     short: typeof raw.short === 'string' && raw.short.trim() ? raw.short : name,
+    inSchool: typeof raw.inSchool === 'boolean' ? raw.inSchool : id === SEEDED_IN_SCHOOL_ID,
   });
 }
 
@@ -406,6 +417,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       if (!current) return true;
       if (isOperations(id)) {
         const next = programFields({ ...current, ...patch });
+        if (next.inSchool) return OPERATIONS_IN_SCHOOL_REFUSAL;
         const same = next.name === current.name && next.short === current.short;
         return same || OPERATIONS_RENAME_REFUSAL;
       }

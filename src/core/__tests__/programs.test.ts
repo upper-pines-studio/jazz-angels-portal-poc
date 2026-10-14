@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { AnyAction } from '../module';
-import { programName, programOptions, programProblem, programsList } from '../derive';
+import {
+  inSchoolProgramIds,
+  isInSchool,
+  programName,
+  programOptions,
+  programProblem,
+  programsList,
+} from '../derive';
 import { makeCoreEmpty, makeCoreSeed } from '../seed';
 import { coreSlice, describeCoreChange, guardActions } from '../store';
 import type { CoreState, PortalState, Role, SignedInUser } from '../types';
@@ -41,6 +48,7 @@ describe('adding and renaming a program', () => {
       id,
       name: 'Summer Jazz Camp',
       short: 'Camp',
+      inSchool: false,
     });
     expect(describeCoreChange(c.sent[0])).toBe('the program');
   });
@@ -58,6 +66,7 @@ describe('adding and renaming a program', () => {
       id: 'in-school',
       name: 'In-School Residencies',
       short: 'In-school',
+      inSchool: true,
     });
     expect(programName(c.state(), 'in-school')).toBe('In-School Residencies');
   });
@@ -104,6 +113,40 @@ describe('adding and renaming a program', () => {
     const c = core(as('admin', 's-gwen'), empty);
     c.actions.addProgram({ name: 'Studio Semester Sessions', short: 'Studio' });
     expect(programOptions(c.state()).map(p => p.name)).toEqual(['Studio Semester Sessions']);
+  });
+});
+
+describe('an in-school program', () => {
+  it('is the seeded In-School Program, and nothing else, in the demo and a new office', () => {
+    for (const start of [makeCoreSeed(), makeCoreEmpty()]) {
+      const state = { core: start } as unknown as PortalState;
+      expect(inSchoolProgramIds(state)).toEqual(['in-school']);
+      expect(isInSchool(state, 'in-school')).toBe(true);
+      expect(isInSchool(state, 'homeschool')).toBe(false);
+      expect(isInSchool(state, 'general-operating')).toBe(false);
+      expect(isInSchool(state, 'p-nowhere')).toBe(false);
+    }
+  });
+
+  it('is marked when it is added or edited, and not unless it is', () => {
+    const c = core();
+    const camp = c.actions.addProgram({ name: 'Summer Jazz Camp', short: 'Camp' });
+    const schools = c.actions.addProgram({ name: 'School Residencies', short: '', inSchool: true });
+    expect(isInSchool(c.state(), camp)).toBe(false);
+    expect(inSchoolProgramIds(c.state())).toEqual(['in-school', schools]);
+
+    c.actions.updateProgram(camp, { inSchool: true });
+    c.actions.updateProgram('in-school', { inSchool: false });
+    expect(inSchoolProgramIds(c.state())).toEqual([camp, schools]);
+    // A rename leaves the flag as it was.
+    c.actions.updateProgram(camp, { name: 'Summer Camp' });
+    expect(isInSchool(c.state(), camp)).toBe(true);
+  });
+
+  it('stays in-school once archived, so the hours logged on it still count', () => {
+    const c = core();
+    c.actions.archiveProgram('in-school');
+    expect(inSchoolProgramIds(c.state())).toEqual(['in-school']);
   });
 });
 
@@ -156,8 +199,27 @@ describe('loading saved programs', () => {
       id: 'p-0a1b2c3d4e',
       name: 'Summer Jazz Camp',
       short: 'Summer Jazz Camp',
+      inSchool: false,
     });
     expect(loaded.programs[7]).not.toHaveProperty('archivedAt');
     expect(loaded.programs[8]).toMatchObject({ archivedAt: '2026-09-01', archivedById: 's-gwen' });
+  });
+
+  it('marks a saved in-school program in-school, so the demo reads as it did', () => {
+    const saved = JSON.parse(JSON.stringify(makeCoreSeed()));
+    for (const p of saved.programs) delete p.inSchool;
+    saved.programs.push({ id: 'p-camp', name: 'Summer Jazz Camp', short: 'Camp' });
+    const loaded = coreSlice.normalise!(saved, false)!;
+    expect(loaded.programs.slice(0, 6)).toEqual(makeCoreSeed().programs);
+    expect(loaded.programs.filter(p => p.inSchool).map(p => p.id)).toEqual(['in-school']);
+  });
+
+  it('keeps a saved flag as it was, on the seeded In-School Program too', () => {
+    const saved = JSON.parse(JSON.stringify(makeCoreSeed()));
+    saved.programs.find((p: { id: string }) => p.id === 'in-school').inSchool = false;
+    saved.programs.push({ id: 'p-camp', name: 'Summer Jazz Camp', short: 'Camp', inSchool: true });
+    saved.programs.push({ id: 'p-odd', name: 'Odd', short: 'Odd', inSchool: 'yes' });
+    const loaded = coreSlice.normalise!(saved, false)!;
+    expect(loaded.programs.filter(p => p.inSchool).map(p => p.id)).toEqual(['p-camp']);
   });
 });
