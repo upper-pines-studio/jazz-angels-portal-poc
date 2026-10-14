@@ -1,21 +1,26 @@
 import React from 'react';
-import { Button, Dialog, Field, Input } from '../../../../design-system';
+import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
 import { useToast } from '../../../../app/ToastHost';
-import { dateRange, useStore } from '../../../../core';
+import { classProgramOptions, dateRange, programName, useStore } from '../../../../core';
 import { termProblems, weeksBetween } from '../../domain';
 import type { Term } from '../../domain';
 
 /**
- * Add a session, or change one: its name, the day it starts and ends, and how
- * many classes each ensemble meets for. The screens call a term a session.
- * Until the office types a number, the classes planned follow the weeks
- * between the dates.
+ * Add a session, or change one: its name, the program it is for (or all
+ * programs), the day it starts and ends, and how many classes each ensemble
+ * meets for. The screens call a term a session. Until the office types a
+ * number, the classes planned follow the weeks between the dates. Dates that
+ * overlap another session for the same program, or for all programs, are
+ * named under the dates as soon as both are picked (decision 0007).
  */
 export default function TermDialog({ term, onClose }: { term?: Term; onClose: () => void }) {
-  const { actions } = useStore();
+  const { state, actions } = useStore();
   const toast = useToast();
 
+  const programs = classProgramOptions(state, term?.programId);
   const [name, setName] = React.useState(term?.name ?? '');
+  // Blank is All programs: the studio sessions.
+  const [programId, setProgramId] = React.useState(term?.programId ?? '');
   const [start, setStart] = React.useState(term?.start ?? '');
   const [end, setEnd] = React.useState(term?.end ?? '');
   // Unset until typed: then it follows the dates.
@@ -25,8 +30,8 @@ export default function TermDialog({ term, onClose }: { term?: Term; onClose: ()
   const [showErrors, setShowErrors] = React.useState(false);
 
   const meetingsPlanned = planned === undefined ? weeksBetween(start, end) : Number(planned);
-  const input = { name, start, end, meetingsPlanned };
-  const problems = termProblems(input);
+  const input = { name, programId: programId || undefined, start, end, meetingsPlanned };
+  const problems = termProblems(state, input, term?.id);
   const valid = Object.keys(problems).length === 0;
   const error = (key: keyof typeof problems) => (showErrors ? problems[key] : undefined);
 
@@ -35,7 +40,11 @@ export default function TermDialog({ term, onClose }: { term?: Term; onClose: ()
       setShowErrors(true);
       return;
     }
-    const message = `${name.trim()} · ${dateRange(start, end)}`;
+    const message = [
+      name.trim(),
+      programId ? programName(state, programId) : 'All programs',
+      dateRange(start, end),
+    ].join(' · ');
     if (term) {
       actions.teaching.updateTerm(term.id, input);
       toast({ tone: 'success', title: 'Session updated', message });
@@ -52,7 +61,7 @@ export default function TermDialog({ term, onClose }: { term?: Term; onClose: ()
       title={term ? 'Edit session' : 'Add session'}
       description={
         term
-          ? 'Change the name, the dates or the classes planned. Its classes stay as they are.'
+          ? 'Change the name, the program, the dates or the classes planned. Its classes stay as they are.'
           : 'The weeks the office plans and reports on. Put classes in it with Add class.'
       }
       onClose={onClose}
@@ -78,24 +87,43 @@ export default function TermDialog({ term, onClose }: { term?: Term; onClose: ()
           />
         </Field>
 
-        <div className="ja-grid-2">
-          <Field label="Starts" required error={error('start')}>
-            <Input
-              type="date"
-              value={start}
-              onChange={e => setStart(e.target.value)}
-              style={{ width: '100%' }}
-            />
-          </Field>
-          <Field label="Ends" required error={error('end')}>
-            <Input
-              type="date"
-              value={end}
-              onChange={e => setEnd(e.target.value)}
-              style={{ width: '100%' }}
-            />
-          </Field>
-        </div>
+        <Field
+          label="Program"
+          error={error('programId')}
+          hint="A program on its own calendar, like an in-school term, has sessions of its own, and its classes follow them. Every other class follows the sessions for all programs."
+        >
+          <Select
+            value={programId}
+            onChange={e => setProgramId(e.target.value)}
+            options={[
+              { value: '', label: 'All programs' },
+              ...programs.map(p => ({ value: p.id, label: p.name })),
+            ]}
+            style={{ width: '100%' }}
+          />
+        </Field>
+
+        {/* A clash shows as soon as both dates are picked, naming the other session. */}
+        <Field error={problems.dates}>
+          <div className="ja-grid-2">
+            <Field label="Starts" required error={error('start')}>
+              <Input
+                type="date"
+                value={start}
+                onChange={e => setStart(e.target.value)}
+                style={{ width: '100%' }}
+              />
+            </Field>
+            <Field label="Ends" required error={error('end')}>
+              <Input
+                type="date"
+                value={end}
+                onChange={e => setEnd(e.target.value)}
+                style={{ width: '100%' }}
+              />
+            </Field>
+          </div>
+        </Field>
 
         <Field
           label="Classes planned"

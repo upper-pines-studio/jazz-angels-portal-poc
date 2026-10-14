@@ -60,7 +60,12 @@ export interface Term extends Archivable {
   id: string;
   /** "Fall 2026 session". */
   name: string;
-  /** Set when a term belongs to one program; the studio sessions span all of them. */
+  /**
+   * Set when a term belongs to one program; the studio sessions span all of
+   * them. This is the session's line (decision 0007): two current sessions on
+   * one line never overlap, and a program's classes follow its own line once
+   * it has a session of its own.
+   */
   programId?: ProgramId;
   start: string;
   end: string;
@@ -68,8 +73,11 @@ export interface Term extends Archivable {
   meetingsPlanned: number;
 }
 
-/** What a new session needs: its name, its dates and how many classes each ensemble meets for. */
-export type TermInput = Pick<Term, 'name' | 'start' | 'end' | 'meetingsPlanned'>;
+/**
+ * What a new session needs: its name, its program (unset for all programs),
+ * its dates and how many classes each ensemble meets for.
+ */
+export type TermInput = Pick<Term, 'name' | 'programId' | 'start' | 'end' | 'meetingsPlanned'>;
 
 /** What a new ensemble needs. */
 export type EnsembleInput = Pick<
@@ -216,15 +224,19 @@ export interface TeachingActions {
    */
   archiveEnsemble(id: string): void;
   restoreEnsemble(id: string): void;
-  /** Add a session. Returns the new id. */
+  /**
+   * Add a session. Returns the new id. Refused when it overlaps another
+   * current session for the same program, or for all programs.
+   */
   addTerm(input: TermInput): string;
-  /** Change a session's name, dates or classes planned. */
+  /** Change a session's name, program, dates or classes planned. Refused like Add on an overlap. */
   updateTerm(id: string, patch: Partial<TermInput>): void;
   /**
    * Archive a session: it leaves the session list and is no longer the
    * current session. Its classes, roll calls and attendance stay.
    */
   archiveTerm(id: string): void;
+  /** Bring an archived session back. Refused when it would overlap a current one on its line. */
   restoreTerm(id: string): void;
   /** Add an ensemble. Returns the new id. */
   addEnsemble(input: EnsembleInput): string;

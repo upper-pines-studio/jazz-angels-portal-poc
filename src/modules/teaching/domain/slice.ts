@@ -14,6 +14,7 @@ import {
   normalisePhotoRelease,
   photoReleaseFor,
   photoReleaseRefusal,
+  restoreTermRefusal,
   termRefusal,
 } from './derive';
 import { guardianRefusal, tidyAddress } from './guardian';
@@ -160,10 +161,15 @@ export function describeChange(action: TeachingAction): string | undefined {
 // Actions
 // ---------------------------------------------------------------------------
 
-/** A session's own fields, tidied: the name trimmed, the classes planned a whole number. */
+/**
+ * A session's own fields, tidied: the name trimmed, the classes planned a
+ * whole number, and no program (all programs) unless one is named. An edit
+ * back to All programs clears the program.
+ */
 function termFields(input: TermInput): TermInput {
   return {
     name: input.name.trim(),
+    programId: input.programId || undefined,
     start: input.start,
     end: input.end,
     meetingsPlanned: Math.round(input.meetingsPlanned),
@@ -435,15 +441,19 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     restoreEnsemble: 'schedule',
     // Sessions and ensembles are the schedule itself: "Schedule and classes: Edit".
     // A session or an ensemble that could not be saved is refused with what is wrong.
-    addTerm: (user, _state, input) =>
-      can(user.role, 'schedule', 'edit') && (termRefusal(input) ?? true),
+    // Two current sessions for the same program, or for all programs, never
+    // overlap (decision 0007): adding, changing or restoring one that would
+    // is refused, naming the session it clashes with.
+    addTerm: (user, state, input) =>
+      can(user.role, 'schedule', 'edit') && (termRefusal(state, input) ?? true),
     updateTerm: (user, state, id, patch) => {
       if (!can(user.role, 'schedule', 'edit')) return false;
       const current = state.teaching.terms.find(t => t.id === id);
-      return !current || (termRefusal({ ...current, ...patch }) ?? true);
+      return !current || (termRefusal(state, { ...current, ...patch }, id) ?? true);
     },
     archiveTerm: 'schedule',
-    restoreTerm: 'schedule',
+    restoreTerm: (user, state, id) =>
+      can(user.role, 'schedule', 'edit') && (restoreTermRefusal(state, id) ?? true),
     addEnsemble: (user, state, input) =>
       can(user.role, 'schedule', 'edit') && (ensembleRefusal(state, input) ?? true),
     updateEnsemble: (user, state, id, patch) => {

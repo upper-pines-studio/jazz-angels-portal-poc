@@ -49,8 +49,9 @@ import {
   leadsEnsemble,
   percent,
   photoReleaseRefusal,
+  currentSessions,
   rosterFor,
-  termForDate,
+  termForProgram,
   waitlistCount,
 } from '../domain';
 import type { Mark, PhotoRelease, PhotoReleaseInput, RosterStudent } from '../domain';
@@ -133,9 +134,6 @@ function Roster() {
   const [enrolling, setEnrolling] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
 
-  const term = termForDate(state, today);
-  const window = term ? { from: term.start, to: term.end } : undefined;
-
   usePageHeader({
     title: 'Students',
     subtitle: ownOnly
@@ -209,9 +207,15 @@ function Roster() {
 
   const selected = students.find(s => s.id === selectedId) ?? rows[0];
 
-  /** This session's rate, or last session's in muted type where this one has no marks. */
+  /**
+   * This session's rate (the student's own program's session), or last
+   * session's in muted type where this one has no marks.
+   */
   const attendanceCell = (s: RosterStudent) => {
-    const thisTerm = window ? attendanceRateForStudent(state, s.id, window) : undefined;
+    const term = termForProgram(state, s.programId, today);
+    const thisTerm = term
+      ? attendanceRateForStudent(state, s.id, { from: term.start, to: term.end })
+      : undefined;
     if (thisTerm !== undefined) return <span>{percent(thisTerm)}</span>;
     const everything = attendanceRateForStudent(state, s.id);
     if (everything === undefined) return <span style={{ color: 'var(--text-faint)' }}>—</span>;
@@ -222,6 +226,22 @@ function Roster() {
     );
   };
 
+  // Which session the attendance column reads from: on a program's tab, that
+  // program's; on All or the waitlist, the one session when every program
+  // shares it, or each student's own program's when they do not.
+  const programTab = tab !== ALL && tab !== WAITLIST ? (tab as ProgramId) : undefined;
+  const sessions = currentSessions(state, today);
+  const term = programTab
+    ? termForProgram(state, programTab, today)
+    : sessions.length === 1
+      ? sessions[0].term
+      : undefined;
+  const attendanceNote = term
+    ? `Attendance is ${term.name}, or last session where this one has no marks yet`
+    : sessions.length > 1
+      ? "Attendance is the current session of each student's program, or last session where it has no marks yet"
+      : 'The whole roster';
+
   return (
     <>
       <div className="ja-tabs-scroll">
@@ -229,15 +249,7 @@ function Roster() {
       </div>
 
       <div className="ja-split" style={{ gap: 'var(--space-4)' }}>
-        <Card
-          padding="0"
-          title="Roster"
-          subtitle={
-            term
-              ? `Attendance is ${term.name}, or last session where this one has no marks yet`
-              : 'The whole roster'
-          }
-        >
+        <Card padding="0" title="Roster" subtitle={attendanceNote}>
           <div
             className="ja-filter-bar"
             style={{
@@ -462,7 +474,8 @@ function StudentCard({
   const [archiving, setArchiving] = React.useState(false);
   const archived = isArchived(student);
   const ensemble = ensembleById(state, student.ensembleId);
-  const term = termForDate(state, today);
+  // The session of the student's own program, or the all-programs one (decision 0007).
+  const term = termForProgram(state, student.programId, today);
 
   const thisTerm = term
     ? attendanceRateForStudent(state, student.id, { from: term.start, to: term.end })

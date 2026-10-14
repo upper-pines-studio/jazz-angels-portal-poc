@@ -11,7 +11,7 @@ import {
   nextTone,
   rollCallStudents,
   sessionWeekLabel,
-  termForDate,
+  termForProgram,
   termProblems,
   termsList,
   weeksBetween,
@@ -124,17 +124,20 @@ describe('adding and editing a session', () => {
 
 describe('what a session needs', () => {
   it('names every field that is missing or wrong', () => {
-    expect(termProblems(WINTER)).toEqual({});
-    expect(termProblems({ name: '', start: '', end: '', meetingsPlanned: 0 })).toEqual({
+    const h = harness();
+    expect(termProblems(h.portal(), WINTER)).toEqual({});
+    expect(termProblems(h.portal(), { name: '', start: '', end: '', meetingsPlanned: 0 })).toEqual({
       name: 'Give the session a name.',
       start: 'Pick the day the session starts.',
       end: 'Pick the day the session ends.',
       meetingsPlanned: 'Plan at least one class for each ensemble.',
     });
-    expect(termProblems({ ...WINTER, end: WINTER.start }).end).toBe(
+    expect(termProblems(h.portal(), { ...WINTER, end: WINTER.start }).end).toBe(
       'The session has to end after it starts.',
     );
-    expect(termProblems({ ...WINTER, meetingsPlanned: 2.5 }).meetingsPlanned).toBeDefined();
+    expect(
+      termProblems(h.portal(), { ...WINTER, meetingsPlanned: 2.5 }).meetingsPlanned,
+    ).toBeDefined();
   });
 
   it('plans one class a week between the dates until the office says otherwise', () => {
@@ -149,12 +152,12 @@ describe('what a session needs', () => {
 describe('archiving and restoring a session', () => {
   it('takes it off the list and out of the current session, and back', () => {
     const h = harness();
-    expect(termForDate(h.portal(), SEED_TODAY)?.id).toBe(FALL_TERM_ID);
+    expect(termForProgram(h.portal(), undefined, SEED_TODAY)?.id).toBe(FALL_TERM_ID);
 
     h.actions.archiveTerm(FALL_TERM_ID);
     const archived = h.portal().teaching.terms.find(t => t.id === FALL_TERM_ID)!;
     expect(archived).toMatchObject({ archivedAt: SEED_TODAY, archivedById: 's-keisha' });
-    expect(termForDate(h.portal(), SEED_TODAY)).toBeUndefined();
+    expect(termForProgram(h.portal(), undefined, SEED_TODAY)).toBeUndefined();
     expect(sessionWeekLabel(h.portal(), SEED_TODAY)).toBeUndefined();
     expect(termsList(h.portal()).map(t => t.id)).toEqual(['t-spring-2026']);
     expect(termsList(h.portal(), true).map(t => t.id)).toEqual(['t-spring-2026', FALL_TERM_ID]);
@@ -163,7 +166,7 @@ describe('archiving and restoring a session', () => {
     expect(teachingSlice.describe!(h.sent[0])).toBe('the archive change');
 
     h.actions.restoreTerm(FALL_TERM_ID);
-    expect(termForDate(h.portal(), SEED_TODAY)?.id).toBe(FALL_TERM_ID);
+    expect(termForProgram(h.portal(), undefined, SEED_TODAY)?.id).toBe(FALL_TERM_ID);
     expect(h.portal().teaching.terms.find(t => t.id === FALL_TERM_ID)).not.toHaveProperty(
       'archivedAt',
       expect.anything(),
@@ -265,6 +268,7 @@ describe('what an ensemble needs', () => {
   const state = () => ({ core: makeCoreSeed(), teaching: makeSeed() }) as unknown as PortalState;
 
   it('names every field that is missing or wrong', () => {
+    const h = harness();
     expect(ensembleProblems(state(), COMBO_C)).toEqual({});
     expect(
       ensembleProblems(state(), {
@@ -336,7 +340,7 @@ describe('a new office, from nothing to a roll call', () => {
     h.actions.submitRollCall(meetingId);
 
     expect(h.refused).toEqual([]);
-    expect(termForDate(h.portal(), today)?.name).toBe('Winter 2027 session');
+    expect(termForProgram(h.portal(), undefined, today)?.name).toBe('Winter 2027 session');
     expect(sessionWeekLabel(h.portal(), today)).toBe('Winter session week 1');
     const meeting = h.portal().teaching.meetings.find(m => m.id === meetingId)!;
     expect(meeting.rollSubmittedAt).toBeDefined();
