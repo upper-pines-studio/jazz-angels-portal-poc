@@ -106,7 +106,7 @@ export default function Programs() {
         variant="primary"
         size="sm"
         iconLeft={<Icon name="plus" size={15} />}
-        onClick={() => setDraft({ name: '', short: '' })}
+        onClick={() => setDraft({ name: '', short: '', inSchool: false })}
       >
         Add program
       </Button>
@@ -200,7 +200,7 @@ export default function Programs() {
                   variant="primary"
                   size="sm"
                   iconLeft={<Icon name="plus" size={15} />}
-                  onClick={() => setDraft({ name: '', short: '' })}
+                  onClick={() => setDraft({ name: '', short: '', inSchool: false })}
                 >
                   Add program
                 </Button>
@@ -307,7 +307,7 @@ export default function Programs() {
                       variant="secondary"
                       size="sm"
                       iconLeft={<Icon name="plus" size={15} />}
-                      onClick={() => setDraft({ name: '', short: '' })}
+                      onClick={() => setDraft({ name: '', short: '', inSchool: false })}
                     >
                       Add program
                     </Button>
@@ -329,7 +329,13 @@ export default function Programs() {
             showArchived={showArchived}
             onEdit={
               mayEdit
-                ? () => setDraft({ id: program.id, name: program.name, short: program.short })
+                ? () =>
+                    setDraft({
+                      id: program.id,
+                      name: program.name,
+                      short: program.short,
+                      inSchool: program.inSchool,
+                    })
                 : undefined
             }
             onArchive={mayEdit ? () => setArchiving(program) : undefined}

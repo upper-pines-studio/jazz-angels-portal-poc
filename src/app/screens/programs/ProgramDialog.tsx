@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Dialog, Field, Input } from '../../../design-system';
+import { Button, Checkbox, Dialog, Field, Input } from '../../../design-system';
 import { useToast } from '../../ToastHost';
 import { programProblem, useStore } from '../../../core';
 
@@ -7,9 +7,13 @@ export interface ProgramDraft {
   id?: string;
   name: string;
   short: string;
+  inSchool: boolean;
 }
 
-/** Add program or Edit program: the name, and the short name a tab or a narrow column uses. */
+/**
+ * Add program or Edit program: the name, the short name a tab or a narrow
+ * column uses, and whether it is taught in schools.
+ */
 export function ProgramDialog({
   draft,
   onClose,
@@ -24,6 +28,7 @@ export function ProgramDialog({
   const toast = useToast();
   const [name, setName] = React.useState(draft.name);
   const [short, setShort] = React.useState(draft.short);
+  const [inSchool, setInSchool] = React.useState(draft.inSchool);
   const [showErrors, setShowErrors] = React.useState(false);
 
   const problem = programProblem(state.core.programs, { name, short }, draft.id);
@@ -34,10 +39,10 @@ export function ProgramDialog({
       return;
     }
     if (draft.id) {
-      actions.core.updateProgram(draft.id, { name, short });
+      actions.core.updateProgram(draft.id, { name, short, inSchool });
       toast({ tone: 'success', title: 'Program updated', message: name.trim() });
     } else {
-      const id = actions.core.addProgram({ name, short });
+      const id = actions.core.addProgram({ name, short, inSchool });
       if (id) onAdded?.(id);
       toast({ tone: 'success', title: 'Program added', message: name.trim() });
     }
@@ -85,6 +90,12 @@ export function ProgramDialog({
             onChange={e => setShort(e.target.value)}
             style={{ width: '100%' }}
           />
+        </Field>
+        <Field
+          label="In-school"
+          hint="Its teaching hours count as In-school hours on Timesheets, the number a grant report asks for."
+        >
+          <Checkbox checked={inSchool} label="Taught in schools" onChange={setInSchool} />
         </Field>
       </div>
     </Dialog>

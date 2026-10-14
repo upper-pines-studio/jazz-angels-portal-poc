@@ -306,6 +306,7 @@ export function ProgramSheet({
           <div>
             <KV k="Name" v={program.name} />
             <KV k="Short name" v={program.short} />
+            <KV k="In-school" v={program.inSchool ? 'Yes' : 'No'} />
           </div>
         </section>
       )}
