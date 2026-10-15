@@ -86,40 +86,43 @@ const ROUTES = [
   '/timesheets',
 ];
 
-test('every route reads sensibly with no data', async ({ page }) => {
-  const problems: string[] = [];
-  page.on('console', m => {
-    if (m.type() === 'error') problems.push(`${page.url()}: ${m.text()}`);
-  });
-  page.on('pageerror', e => problems.push(`${page.url()}: ${e.message}`));
-
-  await page.addInitScript(
-    ({ data, sessionKey }) => {
-      if (sessionStorage.getItem('e2e:started')) return;
-      sessionStorage.setItem('e2e:started', '1');
-      localStorage.clear();
-      for (const [key, value] of Object.entries(data)) {
-        localStorage.setItem(key, JSON.stringify(value));
-      }
-      localStorage.setItem(
-        sessionKey,
-        JSON.stringify({ username: 'gwen', signedInAt: new Date().toISOString() }),
-      );
-    },
-    {
-      data: Object.fromEntries(Object.entries(EMPTY).map(([id, v]) => [slice(id), v])),
-      sessionKey: SESSION_KEY,
-    },
-  );
-
+test.describe('every route reads sensibly with no data', () => {
+  // One test per route, so each has its own timeout and a failure names the route.
   for (const route of ROUTES) {
-    await page.goto(route);
-    const main = page.locator('main');
-    // Every route with no data shows at least one design-system EmptyState (its title is an h3).
-    await expect(main.locator('h3').first(), route).toBeVisible();
-    const text = await main.innerText();
-    expect(text, route).not.toMatch(/\bNaN\b|\bundefined\b|Infinity/);
-  }
+    test(route, async ({ page }) => {
+      const problems: string[] = [];
+      page.on('console', m => {
+        if (m.type() === 'error') problems.push(`${page.url()}: ${m.text()}`);
+      });
+      page.on('pageerror', e => problems.push(`${page.url()}: ${e.message}`));
 
-  expect(problems).toEqual([]);
+      await page.addInitScript(
+        ({ data, sessionKey }) => {
+          if (sessionStorage.getItem('e2e:started')) return;
+          sessionStorage.setItem('e2e:started', '1');
+          localStorage.clear();
+          for (const [key, value] of Object.entries(data)) {
+            localStorage.setItem(key, JSON.stringify(value));
+          }
+          localStorage.setItem(
+            sessionKey,
+            JSON.stringify({ username: 'gwen', signedInAt: new Date().toISOString() }),
+          );
+        },
+        {
+          data: Object.fromEntries(Object.entries(EMPTY).map(([id, v]) => [slice(id), v])),
+          sessionKey: SESSION_KEY,
+        },
+      );
+
+      await page.goto(route);
+      const main = page.locator('main');
+      // Every route with no data shows at least one design-system EmptyState (its title is an h3).
+      await expect(main.locator('h3').first(), route).toBeVisible();
+      const text = await main.innerText();
+      expect(text, route).not.toMatch(/\bNaN\b|\bundefined\b|Infinity/);
+
+      expect(problems).toEqual([]);
+    });
+  }
 });
