@@ -38,6 +38,8 @@ import {
   hoursForPrograms,
   hoursThisMonth,
   mayApprove,
+  mayDeleteEntry,
+  mayRecall,
   monthLabel,
   monthRange,
   ownDrafts,
@@ -79,6 +81,7 @@ export default function Timesheets() {
   const [teacher, setTeacher] = React.useState('all');
   const [logging, setLogging] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [deleting, setDeleting] = React.useState<TimeEntry | null>(null);
 
   const thisMonday = weekStart(today);
   const shiftWeeks = (by: number) => setMonday(toISO(addWeeks(toDate(monday), by)));
@@ -124,7 +127,7 @@ export default function Timesheets() {
     mayLog && !filteredToOthers ? ownDrafts(user, entriesForWeek(state, monday)) : [];
   const myDraftHours = myDrafts.reduce((sum, e) => sum + e.hours, 0);
   const oneDraft = myDrafts.length === 1;
-  const submitMessage = `Your ${myDrafts.length} draft ${oneDraft ? 'entry' : 'entries'}, ${formatHours(myDraftHours)} hours, ${oneDraft ? 'goes' : 'go'} to the office for approval. Once submitted you can't change ${oneDraft ? 'it' : 'them'}.`;
+  const submitMessage = `Your ${myDrafts.length} draft ${oneDraft ? 'entry' : 'entries'}, ${formatHours(myDraftHours)} hours, ${oneDraft ? 'goes' : 'go'} to the office for approval. You can recall ${oneDraft ? 'it' : 'them'} until the office approves ${oneDraft ? 'it' : 'them'}.`;
 
   const submitWeek = () => {
     const sent = actions.timesheets.submitWeek(monday);
@@ -143,6 +146,26 @@ export default function Timesheets() {
       tone: 'success',
       title: 'Hours approved',
       message: `${staffById(state, entry.staffId)?.name ?? 'Teacher'} · ${formatHours(entry.hours)} hrs`,
+    });
+  };
+
+  // Recalling is undone by submitting again, so it asks nothing first.
+  const recall = (entry: TimeEntry) => {
+    actions.timesheets.recallEntry(entry.id);
+    toast({
+      tone: 'success',
+      title: 'Hours recalled',
+      message: `${formatHours(entry.hours)} hrs back in your drafts`,
+    });
+  };
+
+  const deleteDraft = (entry: TimeEntry) => {
+    actions.timesheets.deleteEntry(entry.id);
+    setDeleting(null);
+    toast({
+      tone: 'success',
+      title: 'Draft deleted',
+      message: `${format(toDate(entry.date), 'EEE MMM d')} · ${formatHours(entry.hours)} hrs`,
     });
   };
 
@@ -344,12 +367,22 @@ export default function Timesheets() {
                   ),
                 },
                 {
-                  key: 'approve',
+                  key: 'actions',
                   label: '',
                   width: '100px',
+                  // Your own draft you may delete, your own submitted entry you may
+                  // recall, and somebody else's submitted entry the office approves.
                   // Nobody approves their own hours, so the button is not there on them.
                   render: (r: TimeEntry) =>
-                    r.status === 'submitted' && mayApprove(user, r) ? (
+                    mayDeleteEntry(user, r) ? (
+                      <IconButton label="Delete draft" size="sm" onClick={() => setDeleting(r)}>
+                        <Icon name="trash-2" size={15} />
+                      </IconButton>
+                    ) : mayRecall(user, r) ? (
+                      <Button size="sm" variant="ghost" onClick={() => recall(r)}>
+                        Recall
+                      </Button>
+                    ) : r.status === 'submitted' && mayApprove(user, r) ? (
                       <Button size="sm" variant="ghost" onClick={() => approve(r)}>
                         Approve
                       </Button>
@@ -417,6 +450,30 @@ export default function Timesheets() {
                 onClick={submitWeek}
               >
                 Submit hours
+              </Button>
+            </>
+          }
+        />
+      )}
+
+      {deleting && (
+        <Dialog
+          open
+          width={460}
+          title="Delete this draft?"
+          description={`${format(toDate(deleting.date), 'EEE MMM d')}, ${deleting.activity}, ${formatHours(deleting.hours)} hours. This can't be undone.`}
+          onClose={() => setDeleting(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setDeleting(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                iconLeft={<Icon name="trash-2" size={15} />}
+                onClick={() => deleteDraft(deleting)}
+              >
+                Delete draft
               </Button>
             </>
           }

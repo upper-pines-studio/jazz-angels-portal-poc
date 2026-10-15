@@ -6,7 +6,10 @@ import type { ProgramId } from '../../../core/types';
  * at render time.
  */
 
-/** Draft is the teacher's own; submitted waits on the office; approved is final. */
+/**
+ * Draft is the teacher's own; submitted waits on the office and can be recalled
+ * to a draft until it is approved; approved is final.
+ */
 export type TimeEntryStatus = 'draft' | 'submitted' | 'approved';
 
 export interface TimeEntry {
@@ -56,8 +59,11 @@ export interface TimesheetsActions {
    * office, as one change. Returns how many went.
    */
   submitWeek(weekStartISO: string): number;
+  /** Take a submitted entry back to a draft, until it is approved. Your own only. */
+  recallEntry(id: string): void;
   /** Approve a submitted entry, stamping who approved it and when. */
   approveEntry(id: string): void;
+  /** Remove a draft logged by mistake. Your own only; submitted and approved entries stay. */
   deleteEntry(id: string): void;
 }
 

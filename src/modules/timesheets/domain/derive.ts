@@ -162,9 +162,33 @@ export function mayApprove(user: SignedInUser, entry: TimeEntry): boolean {
   return entry.staffId !== user.id && can(user.role, 'timesheets-approve', 'edit');
 }
 
-/** May this person log, submit or delete hours for this staff id? Only their own. */
+/** May this person log, submit, recall or delete hours for this staff id? Only their own. */
 export function mayLogFor(user: SignedInUser, staffId: string): boolean {
   return can(user.role, 'timesheets-log', 'edit', staffId === user.id);
+}
+
+/** Why a submitted or approved entry is not deleted (decision 0002: approved hours are money). */
+export const DRAFT_ONLY_REFUSAL =
+  'Only a draft can be deleted. Recall a submitted entry first; approved hours stay on the record.';
+
+/** Why an approved entry is not recalled. */
+export const APPROVED_REFUSAL =
+  'These hours are approved, so they stay as they are. Ask the office if something is wrong.';
+
+/**
+ * May this person delete this entry? Only their own, and only while it is a
+ * draft. The Delete button and the store both ask this.
+ */
+export function mayDeleteEntry(user: SignedInUser, entry: TimeEntry): boolean {
+  return entry.status === 'draft' && mayLogFor(user, entry.staffId);
+}
+
+/**
+ * May this person recall this entry to a draft? Only their own, and only while
+ * it is submitted: once approved it stays. The Recall button and the store both ask this.
+ */
+export function mayRecall(user: SignedInUser, entry: TimeEntry): boolean {
+  return entry.status === 'submitted' && mayLogFor(user, entry.staffId);
 }
 
 /**

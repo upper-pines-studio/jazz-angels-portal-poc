@@ -3,6 +3,8 @@
 // submitted the entry is the office's and Submit week is gone. Keisha (Office manager) then
 // approves it: the office approves, and nobody approves their own hours. Keisha has no drafts
 // of her own that week, so she gets no Submit week even though she sees everyone's drafts.
+// Until then Devon may recall a submitted entry to a draft, and delete it while it is a draft
+// (decision 0002: approved hours are money, so they are never deleted or recalled).
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { dialog, field, freshStart, switchUser } from './support';
@@ -59,4 +61,49 @@ test('a teacher logs and submits his hours, and the office approves them', async
   await expect(page.getByText('Hours approved')).toBeVisible();
   await expect(queued.getByText('Approved', { exact: true })).toBeVisible();
   await expect(queued.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+
+  // Approved, it is Devon's no more to recall or delete.
+  await switchUser(page, 'devon');
+  const locked = entryRow(page, activity);
+  await expect(locked.getByText('Approved', { exact: true })).toBeVisible();
+  await expect(locked.getByRole('button', { name: 'Recall' })).toHaveCount(0);
+  await expect(locked.getByRole('button', { name: 'Delete draft' })).toHaveCount(0);
+});
+
+test('a teacher recalls submitted hours and deletes the draft', async ({ page }) => {
+  const activity = 'Combo B sectional, Studio 2';
+  await freshStart(page, 'devon');
+  await page.goto('/timesheets');
+
+  await page.getByRole('button', { name: 'Log hours' }).click();
+  const log = dialog(page, 'Log hours');
+  await field(log, 'Activity').fill(activity);
+  await field(log, 'Hours').fill('0.75');
+  await log.getByRole('button', { name: 'Log hours' }).click();
+  const row = entryRow(page, activity);
+  await expect(row.getByText('Draft', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Submit week' }).click();
+  await dialog(page, 'Submit the week of Sep 7')
+    .getByRole('button', { name: 'Submit hours' })
+    .click();
+  await expect(row.getByText('Submitted', { exact: true })).toBeVisible();
+  // Submitted, it can be recalled but not deleted.
+  await expect(row.getByRole('button', { name: 'Delete draft' })).toHaveCount(0);
+
+  // Recall: back to a draft, and Submit week is offered again.
+  await row.getByRole('button', { name: 'Recall' }).click();
+  await expect(page.getByText('Hours recalled')).toBeVisible();
+  await expect(row.getByText('Draft', { exact: true })).toBeVisible();
+  await expect(row.getByRole('button', { name: 'Recall' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Submit week' })).toBeVisible();
+
+  // Delete the draft, after a confirmation.
+  await row.getByRole('button', { name: 'Delete draft' }).click();
+  const confirm = dialog(page, 'Delete this draft?');
+  await expect(confirm.getByText(`Sun Sep 13, ${activity}, 0.75 hours.`)).toBeVisible();
+  await confirm.getByRole('button', { name: 'Delete draft' }).click();
+  await expect(page.getByText('Draft deleted')).toBeVisible();
+  await expect(page.getByText(activity, { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Submit week' })).toHaveCount(0);
 });
