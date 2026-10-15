@@ -148,6 +148,22 @@ export function termWeek(term: Term | undefined, dateISO: string): number | unde
 }
 
 /**
+ * A session card's dots: each meeting inside the term with the session week
+ * its date falls in, the same count the page heading and week grid use, so a
+ * term that starts before its first class still numbers that class by the
+ * calendar. Meetings outside the term are left out; oldest first.
+ */
+export function termMeetingWeeks<M extends { date: string }>(
+  term: Term,
+  meetings: M[],
+): { meeting: M; week: number }[] {
+  return meetings
+    .filter(m => m.date >= term.start && m.date <= term.end)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(meeting => ({ meeting, week: termWeek(term, meeting.date) as number }));
+}
+
+/**
  * "Fall 2026 session" in week 1 reads "Fall session week 1". With more than
  * one line running, each says which it is: "Fall session week 1 (all
  * programs) · Fall term week 3 (In-school)". Undefined outside every session.

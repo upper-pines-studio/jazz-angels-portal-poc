@@ -49,6 +49,7 @@ import {
   meetingsForWeek,
   restoreTermRefusal,
   termForEnsemble,
+  termMeetingWeeks,
   termWeek,
   termsList,
   timeLabel,
@@ -582,13 +583,18 @@ function SessionCard({ session, several }: { session: LineSession; several: bool
     e => lineForProgram(state, e.programId) === session.programId,
   );
   const first = activeOnly(following)[0] ?? following[0];
-  const weeks = state.teaching.meetings
-    .filter(m => m.ensembleId === first?.id && m.date >= term.start && m.date <= term.end)
-    .sort((a, b) => a.date.localeCompare(b.date));
-  const done = weeks.filter(m => m.rollSubmittedAt).length;
+  const weeks = termMeetingWeeks(
+    term,
+    state.teaching.meetings.filter(m => m.ensembleId === first?.id),
+  );
+  const done = weeks.filter(w => w.meeting.rollSubmittedAt).length;
   // "Sunday" for an ensemble that meets on Sundays, "Monday" for one on Mondays.
-  const day = weeks[0] ? format(toDate(weeks[0].date), 'EEEE') : undefined;
-  const planned = `${term.meetingsPlanned} ${term.meetingsPlanned === 1 ? 'week' : 'weeks'}`;
+  const day = weeks[0] ? format(toDate(weeks[0].meeting.date), 'EEEE') : undefined;
+  // Weeks with no class yet are said in words, not drawn as dots.
+  const planned =
+    weeks.length > 0 && weeks.length < term.meetingsPlanned
+      ? `${weeks.length} of ${term.meetingsPlanned} weeks on the schedule`
+      : `${term.meetingsPlanned} ${term.meetingsPlanned === 1 ? 'week' : 'weeks'}`;
 
   return (
     <Card
@@ -609,7 +615,7 @@ function SessionCard({ session, several }: { session: LineSession; several: bool
       ) : (
         <>
           <div className="ja-term-dots">
-            {weeks.map((m, i) => {
+            {weeks.map(({ meeting: m, week }) => {
               const submitted = Boolean(m.rollSubmittedAt);
               const isNow = m.date === today;
               return (
@@ -620,7 +626,7 @@ function SessionCard({ session, several }: { session: LineSession; several: bool
                     }
                   />
                   <span className="ja-term-dot__date">{dateShort(m.date)}</span>
-                  <span className="ja-term-dot__week">{`Week ${i + 1}`}</span>
+                  <span className="ja-term-dot__week">{`Week ${week}`}</span>
                 </span>
               );
             })}
