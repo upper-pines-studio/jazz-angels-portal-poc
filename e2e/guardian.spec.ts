@@ -1,11 +1,11 @@
-// Signed in as gwen (Admin): she gives Hana Sato's guardian an email and an address on the
+// Signed in as gwen (Admin): she gives Devon Ellis's guardian (one the demo leaves blank) an email and an address on the
 // Guardian card, and imports two students with an email and an address column, one with an email
 // that is not one (#82). Then intern (Office assistant), who may not see guardian contacts, sees
 // neither the email nor the address, nor the card.
 import { expect, test } from '@playwright/test';
 import { dialog, field, freshStart, switchUser } from './support';
 
-const STUDENT = 'Hana Sato';
+const STUDENT = 'Devon Ellis';
 
 test('a guardian email and address: entered, imported, and kept from the assistant', async ({
   page,
@@ -18,7 +18,7 @@ test('a guardian email and address: entered, imported, and kept from the assista
   await expect(page.getByText('Who we call about this student')).toBeVisible();
 
   // A malformed email and half an address are refused with what is wrong.
-  await field(page, 'Guardian email').fill('aiko at example');
+  await field(page, 'Guardian email').fill('angela at example');
   await field(page, 'Guardian address').fill('1520 E 7th St');
   await page.getByRole('button', { name: 'Save guardian' }).click();
   await expect(
@@ -28,13 +28,13 @@ test('a guardian email and address: entered, imported, and kept from the assista
     page.getByText('Add the city, state and ZIP, or leave the address blank.'),
   ).toBeVisible();
 
-  await field(page, 'Guardian email').fill('aiko.sato@example.com');
+  await field(page, 'Guardian email').fill('angela.ellis@example.com');
   await field(page, 'City').fill('Long Beach');
   await field(page, 'State').fill('CA');
   await field(page, 'ZIP').fill('90813');
   await page.getByRole('button', { name: 'Save guardian' }).click();
   await expect(page.getByText('Guardian saved')).toBeVisible();
-  await expect(page.getByText('aiko.sato@example.com', { exact: true })).toBeVisible();
+  await expect(page.getByText('angela.ellis@example.com', { exact: true })).toBeVisible();
   await expect(
     page.getByText('1520 E 7th St, Long Beach, CA 90813', { exact: true }),
   ).toBeVisible();
@@ -70,7 +70,7 @@ test('a guardian email and address: entered, imported, and kept from the assista
   await page.getByPlaceholder('Search students').fill(STUDENT);
   await page.getByText(STUDENT).first().click();
   await expect(page.getByText('Last five marks')).toBeVisible();
-  await expect(page.getByText('aiko.sato@example.com')).toHaveCount(0);
+  await expect(page.getByText('angela.ellis@example.com')).toHaveCount(0);
   await expect(page.getByText('1520 E 7th St', { exact: false })).toHaveCount(0);
   await expect(page.getByText('Who we call about this student')).toHaveCount(0);
 });

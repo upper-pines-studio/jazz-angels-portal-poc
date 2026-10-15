@@ -1,6 +1,6 @@
 import { addDays, addWeeks } from 'date-fns';
 import { PARAMOUNT_MS_VENUE_ID, SEED_TODAY, STUDIO_VENUE_ID, toDate, toISO } from '../../../core';
-import type { ProgramId } from '../../../core';
+import type { Address, ProgramId } from '../../../core';
 import type {
   AttendanceRecord,
   ClassMeeting,
@@ -186,6 +186,112 @@ type SeedStudent = [
   guardianPhone: string,
 ];
 
+/**
+ * Guardian emails and addresses for about half the students, and addresses for
+ * about a third. Invented: emails on the reserved example.com and example.org
+ * domains, streets made up in Long Beach. The rest stay blank, so "Not on file"
+ * still shows.
+ */
+const GUARDIAN_DETAILS = new Map<string, { email: string; address?: Address }>(
+  (
+    [
+      [
+        'Maya Robinson',
+        'lorraine.robinson@example.com',
+        { street: '100 Linden Ave', city: 'Long Beach', state: 'CA', zip: '90802' },
+      ],
+      ['Priya Raman', 'sunil.raman@example.com'],
+      [
+        'Alicia Vargas',
+        'rvargas@example.com',
+        { street: '1608 E 7th St', city: 'Long Beach', state: 'CA', zip: '90803' },
+      ],
+      [
+        'Naomi Fields',
+        'carla.fields@example.com',
+        { street: '2362 Termino Ave', city: 'Long Beach', state: 'CA', zip: '90804' },
+      ],
+      ['Ruby Castellanos', 'elena.castellanos@example.org'],
+      [
+        'Iris Delgado',
+        'pdelgado@example.com',
+        { street: '3870 Orange Ave', city: 'Long Beach', state: 'CA', zip: '90805' },
+      ],
+      [
+        'Zora Whitfield',
+        'andre.whitfield@example.com',
+        { street: '324 Pine Ave', city: 'Long Beach', state: 'CA', zip: '90806' },
+      ],
+      ['Tamara Okonjo', 'grace.okonjo@example.com'],
+      [
+        'Rosa Mendoza',
+        'jmendoza@example.com',
+        { street: '1832 Bellflower Blvd', city: 'Long Beach', state: 'CA', zip: '90807' },
+      ],
+      [
+        'Hana Sato',
+        'kenji.sato@example.org',
+        { street: '2586 E Anaheim St', city: 'Long Beach', state: 'CA', zip: '90808' },
+      ],
+      ['Lila Ferreira', 'paulo.ferreira@example.com'],
+      [
+        'Beatriz Pena',
+        'mpena@example.com',
+        { street: '4094 Elm Ave', city: 'Long Beach', state: 'CA', zip: '90810' },
+      ],
+      [
+        'Anika Sharma',
+        'ravi.sharma@example.com',
+        { street: '548 Cherry Ave', city: 'Long Beach', state: 'CA', zip: '90813' },
+      ],
+      ['Juno Park', 'min.park@example.com'],
+      [
+        'Malik Robeson',
+        'drobeson@example.org',
+        { street: '2056 Redondo Ave', city: 'Long Beach', state: 'CA', zip: '90814' },
+      ],
+      [
+        'Ismael Duarte',
+        'ana.duarte@example.com',
+        { street: '2810 Ximeno Ave', city: 'Long Beach', state: 'CA', zip: '90815' },
+      ],
+      ['Aurelio Santos', 'maria.santos@example.com'],
+      [
+        'Grace Amoako',
+        'kamoako@example.com',
+        { street: '4318 Obispo Ave', city: 'Long Beach', state: 'CA', zip: '90809' },
+      ],
+      [
+        'Selena Ruiz',
+        'hector.ruiz@example.com',
+        { street: '772 Gaviota Ave', city: 'Long Beach', state: 'CA', zip: '90802' },
+      ],
+      ['Ingrid Halvorsen', 'peter.halvorsen@example.org'],
+      [
+        'Kayla Simmons',
+        'tsimmons@example.com',
+        { street: '2280 Lakewood Blvd', city: 'Long Beach', state: 'CA', zip: '90803' },
+      ],
+      [
+        'Destiny Blake',
+        'monique.blake@example.com',
+        { street: '3034 Daisy Ave', city: 'Long Beach', state: 'CA', zip: '90804' },
+      ],
+      ['Elena Petrova', 'irina.petrova@example.com'],
+      [
+        'Nadia Okafor',
+        'cokafor@example.com',
+        { street: '242 Junipero Ave', city: 'Long Beach', state: 'CA', zip: '90805' },
+      ],
+      [
+        'Yasmin Farouk',
+        'layla.farouk@example.org',
+        { street: '996 Linden Ave', city: 'Long Beach', state: 'CA', zip: '90806' },
+      ],
+    ] as Array<[string, string, Address?]>
+  ).map(([name, email, address]) => [name, { email, address }]),
+);
+
 /** Roster by ensemble, then the waitlist. 45 enrolled, 4 waiting. */
 const ROSTER: Array<{ ensembleId: string; programId: ProgramId; students: SeedStudent[] }> = [
   {
@@ -339,6 +445,8 @@ function buildStudents(): Student[] {
         yearsIn,
         guardianName,
         guardianPhone: guardianPhone || undefined,
+        guardianEmail: GUARDIAN_DETAILS.get(name)?.email,
+        guardianAddress: GUARDIAN_DETAILS.get(name)?.address,
         programId: group.programId,
         ensembleId: group.ensembleId,
         status: 'enrolled',
@@ -355,6 +463,8 @@ function buildStudents(): Student[] {
       yearsIn,
       guardianName,
       guardianPhone: guardianPhone || undefined,
+      guardianEmail: GUARDIAN_DETAILS.get(name)?.email,
+      guardianAddress: GUARDIAN_DETAILS.get(name)?.address,
       programId: row.programId,
       status: 'waitlist',
       photoRelease: seedRelease(name, yearsIn),
