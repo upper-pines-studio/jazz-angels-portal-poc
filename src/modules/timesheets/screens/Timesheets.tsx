@@ -1,5 +1,6 @@
 import React from 'react';
 import { addWeeks, format } from 'date-fns';
+import { useSearchParams } from 'react-router-dom';
 import {
   Badge,
   Button,
@@ -52,6 +53,7 @@ import {
   sentBackTo,
   teachersThisMonth,
   visibleEntries,
+  weekFromParam,
   weekRange,
   weekStart,
   weekTotals,
@@ -100,7 +102,11 @@ export default function Timesheets() {
   const seesEveryone = allowed('timesheets-approve', 'edit');
   const mayLog = allowed('timesheets-log', 'edit', true);
 
-  const [monday, setMonday] = React.useState(() => weekStart(today));
+  // A link may name the week to open (`?week=`), as the dashboard's sent-back row does.
+  const [params] = useSearchParams();
+  const [monday, setMonday] = React.useState(
+    () => weekFromParam(params.get('week')) ?? weekStart(today),
+  );
   const [teacher, setTeacher] = React.useState('all');
   const [logging, setLogging] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);

@@ -96,6 +96,12 @@ assign. The module decides it in its `domain/`, with `can` and its own-record
 helpers (`mayApprove`, `mayTakeRoll`), so it has a test per role. A role that
 may only look sees no badge; zero shows nothing.
 
+**Attention rows.** `dashboard.attention(state, today, user)` is given the
+signed-in person the same way, so a row can be theirs alone: Timesheets shows a
+teacher their own hours sent back and nobody else (`sentBackAttention`). A row
+everyone with the role sees ignores `user`, as grants' and teaching's do. Every
+row still shows only to a role that meets its `requires` or may follow its `href`.
+
 `dashboard.subtitle(state, today)` is the few words the module adds to the
 dashboard's page subtitle, after core's date and fiscal year.
 

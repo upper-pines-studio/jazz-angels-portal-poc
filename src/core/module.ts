@@ -168,7 +168,13 @@ export interface DashboardContribution {
    * year with ` · `. Undefined when the module has nothing to add today.
    */
   subtitle?(state: PortalState, today: string): string | undefined;
-  attention?(state: PortalState, today: string): AttentionItem[];
+  /**
+   * The module's rows in the dashboard's Attention card. Given the signed-in
+   * person, so a row can be theirs alone (their own hours sent back), as a rail
+   * item's `badge` is; a row everyone with the role sees can ignore it. Each row
+   * still shows only to a role that meets its `requires` or may follow its `href`.
+   */
+  attention?(state: PortalState, today: string, user: SignedInUser): AttentionItem[];
   /** Each panel renders a Card into the dashboard's right column. */
   panels?: GatedCard[];
 }
