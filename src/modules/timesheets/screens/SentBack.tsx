@@ -21,7 +21,7 @@ export function SentBackNote({ entry, block = false }: { entry: TimeEntry; block
   const who = sentBackBy(staffById(state, entry.sentBackBy)?.name, entry);
   return (
     <span className={block ? 'ja-ts-sentback ja-ts-sentback--block' : 'ja-ts-sentback'}>
-      <Icon name="undo-2" size={13} color="var(--warning-500)" />
+      <Icon name="undo-2" size={13} color="var(--gold-700)" />
       <span>
         <strong>{who}:</strong> {entry.sentBackReason}
       </span>

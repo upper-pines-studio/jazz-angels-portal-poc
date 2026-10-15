@@ -76,15 +76,22 @@ const STATUS: Record<TimeEntryStatus, StatusLook> = {
 };
 
 /**
- * A draft the office sent back is its person's to fix, so it says so, in the amber
- * of the warning tokens: it needs their attention, it is not an error (#96). The
- * Badge has no amber tone and the design system is not edited, so it comes in
- * through the Badge's style.
+ * A draft the office sent back is its person's to fix, so it says so in outlined
+ * gold: it needs their attention, it is not an error (#96). Outlined, not filled,
+ * so it reads apart from the filled gold Submitted: dark gold text (6.5:1 on the
+ * white card) and a 1px gold rule. The padding gives back the border's pixel, so
+ * it stands as tall as the other badges. The Badge has no outlined tone and the
+ * design system is not edited, so it comes in through the Badge's style.
  */
 const SENT_BACK: StatusLook = {
   label: 'Sent back',
   tone: 'gold',
-  style: { background: 'var(--warning-50)', color: 'var(--warning-500)' },
+  style: {
+    background: 'var(--surface-card)',
+    color: 'var(--gold-700)',
+    border: 'var(--border-width) solid var(--gold-500)',
+    padding: '4px calc(var(--space-2) - 1px)',
+  },
 };
 
 function statusOf(entry: TimeEntry): StatusLook {

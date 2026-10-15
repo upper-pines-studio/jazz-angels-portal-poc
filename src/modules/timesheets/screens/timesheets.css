@@ -62,8 +62,9 @@
 }
 
 /* "Sent back by Keisha Grant on Sep 13: …" under a sent-back entry's activity,
-   and at the top of Edit hours. Sent back is amber, the warning tokens, in the
-   status, this note and the notice alike, so they read as one (#96). */
+   and at the top of Edit hours. Sent back is gold in the status, this note and
+   the notice alike, so they read as one (#96): the text is the body and strong
+   text colours (9.6:1 and 16:1 on gold-50), the icon dark gold, the rule gold. */
 .ja-ts-sentback {
   display: flex;
   align-items: baseline;
@@ -87,8 +88,8 @@
 .ja-ts-sentback--block {
   margin-top: 0;
   padding: var(--space-3) var(--space-4);
-  background: var(--warning-50);
-  border-left: 3px solid var(--warning-500);
+  background: var(--gold-50);
+  border-left: 3px solid var(--gold-500);
   border-radius: var(--radius-sm);
 }
 
@@ -100,7 +101,7 @@
   padding: var(--space-4) var(--space-5);
   background: var(--surface-card);
   border: var(--border-width) solid var(--border-subtle);
-  border-left: 3px solid var(--warning-500);
+  border-left: 3px solid var(--gold-500);
   border-radius: var(--radius-md);
 }
 
