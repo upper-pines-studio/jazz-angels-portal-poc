@@ -52,6 +52,43 @@ const NEW: StudentInput = {
   status: 'waitlist',
 };
 
+describe('the demo seed guardians', () => {
+  const students = makeSeed().students;
+  const withEmail = students.filter(s => s.guardianEmail);
+  const withAddress = students.filter(s => s.guardianAddress);
+
+  it('gives about half the students an email and about a third an address', () => {
+    expect(withEmail.length / students.length).toBeGreaterThan(0.4);
+    expect(withEmail.length / students.length).toBeLessThan(0.6);
+    expect(withAddress.length / students.length).toBeGreaterThan(0.25);
+    expect(withAddress.length / students.length).toBeLessThan(0.45);
+    expect(students.length - withEmail.length).toBeGreaterThan(0);
+  });
+
+  it('only gives an address to a student who also has an email', () => {
+    for (const s of withAddress) expect(s.guardianEmail).toBeTruthy();
+  });
+
+  it('uses emails the store accepts, on a reserved example domain', () => {
+    for (const s of withEmail) {
+      expect(guardianEmailRefusal(s.guardianEmail)).toBeUndefined();
+      expect(looksLikeEmail(s.guardianEmail!)).toBe(true);
+      expect(s.guardianEmail).toMatch(/@example\.(com|org)$/);
+    }
+  });
+
+  it('uses whole Long Beach addresses the store accepts', () => {
+    for (const s of withAddress) {
+      const a = s.guardianAddress!;
+      expect(guardianAddressRefusal(a)).toBeUndefined();
+      expect(tidyAddress(a)).toEqual(a);
+      expect(a.city).toBe('Long Beach');
+      expect(a.state).toBe('CA');
+      expect(a.zip).toMatch(/^908\d\d$/);
+    }
+  });
+});
+
 describe('a guardian email', () => {
   it('is fine blank, and refused with a plain message when it is not an email', () => {
     expect(guardianEmailRefusal(undefined)).toBeUndefined();
