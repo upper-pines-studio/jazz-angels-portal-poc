@@ -19,6 +19,8 @@ import {
 import { usePageHeader } from '../../../app/Shell';
 import { useToast } from '../../../app/ToastHost';
 import { OwnerAvatar } from '../../../app/components/badges';
+import { RowMenu } from '../../../app/components/RowMenu';
+import type { RowMenuItem } from '../../../app/components/RowMenu';
 import { TableScroll } from '../../../app/components/TableScroll';
 import {
   activeOnly,
@@ -64,7 +66,7 @@ import LogHoursDialog from './LogHoursDialog';
 import { SentBackNote } from './SentBack';
 import './timesheets.css';
 
-type StatusLook = { label: string; tone: 'neutral' | 'gold' | 'teal' | 'danger' };
+type StatusLook = { label: string; tone: 'neutral' | 'gold' | 'teal'; style?: React.CSSProperties };
 
 /** Draft is nobody's problem yet, submitted is the office's, approved is done. */
 const STATUS: Record<TimeEntryStatus, StatusLook> = {
@@ -73,8 +75,17 @@ const STATUS: Record<TimeEntryStatus, StatusLook> = {
   approved: { label: 'Approved', tone: 'teal' },
 };
 
-/** A draft the office sent back is its person's to fix, so it says so. */
-const SENT_BACK: StatusLook = { label: 'Sent back', tone: 'danger' };
+/**
+ * A draft the office sent back is its person's to fix, so it says so, in the amber
+ * of the warning tokens: it needs their attention, it is not an error (#96). The
+ * Badge has no amber tone and the design system is not edited, so it comes in
+ * through the Badge's style.
+ */
+const SENT_BACK: StatusLook = {
+  label: 'Sent back',
+  tone: 'gold',
+  style: { background: 'var(--warning-50)', color: 'var(--warning-500)' },
+};
 
 function statusOf(entry: TimeEntry): StatusLook {
   return isSentBack(entry) ? SENT_BACK : STATUS[entry.status];
@@ -227,6 +238,41 @@ export default function Timesheets() {
   const sendingBackName = sendingBack
     ? (staffById(state, sendingBack.staffId)?.name ?? 'the teacher')
     : '';
+
+  // The control a row shows directly: Edit and Delete draft on your own draft,
+  // Recall on your own submitted entry, Approve on somebody else's.
+  const direct = (r: TimeEntry): React.ReactNode =>
+    mayDeleteEntry(user, r) ? (
+      <>
+        {mayChangeEntry(user, r) && (
+          <IconButton label="Edit hours" size="sm" onClick={() => setEditing(r)}>
+            <Icon name="pencil" size={15} />
+          </IconButton>
+        )}
+        <IconButton label="Delete draft" size="sm" onClick={() => setDeleting(r)}>
+          <Icon name="trash-2" size={15} />
+        </IconButton>
+      </>
+    ) : mayRecall(user, r) ? (
+      <Button size="sm" variant="ghost" onClick={() => recall(r)}>
+        Recall
+      </Button>
+    ) : r.status === 'submitted' && mayApprove(user, r) ? (
+      <Button size="sm" variant="ghost" onClick={() => approve(r)}>
+        Approve
+      </Button>
+    ) : null;
+
+  // What a row keeps in its "…" menu: sending approved hours back, which is rare,
+  // and the history, which the status opens as well.
+  const more = (r: TimeEntry): RowMenuItem[] => [
+    ...(maySendBack(user, r)
+      ? [{ label: 'Send back', icon: 'undo-2', onSelect: () => openSendBack(r) }]
+      : []),
+    ...(mayReadHistory(user, r)
+      ? [{ label: 'History', icon: 'history', onSelect: () => setHistoryOf(r.id) }]
+      : []),
+  ];
 
   const programHours = hoursByProgram(scoped, month);
   const biggest = programHours[0]?.hours ?? 0;
@@ -394,7 +440,7 @@ export default function Timesheets() {
             action={logButton}
           />
         ) : (
-          <TableScroll minWidth={900}>
+          <TableScroll minWidth={940}>
             <DataTable
               rows={shown}
               columns={[
@@ -482,13 +528,13 @@ export default function Timesheets() {
                         title="Show history"
                         onClick={() => setHistoryOf(r.id)}
                       >
-                        <Badge tone={statusOf(r).tone} dot>
+                        <Badge tone={statusOf(r).tone} style={statusOf(r).style} dot>
                           {statusOf(r).label}
                         </Badge>
                         <Icon name="history" size={13} />
                       </button>
                     ) : (
-                      <Badge tone={statusOf(r).tone} dot>
+                      <Badge tone={statusOf(r).tone} style={statusOf(r).style} dot>
                         {statusOf(r).label}
                       </Badge>
                     ),
@@ -496,36 +542,22 @@ export default function Timesheets() {
                 {
                   key: 'actions',
                   label: '',
-                  width: '100px',
+                  width: '136px',
+                  align: 'right',
                   // Your own draft you may edit and delete, your own submitted entry
-                  // you may recall, somebody else's submitted entry the office
-                  // approves, and somebody else's approved entry the office sends back.
-                  // Nobody approves or sends back their own hours, so neither is there on them.
-                  render: (r: TimeEntry) =>
-                    mayDeleteEntry(user, r) ? (
-                      <span style={{ display: 'inline-flex', gap: 'var(--space-1)' }}>
-                        {mayChangeEntry(user, r) && (
-                          <IconButton label="Edit hours" size="sm" onClick={() => setEditing(r)}>
-                            <Icon name="pencil" size={15} />
-                          </IconButton>
-                        )}
-                        <IconButton label="Delete draft" size="sm" onClick={() => setDeleting(r)}>
-                          <Icon name="trash-2" size={15} />
-                        </IconButton>
-                      </span>
-                    ) : mayRecall(user, r) ? (
-                      <Button size="sm" variant="ghost" onClick={() => recall(r)}>
-                        Recall
-                      </Button>
-                    ) : r.status === 'submitted' && mayApprove(user, r) ? (
-                      <Button size="sm" variant="ghost" onClick={() => approve(r)}>
-                        Approve
-                      </Button>
-                    ) : maySendBack(user, r) ? (
-                      <Button size="sm" variant="ghost" onClick={() => openSendBack(r)}>
-                        Send back
-                      </Button>
-                    ) : null,
+                  // you may recall, and somebody else's submitted entry the office
+                  // approves: those sit on the row. The rarer ones go in the row's
+                  // menu: the history, and sending somebody else's approved entry
+                  // back (#96). Nobody approves or sends back their own hours, so
+                  // neither is there on them.
+                  render: (r: TimeEntry) => (
+                    <span className="ja-ts-actions">
+                      {direct(r)}
+                      {more(r).length > 0 && (
+                        <RowMenu label="More for these hours" items={more(r)} />
+                      )}
+                    </span>
+                  ),
                 },
               ]}
             />

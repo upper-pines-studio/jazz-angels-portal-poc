@@ -1,0 +1,73 @@
+/*
+ * The "…" menu at the end of a table row (RowMenu.tsx): a ghost button, and the
+ * list of the grants transaction menu, fixed to the viewport so a cell or a card
+ * that clips its overflow does not cut it off.
+ */
+
+.ja-row-menu {
+  display: inline-flex;
+  flex: none;
+}
+
+/* The button looks like the design system's small ghost IconButton, so it sits
+   quietly beside Edit and Delete draft on every row. */
+.ja-row-menu__button {
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--neutral-600);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+
+.ja-row-menu__button:hover,
+.ja-row-menu__button[aria-expanded='true'] {
+  background: var(--neutral-100);
+  color: var(--text-strong);
+}
+
+.ja-row-menu__button:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.ja-row-menu__list {
+  position: fixed;
+  z-index: 30;
+  min-width: 180px;
+  padding: var(--space-1);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.ja-row-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: var(--type-body-sm);
+  color: var(--text-body);
+  white-space: nowrap;
+}
+
+.ja-row-menu__item:hover,
+.ja-row-menu__item:focus-visible {
+  background: var(--blue-50);
+  color: var(--text-strong);
+  outline: 0;
+}
