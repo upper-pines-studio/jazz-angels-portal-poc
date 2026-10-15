@@ -1,10 +1,18 @@
 import React from 'react';
 import { staffById } from '../../core';
-import type { AttentionItem, ModuleManifest, PortalState, Requirement, StatSpec } from '../../core';
+import type {
+  AttentionItem,
+  ModuleManifest,
+  PortalState,
+  Requirement,
+  SignedInUser,
+  StatSpec,
+} from '../../core';
 import {
   awaitingApproval,
   formatHours,
   hoursThisMonth,
+  sentBackAttention,
   teachersThisMonth,
   timesheetsSlice,
   waitingOn,
@@ -32,7 +40,12 @@ function stats(state: PortalState, today: string): StatSpec[] {
   ];
 }
 
-function attention(state: PortalState, today: string): AttentionItem[] {
+function attention(state: PortalState, today: string, user: SignedInUser): AttentionItem[] {
+  // The person's own hours the office sent back: theirs alone, one row each.
+  return [...sentBackAttention(state, user), ...awaitingAttention(state, today)];
+}
+
+function awaitingAttention(state: PortalState, today: string): AttentionItem[] {
   const waiting = awaitingApproval(state);
   if (waiting.length === 0) return [];
 

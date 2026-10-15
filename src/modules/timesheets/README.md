@@ -70,6 +70,14 @@ somebody else's hours to approve, for a role that approves, plus their own
 entries sent back and not yet submitted again. Ordinary drafts are their own
 work in progress and do not count.
 
+Their dashboard says so too (`sentBackAttention`, #97): one Attention row per
+entry sent back, "Hours sent back to fix", with the entry's day, its activity
+and "Sent back by Keisha Monroe", a gold Sent back status and the Timesheets
+badge. It links to `/timesheets?week=<Monday>` (`weekHref`), which opens that
+week (`weekFromParam`), with the entry on it and in the notice above. Only the
+person the hours belong to sees it, never the office that sent them back, and
+it goes when they submit the entry again.
+
 The store refuses sending back your own hours whatever the role
 (`OWN_SEND_BACK_REFUSAL`), anything not approved
 (`SEND_BACK_APPROVED_ONLY_REFUSAL`), a blank reason (`SEND_BACK_REASON_REFUSAL`),

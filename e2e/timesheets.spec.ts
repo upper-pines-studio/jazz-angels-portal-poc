@@ -135,8 +135,18 @@ test('the office sends approved hours back, and the teacher fixes and resubmits 
   await expect(row.getByText(reason)).toBeVisible();
   await expect(row.getByRole('button', { name: 'Send back' })).toHaveCount(0);
 
-  // Devon sees it, with who sent it back and why, and fixes it.
+  // The office knows what it sent back, so its dashboard has no row for it (#97).
+  await page.goto('/');
+  await expect(page.getByText('Attention', { exact: true })).toBeVisible();
+  await expect(page.getByText('Hours sent back to fix')).toHaveCount(0);
+
+  // Devon's dashboard says so, and its row opens the entry's week (#97).
   await switchUser(page, 'devon');
+  await expect(page.getByText(`${activity} · Sent back by Keisha Monroe`)).toBeVisible();
+  await page.getByText('Hours sent back to fix').click();
+  await expect(page).toHaveURL(/\/timesheets\?week=2026-09-07$/);
+
+  // Devon sees it, with who sent it back and why, and fixes it.
   await expect(page.getByText('The office sent back 1 entry for you to fix')).toBeVisible();
   const mine = entryRow(page, activity);
   await expect(mine.getByText('Sent back by Keisha Monroe on Sep 13:')).toBeVisible();
@@ -156,9 +166,13 @@ test('the office sends approved hours back, and the teacher fixes and resubmits 
   await expect(mine.getByText('Submitted', { exact: true })).toBeVisible();
   await expect(mine.getByText(reason)).toHaveCount(0);
   await expect(page.getByText('The office sent back 1 entry for you to fix')).toHaveCount(0);
+  await page.goto('/');
+  await expect(page.getByText('Attention', { exact: true })).toBeVisible();
+  await expect(page.getByText('Hours sent back to fix')).toHaveCount(0);
 
   // The office approves it again.
   await switchUser(page, 'keisha');
+  await page.goto('/timesheets');
   const again = entryRow(page, activity);
   await again.getByRole('button', { name: 'Approve', exact: true }).click();
   await expect(again.getByText('Approved', { exact: true })).toBeVisible();

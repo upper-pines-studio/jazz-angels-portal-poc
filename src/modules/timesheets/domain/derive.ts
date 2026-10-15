@@ -1,5 +1,7 @@
 import { addDays, endOfMonth, format, startOfMonth, startOfWeek } from 'date-fns';
+import { staffById } from '../../../core/derive';
 import { toDate, toISO } from '../../../core/format';
+import type { AttentionItem } from '../../../core/module';
 import { can } from '../../../core/permissions';
 import type { PortalState, ProgramId, SignedInUser } from '../../../core/types';
 import type {
@@ -108,6 +110,45 @@ export function awaitingApprovalFor(state: PortalState, user: SignedInUser): Tim
  */
 export function sentBackTo(state: PortalState, user: Pick<SignedInUser, 'id'>): TimeEntry[] {
   return state.timesheets.entries.filter(e => e.staffId === user.id && isSentBack(e)).sort(byDate);
+}
+
+/** Where a week opens on Timesheets: `/timesheets?week=2026-09-07`, the Monday of `iso`'s week. */
+export function weekHref(iso: string): string {
+  return `/timesheets?week=${weekStart(iso)}`;
+}
+
+/**
+ * The Monday of the week a `?week=` names, or undefined when it names no date,
+ * so a link from the dashboard opens that week and a bad one opens today's.
+ */
+export function weekFromParam(raw: string | null | undefined): string | undefined {
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return undefined;
+  return Number.isNaN(toDate(raw).getTime()) ? undefined : weekStart(raw);
+}
+
+/**
+ * The dashboard's rows for this person's own hours the office sent back: one
+ * per entry, naming the day, the activity and who sent it back, and opening
+ * the entry's week on Timesheets. Nobody else sees them, the office that sent
+ * them back included, and a role that does not log hours sees none. A row
+ * goes when its entry is submitted again.
+ */
+export function sentBackAttention(state: PortalState, user: SignedInUser): AttentionItem[] {
+  if (!can(user.role, 'timesheets-log', 'edit', true)) return [];
+  return sentBackTo(state, user).map(entry => {
+    const by = staffById(state, entry.sentBackBy)?.name;
+    return {
+      id: `timesheets-sent-back-${entry.id}`,
+      date: entry.date,
+      label: 'Hours sent back to fix',
+      detail: `${entry.activity} · ${by ? `Sent back by ${by}` : 'Sent back by the office'}`,
+      status: 'due-soon',
+      statusLabel: 'Sent back',
+      href: weekHref(entry.date),
+      ownerId: entry.staffId,
+      source: 'Timesheets',
+    };
+  });
 }
 
 /**

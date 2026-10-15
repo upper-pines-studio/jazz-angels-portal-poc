@@ -44,7 +44,7 @@ export default function Dashboard() {
     .filter(visible);
   const mayDocuments = can(user.role, 'office-documents');
   const attention = [
-    ...enabled.flatMap(m => m.dashboard?.attention?.(state, today) ?? []),
+    ...enabled.flatMap(m => m.dashboard?.attention?.(state, today, user) ?? []),
     ...(mayDocuments ? officeDocumentAttention(state, today) : []),
   ]
     .filter(visible)
@@ -121,7 +121,7 @@ export default function Dashboard() {
               icon={<Icon name="check" size={22} />}
               title="Nothing needs attention"
               message={
-                'Deadlines, reports, roll calls and hours waiting for approval show up here when they are overdue or due in the next 14 days.' +
+                'Deadlines, reports, roll calls, hours waiting for approval and your own hours sent back to fix show up here when they are overdue or due in the next 14 days.' +
                 (mayDocuments
                   ? ' So do office documents that are out of date or expire within 30 days.'
                   : '')
