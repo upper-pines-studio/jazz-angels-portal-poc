@@ -172,7 +172,11 @@ export default function Dashboard() {
                     label: 'Status',
                     width: '110px',
                     render: (d: AttentionItem) => (
-                      <AttentionStatusBadge status={d.status} label={d.statusLabel} />
+                      <AttentionStatusBadge
+                        status={d.status}
+                        label={d.statusLabel}
+                        outlined={d.statusOutlined}
+                      />
                     ),
                   },
                 ]}

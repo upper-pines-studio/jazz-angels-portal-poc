@@ -18,7 +18,7 @@ import {
 } from '../../../design-system';
 import { usePageHeader } from '../../../app/Shell';
 import { useToast } from '../../../app/ToastHost';
-import { OwnerAvatar } from '../../../app/components/badges';
+import { OUTLINED_GOLD_BADGE, OwnerAvatar } from '../../../app/components/badges';
 import { RowMenu } from '../../../app/components/RowMenu';
 import type { RowMenuItem } from '../../../app/components/RowMenu';
 import { TableScroll } from '../../../app/components/TableScroll';
@@ -77,22 +77,10 @@ const STATUS: Record<TimeEntryStatus, StatusLook> = {
 
 /**
  * A draft the office sent back is its person's to fix, so it says so in outlined
- * gold: it needs their attention, it is not an error (#96). Outlined, not filled,
- * so it reads apart from the filled gold Submitted: dark gold text (6.5:1 on the
- * white card) and a 1px gold rule. The padding gives back the border's pixel, so
- * it stands as tall as the other badges. The Badge has no outlined tone and the
- * design system is not edited, so it comes in through the Badge's style.
+ * gold, as its dashboard row does: it needs their attention, it is not an error,
+ * and it reads apart from the filled gold Submitted (#96).
  */
-const SENT_BACK: StatusLook = {
-  label: 'Sent back',
-  tone: 'gold',
-  style: {
-    background: 'var(--surface-card)',
-    color: 'var(--gold-700)',
-    border: 'var(--border-width) solid var(--gold-500)',
-    padding: '4px calc(var(--space-2) - 1px)',
-  },
-};
+const SENT_BACK: StatusLook = { label: 'Sent back', tone: 'gold', style: OUTLINED_GOLD_BADGE };
 
 function statusOf(entry: TimeEntry): StatusLook {
   return isSentBack(entry) ? SENT_BACK : STATUS[entry.status];

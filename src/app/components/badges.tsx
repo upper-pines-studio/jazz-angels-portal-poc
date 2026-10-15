@@ -6,16 +6,34 @@ import type { AttentionItem, OfficeDocumentStatus } from '../../core';
 /** The small pieces every module's screens share. Module-specific badges live in the module. */
 
 /**
+ * The outlined gold of a status that is somebody's to fix without being late,
+ * "Sent back" (#96): dark gold words (6.5:1 on white) and a 1px gold rule on the
+ * card's white, so it reads apart from a filled gold Badge. The padding gives
+ * back the rule's pixel, so it stands as tall as the other badges. For the
+ * Badge's `style`; the design system has no outlined tone.
+ */
+export const OUTLINED_GOLD_BADGE: React.CSSProperties = {
+  background: 'var(--surface-card)',
+  color: 'var(--gold-700)',
+  border: 'var(--border-width) solid var(--gold-500)',
+  padding: '4px calc(var(--space-2) - 1px)',
+};
+
+/**
  * Overdue / Due soon / a note, or the row's own words for them ("Out of date",
- * "Expires soon"). Gold is rationed to attention states.
+ * "Expires soon"). Gold is rationed to attention states. `outlined` draws it in
+ * outlined gold instead (see `OUTLINED_GOLD_BADGE`).
  */
 export function AttentionStatusBadge({
   status,
   label,
+  outlined = false,
 }: {
   status: AttentionItem['status'];
   label?: string;
+  outlined?: boolean;
 }) {
+  if (outlined) return <Badge style={OUTLINED_GOLD_BADGE}>{label ?? 'Note'}</Badge>;
   if (status === 'overdue') return <Badge tone="danger">{label ?? 'Overdue'}</Badge>;
   if (status === 'due-soon') return <Badge tone="gold">{label ?? 'Due soon'}</Badge>;
   return <Badge tone="neutral">{label ?? 'Note'}</Badge>;
