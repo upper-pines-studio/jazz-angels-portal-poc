@@ -43,6 +43,47 @@ export interface TimeEntry {
    * submits it again, which clears it.
    */
   sentBackReason?: string;
+  /**
+   * Everything that happened to the entry, oldest first: logged, changed,
+   * submitted, recalled, approved, sent back. Written in the same change as the
+   * status it describes and only ever added to, so an approval stays on the
+   * record after the entry is sent back (decision 0001, #95). With the backend
+   * these become rows of the shared `activity` table, subject kind
+   * `time-entry` (decision 0005, "One activity log").
+   */
+  history: TimeEntryEvent[];
+}
+
+/** What happened to an entry, in the order the status runs. */
+export type TimeEntryEventKind =
+  'logged' | 'changed' | 'submitted' | 'recalled' | 'approved' | 'sent-back';
+
+/** One field's value before and after a change to a draft. */
+export type FieldChange<T> = { from: T; to: T };
+
+/** What a change to a draft altered: only the fields that are different. */
+export type TimeEntryFieldChanges = {
+  [K in keyof TimeEntryChanges]?: FieldChange<TimeEntryChanges[K]>;
+};
+
+/** One step in an entry's history. */
+export interface TimeEntryEvent {
+  /** `${entryId}:${n}`, n counting from 1, so the same step sent twice is kept once. */
+  id: string;
+  kind: TimeEntryEventKind;
+  /** Staff id of whoever did it. The name is looked up when shown, so a rename follows. */
+  whoId: string;
+  /**
+   * ISO date it happened. Unset only on a step rebuilt from an entry saved
+   * before the history was kept, where the day is not known.
+   */
+  at?: string;
+  /** A send back's reason, as the office wrote it. */
+  reason?: string;
+  /** A change's fields, before and after. */
+  changes?: TimeEntryFieldChanges;
+  /** Rebuilt from the entry's own fields when it was loaded, not recorded as it happened. */
+  rebuilt?: true;
 }
 
 export interface TimesheetsState {

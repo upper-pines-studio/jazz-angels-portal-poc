@@ -157,7 +157,7 @@ erDiagram
   }
   activity {
     text id PK
-    text subject_kind "grant, funder; later student, ensemble, time-entry, program, project"
+    text subject_kind "grant, funder, time-entry; later student, ensemble, program, project"
     text subject_id
     timestamptz at
     text who_id FK "null; staff"
@@ -583,6 +583,7 @@ foreign keys; the modules still read each other only through their `index.ts`.
 | `GrantDocument.officeDocumentId` (grants to core) | `grant_documents.office_document_id`, nullable |
 | `Ensemble.venueId`, `ClassMeeting.venueId`, `Ensemble.leadStaffId`, every `programId` and staff id in a module | Foreign keys to the core tables |
 | `Activity.grantId` (grants' own log) | `activity.subject_kind = 'grant'` and `subject_id`, no foreign key, since the subject can be any kind |
+| `TimeEntry.history` (each entry's own steps, #95) | Rows of `activity` with `subject_kind = 'time-entry'` and `subject_id` the entry's id, one per step: `who_id` from `whoId`, `at` from the step's date, `text` from the step ("Approved", "Sent back: reason", "Changed: hours 1.25 to 1.50"). Until the backend they live on the entry, saved with it. A step rebuilt from an entry saved before #95 has no date for logged and submitted; it takes the entry's `date` as `at` when moved |
 | `time_charges.grant_id` (timesheets to grants, 0005) | New: references `grants` |
 
 ## Archive, and no cascading deletes
@@ -673,7 +674,7 @@ core's `Address`, so it becomes four columns, all four or none, as on a venue.
 | `students` | Admin, Director, Office manager, Office assistant; Teacher: own classes. Read-only: counts only, through a counting function, never the rows. Bookkeeper: none | Admin, Director, Office manager | Students: names, attendance |
 | `student_private` | Admin, Director, Office manager; Teacher: own classes. Never the Office assistant, the Bookkeeper or Read-only | Admin, Director, Office manager (whoever edits the student); `photo_release_recorded_by` is always the person writing | Guardian contact details |
 | `attendance` | Admin, Director, Office manager, Office assistant; Teacher: own classes. Read-only: counts only | Admin, Director, Office manager (any class); Teacher: own classes; none once the meeting's roll is submitted | Roll call |
-| `time_entries` | Own hours, for every role but Read-only; all rows for Admin, Director, Office manager, Bookkeeper | Insert: own hours, as a draft. Change and delete: own hours, only while a draft. Submit (draft to submitted) and recall (submitted to draft): own hours. Approve (submitted to approved): Admin, Director, Office manager, Bookkeeper, never their own. Send back (approved to draft, with `sent_back_reason` required; sets `sent_back_by` to the writer and `sent_back_at`, clears `approved_by` and `approved_at`): the same roles, never their own. Submitting clears `sent_back_reason` and keeps `sent_back_by` and `sent_back_at`. Nobody changes or deletes an approved entry; it is sent back to its person to change | Timesheets: log hours, Timesheets: approve |
+| `time_entries` | Own hours, for every role but Read-only; all rows for Admin, Director, Office manager, Bookkeeper | Insert: own hours, as a draft. Change and delete: own hours, only while a draft. Submit (draft to submitted) and recall (submitted to draft): own hours. Approve (submitted to approved): Admin, Director, Office manager, Bookkeeper, never their own. Send back (approved to draft, with `sent_back_reason` required; sets `sent_back_by` to the writer and `sent_back_at`, clears `approved_by` and `approved_at`): the same roles, never their own. Submitting clears `sent_back_reason` and keeps `sent_back_by` and `sent_back_at`. Nobody changes or deletes an approved entry; it is sent back to its person to change. Each of these writes its `activity` row (subject kind `time-entry`) in the same transaction, so an approval sent back stays on the record (#95); the history is read by whoever may read the entry | Timesheets: log hours, Timesheets: approve |
 | `time_charges` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper: it is grant money, as "Award, budget, reports" (0001, answered October 2026) | Award, budget, reports |
 
 The client answered the schema's questions in October 2026 (decision 0001): `time_charges`
@@ -711,7 +712,7 @@ submitted (the store ignores a mark then; reopening the roll is the way to chang
   records who made it).
 - **One change, one transaction.** Today each slice saves on its own, so the grants log stays in
   the grants slice where a change and its activity line save together (decision 0005, "One
-  activity log"). With the backend, a change and its `activity` row are written in one
+  activity log"), and a time entry's steps stay on the entry for the same reason (#95). With the backend, a change and its `activity` row are written in one
   transaction.
 - **Sessions on one line never overlap (decision 0007, #83).** A term's line is its `program_id`,
   with null (a session for all programs) treated as one value of its own. Two current terms on

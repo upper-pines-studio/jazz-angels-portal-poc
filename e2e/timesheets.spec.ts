@@ -4,7 +4,8 @@
 // approves it: the office approves, and nobody approves their own hours. Keisha has no drafts
 // of her own that week, so she gets no Submit week even though she sees everyone's drafts.
 // Until then Devon may recall a submitted entry to a draft, and delete it while it is a draft
-// (decision 0002: approved hours are money, so they are never deleted or recalled).
+// (decision 0002: approved hours are money, so they are never deleted or recalled). Every step
+// stays in the entry's history, opened from its status, an approval sent back included (#95).
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { dialog, field, freshStart, switchUser } from './support';
@@ -48,7 +49,7 @@ test('a teacher logs and submits his hours, and the office approves them', async
   await expect(page.getByText('Hours submitted')).toBeVisible();
   await expect(row.getByText('Submitted', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Submit week' })).toHaveCount(0);
-  await expect(row.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+  await expect(row.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
 
   // The office approves it.
   await switchUser(page, 'keisha');
@@ -56,11 +57,11 @@ test('a teacher logs and submits his hours, and the office approves them', async
   await expect(page.getByRole('button', { name: 'Submit week' })).toHaveCount(0);
   const queued = entryRow(page, activity);
   await expect(queued.getByText('Submitted', { exact: true })).toBeVisible();
-  await queued.getByRole('button', { name: 'Approve' }).click();
+  await queued.getByRole('button', { name: 'Approve', exact: true }).click();
 
   await expect(page.getByText('Hours approved')).toBeVisible();
   await expect(queued.getByText('Approved', { exact: true })).toBeVisible();
-  await expect(queued.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+  await expect(queued.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
 
   // Approved, it is Devon's no more to recall or delete.
   await switchUser(page, 'devon');
@@ -159,6 +160,30 @@ test('the office sends approved hours back, and the teacher fixes and resubmits 
   // The office approves it again.
   await switchUser(page, 'keisha');
   const again = entryRow(page, activity);
-  await again.getByRole('button', { name: 'Approve' }).click();
+  await again.getByRole('button', { name: 'Approve', exact: true }).click();
   await expect(again.getByText('Approved', { exact: true })).toBeVisible();
+
+  // The history keeps every step, the first approval too, for the office and for Devon (#95).
+  const steps = [
+    'Logged by Devon Price, Sep 9',
+    'Submitted by Devon Price, Sep 9',
+    'Approved by Barry Cogert, Sep 13',
+    `Sent back by Keisha Monroe, Sep 13: ${reason}`,
+    'Changed by Devon Price, Sep 13: hours 1.25 to 1.50',
+    'Submitted again by Devon Price, Sep 13',
+    'Approved again by Keisha Monroe, Sep 13',
+  ];
+  const readHistory = async () => {
+    await entryRow(page, activity).getByRole('button', { name: 'Approved, show history' }).click();
+    const history = dialog(page, 'History');
+    await expect(
+      history.getByText(`Wed Sep 9, Devon Price, ${activity}, 1.50 hours.`),
+    ).toBeVisible();
+    await expect(history.getByRole('listitem')).toHaveText(steps);
+    await history.locator('footer').getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByRole('heading', { name: 'History', exact: true })).toHaveCount(0);
+  };
+  await readHistory();
+  await switchUser(page, 'devon');
+  await readHistory();
 });

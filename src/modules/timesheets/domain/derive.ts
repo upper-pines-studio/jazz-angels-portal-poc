@@ -2,7 +2,14 @@ import { addDays, endOfMonth, format, startOfMonth, startOfWeek } from 'date-fns
 import { toDate, toISO } from '../../../core/format';
 import { can } from '../../../core/permissions';
 import type { PortalState, ProgramId, SignedInUser } from '../../../core/types';
-import type { DateRange, ProgramHours, TimeEntry, WeekTotals } from './types';
+import type {
+  DateRange,
+  ProgramHours,
+  TimeEntry,
+  TimeEntryEvent,
+  TimeEntryEventKind,
+  WeekTotals,
+} from './types';
 
 /**
  * Derived data for timesheets. Every function here is pure: it takes state and
@@ -253,4 +260,74 @@ export function visibleEntries(user: SignedInUser, entries: TimeEntry[]): TimeEn
   return can(user.role, 'timesheets-approve', 'edit')
     ? entries
     : entries.filter(e => e.staffId === user.id);
+}
+
+// ---------------------------------------------------------------------------
+// History (#95)
+// ---------------------------------------------------------------------------
+
+/** The id the next step on this entry takes: `${entryId}:${n}`, n counting from 1. */
+export function nextEventId(entry: Pick<TimeEntry, 'id'> & { history?: TimeEntryEvent[] }): string {
+  return `${entry.id}:${(entry.history?.length ?? 0) + 1}`;
+}
+
+/**
+ * The history an entry saved before #95 can be given from its own fields:
+ * logged by its person, sent back if the office did, then submitted or approved
+ * as its status says. When it was logged or submitted is not known, so those
+ * steps carry no date. Every step is marked `rebuilt`.
+ */
+export function rebuildHistory(entry: Omit<TimeEntry, 'history'>): TimeEntryEvent[] {
+  const steps: Array<Omit<TimeEntryEvent, 'id' | 'rebuilt'>> = [
+    { kind: 'logged', whoId: entry.staffId },
+  ];
+  if (entry.sentBackBy) {
+    steps.push({
+      kind: 'sent-back',
+      whoId: entry.sentBackBy,
+      ...(entry.sentBackAt ? { at: entry.sentBackAt } : {}),
+      ...(entry.sentBackReason ? { reason: entry.sentBackReason } : {}),
+    });
+  }
+  if (entry.status === 'submitted') steps.push({ kind: 'submitted', whoId: entry.staffId });
+  if (entry.status === 'approved' && entry.approvedBy) {
+    steps.push({
+      kind: 'approved',
+      whoId: entry.approvedBy,
+      ...(entry.approvedAt ? { at: entry.approvedAt } : {}),
+    });
+  }
+  return steps.map((step, i) => ({ ...step, id: `${entry.id}:${i + 1}`, rebuilt: true }));
+}
+
+/** One line of the History dialog: the step, and whether it is the second time or more. */
+export interface HistoryLine {
+  event: TimeEntryEvent;
+  /** Submitted or approved before: "Submitted again", "Approved again". */
+  again: boolean;
+}
+
+const REPEATS: TimeEntryEventKind[] = ['submitted', 'approved'];
+
+/** The entry's history as the dialog reads it, oldest first. */
+export function historyLines(entry: TimeEntry): HistoryLine[] {
+  const seen = new Set<TimeEntryEventKind>();
+  return entry.history.map(event => {
+    const again = REPEATS.includes(event.kind) && seen.has(event.kind);
+    seen.add(event.kind);
+    return { event, again };
+  });
+}
+
+/** Was any of this entry's history rebuilt from an entry saved before it was kept? */
+export function hasRebuiltHistory(entry: TimeEntry): boolean {
+  return entry.history.some(e => e.rebuilt);
+}
+
+/**
+ * May this person read this entry's history? The person who logged it, and any
+ * role that approves hours: the same people who see the row (`visibleEntries`).
+ */
+export function mayReadHistory(user: SignedInUser, entry: TimeEntry): boolean {
+  return entry.staffId === user.id || can(user.role, 'timesheets-approve', 'edit');
 }

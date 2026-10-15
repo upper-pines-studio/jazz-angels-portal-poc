@@ -119,3 +119,80 @@
   flex: 1 1 260px;
   min-width: 0;
 }
+
+/* The status in the week table is a button: it opens the entry's history. The badge
+   keeps its look; a small history mark beside it says it opens something. */
+.ja-ts-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 2px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+
+.ja-ts-status:hover {
+  color: var(--blue-500);
+}
+
+
+/* The History dialog: every step, oldest first, on a thin rule. The last step,
+   where the entry stands now, has the teal dot. */
+.ja-ts-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ja-ts-history__step {
+  position: relative;
+  padding: 0 0 var(--space-4) var(--space-6);
+  font: var(--type-body-sm);
+  color: var(--text-body);
+}
+
+.ja-ts-history__step::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--neutral-300);
+}
+
+.ja-ts-history__step::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 14px;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-default);
+}
+
+.ja-ts-history__step--now {
+  padding-bottom: 0;
+  color: var(--text-strong);
+}
+
+.ja-ts-history__step--now::before {
+  background: var(--teal-500);
+}
+
+.ja-ts-history__step--now::after {
+  display: none;
+}
+
+.ja-ts-history__note {
+  margin: var(--space-4) 0 0;
+  font: var(--type-body-sm);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
