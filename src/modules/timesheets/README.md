@@ -14,11 +14,12 @@ timesheets/
   domain/
     types.ts      TimeEntry, TimesheetsState, TimesheetsActions
     seed.ts       the demo hours
-    derive.ts     weeks, months, totals by program, own drafts, who may do what
+    derive.ts     weeks, months, totals by program, own drafts, sent back, who may do what
     slice.ts      the reducer, the actions, the `declare module`
   screens/
     Timesheets.tsx      /timesheets
-    LogHoursDialog.tsx
+    LogHoursDialog.tsx  Log hours, and Edit hours on your own draft
+    SentBack.tsx        "Sent back by Keisha Monroe on Sep 13: …"
     timesheets.css
 ```
 
@@ -31,8 +32,48 @@ readable name lives in `activity` ("Combo A rehearsal, Studio 1").
 
 Status runs `draft` → `submitted` → `approved`. Approving stamps `approvedBy`
 and `approvedAt`, and that is the only thing that clears the rail's badge. Until
-then the person who logged a submitted entry can recall it to a draft; an
-approved entry stays as it is.
+then the person who logged a submitted entry can recall it to a draft. An
+approved entry stays as it is, unless the office sends it back (below).
+
+## Sending back
+
+Approved hours stay on the record; when they are wrong, the office sends them
+back to the person to fix (decision 0001, #91). On somebody else's approved
+entry, a role that approves gets **Send back** in the week table's last column.
+It asks for a reason ("Send these hours back?": "Sun Sep 6, Devon Price, Big
+Band rehearsal, Main room, 1.50 hours. They go back to Devon Price as a draft to
+fix and submit again, and are no longer approved."; a required "What needs
+fixing", hinted "Devon Price sees this on the entry until it is submitted
+again."; Cancel or Send back, which stays disabled until there is a reason). The
+toast is "Hours sent back", "Devon Price · 1.50 hrs back in their drafts".
+
+`sendBackEntry(id, reason)` makes it a draft again, clears `approvedBy` and
+`approvedAt`, and stamps `sentBackBy`, `sentBackAt` and `sentBackReason`. The
+person then sees:
+
+- a notice above the week card, whatever week is on screen: "The office sent
+  back 1 entry for you to fix", each entry with its day, activity and hours, the
+  note, **Show week** (when it is another week) and **Edit hours**;
+- in the row, the status **Sent back** and, under the activity, "Sent back by
+  Keisha Monroe on Sep 13: This was the Saturday rehearsal, Sep 5, not Sunday.";
+- the same note at the top of Edit hours ("Fix what the office asked, then
+  submit the week again.").
+
+It is an ordinary draft otherwise: they change it (Edit hours), delete it or
+submit it with the week. Submitting clears `sentBackReason`, so the note and the
+notice go; `sentBackBy` and `sentBackAt` stay on the entry for good, through
+approving again. Sending back again overwrites all three.
+
+The rail badge counts what is waiting on the signed-in person (`waitingOn`):
+somebody else's hours to approve, for a role that approves, plus their own
+entries sent back and not yet submitted again. Ordinary drafts are their own
+work in progress and do not count.
+
+The store refuses sending back your own hours whatever the role
+(`OWN_SEND_BACK_REFUSAL`), anything not approved
+(`SEND_BACK_APPROVED_ONLY_REFUSAL`), a blank reason (`SEND_BACK_REASON_REFUSAL`),
+and a role that does not approve. Charging hours to a grant is not built yet;
+when it is, sending back a charged entry has to say what happens to the charge.
 
 ## Submitting
 
@@ -51,7 +92,9 @@ time, as the Log hours dialog says.
 
 The week table's last column holds one control per row, for whoever may use it:
 
-- Your own **draft**: a trash button, "Delete draft". It asks first ("Delete this
+- Your own **draft**: a pencil, "Edit hours", which opens the Log hours fields
+  as "Edit hours" with Save changes (toast "Hours changed", "Sun Sep 6 · 1.50
+  hrs, still a draft"), and a trash button, "Delete draft". Delete asks first ("Delete this
   draft?": "Mon Sep 7, Big Band sectional prep, 1.50 hours. This can't be
   undone."; Cancel or Delete
   draft), then toasts "Draft deleted", "Mon Sep 7 · 1.50 hrs".
@@ -59,10 +102,12 @@ The week table's last column holds one control per row, for whoever may use it:
   without asking, since submitting again undoes it. The toast is "Hours
   recalled", "1.50 hrs back in your drafts".
 - Somebody else's **submitted** entry, for a role that approves: **Approve**.
+- Somebody else's **approved** entry, for a role that approves: **Send back**.
 
-An approved entry has none. The store asks the same (`mayDeleteEntry`,
-`mayRecall`): it refuses deleting anything but a draft (`DRAFT_ONLY_REFUSAL`),
-recalling an approved entry (`APPROVED_REFUSAL`), and either on somebody
+Your own approved entry has none. The store asks the same (`mayChangeEntry`,
+`mayDeleteEntry`, `mayRecall`, `maySendBack`): it refuses changing or deleting
+anything but a draft (`CHANGE_DRAFT_ONLY_REFUSAL`, `DRAFT_ONLY_REFUSAL`),
+recalling an approved entry (`APPROVED_REFUSAL`), and any of them on somebody
 else's hours, the office's too.
 
 ## Weeks
@@ -88,10 +133,12 @@ dashboard attention row.
 | Action | What it does |
 | --- | --- |
 | `logHours(input)` | Adds a draft entry, rounded to the nearest quarter hour. Returns the id. |
-| `submitEntry(id)` | Draft → submitted. A submitted or approved entry is left alone. Only your own (the slice's rule refuses anyone else's, the office's too). No screen offers it on one entry. |
+| `submitEntry(id)` | Draft → submitted, clearing a sent-back reason. A submitted or approved entry is left alone. Only your own (the slice's rule refuses anyone else's, the office's too). No screen offers it on one entry. |
 | `submitWeek(weekStart)` | Every one of the signed-in person's drafts in that Monday-to-Sunday week → submitted, as one change. Nobody else's drafts move, whatever the role. Returns how many went. |
 | `recallEntry(id)` | Submitted → draft. A draft or an approved entry is left alone. Only your own; an approved one is refused with `APPROVED_REFUSAL`. |
 | `approveEntry(id)` | Marks it approved and stamps the signed-in person and today. |
+| `sendBackEntry(id, reason)` | Approved → draft, with a required reason, stamping `sentBackBy` and `sentBackAt` and clearing the approval. A role that approves, never on their own hours. |
+| `changeEntry(id, changes)` | Changes a draft's date, program, ensemble, activity and hours (rounded to the quarter hour). Only your own; anything but a draft is refused with `CHANGE_DRAFT_ONLY_REFUSAL`. |
 | `deleteEntry(id)` | Removes a draft entered by mistake (decision 0002). Only your own; a submitted or approved entry is left alone and refused with `DRAFT_ONLY_REFUSAL`. |
 
 ## Public API

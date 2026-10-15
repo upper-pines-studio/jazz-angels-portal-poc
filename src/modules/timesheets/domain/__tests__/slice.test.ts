@@ -5,19 +5,27 @@ import { guardActions } from '../../../../core/store';
 import type { PortalState, Role, SignedInUser } from '../../../../core/types';
 import {
   APPROVED_REFUSAL,
+  CHANGE_DRAFT_ONLY_REFUSAL,
   DRAFT_ONLY_REFUSAL,
   OWN_HOURS_REFUSAL,
+  OWN_SEND_BACK_REFUSAL,
+  SEND_BACK_APPROVED_ONLY_REFUSAL,
+  SEND_BACK_REASON_REFUSAL,
   awaitingApproval,
   entriesForWeek,
+  isSentBack,
   mayApprove,
+  mayChangeEntry,
   mayDeleteEntry,
   mayLogFor,
   mayRecall,
+  maySendBack,
   ownDrafts,
+  sentBackTo,
 } from '../derive';
 import { SEED_TODAY, makeSeed } from '../seed';
 import { reducer, timesheetsSlice, toQuarterHours } from '../slice';
-import type { TimeEntry } from '../types';
+import type { TimeEntry, TimesheetsState } from '../types';
 
 const today = SEED_TODAY;
 
@@ -293,9 +301,12 @@ describe('recallEntry', () => {
 // Who may log and approve (decision 0001), through the store's check
 // ---------------------------------------------------------------------------
 
-/** The actions as the store hands them out: every one behind the slice's rules. */
-function guarded(user: SignedInUser) {
-  let state = makeSeed();
+/**
+ * The actions as the store hands them out: every one behind the slice's rules.
+ * `from` starts it on data another person has already changed.
+ */
+function guarded(user: SignedInUser, from: TimesheetsState = makeSeed()) {
+  let state = from;
   const refused: string[] = [];
   const getState = () => portal(state);
   const actions = guardActions(
@@ -562,5 +573,215 @@ describe('recalling through the store', () => {
     h.actions.recallEntry(entry.id);
     expect(h.refused).toHaveLength(1);
     expect(h.state().entries.find(e => e.id === entry.id)?.status).toBe('submitted');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sending approved hours back (decision 0001: the office sends wrong hours back to fix)
+// ---------------------------------------------------------------------------
+
+/** One of Devon's approved entries from the seed, approved by Barry. */
+function devonsApproved(): TimeEntry {
+  return makeSeed().entries.find(e => e.staffId === 's-devon' && e.status === 'approved')!;
+}
+
+const REASON = 'This was Saturday the 5th, not Sunday.';
+
+describe('sending back through the store', () => {
+  it('returns an approved entry to its person as a draft, with who, when and why', () => {
+    const entry = devonsApproved();
+    expect(maySendBack(KEISHA, entry)).toBe(true);
+    const h = guarded(KEISHA);
+    h.actions.sendBackEntry(entry.id, `  ${REASON}  `);
+    expect(h.refused).toEqual([]);
+
+    const back = h.state().entries.find(e => e.id === entry.id)!;
+    expect(back).toMatchObject({
+      status: 'draft',
+      sentBackBy: 's-keisha',
+      sentBackAt: today,
+      sentBackReason: REASON,
+    });
+    expect(back.approvedBy).toBeUndefined();
+    expect(back.approvedAt).toBeUndefined();
+    expect(isSentBack(back)).toBe(true);
+    expect(sentBackTo(portal(h.state()), DEVON).map(e => e.id)).toEqual([entry.id]);
+  });
+
+  it('lets every role that approves send back', () => {
+    const entry = devonsApproved();
+    for (const role of ['admin', 'director', 'office-manager', 'bookkeeper'] as Role[]) {
+      const h = guarded(as('s-approver', role));
+      h.actions.sendBackEntry(entry.id, REASON);
+      expect(h.refused).toEqual([]);
+      expect(h.state().entries.find(e => e.id === entry.id)?.status).toBe('draft');
+    }
+  });
+
+  it('refuses a send back with no reason', () => {
+    const entry = devonsApproved();
+    const h = guarded(KEISHA);
+    const before = h.state();
+    h.actions.sendBackEntry(entry.id, '   ');
+    expect(h.refused).toEqual([SEND_BACK_REASON_REFUSAL]);
+    expect(h.state()).toBe(before);
+  });
+
+  it('refuses your own hours whatever the role, with the reason', () => {
+    const entry = devonsApproved();
+    for (const role of ['admin', 'director', 'office-manager', 'bookkeeper'] as Role[]) {
+      const self = as('s-devon', role);
+      expect(maySendBack(self, entry)).toBe(false);
+      const h = guarded(self);
+      h.actions.sendBackEntry(entry.id, REASON);
+      expect(h.refused).toEqual([OWN_SEND_BACK_REFUSAL]);
+      expect(h.state().entries.find(e => e.id === entry.id)?.status).toBe('approved');
+    }
+  });
+
+  it('refuses a role that does not approve', () => {
+    const entry = devonsApproved();
+    for (const role of ['teacher', 'assistant', 'read-only'] as Role[]) {
+      const user = as('s-someone-else', role);
+      expect(maySendBack(user, entry)).toBe(false);
+      const h = guarded(user);
+      h.actions.sendBackEntry(entry.id, REASON);
+      expect(h.refused).toHaveLength(1);
+      expect(h.state().entries.find(e => e.id === entry.id)?.status).toBe('approved');
+    }
+  });
+
+  it('refuses an entry that is not approved, with the reason', () => {
+    const h = guarded(KEISHA);
+    const before = h.state();
+    const draft = before.entries.find(e => e.staffId !== 's-keisha' && e.status === 'draft')!;
+    for (const entry of [submitted(), draft]) {
+      expect(maySendBack(KEISHA, entry)).toBe(false);
+      h.actions.sendBackEntry(entry.id, REASON);
+    }
+    expect(h.refused).toEqual([SEND_BACK_APPROVED_ONLY_REFUSAL, SEND_BACK_APPROVED_ONLY_REFUSAL]);
+    expect(h.state()).toBe(before);
+  });
+
+  it('is described as sending the hours back when it cannot be saved', () => {
+    const h = harness(KEISHA);
+    h.actions.sendBackEntry(devonsApproved().id, REASON);
+    expect(timesheetsSlice.describe!(h.sent[0])).toBe('sending the hours back');
+  });
+});
+
+describe('fixing sent-back hours', () => {
+  /** Keisha sends Devon's approved entry back; Devon picks it up on the same data. */
+  function sentBack() {
+    const entry = devonsApproved();
+    const office = guarded(KEISHA);
+    office.actions.sendBackEntry(entry.id, REASON);
+    return { id: entry.id, ...guarded(DEVON, office.state()) };
+  }
+
+  it('lets the person change it, and then resubmit it', () => {
+    const h = sentBack();
+    const entry = h.state().entries.find(e => e.id === h.id)!;
+    expect(mayChangeEntry(DEVON, entry)).toBe(true);
+    h.actions.changeEntry(h.id, {
+      date: '2026-09-05',
+      programId: entry.programId,
+      ensembleId: entry.ensembleId,
+      activity: entry.activity,
+      hours: 2.1,
+    });
+    expect(h.refused).toEqual([]);
+    expect(h.state().entries.find(e => e.id === h.id)).toMatchObject({
+      date: '2026-09-05',
+      hours: 2,
+      status: 'draft',
+      sentBackReason: REASON,
+    });
+
+    h.actions.submitEntry(h.id);
+    expect(h.refused).toEqual([]);
+    expect(h.state().entries.find(e => e.id === h.id)?.status).toBe('submitted');
+  });
+
+  it('clears the reason on resubmit and keeps who sent it back and when', () => {
+    const h = sentBack();
+    expect(h.actions.submitWeek(h.state().entries.find(e => e.id === h.id)!.date)).toBe(1);
+    const resubmitted = h.state().entries.find(e => e.id === h.id)!;
+    expect(resubmitted.status).toBe('submitted');
+    expect(resubmitted.sentBackReason).toBeUndefined();
+    expect(resubmitted).toMatchObject({ sentBackBy: 's-keisha', sentBackAt: today });
+    expect(isSentBack(resubmitted)).toBe(false);
+    expect(sentBackTo(portal(h.state()), DEVON)).toEqual([]);
+  });
+
+  it('keeps who sent it back once the office approves it again', () => {
+    const h = sentBack();
+    h.actions.submitEntry(h.id);
+    const office = guarded(KEISHA, h.state());
+    office.actions.approveEntry(h.id);
+    expect(office.refused).toEqual([]);
+    expect(office.state().entries.find(e => e.id === h.id)).toMatchObject({
+      status: 'approved',
+      approvedBy: 's-keisha',
+      sentBackBy: 's-keisha',
+      sentBackAt: today,
+    });
+  });
+
+  it('lets the person delete it as a draft', () => {
+    const h = sentBack();
+    const entry = h.state().entries.find(e => e.id === h.id)!;
+    expect(mayDeleteEntry(DEVON, entry)).toBe(true);
+    h.actions.deleteEntry(h.id);
+    expect(h.refused).toEqual([]);
+    expect(h.state().entries.some(e => e.id === h.id)).toBe(false);
+  });
+
+  it('lets the person recall it again after resubmitting, without the old reason', () => {
+    const h = sentBack();
+    h.actions.submitEntry(h.id);
+    h.actions.recallEntry(h.id);
+    expect(h.refused).toEqual([]);
+    expect(isSentBack(h.state().entries.find(e => e.id === h.id)!)).toBe(false);
+  });
+});
+
+describe('changing a draft through the store', () => {
+  const changes = {
+    date: today,
+    programId: 'studio-sessions' as const,
+    activity: 'Sectional, Studio 2',
+    hours: 1.5,
+  };
+
+  it('lets a teacher change their own draft, clearing an ensemble left out', () => {
+    const h = guarded(DEVON);
+    const id = h.actions.logHours({ ...hours('s-devon'), ensembleId: 'ens-x' });
+    h.actions.changeEntry(id, changes);
+    expect(h.refused).toEqual([]);
+    const changed = h.state().entries.find(e => e.id === id)!;
+    expect(changed).toMatchObject({ activity: 'Sectional, Studio 2', hours: 1.5 });
+    expect(changed.ensembleId).toBeUndefined();
+  });
+
+  it('refuses their own submitted or approved hours, with the reason', () => {
+    const h = guarded(DEVON);
+    const id = h.actions.logHours(hours('s-devon'));
+    h.actions.submitEntry(id);
+    const before = h.state();
+    h.actions.changeEntry(id, changes);
+    h.actions.changeEntry(devonsApproved().id, changes);
+    expect(h.refused).toEqual([CHANGE_DRAFT_ONLY_REFUSAL, CHANGE_DRAFT_ONLY_REFUSAL]);
+    expect(h.state()).toBe(before);
+  });
+
+  it("refuses somebody else's draft, even for the office", () => {
+    const h = guarded(KEISHA);
+    const theirs = h.state().entries.find(e => e.staffId !== 's-keisha' && e.status === 'draft')!;
+    expect(mayChangeEntry(KEISHA, theirs)).toBe(false);
+    const before = h.state();
+    h.actions.changeEntry(theirs.id, changes);
+    expect(h.refused).toHaveLength(1);
+    expect(h.state()).toBe(before);
   });
 });

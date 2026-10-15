@@ -2,8 +2,12 @@ import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module'
 import type { PortalState } from '../../../core/types';
 import {
   APPROVED_REFUSAL,
+  CHANGE_DRAFT_ONLY_REFUSAL,
   DRAFT_ONLY_REFUSAL,
   OWN_HOURS_REFUSAL,
+  OWN_SEND_BACK_REFUSAL,
+  SEND_BACK_APPROVED_ONLY_REFUSAL,
+  SEND_BACK_REASON_REFUSAL,
   entriesForWeek,
   mayApprove,
   mayLogFor,
@@ -34,8 +38,9 @@ declare module '../../../core/types' {
 
 /**
  * Every change the timesheets slice makes: an entry added, changed or taken
- * away. Which changes are allowed (only a draft is submitted or deleted, only
- * a submitted entry is recalled, an approval stands) is decided in `createActions`, which reads the state first, so one
+ * away. Which changes are allowed (only a draft is changed, submitted or
+ * deleted, only a submitted entry is recalled, only an approved one is sent
+ * back) is decided in `createActions`, which reads the state first, so one
  * repository `apply` covers every module.
  */
 export type TimesheetsAction =
@@ -76,6 +81,7 @@ export function reducer(state: TimesheetsState, action: TimesheetsAction): Times
 export function describeChange(action: TimesheetsAction): string | undefined {
   if (action.type === 'batch') return action.actions[0] && describeChange(action.actions[0]);
   if (action.type === 'update' && action.patch.status === 'approved') return 'the approval';
+  if (action.type === 'update' && action.patch.sentBackBy) return 'sending the hours back';
   return 'the hours';
 }
 
@@ -98,6 +104,11 @@ function createActions(
   const send = (action: TimesheetsAction) =>
     dispatch({ ...action, type: `timesheets/${action.type}` });
   const entryOf = (id: string) => getState().timesheets.entries.find(e => e.id === id);
+  /** Submitting clears the office's reason: the person has dealt with it. Who and when stay. */
+  const submitPatch = (entry: TimeEntry): Partial<TimeEntry> =>
+    entry.sentBackReason
+      ? { status: 'submitted', sentBackReason: undefined }
+      : { status: 'submitted' };
 
   return {
     logHours(input) {
@@ -120,8 +131,9 @@ function createActions(
     },
     submitEntry(id) {
       // Only a draft can be handed over; a submitted or approved entry stands.
-      if (entryOf(id)?.status !== 'draft') return;
-      send({ type: 'update', key: 'entries', id, patch: { status: 'submitted' } });
+      const entry = entryOf(id);
+      if (entry?.status !== 'draft') return;
+      send({ type: 'update', key: 'entries', id, patch: submitPatch(entry) });
     },
     submitWeek(weekStartISO) {
       // Only the signed-in person's own drafts; a submitted or approved entry stands.
@@ -134,7 +146,7 @@ function createActions(
           type: 'update',
           key: 'entries',
           id: e.id,
-          patch: { status: 'submitted' },
+          patch: submitPatch(e),
         })),
       });
       return drafts.length;
@@ -147,6 +159,40 @@ function createActions(
         key: 'entries',
         id,
         patch: { status: 'approved', approvedBy: user.id, approvedAt: today },
+      });
+    },
+    sendBackEntry(id, reason) {
+      // Only an approved entry goes back, and only with a reason to fix it by.
+      const why = reason.trim();
+      if (entryOf(id)?.status !== 'approved' || !why) return;
+      send({
+        type: 'update',
+        key: 'entries',
+        id,
+        patch: {
+          status: 'draft',
+          approvedBy: undefined,
+          approvedAt: undefined,
+          sentBackBy: user.id,
+          sentBackAt: today,
+          sentBackReason: why,
+        },
+      });
+    },
+    changeEntry(id, changes) {
+      // Only a draft changes; submitted and approved hours stand.
+      if (entryOf(id)?.status !== 'draft') return;
+      send({
+        type: 'update',
+        key: 'entries',
+        id,
+        patch: {
+          date: changes.date,
+          programId: changes.programId,
+          ensembleId: changes.ensembleId,
+          activity: changes.activity,
+          hours: toQuarterHours(changes.hours),
+        },
       });
     },
     recallEntry(id) {
@@ -207,6 +253,21 @@ export const timesheetsSlice: ModuleSlice<TimesheetsState, TimesheetsActions> = 
       const entry = state.timesheets.entries.find(e => e.id === id);
       if (!entry || !mayLogFor(user, entry.staffId)) return false;
       return entry.status === 'approved' ? APPROVED_REFUSAL : true;
+    },
+    // Your own, while it is a draft (a sent-back one included).
+    changeEntry: (user, state, id) => {
+      const entry = state.timesheets.entries.find(e => e.id === id);
+      if (!entry || !mayLogFor(user, entry.staffId)) return false;
+      return entry.status === 'draft' ? true : CHANGE_DRAFT_ONLY_REFUSAL;
+    },
+    // Whoever may approve it, never on their own hours, and always with a reason (decision 0001).
+    sendBackEntry: (user, state, id, reason) => {
+      const entry = state.timesheets.entries.find(e => e.id === id);
+      if (!entry) return false;
+      if (entry.staffId === user.id) return OWN_SEND_BACK_REFUSAL;
+      if (!mayApprove(user, entry)) return false;
+      if (entry.status !== 'approved') return SEND_BACK_APPROVED_ONLY_REFUSAL;
+      return typeof reason === 'string' && reason.trim() ? true : SEND_BACK_REASON_REFUSAL;
     },
     approveEntry: (user, state, id) => {
       const entry = state.timesheets.entries.find(e => e.id === id);

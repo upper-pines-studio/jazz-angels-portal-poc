@@ -4,7 +4,9 @@ import type { InputProps } from '../../../design-system';
 import { programOptions, useStore } from '../../../core';
 import type { ProgramId } from '../../../core';
 import { ensembleOptions } from '../../teaching';
-import type { NewTimeEntryInput } from '../domain';
+import { formatHours, isSentBack } from '../domain';
+import type { NewTimeEntryInput, TimeEntry } from '../domain';
+import { SentBackNote } from './SentBack';
 
 /**
  * The design-system Input forwards anything it does not recognise to the native
@@ -12,11 +14,16 @@ import type { NewTimeEntryInput } from '../domain';
  */
 const NumberInput = Input as React.ComponentType<InputProps & { step?: string; min?: string }>;
 
-/** Log hours: who, when, which program, what it was, how long. */
+/**
+ * Log hours: who, when, which program, what it was, how long. Given `entry`,
+ * the same fields change one of your own drafts instead (a sent-back one too).
+ */
 export default function LogHoursDialog({
+  entry,
   onClose,
   onSaved,
 }: {
+  entry?: TimeEntry;
   onClose: () => void;
   onSaved: (entry: { staffId: string; hours: number }) => void;
 }) {
@@ -25,11 +32,13 @@ export default function LogHoursDialog({
   // Everyone logs their own hours and nobody else's (decision 0001), so the
   // only name on offer is the signed-in person's.
   const staffId = user.id;
-  const [date, setDate] = React.useState(today);
-  const [programId, setProgramId] = React.useState<string>(programOptions(state)[0]?.id ?? '');
-  const [ensembleId, setEnsembleId] = React.useState('');
-  const [activity, setActivity] = React.useState('');
-  const [hours, setHours] = React.useState('2.00');
+  const [date, setDate] = React.useState(entry?.date ?? today);
+  const [programId, setProgramId] = React.useState<string>(
+    entry?.programId ?? programOptions(state)[0]?.id ?? '',
+  );
+  const [ensembleId, setEnsembleId] = React.useState(entry?.ensembleId ?? '');
+  const [activity, setActivity] = React.useState(entry?.activity ?? '');
+  const [hours, setHours] = React.useState(entry ? formatHours(entry.hours) : '2.00');
 
   // Only the groups that meet inside the chosen program, so an entry never
   // names a combo the program does not run.
@@ -51,15 +60,26 @@ export default function LogHoursDialog({
       activity: activity.trim(),
       hours: parsed,
     };
-    actions.timesheets.logHours(input);
+    if (entry) {
+      actions.timesheets.changeEntry(entry.id, input);
+    } else {
+      actions.timesheets.logHours(input);
+    }
     onSaved({ staffId, hours: parsed });
   };
+
+  const title = entry ? 'Edit hours' : 'Log hours';
+  const description = !entry
+    ? 'Hours go in as a draft. Submit them when the week is done.'
+    : isSentBack(entry)
+      ? 'Fix what the office asked, then submit the week again.'
+      : 'This is still a draft. Submit it with the rest of the week.';
 
   return (
     <Dialog
       open
-      title="Log hours"
-      description="Hours go in as a draft. Submit them when the week is done."
+      title={title}
+      description={description}
       onClose={onClose}
       width={480}
       footer={
@@ -68,12 +88,13 @@ export default function LogHoursDialog({
             Cancel
           </Button>
           <Button variant="primary" disabled={!valid} onClick={save}>
-            Log hours
+            {entry ? 'Save changes' : 'Log hours'}
           </Button>
         </>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        {entry && <SentBackNote entry={entry} block />}
         <Field label="Teacher" required hint="You log your own hours.">
           <Select value={staffId} disabled options={[{ value: user.id, label: user.name }]} />
         </Field>

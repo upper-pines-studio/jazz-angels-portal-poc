@@ -3,11 +3,11 @@ import { staffById } from '../../core';
 import type { AttentionItem, ModuleManifest, PortalState, Requirement, StatSpec } from '../../core';
 import {
   awaitingApproval,
-  awaitingApprovalFor,
   formatHours,
   hoursThisMonth,
   teachersThisMonth,
   timesheetsSlice,
+  waitingOn,
 } from './domain';
 import Timesheets from './screens/Timesheets';
 
@@ -65,7 +65,8 @@ export const manifest: ModuleManifest = {
         path: '/timesheets',
         label: 'Timesheets',
         icon: 'clock',
-        badge: (state, _today, user) => awaitingApprovalFor(state, user).length,
+        // What is waiting on this person: hours to approve, and their own hours sent back.
+        badge: (state, _today, user) => waitingOn(state, user),
         // The rail item opens for anyone who logs hours or approves them.
         requires: [{ subject: 'timesheets-log' }, APPROVE],
       },

@@ -107,3 +107,58 @@ test('a teacher recalls submitted hours and deletes the draft', async ({ page })
   await expect(page.getByText(activity, { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Submit week' })).toHaveCount(0);
 });
+
+test('the office sends approved hours back, and the teacher fixes and resubmits them', async ({
+  page,
+}) => {
+  // Devon's Wednesday planning, approved by Barry in the seed.
+  const activity = 'Paramount MS planning with the band director';
+  const reason = 'The meeting ran 1.50 hours, not 1.25.';
+  await freshStart(page, 'keisha');
+  await page.goto('/timesheets');
+
+  const row = entryRow(page, activity);
+  await expect(row.getByText('Approved', { exact: true })).toBeVisible();
+  await row.getByRole('button', { name: 'Send back' }).click();
+
+  // The reason is required.
+  const confirm = dialog(page, 'Send these hours back?');
+  await expect(confirm.getByText(`Wed Sep 9, Devon Price, ${activity}, 1.25 hours.`)).toBeVisible();
+  const send = confirm.getByRole('button', { name: 'Send back' });
+  await expect(send).toBeDisabled();
+  await field(confirm, 'What needs fixing', 'textarea').fill(reason);
+  await send.click();
+
+  await expect(page.getByText('Hours sent back')).toBeVisible();
+  await expect(row.getByText('Sent back', { exact: true })).toBeVisible();
+  await expect(row.getByText(reason)).toBeVisible();
+  await expect(row.getByRole('button', { name: 'Send back' })).toHaveCount(0);
+
+  // Devon sees it, with who sent it back and why, and fixes it.
+  await switchUser(page, 'devon');
+  await expect(page.getByText('The office sent back 1 entry for you to fix')).toBeVisible();
+  const mine = entryRow(page, activity);
+  await expect(mine.getByText('Sent back by Keisha Monroe on Sep 13:')).toBeVisible();
+  await mine.getByRole('button', { name: 'Edit hours' }).click();
+  const edit = dialog(page, 'Edit hours');
+  await expect(edit.getByText(reason)).toBeVisible();
+  await field(edit, 'Hours').fill('1.50');
+  await edit.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Hours changed')).toBeVisible();
+  await expect(mine.getByText('1.50', { exact: true })).toBeVisible();
+
+  // Submitting it again clears the note.
+  await page.getByRole('button', { name: 'Submit week' }).click();
+  await dialog(page, 'Submit the week of Sep 7')
+    .getByRole('button', { name: 'Submit hours' })
+    .click();
+  await expect(mine.getByText('Submitted', { exact: true })).toBeVisible();
+  await expect(mine.getByText(reason)).toHaveCount(0);
+  await expect(page.getByText('The office sent back 1 entry for you to fix')).toHaveCount(0);
+
+  // The office approves it again.
+  await switchUser(page, 'keisha');
+  const again = entryRow(page, activity);
+  await again.getByRole('button', { name: 'Approve' }).click();
+  await expect(again.getByText('Approved', { exact: true })).toBeVisible();
+});

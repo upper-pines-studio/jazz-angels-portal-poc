@@ -8,7 +8,8 @@ import type { ProgramId } from '../../../core/types';
 
 /**
  * Draft is the teacher's own; submitted waits on the office and can be recalled
- * to a draft until it is approved; approved is final.
+ * to a draft until it is approved; approved stays on the record unless the
+ * office sends it back to its person as a draft to fix (decision 0001).
  */
 export type TimeEntryStatus = 'draft' | 'submitted' | 'approved';
 
@@ -28,9 +29,20 @@ export interface TimeEntry {
   /** Decimal hours in quarter-hour steps. */
   hours: number;
   status: TimeEntryStatus;
-  /** Staff id of whoever approved it. */
+  /** Staff id of whoever approved it. Cleared when it is sent back. */
   approvedBy?: string;
   approvedAt?: string;
+  /**
+   * Staff id of whoever last sent the approved entry back to its person, and
+   * when. Kept for good, through resubmitting and approving again.
+   */
+  sentBackBy?: string;
+  sentBackAt?: string;
+  /**
+   * What the office said needs fixing. Shown on the draft until its person
+   * submits it again, which clears it.
+   */
+  sentBackReason?: string;
 }
 
 export interface TimesheetsState {
@@ -48,6 +60,12 @@ export interface NewTimeEntryInput {
   status?: TimeEntryStatus;
 }
 
+/** What a person may change on their own draft: everything but who and the status. */
+export type TimeEntryChanges = Pick<
+  NewTimeEntryInput,
+  'date' | 'programId' | 'ensembleId' | 'activity' | 'hours'
+>;
+
 export interface TimesheetsActions {
   /** Record hours. Returns the new entry id. */
   logHours(input: NewTimeEntryInput): string;
@@ -63,6 +81,13 @@ export interface TimesheetsActions {
   recallEntry(id: string): void;
   /** Approve a submitted entry, stamping who approved it and when. */
   approveEntry(id: string): void;
+  /**
+   * Send an approved entry back to its person as a draft, with the reason
+   * (required), stamping who sent it back and when. Never your own.
+   */
+  sendBackEntry(id: string, reason: string): void;
+  /** Change a draft: date, program, ensemble, activity, hours. Your own only. */
+  changeEntry(id: string, changes: TimeEntryChanges): void;
   /** Remove a draft logged by mistake. Your own only; submitted and approved entries stay. */
   deleteEntry(id: string): void;
 }
