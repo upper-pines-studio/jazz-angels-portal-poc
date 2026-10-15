@@ -27,6 +27,12 @@ test('an in-school term runs beside the studio session, and an overlap is refuse
   await expect(main.getByRole('heading', { name: 'In-school: Fall in-school term' })).toBeVisible();
   await expect(page.getByText('In-school: Fall in-school term · week 2 of 16')).toBeVisible();
 
+  // The card numbers its dots by the session's calendar, as the heading does: Thu Sep 17 is week 3.
+  await expect(main.getByText(/\d+ of 16 weeks on the schedule/)).toBeVisible();
+  await expect(
+    main.locator('.ja-term-dot').filter({ hasText: 'Sep 17' }).getByText('Week 3', { exact: true }),
+  ).toBeVisible();
+
   // Another session for all programs on the studio's weeks is refused under the dates.
   await main.getByRole('button', { name: 'Add session' }).click();
   const clash = dialog(page, 'Add session');

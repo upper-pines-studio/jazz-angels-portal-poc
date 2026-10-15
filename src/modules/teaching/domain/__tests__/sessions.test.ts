@@ -12,6 +12,7 @@ import {
   termClash,
   termForEnsemble,
   termForProgram,
+  termMeetingWeeks,
   termWeek,
 } from '../derive';
 import { FALL_TERM_ID, SEED_TODAY, SPRING_TERM_ID, makeSeed } from '../seed';
@@ -283,5 +284,16 @@ describe('what shows every line at once', () => {
     h.actions.addTerm(IN_SCHOOL_FALL);
     expect(rollCallsDueFor(h.portal(), SEED_TODAY, KEISHA).map(m => m.id)).toEqual(before);
     expect(before).toHaveLength(2);
+  });
+});
+
+describe('session card weeks', () => {
+  it('numbers a class by the session week, not by the classes before it', () => {
+    const term = { ...IN_SCHOOL_FALL, id: 't', start: '2026-08-31', end: '2026-12-18' };
+    const meetings = [{ date: '2026-10-01' }, { date: '2026-09-17' }, { date: '2027-01-07' }];
+    const weeks = termMeetingWeeks(term, meetings);
+    expect(weeks.map(w => w.meeting.date)).toEqual(['2026-09-17', '2026-10-01']);
+    // Aug 31 starts week 1, so Sep 17 is week 3 and Oct 1 is week 5.
+    expect(weeks.map(w => w.week)).toEqual([3, 5]);
   });
 });
