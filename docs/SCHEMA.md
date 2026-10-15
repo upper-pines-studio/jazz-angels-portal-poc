@@ -533,6 +533,9 @@ erDiagram
     text status "draft | submitted | approved"
     text approved_by FK "null; never staff_id"
     date approved_at "null"
+    text sent_back_by FK "null; never staff_id"
+    date sent_back_at "null"
+    text sent_back_reason "null; set with sent_back_by, cleared on submit"
   }
   time_charges {
     text id PK "0005: staff pay charged to grants"
@@ -560,6 +563,7 @@ erDiagram
   time_entries ||--o| time_charges : "charged as"
   grants ||--o{ time_charges : "pays"
   staff |o--o{ time_entries : "approved"
+  staff |o--o{ time_entries : "sent back"
   staff ||--o{ time_charges : "charged"
   staff |o--o{ student_private : "recorded the release"
 ```
@@ -669,13 +673,14 @@ core's `Address`, so it becomes four columns, all four or none, as on a venue.
 | `students` | Admin, Director, Office manager, Office assistant; Teacher: own classes. Read-only: counts only, through a counting function, never the rows. Bookkeeper: none | Admin, Director, Office manager | Students: names, attendance |
 | `student_private` | Admin, Director, Office manager; Teacher: own classes. Never the Office assistant, the Bookkeeper or Read-only | Admin, Director, Office manager (whoever edits the student); `photo_release_recorded_by` is always the person writing | Guardian contact details |
 | `attendance` | Admin, Director, Office manager, Office assistant; Teacher: own classes. Read-only: counts only | Admin, Director, Office manager (any class); Teacher: own classes; none once the meeting's roll is submitted | Roll call |
-| `time_entries` | Own hours, for every role but Read-only; all rows for Admin, Director, Office manager, Bookkeeper | Insert: own hours, as a draft. Change and delete: own hours, only while a draft. Submit (draft to submitted) and recall (submitted to draft): own hours. Approve (submitted to approved): Admin, Director, Office manager, Bookkeeper, never their own. Nobody changes or deletes an approved entry | Timesheets: log hours, Timesheets: approve |
+| `time_entries` | Own hours, for every role but Read-only; all rows for Admin, Director, Office manager, Bookkeeper | Insert: own hours, as a draft. Change and delete: own hours, only while a draft. Submit (draft to submitted) and recall (submitted to draft): own hours. Approve (submitted to approved): Admin, Director, Office manager, Bookkeeper, never their own. Send back (approved to draft, with `sent_back_reason` required; sets `sent_back_by` to the writer and `sent_back_at`, clears `approved_by` and `approved_at`): the same roles, never their own. Submitting clears `sent_back_reason` and keeps `sent_back_by` and `sent_back_at`. Nobody changes or deletes an approved entry; it is sent back to its person to change | Timesheets: log hours, Timesheets: approve |
 | `time_charges` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper: it is grant money, as "Award, budget, reports" (0001, answered October 2026) | Award, budget, reports |
 
 The client answered the schema's questions in October 2026 (decision 0001): `time_charges`
 follows "Award, budget, reports"; a person may delete their own time entries while they are
 drafts, and recall their own submitted ones until they are approved (#80, which replaced the
-first answer, any of their own whatever the status); and attendance is fixed once the roll is
+first answer, any of their own whatever the status), and approved hours that are wrong are sent
+back by the office to the person to fix (#91); and attendance is fixed once the roll is
 submitted (the store ignores a mark then; reopening the roll is the way to change it).
 
 ## The eleven roadmap items (decision 0005)

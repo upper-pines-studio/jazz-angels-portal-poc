@@ -60,3 +60,62 @@
     grid-column: 1 / -1;
   }
 }
+
+/* "Sent back by Keisha Grant on Sep 13: …" under a sent-back entry's activity,
+   and at the top of Edit hours. */
+.ja-ts-sentback {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  font: var(--type-body-sm);
+  color: var(--text-body);
+}
+
+.ja-ts-sentback > svg,
+.ja-ts-sentback > i {
+  flex: none;
+  transform: translateY(2px);
+}
+
+.ja-ts-sentback strong {
+  color: var(--text-strong);
+  font-weight: var(--weight-semibold);
+}
+
+.ja-ts-sentback--block {
+  margin-top: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--gold-50);
+  border-left: 3px solid var(--gold-400);
+  border-radius: var(--radius-sm);
+}
+
+/* The office's list of hours sent back, for the person they were sent back to. */
+.ja-ts-returned {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-subtle);
+  border-left: 3px solid var(--gold-400);
+  border-radius: var(--radius-md);
+}
+
+.ja-ts-returned__title {
+  font: var(--weight-semibold) var(--text-sm) / 1.4 var(--font-sans);
+  color: var(--text-strong);
+}
+
+.ja-ts-returned__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.ja-ts-returned__item > div {
+  flex: 1 1 260px;
+  min-width: 0;
+}

@@ -7,11 +7,13 @@ import {
   DataTable,
   Dialog,
   EmptyState,
+  Field,
   Icon,
   IconButton,
   ProgressBar,
   Select,
   StatCard,
+  Textarea,
 } from '../../../design-system';
 import { usePageHeader } from '../../../app/Shell';
 import { useToast } from '../../../app/ToastHost';
@@ -37,12 +39,16 @@ import {
   hoursByProgram,
   hoursForPrograms,
   hoursThisMonth,
+  isSentBack,
   mayApprove,
+  mayChangeEntry,
   mayDeleteEntry,
   mayRecall,
+  maySendBack,
   monthLabel,
   monthRange,
   ownDrafts,
+  sentBackTo,
   teachersThisMonth,
   visibleEntries,
   weekRange,
@@ -51,14 +57,29 @@ import {
 } from '../domain';
 import type { TimeEntry, TimeEntryStatus } from '../domain';
 import LogHoursDialog from './LogHoursDialog';
+import { SentBackNote } from './SentBack';
 import './timesheets.css';
 
+type StatusLook = { label: string; tone: 'neutral' | 'gold' | 'teal' | 'danger' };
+
 /** Draft is nobody's problem yet, submitted is the office's, approved is done. */
-const STATUS: Record<TimeEntryStatus, { label: string; tone: 'neutral' | 'gold' | 'teal' }> = {
+const STATUS: Record<TimeEntryStatus, StatusLook> = {
   draft: { label: 'Draft', tone: 'neutral' },
   submitted: { label: 'Submitted', tone: 'gold' },
   approved: { label: 'Approved', tone: 'teal' },
 };
+
+/** A draft the office sent back is its person's to fix, so it says so. */
+const SENT_BACK: StatusLook = { label: 'Sent back', tone: 'danger' };
+
+function statusOf(entry: TimeEntry): StatusLook {
+  return isSentBack(entry) ? SENT_BACK : STATUS[entry.status];
+}
+
+/** "Mon Sep 7", the day column and every message that names one entry. */
+function day(entry: TimeEntry): string {
+  return format(toDate(entry.date), 'EEE MMM d');
+}
 
 /**
  * In-school hours are the ones a grant report asks for, so they keep the teal
@@ -82,6 +103,9 @@ export default function Timesheets() {
   const [logging, setLogging] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [deleting, setDeleting] = React.useState<TimeEntry | null>(null);
+  const [editing, setEditing] = React.useState<TimeEntry | null>(null);
+  const [sendingBack, setSendingBack] = React.useState<TimeEntry | null>(null);
+  const [reason, setReason] = React.useState('');
 
   const thisMonday = weekStart(today);
   const shiftWeeks = (by: number) => setMonday(toISO(addWeeks(toDate(monday), by)));
@@ -165,9 +189,31 @@ export default function Timesheets() {
     toast({
       tone: 'success',
       title: 'Draft deleted',
-      message: `${format(toDate(entry.date), 'EEE MMM d')} · ${formatHours(entry.hours)} hrs`,
+      message: `${day(entry)} · ${formatHours(entry.hours)} hrs`,
     });
   };
+
+  const openSendBack = (entry: TimeEntry) => {
+    setReason('');
+    setSendingBack(entry);
+  };
+
+  const sendBack = (entry: TimeEntry) => {
+    if (!reason.trim()) return;
+    actions.timesheets.sendBackEntry(entry.id, reason);
+    setSendingBack(null);
+    toast({
+      tone: 'success',
+      title: 'Hours sent back',
+      message: `${staffById(state, entry.staffId)?.name ?? 'Teacher'} · ${formatHours(entry.hours)} hrs back in their drafts`,
+    });
+  };
+
+  // The person's own hours the office sent back, whichever week they are in.
+  const returned = mayLog ? sentBackTo(state, user) : [];
+  const sendingBackName = sendingBack
+    ? (staffById(state, sendingBack.staffId)?.name ?? 'the teacher')
+    : '';
 
   const programHours = hoursByProgram(scoped, month);
   const biggest = programHours[0]?.hours ?? 0;
@@ -213,6 +259,46 @@ export default function Timesheets() {
           footnote="Grant-reportable"
         />
       </div>
+
+      {returned.length > 0 && (
+        <div className="ja-ts-returned" role="status">
+          <div className="ja-ts-returned__title">
+            {returned.length === 1
+              ? 'The office sent back 1 entry for you to fix'
+              : `The office sent back ${returned.length} entries for you to fix`}
+          </div>
+          {returned.map(entry => (
+            <div key={entry.id} className="ja-ts-returned__item">
+              <div>
+                <div style={{ font: 'var(--type-body-sm)', color: 'var(--text-body)' }}>
+                  {day(entry)}, {entry.activity}, {formatHours(entry.hours)} hours
+                </div>
+                <SentBackNote entry={entry} />
+              </div>
+              {weekStart(entry.date) !== monday && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setTeacher('all');
+                    setMonday(weekStart(entry.date));
+                  }}
+                >
+                  Show week
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="secondary"
+                iconLeft={<Icon name="pencil" size={15} />}
+                onClick={() => setEditing(entry)}
+              >
+                Edit hours
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <Card
         padding="0"
@@ -304,7 +390,7 @@ export default function Timesheets() {
                   label: 'Day',
                   width: '110px',
                   mono: true,
-                  render: (r: TimeEntry) => format(toDate(r.date), 'EEE MMM d'),
+                  render: (r: TimeEntry) => day(r),
                 },
                 {
                   key: 'teacher',
@@ -334,7 +420,19 @@ export default function Timesheets() {
                     </span>
                   ),
                 },
-                { key: 'activity', label: 'Activity', width: '1.8fr', wrap: true },
+                {
+                  key: 'activity',
+                  label: 'Activity',
+                  width: '1.8fr',
+                  wrap: true,
+                  // A sent-back entry says who sent it back and why, until it is submitted again.
+                  render: (r: TimeEntry) => (
+                    <>
+                      <span>{r.activity}</span>
+                      <SentBackNote entry={r} />
+                    </>
+                  ),
+                },
                 {
                   key: 'program',
                   label: 'Program',
@@ -361,8 +459,8 @@ export default function Timesheets() {
                   label: 'Status',
                   width: '120px',
                   render: (r: TimeEntry) => (
-                    <Badge tone={STATUS[r.status].tone} dot>
-                      {STATUS[r.status].label}
+                    <Badge tone={statusOf(r).tone} dot>
+                      {statusOf(r).label}
                     </Badge>
                   ),
                 },
@@ -370,14 +468,22 @@ export default function Timesheets() {
                   key: 'actions',
                   label: '',
                   width: '100px',
-                  // Your own draft you may delete, your own submitted entry you may
-                  // recall, and somebody else's submitted entry the office approves.
-                  // Nobody approves their own hours, so the button is not there on them.
+                  // Your own draft you may edit and delete, your own submitted entry
+                  // you may recall, somebody else's submitted entry the office
+                  // approves, and somebody else's approved entry the office sends back.
+                  // Nobody approves or sends back their own hours, so neither is there on them.
                   render: (r: TimeEntry) =>
                     mayDeleteEntry(user, r) ? (
-                      <IconButton label="Delete draft" size="sm" onClick={() => setDeleting(r)}>
-                        <Icon name="trash-2" size={15} />
-                      </IconButton>
+                      <span style={{ display: 'inline-flex', gap: 'var(--space-1)' }}>
+                        {mayChangeEntry(user, r) && (
+                          <IconButton label="Edit hours" size="sm" onClick={() => setEditing(r)}>
+                            <Icon name="pencil" size={15} />
+                          </IconButton>
+                        )}
+                        <IconButton label="Delete draft" size="sm" onClick={() => setDeleting(r)}>
+                          <Icon name="trash-2" size={15} />
+                        </IconButton>
+                      </span>
                     ) : mayRecall(user, r) ? (
                       <Button size="sm" variant="ghost" onClick={() => recall(r)}>
                         Recall
@@ -385,6 +491,10 @@ export default function Timesheets() {
                     ) : r.status === 'submitted' && mayApprove(user, r) ? (
                       <Button size="sm" variant="ghost" onClick={() => approve(r)}>
                         Approve
+                      </Button>
+                    ) : maySendBack(user, r) ? (
+                      <Button size="sm" variant="ghost" onClick={() => openSendBack(r)}>
+                        Send back
                       </Button>
                     ) : null,
                 },
@@ -461,7 +571,7 @@ export default function Timesheets() {
           open
           width={460}
           title="Delete this draft?"
-          description={`${format(toDate(deleting.date), 'EEE MMM d')}, ${deleting.activity}, ${formatHours(deleting.hours)} hours. This can't be undone.`}
+          description={`${day(deleting)}, ${deleting.activity}, ${formatHours(deleting.hours)} hours. This can't be undone.`}
           onClose={() => setDeleting(null)}
           footer={
             <>
@@ -477,6 +587,59 @@ export default function Timesheets() {
               </Button>
             </>
           }
+        />
+      )}
+
+      {sendingBack && (
+        <Dialog
+          open
+          width={480}
+          title="Send these hours back?"
+          description={`${day(sendingBack)}, ${sendingBackName}, ${sendingBack.activity}, ${formatHours(sendingBack.hours)} hours. They go back to ${sendingBackName} as a draft to fix and submit again, and are no longer approved.`}
+          onClose={() => setSendingBack(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setSendingBack(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                iconLeft={<Icon name="undo-2" size={15} />}
+                disabled={!reason.trim()}
+                onClick={() => sendBack(sendingBack)}
+              >
+                Send back
+              </Button>
+            </>
+          }
+        >
+          <Field
+            label="What needs fixing"
+            required
+            hint={`${sendingBackName} sees this on the entry until it is submitted again.`}
+          >
+            <Textarea
+              rows={3}
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              placeholder="A sentence is enough."
+            />
+          </Field>
+        </Dialog>
+      )}
+
+      {editing && (
+        <LogHoursDialog
+          entry={editing}
+          onClose={() => setEditing(null)}
+          onSaved={({ hours }) => {
+            toast({
+              tone: 'success',
+              title: 'Hours changed',
+              message: `${day(editing)} · ${formatHours(hours)} hrs, still a draft`,
+            });
+            setEditing(null);
+          }}
         />
       )}
 

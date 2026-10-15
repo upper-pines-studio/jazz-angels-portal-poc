@@ -96,6 +96,24 @@ export function awaitingApprovalFor(state: PortalState, user: SignedInUser): Tim
 }
 
 /**
+ * This person's own entries the office sent back, oldest first: drafts with
+ * the office's reason still on them, waiting to be fixed and submitted again.
+ */
+export function sentBackTo(state: PortalState, user: Pick<SignedInUser, 'id'>): TimeEntry[] {
+  return state.timesheets.entries.filter(e => e.staffId === user.id && isSentBack(e)).sort(byDate);
+}
+
+/**
+ * The number on the rail: what Timesheets is waiting on this person to do.
+ * Somebody else's hours to approve, for a role that approves, and their own
+ * hours the office sent back to fix. Ordinary drafts are their own work in
+ * progress, so they do not count.
+ */
+export function waitingOn(state: PortalState, user: SignedInUser): number {
+  return awaitingApprovalFor(state, user).length + sentBackTo(state, user).length;
+}
+
+/**
  * Hours per program over an inclusive range, biggest first. Programs with
  * nothing logged are left out, so the bars never show an empty row.
  */
@@ -173,7 +191,21 @@ export const DRAFT_ONLY_REFUSAL =
 
 /** Why an approved entry is not recalled. */
 export const APPROVED_REFUSAL =
-  'These hours are approved, so they stay as they are. Ask the office if something is wrong.';
+  'These hours are approved, so they stay as they are. If something is wrong, the office can send them back to you.';
+
+/** Why a submitted or approved entry is not changed. */
+export const CHANGE_DRAFT_ONLY_REFUSAL =
+  'Only a draft can be changed. Recall a submitted entry first; approved hours are sent back by the office to fix.';
+
+/** Why sending back is refused whatever the role, as approving is. */
+export const OWN_SEND_BACK_REFUSAL = 'Nobody sends back their own hours.';
+
+/** Why an entry that is not approved is not sent back. */
+export const SEND_BACK_APPROVED_ONLY_REFUSAL =
+  'Only approved hours are sent back. Hours still waiting are approved, or recalled by their person.';
+
+/** Why a send back with no reason is refused. */
+export const SEND_BACK_REASON_REFUSAL = 'Say what needs fixing, so they know what to change.';
 
 /**
  * May this person delete this entry? Only their own, and only while it is a
@@ -189,6 +221,28 @@ export function mayDeleteEntry(user: SignedInUser, entry: TimeEntry): boolean {
  */
 export function mayRecall(user: SignedInUser, entry: TimeEntry): boolean {
   return entry.status === 'submitted' && mayLogFor(user, entry.staffId);
+}
+
+/**
+ * May this person change this entry? Only their own, and only while it is a
+ * draft, a sent-back one included. The Edit button and the store both ask this.
+ */
+export function mayChangeEntry(user: SignedInUser, entry: TimeEntry): boolean {
+  return entry.status === 'draft' && mayLogFor(user, entry.staffId);
+}
+
+/**
+ * May this person send this entry back to whoever logged it? Only an approved
+ * entry, only a role that approves, and never their own hours. The Send back
+ * button and the store both ask this.
+ */
+export function maySendBack(user: SignedInUser, entry: TimeEntry): boolean {
+  return entry.status === 'approved' && mayApprove(user, entry);
+}
+
+/** A draft the office sent back, with its reason still on it: not yet submitted again. */
+export function isSentBack(entry: TimeEntry): boolean {
+  return entry.status === 'draft' && !!entry.sentBackReason;
 }
 
 /**
