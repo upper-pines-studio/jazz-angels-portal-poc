@@ -14,12 +14,13 @@ timesheets/
   domain/
     types.ts      TimeEntry, TimesheetsState, TimesheetsActions
     seed.ts       the demo hours
-    derive.ts     weeks, months, totals by program, own drafts, sent back, who may do what
+    derive.ts     weeks, months, totals by program, own drafts, sent back, who may do what, history
     slice.ts      the reducer, the actions, the `declare module`
   screens/
     Timesheets.tsx      /timesheets
     LogHoursDialog.tsx  Log hours, and Edit hours on your own draft
     SentBack.tsx        "Sent back by Keisha Monroe on Sep 13: …"
+    HistoryDialog.tsx   History: every step of one entry, oldest first
     timesheets.css
 ```
 
@@ -74,6 +75,49 @@ The store refuses sending back your own hours whatever the role
 (`SEND_BACK_APPROVED_ONLY_REFUSAL`), a blank reason (`SEND_BACK_REASON_REFUSAL`),
 and a role that does not approve. Charging hours to a grant is not built yet;
 when it is, sending back a charged entry has to say what happens to the charge.
+
+## History
+
+Every entry keeps `history`, a list of the steps it went through (#95):
+`logged`, `changed`, `submitted`, `recalled`, `approved`, `sent-back`. Each
+names who (`whoId`, the signed-in person) and when (`at`, today's ISO date); a
+send back carries its `reason`, and a change the fields it altered, each `from`
+and `to`. A change that alters nothing records nothing.
+
+A step is written in the same change as the status it describes: the reducer's
+`update` carries the `event` and adds it to the entry, so the two save or roll
+back together (decision 0005, "One activity log"). Steps are only ever added: a
+patch never touches `history`, and a step whose id (`${entryId}:${n}`) is
+already there is not added twice, so a retry keeps one. Refused actions add
+nothing. Sending back clears `approvedBy` and `approvedAt` from the entry as it
+did, but the approval stays in the history, so approving again leaves two.
+
+An entry saved before #95 loads with what `rebuildHistory` can tell from its
+fields, each step marked `rebuilt`: logged by its person, sent back if it was,
+then submitted or approved as its status says. Logged and submitted carry no
+date, since none was kept. Deleting a draft takes its history with it (decision
+0002: a draft is a mistake, not a record).
+
+In the week table the status badge is a button ("Approved, show history", with
+a small history mark beside it) for whoever may read it (`mayReadHistory`): the
+person who logged it and every role that approves, the same people who see the
+row. It opens **History**: "Wed Sep 9, Devon Price, Paramount MS planning with
+the band director, 1.50 hours." over the steps, oldest first, the last with the
+teal dot:
+
+- Logged by Devon Price, Sep 9
+- Submitted by Devon Price, Sep 9
+- Approved by Barry Cogert, Sep 13
+- Sent back by Keisha Monroe, Sep 13: The meeting ran 1.50 hours, not 1.25.
+- Changed by Devon Price, Sep 13: hours 1.25 to 1.50
+- Submitted again by Devon Price, Sep 13
+- Approved again by Keisha Monroe, Sep 13
+
+A rebuilt history adds "These hours were saved before the portal kept every
+step, so this is rebuilt from what the entry recorded. A step without a date is
+one whose day was not kept." The dialog closes with Close. With the backend the
+steps become rows of the shared `activity` table, subject kind `time-entry`
+(`docs/SCHEMA.md`).
 
 ## Submitting
 
@@ -132,12 +176,12 @@ dashboard attention row.
 
 | Action | What it does |
 | --- | --- |
-| `logHours(input)` | Adds a draft entry, rounded to the nearest quarter hour. Returns the id. |
+| `logHours(input)` | Adds a draft entry, rounded to the nearest quarter hour, its history starting with `logged`. Returns the id. Every action below that changes an entry adds its step to the history in the same change. |
 | `submitEntry(id)` | Draft → submitted, clearing a sent-back reason. A submitted or approved entry is left alone. Only your own (the slice's rule refuses anyone else's, the office's too). No screen offers it on one entry. |
 | `submitWeek(weekStart)` | Every one of the signed-in person's drafts in that Monday-to-Sunday week → submitted, as one change. Nobody else's drafts move, whatever the role. Returns how many went. |
 | `recallEntry(id)` | Submitted → draft. A draft or an approved entry is left alone. Only your own; an approved one is refused with `APPROVED_REFUSAL`. |
 | `approveEntry(id)` | Marks it approved and stamps the signed-in person and today. |
-| `sendBackEntry(id, reason)` | Approved → draft, with a required reason, stamping `sentBackBy` and `sentBackAt` and clearing the approval. A role that approves, never on their own hours. |
+| `sendBackEntry(id, reason)` | Approved → draft, with a required reason, stamping `sentBackBy` and `sentBackAt` and clearing the approval from the entry (it stays in the history). A role that approves, never on their own hours. |
 | `changeEntry(id, changes)` | Changes a draft's date, program, ensemble, activity and hours (rounded to the quarter hour). Only your own; anything but a draft is refused with `CHANGE_DRAFT_ONLY_REFUSAL`. |
 | `deleteEntry(id)` | Removes a draft entered by mistake (decision 0002). Only your own; a submitted or approved entry is left alone and refused with `DRAFT_ONLY_REFUSAL`. |
 

@@ -43,6 +43,7 @@ import {
   mayApprove,
   mayChangeEntry,
   mayDeleteEntry,
+  mayReadHistory,
   mayRecall,
   maySendBack,
   monthLabel,
@@ -56,6 +57,7 @@ import {
   weekTotals,
 } from '../domain';
 import type { TimeEntry, TimeEntryStatus } from '../domain';
+import HistoryDialog from './HistoryDialog';
 import LogHoursDialog from './LogHoursDialog';
 import { SentBackNote } from './SentBack';
 import './timesheets.css';
@@ -106,6 +108,11 @@ export default function Timesheets() {
   const [editing, setEditing] = React.useState<TimeEntry | null>(null);
   const [sendingBack, setSendingBack] = React.useState<TimeEntry | null>(null);
   const [reason, setReason] = React.useState('');
+  // The entry whose history is open, by id, so the dialog follows the live entry.
+  const [historyOf, setHistoryOf] = React.useState<string | null>(null);
+  const historyEntry = historyOf
+    ? state.timesheets.entries.find(e => e.id === historyOf)
+    : undefined;
 
   const thisMonday = weekStart(today);
   const shiftWeeks = (by: number) => setMonday(toISO(addWeeks(toDate(monday), by)));
@@ -457,12 +464,28 @@ export default function Timesheets() {
                 {
                   key: 'status',
                   label: 'Status',
-                  width: '120px',
-                  render: (r: TimeEntry) => (
-                    <Badge tone={statusOf(r).tone} dot>
-                      {statusOf(r).label}
-                    </Badge>
-                  ),
+                  width: '136px',
+                  // The status opens the entry's history: every step, who and when (#95).
+                  render: (r: TimeEntry) =>
+                    mayReadHistory(user, r) ? (
+                      <button
+                        type="button"
+                        className="ja-ts-status"
+                        aria-haspopup="dialog"
+                        aria-label={`${statusOf(r).label}, show history`}
+                        title="Show history"
+                        onClick={() => setHistoryOf(r.id)}
+                      >
+                        <Badge tone={statusOf(r).tone} dot>
+                          {statusOf(r).label}
+                        </Badge>
+                        <Icon name="history" size={13} />
+                      </button>
+                    ) : (
+                      <Badge tone={statusOf(r).tone} dot>
+                        {statusOf(r).label}
+                      </Badge>
+                    ),
                 },
                 {
                   key: 'actions',
@@ -627,6 +650,8 @@ export default function Timesheets() {
           </Field>
         </Dialog>
       )}
+
+      {historyEntry && <HistoryDialog entry={historyEntry} onClose={() => setHistoryOf(null)} />}
 
       {editing && (
         <LogHoursDialog

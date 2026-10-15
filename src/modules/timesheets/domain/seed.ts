@@ -3,7 +3,8 @@ import { OPERATIONS_ID } from '../../../core/derive';
 import { toDate, toISO } from '../../../core/format';
 import { SEED_TODAY } from '../../../core/seed';
 import type { ProgramId } from '../../../core/types';
-import type { TimeEntry, TimeEntryStatus, TimesheetsState } from './types';
+import { nextEventId } from './derive';
+import type { TimeEntry, TimeEntryEventKind, TimeEntryStatus, TimesheetsState } from './types';
 
 /**
  * Demo hours for the timesheets module (PLATFORM §2.3). "Today" in the story is
@@ -62,11 +63,18 @@ function makeEntry(
     activity,
     hours,
     status,
+    history: [],
   };
   if (ensembleId) entry.ensembleId = ensembleId;
+  // Logged and handed in on the day worked; approved by the office the Monday after.
+  const step = (kind: TimeEntryEventKind, whoId: string, at: string) =>
+    entry.history.push({ id: nextEventId(entry), kind, whoId, at });
+  step('logged', staffId, date);
+  if (status !== 'draft') step('submitted', staffId, date);
   if (status === 'approved') {
     entry.approvedBy = approver(staffId);
     entry.approvedAt = approvedOn(date);
+    step('approved', entry.approvedBy, entry.approvedAt);
   }
   return entry;
 }
