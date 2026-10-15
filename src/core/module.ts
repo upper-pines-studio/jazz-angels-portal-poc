@@ -146,6 +146,12 @@ export interface AttentionItem {
    * a document is "Out of date" or "Expires soon". The tone still follows `status`.
    */
   statusLabel?: string;
+  /**
+   * Draw the status Badge outlined (dark gold words, a gold rule, no fill)
+   * rather than filled: something that is the person's to fix without being
+   * late, such as hours sent back (#96).
+   */
+  statusOutlined?: boolean;
   href: string;
   ownerId?: string;
   /** The module label, shown as a Badge on the row. */

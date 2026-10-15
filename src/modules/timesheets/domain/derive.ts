@@ -144,6 +144,7 @@ export function sentBackAttention(state: PortalState, user: SignedInUser): Atten
       detail: `${entry.activity} · ${by ? `Sent back by ${by}` : 'Sent back by the office'}`,
       status: 'due-soon',
       statusLabel: 'Sent back',
+      statusOutlined: true,
       href: weekHref(entry.date),
       ownerId: entry.staffId,
       source: 'Timesheets',

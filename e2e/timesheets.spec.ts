@@ -6,6 +6,7 @@
 // Until then Devon may recall a submitted entry to a draft, and delete it while it is a draft
 // (decision 0002: approved hours are money, so they are never deleted or recalled). Every step
 // stays in the entry's history, opened from its status, an approval sent back included (#95).
+// Sending back is rare, so it sits in the row's "…" menu, with History (#96).
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { dialog, field, freshStart, switchUser } from './support';
@@ -120,7 +121,10 @@ test('the office sends approved hours back, and the teacher fixes and resubmits 
 
   const row = entryRow(page, activity);
   await expect(row.getByText('Approved', { exact: true })).toBeVisible();
-  await row.getByRole('button', { name: 'Send back' }).click();
+  // Send back is in the row's menu, not on the row.
+  await expect(row.getByRole('button', { name: 'Send back' })).toHaveCount(0);
+  await row.getByRole('button', { name: 'More for these hours' }).click();
+  await page.getByRole('menu').getByRole('menuitem', { name: 'Send back' }).click();
 
   // The reason is required.
   const confirm = dialog(page, 'Send these hours back?');
@@ -133,7 +137,11 @@ test('the office sends approved hours back, and the teacher fixes and resubmits 
   await expect(page.getByText('Hours sent back')).toBeVisible();
   await expect(row.getByText('Sent back', { exact: true })).toBeVisible();
   await expect(row.getByText(reason)).toBeVisible();
-  await expect(row.getByRole('button', { name: 'Send back' })).toHaveCount(0);
+  // A draft is not the office's to send back, so the menu has only its history.
+  await row.getByRole('button', { name: 'More for these hours' }).click();
+  await expect(page.getByRole('menu').getByRole('menuitem')).toHaveText(['History']);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toHaveCount(0);
 
   // The office knows what it sent back, so its dashboard has no row for it (#97).
   await page.goto('/');
@@ -187,8 +195,14 @@ test('the office sends approved hours back, and the teacher fixes and resubmits 
     'Submitted again by Devon Price, Sep 13',
     'Approved again by Keisha Monroe, Sep 13',
   ];
-  const readHistory = async () => {
-    await entryRow(page, activity).getByRole('button', { name: 'Approved, show history' }).click();
+  const readHistory = async (from: 'status' | 'menu') => {
+    const row = entryRow(page, activity);
+    if (from === 'status') {
+      await row.getByRole('button', { name: 'Approved, show history' }).click();
+    } else {
+      await row.getByRole('button', { name: 'More for these hours' }).click();
+      await page.getByRole('menu').getByRole('menuitem', { name: 'History' }).click();
+    }
     const history = dialog(page, 'History');
     await expect(
       history.getByText(`Wed Sep 9, Devon Price, ${activity}, 1.50 hours.`),
@@ -197,7 +211,38 @@ test('the office sends approved hours back, and the teacher fixes and resubmits 
     await history.locator('footer').getByRole('button', { name: 'Close' }).click();
     await expect(page.getByRole('heading', { name: 'History', exact: true })).toHaveCount(0);
   };
-  await readHistory();
+  await readHistory('status');
+  await readHistory('menu');
   await switchUser(page, 'devon');
-  await readHistory();
+  await readHistory('status');
+});
+
+test('the row menu works from the keyboard', async ({ page }) => {
+  // Albert's Monday chart prep, approved in the seed.
+  const activity = 'Chart prep for the fall books';
+  await freshStart(page, 'keisha');
+  await page.goto('/timesheets');
+
+  const more = entryRow(page, activity).getByRole('button', { name: 'More for these hours' });
+  await more.focus();
+  await page.keyboard.press('Enter');
+  const menu = page.getByRole('menu');
+  await expect(menu.getByRole('menuitem', { name: 'Send back' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(menu.getByRole('menuitem', { name: 'History' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(menu.getByRole('menuitem', { name: 'Send back' })).toBeFocused();
+
+  // Escape closes it back onto its button.
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(more).toBeFocused();
+
+  // The up arrow opens it on the last item; Enter picks it.
+  await page.keyboard.press('ArrowUp');
+  await expect(menu.getByRole('menuitem', { name: 'History' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(
+    dialog(page, 'History').getByText(`Mon Sep 7, Albert Alva, ${activity}`),
+  ).toBeVisible();
 });

@@ -54,6 +54,7 @@ describe('the dashboard row for hours sent back', () => {
       detail: `${first.activity} · Sent back by Keisha Monroe`,
       status: 'due-soon',
       statusLabel: 'Sent back',
+      statusOutlined: true,
       href: weekHref(first.date),
       ownerId: 's-devon',
       source: 'Timesheets',
