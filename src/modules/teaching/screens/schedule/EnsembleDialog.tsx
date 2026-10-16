@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
+import { Button, Field, Input, Select } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { useToast } from '../../../../app/ToastHost';
 import {
   pickable,
@@ -76,7 +77,7 @@ export default function EnsembleDialog({
   };
 
   return (
-    <Dialog
+    <AppDialog
       open
       title={ensemble ? 'Edit ensemble' : 'Add ensemble'}
       description={
@@ -193,6 +194,6 @@ export default function EnsembleDialog({
           </div>
         </Field>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }

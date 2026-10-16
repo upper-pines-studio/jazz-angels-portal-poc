@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Icon, IconButton } from '../../design-system';
+import { Button, Icon, IconButton } from '../../design-system';
+import { AppDialog } from './AppDialog';
 import { dateLong, fileSize, staffById, useStore } from '../../core';
 import type { FileFacts, FileFormat } from '../../core';
 import { KV } from './badges';
@@ -286,7 +287,7 @@ export function StoredFileDialog({
   const pages = file.pages ?? 1;
 
   return (
-    <Dialog
+    <AppDialog
       open
       title={file.name}
       description={`${kindLabel} · ${fileFacts(file)}`}
@@ -340,7 +341,7 @@ export function StoredFileDialog({
           </p>
         </div>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }
 

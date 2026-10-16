@@ -5,7 +5,6 @@ import {
   Button,
   Card,
   DataTable,
-  Dialog,
   EmptyState,
   Field,
   Icon,
@@ -13,6 +12,7 @@ import {
   Select,
   Switch,
 } from '../../design-system';
+import { AppDialog } from '../components/AppDialog';
 import { usePageHeader } from '../Shell';
 import { ArchiveDialog, ArchivedName, ShowArchivedSwitch } from '../components/archive';
 import { useToast } from '../ToastHost';
@@ -598,7 +598,7 @@ export default function Settings() {
       )}
 
       {person && mayStaff && (
-        <Dialog
+        <AppDialog
           open
           title={person.id ? 'Edit person' : 'Add person'}
           description={
@@ -670,7 +670,7 @@ export default function Settings() {
               />
             </Field>
           </div>
-        </Dialog>
+        </AppDialog>
       )}
     </>
   );

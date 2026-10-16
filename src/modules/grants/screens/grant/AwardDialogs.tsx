@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Field, Input, Select, Textarea } from '../../../../design-system';
+import { Button, Field, Input, Select, Textarea } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { dateLong, money, pickable, staffById, useStore } from '../../../../core';
 import type { ProgramId } from '../../../../core';
 import { programNames } from '../../domain';
@@ -92,7 +93,7 @@ export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: ()
   };
 
   return (
-    <Dialog
+    <AppDialog
       open
       title="Edit award record"
       description="What the funder awarded, as the award letter states it. The change is noted in the activity timeline."
@@ -172,7 +173,7 @@ export function EditRecordDialog({ grant, onClose }: { grant: Grant; onClose: ()
           />
         </Field>
       </DialogFields>
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -208,7 +209,7 @@ export function PaymentDialog({
   const ok = !!label.trim() && !!expectedDate && dollars !== undefined && dollars > 0;
 
   return (
-    <Dialog
+    <AppDialog
       open
       title={payment ? 'Edit payment' : 'Add payment'}
       description={
@@ -291,7 +292,7 @@ export function PaymentDialog({
           </Field>
         </FieldRow>
       </DialogFields>
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -312,7 +313,7 @@ export function TermDialog({
   const [page, setPage] = React.useState(term?.page ? String(term.page) : '');
 
   return (
-    <Dialog
+    <AppDialog
       open
       title={term ? 'Edit term' : 'Add term'}
       description="Copy the wording from the award letter, and note the page it is on."
@@ -353,6 +354,6 @@ export function TermDialog({
           <LetterPageField value={page} onChange={setPage} pages={letterPages} />
         </Field>
       </DialogFields>
-    </Dialog>
+    </AppDialog>
   );
 }

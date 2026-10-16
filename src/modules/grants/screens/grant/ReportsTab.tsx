@@ -4,7 +4,6 @@ import {
   Badge,
   Button,
   DataTable,
-  Dialog,
   EmptyState,
   Field,
   Icon,
@@ -12,6 +11,7 @@ import {
   Input,
   Select,
 } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { dateShort, useCan, useStore } from '../../../../core';
 import { isPostAward, isReportOpen } from '../../domain';
 import type { Grant, Report, ReportStatus } from '../../domain';
@@ -369,7 +369,7 @@ function ReportDialog({
     onSave({ kind, dueDate, status, submittedDate: done ? submittedDate : undefined });
 
   return (
-    <Dialog
+    <AppDialog
       open
       title={report ? 'Edit report' : 'Add report'}
       width={460}
@@ -431,6 +431,6 @@ function ReportDialog({
           )}
         </FieldRow>
       </DialogFields>
-    </Dialog>
+    </AppDialog>
   );
 }

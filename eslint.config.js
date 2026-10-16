@@ -61,6 +61,17 @@ const NO_BARE_NEW_DATE = {
   message:
     'Screens use `today` from useStore() rather than `new Date()`. `new Date(value)` is fine.',
 };
+// Every dialog goes through AppDialog, which adds focus, Escape and the dialog role.
+const NO_BARE_DIALOG = {
+  patterns: [
+    {
+      group: ['**/design-system', '**/design-system/**'],
+      importNames: ['Dialog'],
+      message:
+        'Use AppDialog from src/app/components/AppDialog.tsx, not the design-system Dialog: it moves focus in, keeps it there, closes on Escape and gives focus back.',
+    },
+  ],
+};
 const SCREENS = ['src/app/**/*.{ts,tsx}', 'src/modules/*/screens/**/*.{ts,tsx}'];
 const STORAGE_OWNERS = ['src/core/repository.ts', 'src/core/auth.ts'];
 // Tests stand up a fake localStorage to exercise the two owners.
@@ -81,6 +92,7 @@ export default tseslint.config(
     rules: {
       'import/no-restricted-paths': ['error', { zones }],
       'no-restricted-syntax': ['error', NO_LOCAL_STORAGE],
+      'no-restricted-imports': ['error', NO_BARE_DIALOG],
       'react-hooks/rules-of-hooks': 'error',
 
       // Left out: each would need real code changes today, not just formatting.
@@ -96,6 +108,12 @@ export default tseslint.config(
   {
     files: SCREENS,
     rules: { 'no-restricted-syntax': ['error', NO_LOCAL_STORAGE, NO_BARE_NEW_DATE] },
+  },
+
+  // The wrapper itself is the one file that imports Dialog.
+  {
+    files: ['src/app/components/AppDialog.tsx'],
+    rules: { 'no-restricted-imports': 'off' },
   },
 
   {

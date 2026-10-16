@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Checkbox, Dialog, Field, Input } from '../../../design-system';
+import { Button, Checkbox, Field, Input } from '../../../design-system';
+import { AppDialog } from '../../components/AppDialog';
 import { useToast } from '../../ToastHost';
 import { programProblem, useStore } from '../../../core';
 
@@ -50,7 +51,7 @@ export function ProgramDialog({
   };
 
   return (
-    <Dialog
+    <AppDialog
       open
       width={460}
       title={draft.id ? 'Edit program' : 'Add program'}
@@ -98,6 +99,6 @@ export function ProgramDialog({
           <Checkbox checked={inSchool} label="Taught in schools" onChange={setInSchool} />
         </Field>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }

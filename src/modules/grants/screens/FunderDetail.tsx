@@ -14,7 +14,8 @@ import { FunderFields, capitalise, type FunderDraft } from './Funders';
 import { ActivityTimeline } from './ActivityTimeline';
 import { LinkButton } from './money/shared';
 import { TableScroll } from '../../../app/components/TableScroll';
-import { Card, DataTable, Button, Icon, Dialog, EmptyState } from '../../../design-system';
+import { Card, DataTable, Button, Icon, EmptyState } from '../../../design-system';
+import { AppDialog } from '../../../app/components/AppDialog';
 import { isArchived, useStore, useCan, money } from '../../../core';
 import { funderActivity, funderById, funderGrantHistory, funderTotals } from '../domain';
 import type { GrantHistoryRow } from '../domain';
@@ -291,7 +292,7 @@ export default function FunderDetail() {
         />
       )}
       {editing && draft && mayEdit && (
-        <Dialog
+        <AppDialog
           open
           width={560}
           title="Edit funder"
@@ -313,7 +314,7 @@ export default function FunderDetail() {
             showErrors={showErrors}
             onChange={patch => setDraft(d => (d ? { ...d, ...patch } : d))}
           />
-        </Dialog>
+        </AppDialog>
       )}
     </>
   );

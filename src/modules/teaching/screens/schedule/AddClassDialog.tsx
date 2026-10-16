@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
+import { Button, Field, Input, Select } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { useToast } from '../../../../app/ToastHost';
 import { activeOnly, dateLong, pickable, useStore, venueById } from '../../../../core';
 import { ensembleById, timeLabel } from '../../domain';
@@ -56,7 +57,7 @@ export default function AddClassDialog({
   };
 
   return (
-    <Dialog
+    <AppDialog
       open={open}
       title="Add class"
       description="One class on one date. The roll call opens as soon as it has happened."
@@ -146,6 +147,6 @@ export default function AddClassDialog({
           />
         </Field>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }

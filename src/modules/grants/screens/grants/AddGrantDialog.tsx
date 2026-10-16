@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../../../app/ToastHost';
 import { Eyebrow } from '../../../../app/components/badges';
 import {
-  Dialog,
   Button,
   Field,
   Input,
@@ -12,6 +11,7 @@ import {
   Switch,
   Checkbox,
 } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import {
   activeOnly,
   can,
@@ -281,7 +281,7 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
   }
 
   return (
-    <Dialog
+    <AppDialog
       open={open}
       onClose={onClose}
       width={640}
@@ -613,7 +613,7 @@ export default function AddGrantDialog({ open, onClose }: { open: boolean; onClo
           )}
         </div>
       )}
-    </Dialog>
+    </AppDialog>
   );
 }
 

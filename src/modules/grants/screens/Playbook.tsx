@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Button,
   Card,
-  Dialog,
   EmptyState,
   Field,
   Icon,
@@ -11,6 +10,7 @@ import {
   RadioGroup,
   Select,
 } from '../../../design-system';
+import { AppDialog } from '../../../app/components/AppDialog';
 import { usePageHeader } from '../../../app/Shell';
 import { useToast } from '../../../app/ToastHost';
 import { PhaseBadge } from './badges';
@@ -461,7 +461,7 @@ export default function Playbook() {
       )}
 
       {adding && mayEdit && (
-        <Dialog
+        <AppDialog
           open
           title="New template"
           description="A checklist new grants can copy. Add the steps once it exists."
@@ -493,7 +493,7 @@ export default function Playbook() {
               onChange={e => setNewName(e.target.value)}
             />
           </Field>
-        </Dialog>
+        </AppDialog>
       )}
 
       {timingItem && mayEdit && (
@@ -557,7 +557,7 @@ function TimingDialog({
   const preview = timingLabel({ offsetDays: dir === 'before' ? -n : n, anchor });
 
   return (
-    <Dialog
+    <AppDialog
       open
       title="When is this step due?"
       description={item.title}
@@ -600,6 +600,6 @@ function TimingDialog({
         </Field>
         <p style={{ ...MONO_SM, margin: 0 }}>{preview}</p>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }

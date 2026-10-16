@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog } from '../../../../design-system';
+import { Button } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { money, useStore } from '../../../../core';
 import { useToast } from '../../../../app/ToastHost';
 import { transactionById, transactionSnapshot } from '../../domain';
@@ -140,7 +141,7 @@ function SendBackDialog({
     notes ? (notes === 1 ? 'its backup note' : `its ${notes} backup notes`) : '',
   ].filter(Boolean);
   return (
-    <Dialog
+    <AppDialog
       open
       title="Send back to assign?"
       onClose={onCancel}
@@ -160,6 +161,6 @@ function SendBackDialog({
         off the budget and deletes {joinWords(what)}. The transaction goes back to {place}.
         QuickBooks is not changed.
       </p>
-    </Dialog>
+    </AppDialog>
   );
 }

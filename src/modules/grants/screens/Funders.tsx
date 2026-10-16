@@ -15,12 +15,12 @@ import {
   Badge,
   Button,
   Icon,
-  Dialog,
   Field,
   Input,
   Select,
   Textarea,
 } from '../../../design-system';
+import { AppDialog } from '../../../app/components/AppDialog';
 import { activeOnly, archivedOnly, useStore, useCan, money, dateShort } from '../../../core';
 import { funderLastActivity, funderTotals, fundersList } from '../domain';
 import type { Funder, FunderType } from '../domain';
@@ -287,7 +287,7 @@ export default function Funders() {
         )}
       </Card>
       {adding && mayEdit && (
-        <Dialog
+        <AppDialog
           open
           width={560}
           title="Add funder"
@@ -309,7 +309,7 @@ export default function Funders() {
             showErrors={showErrors}
             onChange={patch => setDraft(d => ({ ...d, ...patch }))}
           />
-        </Dialog>
+        </AppDialog>
       )}
     </>
   );

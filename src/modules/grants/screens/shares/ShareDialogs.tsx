@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
+import { Button, Field, Input, Select } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { fiscalYearChoices, money, programName, targetName, useStore } from '../../../../core';
 import type { FundingTarget, PortalState } from '../../../../core';
 import { useToast } from '../../../../app/ToastHost';
@@ -83,7 +84,7 @@ export function ChangeShareDialog({ share, onClose }: { share: GrantShare; onClo
   };
 
   return (
-    <Dialog
+    <AppDialog
       open
       width={460}
       title="Change the share"
@@ -122,7 +123,7 @@ export function ChangeShareDialog({ share, onClose }: { share: GrantShare; onClo
         </div>
         <FundingWarnings messages={warnings} />
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -133,7 +134,7 @@ export function TakeBackDialog({ share, onClose }: { share: GrantShare; onClose:
   const grant = grantById(state, share.grantId);
   const name = targetName(state, share.target);
   return (
-    <Dialog
+    <AppDialog
       open
       width={460}
       title={`Take back ${money(share.amount)} from ${name}?`}

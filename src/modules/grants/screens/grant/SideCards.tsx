@@ -1,15 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Badge,
-  Button,
-  Card,
-  Dialog,
-  Field,
-  Input,
-  Select,
-  Textarea,
-} from '../../../../design-system';
+import { Badge, Button, Card, Field, Input, Select, Textarea } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import {
   dateLong,
   dateRange,
@@ -126,7 +118,7 @@ function KeyDatesDialog({ grant, onClose }: { grant: Grant; onClose: () => void 
     setDates(prev => ({ ...prev, [key]: e.target.value || undefined }));
 
   return (
-    <Dialog
+    <AppDialog
       open
       title="Key dates"
       description="The dates that drive the deadlines list."
@@ -192,7 +184,7 @@ function KeyDatesDialog({ grant, onClose }: { grant: Grant; onClose: () => void 
           </Field>
         </FieldRow>
       </DialogFields>
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -349,7 +341,7 @@ function DetailsDialog({ grant, onClose }: { grant: Grant; onClose: () => void }
   const [notes, setNotes] = React.useState(grant.notes ?? '');
 
   return (
-    <Dialog
+    <AppDialog
       open
       title="Grant details"
       description="The terms of this grant as we have them."
@@ -426,6 +418,6 @@ function DetailsDialog({ grant, onClose }: { grant: Grant; onClose: () => void }
           />
         </Field>
       </DialogFields>
-    </Dialog>
+    </AppDialog>
   );
 }
