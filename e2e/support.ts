@@ -43,11 +43,9 @@ export function field(scope: Page | Locator, label: string, control = 'input, se
     .first();
 }
 
-/** The open design-system Dialog with this title. */
+/** The open dialog with this title: AppDialog names its box by the title (aria-labelledby). */
 export function dialog(page: Page, title: string): Locator {
-  return page
-    .getByRole('heading', { level: 2, name: title, exact: true })
-    .locator('xpath=ancestor::div[.//footer][1]');
+  return page.getByRole('dialog', { name: title, exact: true });
 }
 
 function escape(s: string): string {
