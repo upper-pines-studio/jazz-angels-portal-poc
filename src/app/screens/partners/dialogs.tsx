@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Field, Input, Select, Textarea } from '../../../design-system';
+import { Button, Field, Input, Select, Textarea } from '../../../design-system';
+import { AppDialog } from '../../components/AppDialog';
 import { useToast } from '../../ToastHost';
 import { pickable, useStore } from '../../../core';
 import type { Address, Organization, OrganizationKind, Venue, VenueKind } from '../../../core';
@@ -104,7 +105,7 @@ export function OrganizationDialog({
   }
 
   return (
-    <Dialog
+    <AppDialog
       open
       width={520}
       title={organization ? 'Edit organization' : 'Add organization'}
@@ -179,7 +180,7 @@ export function OrganizationDialog({
           />
         </Field>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -240,7 +241,7 @@ export function VenueDialog({
   }
 
   return (
-    <Dialog
+    <AppDialog
       open
       width={520}
       title={venue ? 'Edit venue' : 'Add venue'}
@@ -362,6 +363,6 @@ export function VenueDialog({
           />
         </Field>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }

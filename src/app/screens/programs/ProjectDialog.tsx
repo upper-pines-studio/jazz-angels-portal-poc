@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Field, Input, Select } from '../../../design-system';
+import { Button, Field, Input, Select } from '../../../design-system';
+import { AppDialog } from '../../components/AppDialog';
 import { useToast } from '../../ToastHost';
 import {
   isOperations,
@@ -59,7 +60,7 @@ export function BudgetDialog({
   };
 
   return (
-    <Dialog
+    <AppDialog
       open
       width={420}
       title={`${name} budget, ${fy.label}`}
@@ -89,7 +90,7 @@ export function BudgetDialog({
           style={{ width: '100%' }}
         />
       </Field>
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -140,7 +141,7 @@ export function ProjectDialog({
   };
 
   return (
-    <Dialog
+    <AppDialog
       open
       width={520}
       title={draft.id ? 'Edit project' : 'Add a project'}
@@ -216,6 +217,6 @@ export function ProjectDialog({
           />
         </Field>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }

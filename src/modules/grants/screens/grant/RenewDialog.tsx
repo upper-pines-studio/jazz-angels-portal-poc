@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
+import { Button, Field, Input, Select } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { activeOnly, money, plainNumber, useStore } from '../../../../core';
 import type { ProgramId } from '../../../../core';
 import {
@@ -92,7 +93,7 @@ export function RenewDialog({ grant, onClose }: { grant: Grant; onClose: () => v
 
   if (refusal) {
     return (
-      <Dialog
+      <AppDialog
         open
         title="Start next year's grant"
         onClose={onClose}
@@ -104,7 +105,7 @@ export function RenewDialog({ grant, onClose }: { grant: Grant; onClose: () => v
         }
       >
         <p style={{ margin: 0, font: 'var(--type-body)', color: 'var(--text-body)' }}>{refusal}</p>
-      </Dialog>
+      </AppDialog>
     );
   }
 
@@ -116,7 +117,7 @@ export function RenewDialog({ grant, onClose }: { grant: Grant; onClose: () => v
   ].join(' and ');
 
   return (
-    <Dialog
+    <AppDialog
       open
       title="Start next year's grant"
       description={`It starts at Prospect with ${carried}, and is linked to ${grant.title}. Check the title, amount and dates.`}
@@ -236,7 +237,7 @@ export function RenewDialog({ grant, onClose }: { grant: Grant; onClose: () => v
           />
         </Field>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }
 

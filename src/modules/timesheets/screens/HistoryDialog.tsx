@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
-import { Button, Dialog } from '../../../design-system';
+import { Button } from '../../../design-system';
+import { AppDialog } from '../../../app/components/AppDialog';
 import { dateLong, dateShort, programName, staffById, toDate, useStore } from '../../../core';
 import type { PortalState } from '../../../core';
 import { formatHours, hasRebuiltHistory, historyLines } from '../domain';
@@ -73,7 +74,7 @@ export default function HistoryDialog({
   const lines = historyLines(entry);
   const name = staffById(state, entry.staffId)?.name ?? 'Unknown';
   return (
-    <Dialog
+    <AppDialog
       open
       width={500}
       title="History"
@@ -105,6 +106,6 @@ export default function HistoryDialog({
           entry recorded. A step without a date is one whose day was not kept.
         </p>
       )}
-    </Dialog>
+    </AppDialog>
   );
 }

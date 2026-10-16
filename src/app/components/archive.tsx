@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Badge, Button, Dialog, Icon, Switch } from '../../design-system';
+import { Badge, Button, Icon, Switch } from '../../design-system';
+import { AppDialog } from './AppDialog';
 import { dateLong, staffById, useStore } from '../../core';
 import type { Archivable } from '../../core';
 
@@ -129,7 +130,7 @@ export function ArchiveDialog({
   onClose: () => void;
 }) {
   return (
-    <Dialog
+    <AppDialog
       open
       width={460}
       title={title}

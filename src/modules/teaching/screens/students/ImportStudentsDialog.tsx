@@ -1,5 +1,6 @@
 import React from 'react';
-import { Badge, Button, DataTable, Dialog, Icon, Select } from '../../../../design-system';
+import { Badge, Button, DataTable, Icon, Select } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { useToast } from '../../../../app/ToastHost';
 import {
   activeOnly,
@@ -157,7 +158,7 @@ export default function ImportStudentsDialog({
   );
 
   return (
-    <Dialog
+    <AppDialog
       open={open}
       title="Import students"
       description={
@@ -236,7 +237,7 @@ export default function ImportStudentsDialog({
           </div>
         </div>
       )}
-    </Dialog>
+    </AppDialog>
   );
 }
 

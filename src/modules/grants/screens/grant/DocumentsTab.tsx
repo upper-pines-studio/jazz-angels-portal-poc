@@ -4,13 +4,13 @@ import {
   Badge,
   Button,
   DataTable,
-  Dialog,
   Field,
   Icon,
   Input,
   Select,
   EmptyState,
 } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { dateLong, dateShort, isArchived, useCan, useStore } from '../../../../core';
 import type { OfficeDocument } from '../../../../core';
 import { kindsMatch, linkedOfficeDocument, officeDocumentsFor } from '../../domain';
@@ -347,7 +347,7 @@ function DocumentDialog({
   };
 
   return (
-    <Dialog
+    <AppDialog
       open
       title={title}
       description={
@@ -481,6 +481,6 @@ function DocumentDialog({
           </>
         )}
       </DialogFields>
-    </Dialog>
+    </AppDialog>
   );
 }

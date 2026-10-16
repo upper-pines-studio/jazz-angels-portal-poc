@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Card, Dialog, Field, Input, Select } from '../../../../design-system';
+import { Button, Card, Field, Input, Select } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { isArchived, useCan, useStore } from '../../../../core';
 import { REMINDER_OFFSETS, hourLabel, offsetChip, offsetLabel } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
@@ -61,7 +62,7 @@ export function ReminderDefaultsDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Dialog
+    <AppDialog
       open
       title="Default reminders"
       width={520}
@@ -168,7 +169,7 @@ export function ReminderDefaultsDialog({ onClose }: { onClose: () => void }) {
           </p>
         )}
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }
 

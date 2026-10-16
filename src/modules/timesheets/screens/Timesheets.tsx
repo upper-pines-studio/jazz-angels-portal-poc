@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   DataTable,
-  Dialog,
   EmptyState,
   Field,
   Icon,
@@ -16,6 +15,7 @@ import {
   StatCard,
   Textarea,
 } from '../../../design-system';
+import { AppDialog } from '../../../app/components/AppDialog';
 import { usePageHeader } from '../../../app/Shell';
 import { useToast } from '../../../app/ToastHost';
 import { OUTLINED_GOLD_BADGE, OwnerAvatar } from '../../../app/components/badges';
@@ -599,7 +599,7 @@ export default function Timesheets() {
       </Card>
 
       {submitting && myDrafts.length > 0 && (
-        <Dialog
+        <AppDialog
           open
           width={460}
           title={`Submit the week of ${dateShort(week.from)}`}
@@ -623,7 +623,7 @@ export default function Timesheets() {
       )}
 
       {deleting && (
-        <Dialog
+        <AppDialog
           open
           width={460}
           title="Delete this draft?"
@@ -647,7 +647,7 @@ export default function Timesheets() {
       )}
 
       {sendingBack && (
-        <Dialog
+        <AppDialog
           open
           width={480}
           title="Send these hours back?"
@@ -681,7 +681,7 @@ export default function Timesheets() {
               placeholder="A sentence is enough."
             />
           </Field>
-        </Dialog>
+        </AppDialog>
       )}
 
       {historyEntry && <HistoryDialog entry={historyEntry} onClose={() => setHistoryOf(null)} />}

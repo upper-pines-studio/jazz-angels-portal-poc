@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Field, Input, Textarea } from '../../../../design-system';
+import { Button, Field, Input, Textarea } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { useStore } from '../../../../core';
 import type { Grant, Phase, Transition, TransitionPayload } from '../../domain';
 import { useToast } from '../../../../app/ToastHost';
@@ -69,7 +70,7 @@ export function TransitionDialog({
   };
 
   return (
-    <Dialog
+    <AppDialog
       open
       title={transition.label}
       description={WHAT_HAPPENS[transition.to]}
@@ -141,6 +142,6 @@ export function TransitionDialog({
           )}
         </DialogFields>
       )}
-    </Dialog>
+    </AppDialog>
   );
 }

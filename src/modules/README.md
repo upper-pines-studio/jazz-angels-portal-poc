@@ -138,8 +138,17 @@ The import side of rules 1 and 2 is lint-enforced: `npm run lint` fails when a
 module imports another module's folder other than its `index.ts`, when core imports from
 `modules/`, when the registry or `src/app/` reach past a module's `index.ts`,
 when anything other than `core/repository.ts` and `core/auth.ts` mentions
-`localStorage`, or when a screen calls `new Date()` with no arguments. The
-rules live in `eslint.config.js` at the repo root.
+`localStorage`, when a screen calls `new Date()` with no arguments, or when
+anything imports `Dialog` from the design system. The rules live in
+`eslint.config.js` at the repo root.
+
+A dialog is an `AppDialog` (`src/app/components/AppDialog.tsx`), never the
+design-system `Dialog` directly. It takes the same props, looks the same, and
+adds what a keyboard or screen-reader user needs: focus moves in to the first
+field (or first button; mark another control `data-autofocus` to start
+there), Tab stays inside, Escape closes it, focus goes back to what opened it,
+and the box is a named `role="dialog"`. Pass `busy` while a save is under way
+to keep Escape, the × and the scrim from closing it.
 
 Rail sections with the same name merge, in registry order. **Office** is where
 Timesheets and core's Settings meet, so Settings is always its last item.

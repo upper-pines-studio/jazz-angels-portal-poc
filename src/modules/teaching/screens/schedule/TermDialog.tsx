@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
+import { Button, Field, Input, Select } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { useToast } from '../../../../app/ToastHost';
 import { classProgramOptions, dateRange, programName, useStore } from '../../../../core';
 import { termProblems, weeksBetween } from '../../domain';
@@ -56,7 +57,7 @@ export default function TermDialog({ term, onClose }: { term?: Term; onClose: ()
   };
 
   return (
-    <Dialog
+    <AppDialog
       open
       title={term ? 'Edit session' : 'Add session'}
       description={
@@ -140,6 +141,6 @@ export default function TermDialog({ term, onClose }: { term?: Term; onClose: ()
           />
         </Field>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }

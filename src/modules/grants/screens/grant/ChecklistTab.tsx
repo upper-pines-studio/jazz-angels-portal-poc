@@ -3,7 +3,6 @@ import {
   Badge,
   Button,
   Checkbox,
-  Dialog,
   EmptyState,
   Field,
   Icon,
@@ -11,6 +10,7 @@ import {
   ProgressBar,
   Select,
 } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { dateShort, pickable, useCan, useStore } from '../../../../core';
 import { PHASES, PHASE_ORDER, checklistProgress } from '../../domain';
 import type { Grant, Phase, Task } from '../../domain';
@@ -281,7 +281,7 @@ function AddTaskDialog({
   const [assigneeId, setAssigneeId] = React.useState(grant.ownerId);
 
   return (
-    <Dialog
+    <AppDialog
       open
       title="Add task"
       description="One thing that has to happen on this grant."
@@ -333,6 +333,6 @@ function AddTaskDialog({
           />
         </Field>
       </DialogFields>
-    </Dialog>
+    </AppDialog>
   );
 }

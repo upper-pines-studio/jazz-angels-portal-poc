@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Field, Icon, IconButton, Select } from '../../../../design-system';
+import { Button, Field, Icon, IconButton, Select } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { useCan, useStore } from '../../../../core';
 import { awardLetter, grantFiles, isPostAward } from '../../domain';
 import type { Grant, GrantFile, GrantFileKind } from '../../domain';
@@ -152,7 +153,7 @@ export function StoredFiles({ grant }: { grant: Grant }) {
       )}
 
       {picked && mayEdit && (
-        <Dialog
+        <AppDialog
           open
           title={picked.length === 1 ? 'Store this file' : `Store ${picked.length} files`}
           description={`Say what each file is. It is kept with ${grant.title}.`}
@@ -207,7 +208,7 @@ export function StoredFiles({ grant }: { grant: Grant }) {
               );
             })}
           </DialogFields>
-        </Dialog>
+        </AppDialog>
       )}
       {viewing && <FileViewerDialog file={viewing} onClose={() => setViewing(null)} />}
     </>

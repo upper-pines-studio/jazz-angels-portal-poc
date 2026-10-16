@@ -246,3 +246,41 @@ test('the row menu works from the keyboard', async ({ page }) => {
     dialog(page, 'History').getByText(`Mon Sep 7, Albert Alva, ${activity}`),
   ).toBeVisible();
 });
+
+test('send back from the row menu works from the keyboard alone', async ({ page }) => {
+  // Albert's Monday chart prep, approved in the seed.
+  const activity = 'Chart prep for the fall books';
+  await freshStart(page, 'keisha');
+  await page.goto('/timesheets');
+
+  const more = entryRow(page, activity).getByRole('button', { name: 'More for these hours' });
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitem', { name: 'Send back' })).toBeFocused();
+  await page.keyboard.press('Enter');
+
+  // The dialog is announced as one, and the reason box has focus: type straight away.
+  const confirm = dialog(page, 'Send these hours back?');
+  await expect(confirm).toHaveAttribute('aria-modal', 'true');
+  const reason = field(confirm, 'What needs fixing', 'textarea');
+  await expect(reason).toBeFocused();
+  await page.keyboard.type('Two hours, not three.');
+  await expect(reason).toHaveValue('Two hours, not three.');
+
+  // Tab and Shift+Tab go round inside it: the reason, Cancel, Send back, the ×.
+  const close = confirm.getByRole('button', { name: 'Close' });
+  await page.keyboard.press('Tab');
+  await expect(confirm.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(confirm.getByRole('button', { name: 'Send back' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(close).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(confirm.getByRole('button', { name: 'Send back' })).toBeFocused();
+
+  // Escape closes it as the × does, and focus is back on the row's "…".
+  await page.keyboard.press('Escape');
+  await expect(confirm).toHaveCount(0);
+  await expect(entryRow(page, activity).getByText('Approved', { exact: true })).toBeVisible();
+  await expect(more).toBeFocused();
+});

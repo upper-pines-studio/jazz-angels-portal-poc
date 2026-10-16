@@ -10,7 +10,7 @@ per module.
 - `npm run dev` — demo on, http://localhost:5181; set `PORT` to use another (`PORT=5190 npm run dev`, or `PORT=` in `.env.local`) so worktrees run side by side. `VITE_DEMO=0 npm run dev` starts empty
 - `npm run build` — typecheck + vite build, demo off (empty) unless `VITE_DEMO=1 npm run build`. Netlify runs it with `VITE_DEMO = "1"` from `netlify.toml`, so the published site is the demo
 - `npm run preview` — serves the last `dist/` build on http://localhost:4173 (`npx vite preview --port 5318` for another port), to check a production build
-- `npm test` — vitest (core and module domain layers only)
+- `npm test` — vitest (core and module domain layers, and the dialog focus helper)
 - `npm run test:e2e` — Playwright smoke tests in `e2e/`, headless; starts the dev server on `PORT` (`PORT=5207 npm run test:e2e`) with the demo on. Needs `npx playwright install chromium` once. The sign-in spec reads `DEMO_<ROLE>_USERNAME`/`DEMO_<ROLE>_PASSWORD` (from `.env.local`) and skips a role whose password is unset
 - `npm run lint` — ESLint over `src/` (the module boundaries, localStorage only in core, no bare `new Date()` in screens), then `prettier --check`
 - `npm run format` — Prettier over the TypeScript in `src/` and the root config files; run it before `npm run lint`
@@ -39,4 +39,5 @@ per module.
 - QuickBooks is read-only: people assign its transactions, nothing is written back. An assigned transaction's parts are the `Expense` rows carrying its `transactionId`.
 - A page with a docked right-hand panel uses `WithPanel` and `SidePanel` from `src/app/components/SidePanel.tsx`.
 - Dialog renders `position:absolute`; the scrolling `main` in Shell is `position:relative` so dialogs scope to it.
+- A dialog is `AppDialog` from `src/app/components/AppDialog.tsx`, never the design-system `Dialog` (lint): same props and look, plus focus in, Tab trapped, Escape, focus back, `role="dialog"`.
 - Lucide icons come from the CDN tag in `index.html` via the `Icon` component; call `window.lucide.createIcons()` after renders that add icons (App does this in an effect).

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
+import { Button, Field, Input, Select } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { useToast } from '../../../../app/ToastHost';
 import { activeOnly, classProgramOptions, placeLabel, useStore } from '../../../../core';
 import type { ProgramId } from '../../../../core';
@@ -84,7 +85,7 @@ export default function EnrollStudentDialog({
   };
 
   return (
-    <Dialog
+    <AppDialog
       open={open}
       title="Enroll student"
       description="Name, instrument and a guardian we can reach. The rest can wait."
@@ -154,6 +155,6 @@ export default function EnrollStudentDialog({
           />
         </Field>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }

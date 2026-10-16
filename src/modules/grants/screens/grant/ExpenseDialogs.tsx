@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Field, Input, Select } from '../../../../design-system';
+import { Button, Field, Input, Select } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { money, useStore } from '../../../../core';
 import { grantLines } from '../../domain';
 import type { Expense, Grant } from '../../domain';
@@ -65,7 +66,7 @@ export function LogExpenseDialog({
 
   if (lines.length === 0) {
     return (
-      <Dialog
+      <AppDialog
         open
         title="Log an expense by hand"
         onClose={onClose}
@@ -80,12 +81,12 @@ export function LogExpenseDialog({
           This grant has no budget lines yet, so there is nowhere to count an expense. Add the lines
           on the Budget tab first.
         </p>
-      </Dialog>
+      </AppDialog>
     );
   }
 
   return (
-    <Dialog
+    <AppDialog
       open
       title="Log an expense by hand"
       onClose={onClose}
@@ -157,7 +158,7 @@ export function LogExpenseDialog({
         </DialogFields>
         <button type="submit" hidden />
       </form>
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -179,7 +180,7 @@ export function ReassignDialog({
   const same = lineId === expense.budgetLineId;
 
   return (
-    <Dialog
+    <AppDialog
       open
       title="Move to another budget line"
       onClose={onClose}
@@ -209,6 +210,6 @@ export function ReassignDialog({
           }))}
         />
       </Field>
-    </Dialog>
+    </AppDialog>
   );
 }

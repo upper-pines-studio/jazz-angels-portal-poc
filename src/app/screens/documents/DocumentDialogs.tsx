@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Field, Icon, Input, Select } from '../../../design-system';
+import { Button, Field, Icon, Input, Select } from '../../../design-system';
+import { AppDialog } from '../../components/AppDialog';
 import { useToast } from '../../ToastHost';
 import { countPdfPages, describeFile, fileFacts, FileDrop } from '../../components/files';
 import {
@@ -149,7 +150,7 @@ export function AddDocumentDialog({
   }
 
   return (
-    <Dialog
+    <AppDialog
       open
       width={520}
       title="Add document"
@@ -184,7 +185,7 @@ export function AddDocumentDialog({
           onExpires={setExpires}
         />
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -221,7 +222,7 @@ export function AddVersionDialog({
   }
 
   return (
-    <Dialog
+    <AppDialog
       open
       width={520}
       title="Add version"
@@ -246,7 +247,7 @@ export function AddVersionDialog({
           onExpires={setExpires}
         />
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -272,7 +273,7 @@ export function EditDocumentDialog({
   }
 
   return (
-    <Dialog
+    <AppDialog
       open
       width={480}
       title="Edit document"
@@ -301,6 +302,6 @@ export function EditDocumentDialog({
           <Input value={name} onChange={e => setName(e.target.value)} />
         </Field>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }

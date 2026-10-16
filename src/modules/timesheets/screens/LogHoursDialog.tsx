@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, Field, Input, Select } from '../../../design-system';
+import { Button, Field, Input, Select } from '../../../design-system';
+import { AppDialog } from '../../../app/components/AppDialog';
 import type { InputProps } from '../../../design-system';
 import { programOptions, useStore } from '../../../core';
 import type { ProgramId } from '../../../core';
@@ -76,7 +77,7 @@ export default function LogHoursDialog({
       : 'This is still a draft. Submit it with the rest of the week.';
 
   return (
-    <Dialog
+    <AppDialog
       open
       title={title}
       description={description}
@@ -139,6 +140,6 @@ export default function LogHoursDialog({
           />
         </Field>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }

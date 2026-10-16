@@ -1,5 +1,6 @@
 import React from 'react';
-import { Badge, Button, Card, Dialog, Icon } from '../../../../design-system';
+import { Badge, Button, Card, Icon } from '../../../../design-system';
+import { AppDialog } from '../../../../app/components/AppDialog';
 import { useCan, useStore } from '../../../../core';
 import { className, grantById, syncedLabel } from '../../domain';
 import { KV } from '../../../../app/components/badges';
@@ -215,7 +216,7 @@ export function QuickBooksCard() {
       </Card>
 
       {connecting && mayConnect && (
-        <Dialog
+        <AppDialog
           open
           title="Connect QuickBooks Online"
           width={480}
@@ -273,7 +274,7 @@ export function QuickBooksCard() {
               QuickBooks is read-only here. The portal never changes anything in it.
             </p>
           </div>
-        </Dialog>
+        </AppDialog>
       )}
     </>
   );
