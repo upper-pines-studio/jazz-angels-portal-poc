@@ -1,7 +1,7 @@
 # Jazz Angels Portal — POC
 
 Staff portal for Jazz Angels (youth jazz education nonprofit): a shared core plus one module per
-office workflow (grants, teaching, timesheets). React 18 + TypeScript + Vite, react-router 6,
+office workflow (grants, teaching, timesheets). React 18 + TypeScript + Vite, react-router 7,
 date-fns, vitest. No backend: state lives in localStorage behind `src/core/repository.ts`, one key
 per module.
 

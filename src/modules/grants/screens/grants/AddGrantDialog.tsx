@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useToast } from '../../../../app/ToastHost';
 import { Eyebrow } from '../../../../app/components/badges';
 import {

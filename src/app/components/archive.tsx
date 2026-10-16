@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { Badge, Button, Icon, Switch } from '../../design-system';
 import { AppDialog } from './AppDialog';
 import { dateLong, staffById, useStore } from '../../core';

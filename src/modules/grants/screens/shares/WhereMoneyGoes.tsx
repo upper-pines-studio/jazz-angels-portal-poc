@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Button, Card, Field, Input, Select } from '../../../../design-system';
 import {
   activeOnly,

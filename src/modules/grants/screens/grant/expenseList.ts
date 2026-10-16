@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { useStore } from '../../../../core';
 import type { PortalState } from '../../../../core';
 import { grantExpenses } from '../../domain';

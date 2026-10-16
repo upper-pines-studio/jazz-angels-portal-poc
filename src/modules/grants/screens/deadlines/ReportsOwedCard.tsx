@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { format, parseISO } from 'date-fns';
 import { Badge, Card, EmptyState, Icon } from '../../../../design-system';
 import { dateShort, useCan, useStore } from '../../../../core';

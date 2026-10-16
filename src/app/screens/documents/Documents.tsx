@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { usePageHeader } from '../../Shell';
 import { useToast } from '../../ToastHost';
 import { TableScroll } from '../../components/TableScroll';

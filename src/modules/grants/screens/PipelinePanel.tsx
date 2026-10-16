@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Button, Card, EmptyState, Icon } from '../../../design-system';
 import { useCan, useStore } from '../../../core';
 import { PHASES, pipelineCounts } from '../domain';

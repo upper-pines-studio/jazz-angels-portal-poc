@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Button, Input, Select } from '../../../../design-system';
 import { money, plainNumber, useStore } from '../../../../core';
 import { accountLabel, accountUsedBy, lineMatched, moveTargets } from '../../domain';

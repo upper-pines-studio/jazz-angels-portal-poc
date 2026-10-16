@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router';
 import { StoreProvider, useStore } from '../core';
 import type { ModuleRoute } from '../core';
 import { MODULES } from '../modules';

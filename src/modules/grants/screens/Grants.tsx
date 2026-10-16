@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 import { usePageHeader } from '../../../app/Shell';
 import { PhaseBadge, DeadlineStatusBadge } from './badges';
 import { OwnerAvatar } from '../../../app/components/badges';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Badge, Button, Field, Input, Select } from '../../../../design-system';
 import {
   fundingSummary,

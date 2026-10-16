@@ -42,7 +42,7 @@ not sent.
 
 ## How it is built
 
-- React 18 + TypeScript + Vite, react-router 6, date-fns. No backend for the POC.
+- React 18 + TypeScript + Vite, react-router 7, date-fns. No backend for the POC.
 - **Core** (`src/core/`) owns the shared nouns — staff, programs, the fiscal year, the settings —
   plus the store and the formatting helpers. `useStore()` gives every screen
   `{ state, today, actions }`, namespaced by module: `state.grants.grants`,

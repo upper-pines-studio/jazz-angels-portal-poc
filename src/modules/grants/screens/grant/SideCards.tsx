@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Badge, Button, Card, Field, Input, Select, Textarea } from '../../../../design-system';
 import { AppDialog } from '../../../../app/components/AppDialog';
 import {

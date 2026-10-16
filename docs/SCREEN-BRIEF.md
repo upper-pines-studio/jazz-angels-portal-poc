@@ -1,6 +1,6 @@
 # Screen-building brief (for implementation agents)
 
-You are implementing screens of the Jazz Angels Grants POC: React 18 + TypeScript + Vite + react-router 6.
+You are implementing screens of the Jazz Angels Grants POC: React 18 + TypeScript + Vite + react-router 7.
 Working directory: /Users/nhuttran/Projects/jazz-angels/ja-portal-poc
 
 ## Read first, in this order
@@ -13,7 +13,7 @@ Working directory: /Users/nhuttran/Projects/jazz-angels/ja-portal-poc
 
 ## Rules
 - Use the design-system components (`Card, DataTable, Badge, Button, Icon, Tabs, Input, Select, Textarea, Field, Checkbox, Switch, ProgressBar, StatCard, Dialog, EmptyState, Avatar, Tooltip, IconButton, Tag`). Style layout glue with inline `style={{}}` using tokens (`var(--space-4)`, `var(--blue-500)`, `var(--type-body-sm)`). No new colours, no CSS files, no utility classes, no new npm packages.
-- Every screen: `export default function X()`, calls `usePageHeader({ title, subtitle, crumbs?, actions? })` once. Navigation via `useNavigate()` / `useParams()` from react-router-dom.
+- Every screen: `export default function X()`, calls `usePageHeader({ title, subtitle, crumbs?, actions? })` once. Navigation via `useNavigate()` / `useParams()` from react-router.
 - Money via `money()`, dates via `dateShort/dateLong/dateRange`, never `toLocaleDateString`.
 - `DataTable` rows need an `id`; pass `onRowClick` for navigation. Column `render` gets the row.
 - `Input`/`Select`/`Textarea` are controlled with `value` + `onChange(e)`; `Checkbox`/`Switch` use `onChange(next: boolean)`.

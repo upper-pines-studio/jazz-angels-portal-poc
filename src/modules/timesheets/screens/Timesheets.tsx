@@ -1,6 +1,6 @@
 import React from 'react';
 import { addWeeks, format } from 'date-fns';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import {
   Badge,
   Button,
