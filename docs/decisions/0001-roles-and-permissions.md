@@ -41,6 +41,10 @@ director's role and gets a teacher's view of their own classes on top.
 | QuickBooks: connect | Yes | – | – | – | – | – | – |
 | QuickBooks: sync | Yes | Yes | Yes | Yes | – | – | – |
 
+Import (and the demo's reset) exists only while the data lives in the browser. On the backend it
+is not offered to anyone, the Admin included, because it would delete rows (decision 0008, 3C;
+#125). Export stays the Admin's.
+
 ## Rules that hold for every role
 
 - Nobody approves their own hours. The seed already works this way: Denise approves Barry's.
