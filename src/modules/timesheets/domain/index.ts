@@ -7,3 +7,4 @@ export * from './types';
 export * from './derive';
 export * from './seed';
 export * from './slice';
+export * from './tables';
