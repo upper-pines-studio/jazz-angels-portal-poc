@@ -1,3 +1,4 @@
+import { insertRow } from '../../../core/module';
 import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import {
   PARAMOUNT_MS_VENUE_ID,
@@ -91,12 +92,9 @@ export function reducer(state: TeachingState, action: TeachingAction): TeachingS
     case 'batch':
       return action.actions.reduce(reducer, state);
 
-    case 'insert': {
-      const rows = state[action.key] as Row[];
+    case 'insert':
       // Sent twice (a retry), it is still one row.
-      if (rows.some(row => row.id === action.item.id)) return state;
-      return { ...state, [action.key]: [...rows, action.item] };
-    }
+      return insertRow(state, action.key, action.item);
 
     case 'update': {
       const rows = state[action.key] as Row[];

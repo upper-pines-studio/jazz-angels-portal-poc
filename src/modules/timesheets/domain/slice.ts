@@ -1,3 +1,4 @@
+import { insertRow } from '../../../core/module';
 import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import type { PortalState } from '../../../core/types';
 import {
@@ -73,8 +74,7 @@ export function reducer(state: TimesheetsState, action: TimesheetsAction): Times
 
     case 'insert':
       // Sent twice (a retry), it is still one entry.
-      if (rows.some(e => e.id === action.item.id)) return state;
-      return { ...state, entries: [...rows, action.item] };
+      return insertRow(state, 'entries', action.item);
 
     case 'update': {
       if (!rows.some(e => e.id === action.id)) return state;
