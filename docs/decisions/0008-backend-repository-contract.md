@@ -1,7 +1,8 @@
 # 0008 How the backend Repository writes rows
 
-**Status:** Proposed, awaiting a decision (#115). Nothing here is built or decided. Each question
-below ends with a recommendation and an empty Decision line for the owner.
+**Status:** Decided, October 2026 (#115). The owner took the option this record argued for on
+each of the four questions. None of it is built yet; the work is in the issues under
+[What changes](#what-changes). The options not taken stay below, with why.
 
 ## Why
 
@@ -19,7 +20,7 @@ Four questions, which depend on each other (see [How the answers fit](#how-the-a
 3. Do import and reset run as one transaction?
 4. What format do ids use?
 
-What stays fixed whatever is chosen: there is no offline queue, a change is saved or it fails,
+What stayed fixed whatever was chosen: there is no offline queue, a change is saved or it fails,
 and a failed change is rolled back and says so (decision [0003](0003-no-offline.md)); nothing on
 the eleven archivable tables is ever deleted (decision [0002](0002-archive-not-delete.md)); the
 screens hide what the database refuses anyway, so the database enforces decision
@@ -159,16 +160,18 @@ transaction and returns the rows it wrote; the client replaces its optimistic ro
 - Retry: needs an idempotency key per command, since a toggle sent twice still toggles twice.
 - Can be mixed with A: diff by default, a command for the few changes a diff cannot check.
 
-### Recommendation
+### Why this one
 
-**Recommended: A**, a row diff worked out in core from `before` and `next`, writing only changed
-columns, with updates and deletes refused when the row changed since it was read. It fixes every
+**A**, a row diff worked out in core from `before` and `next`, writing only changed columns,
+with updates and deletes refused when the row changed since it was read. It fixes every
 compound action at once without touching a reducer, it is idempotent on retry, it keeps
 SCHEMA.md and its row rules, and it answers question 2 for free. B is a good clean-up to do
 anyway (it makes the diff match the action one to one), but it is not needed for correctness.
 Keep D in reserve for a change a diff cannot check; none is known today.
 
-**Decision:**
+**Decision:** A. Core works out a row diff from `before` and `next` and hands it to `apply`; an
+update or delete names the old values of the columns it changes, and the server refuses it on a
+mismatch, with no version column (#122, #124).
 
 ## 2. How is a cleared field sent?
 
@@ -229,12 +232,13 @@ derive functions and screens, and patches set `null`.
   and every `?.` and `!== undefined` that reads them. Matches the database one to one, which
   makes the load mapping trivial, but buys little that A does not.
 
-### Recommendation
+### Why this one
 
-**Recommended: A** if 1A is chosen; **B** if the action stays the payload. Keep `undefined` in
-state. Either way, a test per clearing action asserts that what is sent clears the column.
+**A**, since 1A was chosen; B would have been needed had the action stayed the payload. Keep
+`undefined` in state. Either way, a test per clearing action asserts that what is sent clears the column.
 
-**Decision:**
+**Decision:** A. A column that lost its value is sent as `null` by the diff, state keeps
+`undefined`, and a `null` read back from the database becomes a missing field (#122, #123).
 
 ## 3. Do import and reset run as one transaction?
 
@@ -286,13 +290,14 @@ an empty office" step, run once, not a button in Settings.
   Add grant. None of these needs a whole-portal import.
 - Fits 0002: nothing is deleted.
 
-### Recommendation
+### Why this one
 
-**Recommended: C.** A whole-portal replace contradicts 0002 on a live database, and 0004 never
+**C.** A whole-portal replace contradicts 0002 on a live database, and 0004 never
 needs one. If the owner wants the browser data carried over at switch-over, that is a one-time
 load into an empty database, decided and scripted then.
 
-**Decision:**
+**Decision:** C. Import and reset never reach the backend: Reset stays demo-only, Import JSON is
+hidden when the repository does not accept a whole-state replace, and Export stays (#125).
 
 ## 4. What format do ids use?
 
@@ -342,14 +347,15 @@ temporary id and swaps it when the save returns.
 - Retry: a resent insert makes a second row unless each request carries an idempotency key.
 - Works against the optimistic live store rather than with it; no benefit at this size.
 
-### Recommendation
+### Why this one
 
-**Recommended: A**, text ids made on the client: `prefix-` and the full 32 hex characters of
+**A**, text ids made on the client: `prefix-` and the full 32 hex characters of
 `crypto.randomUUID()`, no fallback. Seeded and derived ids stay. A derived id is allowed only
 inside the same change that inserts its parent, so it is unique whenever the parent's is.
 UUID v7 is worth it only if rows should sort by id; `activity` already sorts by `at`.
 
-**Decision:**
+**Decision:** A. Ids stay `text`, made on the client as the prefix and the full 32 hex
+characters of `crypto.randomUUID()`, with no fallback; seeded and derived ids stay (#126).
 
 ## How the answers fit
 
@@ -364,34 +370,29 @@ UUID v7 is worth it only if rows should sort by id; `activity` already sorts by 
 - **#114 is part of all of it.** Inserts that are safe to send twice, and ids from `ctx.newId`,
   are what make 1A and 4A safe on retry.
 
-## What changes once decided
+## What changes
 
-Written for the recommendations; each line could be an issue.
+Each follow-up is its own issue.
 
-1. `Repository.apply` receives the change as rows: core passes `before` and `next` to a differ
-   and hands the repository `{ table, inserts, updates, deletes }` per table, with the action as a
-   label. `localRepository` keeps writing `next` whole. Update `persistence.ts`, `live.ts` and
-   `src/core/README.md`.
-2. A row mapping per slice (core, grants, teaching, timesheets) that turns state into the tables
-   of SCHEMA.md and back: nested shapes to columns and child tables, a time entry's history to
-   `activity`, guardian fields to `student_private`. Round-trip tests against the seed.
-3. A generic differ in core with tests for every compound action above: `add-grant`,
-   `transition`, `toggle-task`, `duplicate-template`, `assign-transaction`,
-   `restore-transactions`, `move-expenses`, `set-transaction-status`, and each clearing action
-   (Restore, unlink a document, reopen a roll, a session back to All programs, submit after Send
-   back, Send back).
-4. Loading from rows: `null` becomes a missing field in every slice's `normalise`, not only the
-   archive fields.
-5. Refuse a stale write: updates and deletes carry what they expect to find (old values or a row
-   version), and the server refuses on mismatch. If a version column is chosen, add it to
-   SCHEMA.md.
-6. Keep `REPLACE` off the backend: the repository says whether it accepts a whole-state replace,
-   Settings hides Import JSON when it does not, Reset stays demo-only, Export stays.
-7. Full-length ids: `newId` keeps the whole UUID and drops the fallback; core's actions take ids
-   from `ctx.newId` (with #114). Note the derived-id rule in `src/core/README.md`.
-8. SCHEMA.md, once decided: the id format in "Conventions"; that a cleared field is written as
-   `null`; that one apply is one transaction across a slice's tables; the triggers for the rules
-   a row policy cannot express (transitions, never approving one's own, the closed roll,
-   Operations) and for the "by" columns.
-9. Optional clean-up (1B): rewrite the grants compound actions as `insert`, `update` and
-   `remove` batches built in `createActions`, as teaching and timesheets do.
+1. #122: `Repository.apply` receives the change as rows. Core passes `before` and `next` to a
+   differ and hands the repository `{ table, inserts, updates, deletes }` per table, with the
+   action as a label, and a cleared field as `null`; `localRepository` keeps writing `next` whole.
+   Tests for every compound action above and each clearing action (Restore, unlink a document,
+   reopen a roll, a session back to All programs, submit after Send back, Send back).
+2. #121: a row mapping per slice (core, grants, teaching, timesheets) that turns state into the
+   tables of SCHEMA.md and back: nested shapes to columns and child tables, a time entry's history
+   to `activity`, guardian fields to `student_private`. Round-trip tests against the seed.
+3. #123: loading from rows, where `null` becomes a missing field in every slice's `normalise`,
+   not only the archive fields.
+4. #124: refuse a stale write. Updates and deletes carry the old values of the columns they
+   change, and the server refuses on a mismatch; no version column.
+5. #125: keep `REPLACE` off the backend. The repository says whether it accepts a whole-state
+   replace, Settings hides Import JSON when it does not, Reset stays demo-only, Export stays.
+6. #126: full-length ids. `newId` keeps the whole UUID and drops the fallback; core's actions take
+   ids from `ctx.newId` (with #114). The derived-id rule goes in `src/core/README.md`.
+7. #127, optional: rewrite the grants compound actions as `insert`, `update` and `remove` batches
+   built in `createActions`, as teaching and timesheets do (option 1B as a clean-up).
+8. Done with this record (#115): `docs/SCHEMA.md` gives the id format, that a cleared field is
+   written as `null`, that one apply is one transaction across a slice's tables, how a stale write
+   is refused, and the triggers for the rules a row policy cannot express and for the "by"
+   columns.
