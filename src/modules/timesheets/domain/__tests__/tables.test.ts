@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { rebuildHistory } from '../derive';
 import { makeEmpty, makeSeed } from '../seed';
+import { timesheetsSlice } from '../slice';
 import { stepText, timesheetsTables } from '../tables';
 import type { TimeEntry } from '../types';
 
@@ -12,6 +13,10 @@ describe('timesheets tables (#121)', () => {
     const rows = timesheetsTables.toRows(state);
     expect(Object.keys(rows)).toEqual(Object.keys(timesheetsTables.keys));
     expect(timesheetsTables.fromRows(rows)).toEqual(state);
+  });
+
+  it('is the mapping on the timesheets slice', () => {
+    expect(timesheetsSlice.tables).toBe(timesheetsTables);
   });
 
   it("writes each step of an entry's history as an activity row on the entry", () => {

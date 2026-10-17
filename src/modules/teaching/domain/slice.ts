@@ -20,6 +20,7 @@ import {
 } from './derive';
 import { guardianRefusal, tidyAddress } from './guardian';
 import { makeEmpty, makeSeed } from './seed';
+import { teachingTables } from './tables';
 import type {
   AttendanceRecord,
   ClassMeeting,
@@ -389,6 +390,7 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
   id: 'teaching',
   seed: () => makeSeed(),
   empty: () => makeEmpty(),
+  tables: teachingTables,
   reducer(state, action) {
     if (!action.type.startsWith('teaching/')) return state;
     return reducer(state, {

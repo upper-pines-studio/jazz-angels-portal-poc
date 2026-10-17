@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeEmpty, makeSeed } from '../seed';
+import { teachingSlice } from '../slice';
 import { teachingTables } from '../tables';
 
 describe('teaching tables (#121)', () => {
@@ -10,6 +11,10 @@ describe('teaching tables (#121)', () => {
     const rows = teachingTables.toRows(state);
     expect(Object.keys(rows)).toEqual(Object.keys(teachingTables.keys));
     expect(teachingTables.fromRows(rows)).toEqual(state);
+  });
+
+  it('is the mapping on the teaching slice', () => {
+    expect(teachingSlice.tables).toBe(teachingTables);
   });
 
   it("keeps the guardian's details and the photo release in student_private, never on students", () => {

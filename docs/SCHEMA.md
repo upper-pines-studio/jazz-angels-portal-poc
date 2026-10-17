@@ -29,7 +29,11 @@ type turns out to be wrong for a table, file an issue rather than bend the table
   (`Grant.dates` becomes eight date columns, `Venue.address` four); a list becomes a child table
   (`Grant.programs` is `grant_programs`, `OfficeDocument.versions` is
   `office_document_versions`). A list of plain values that point at nothing stays an array
-  column: reminder offsets (`int[]`) and the modules switched on (`text[]`).
+  column: reminder offsets (`int[]`) and the modules switched on (`text[]`). The one `jsonb`
+  column is a time entry step's `activity.detail`, which only the History dialog reads.
+- **The mapping in code.** Each slice turns its state into these tables' rows and back
+  (`tables` on the slice, `src/core/rows.ts`, #121), so the row diff of decision 0008 knows
+  which table each change lands in.
 - **Singletons.** The office's settings, its QuickBooks connection and its reminder defaults are
   one row each.
 - **Nullable** is marked `null` in the diagrams and "yes" in the tables below; every other column

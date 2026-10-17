@@ -1,5 +1,6 @@
 import type React from 'react';
 import type { Requirement } from './permissions';
+import type { SliceTables } from './rows';
 import type { FundingTarget, PortalState, SignedInUser } from './types';
 
 /**
@@ -85,6 +86,12 @@ export interface ModuleSlice<S, A> {
    * refuses with a toast when the signed-in person's role may not (decision 0001).
    */
   rules: ActionRules<A>;
+  /**
+   * How the state maps onto its tables in `docs/SCHEMA.md` and back
+   * (decision 0008): rows by table, for a backend that writes rows. See
+   * `src/core/rows.ts`.
+   */
+  tables: SliceTables<S>;
   /**
    * Optional: validate and fill a loaded payload. Return undefined to reject it.
    * `demo` says whether this is a demo build, for a slice that fills a gap
