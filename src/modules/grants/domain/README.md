@@ -506,3 +506,21 @@ the next `syncQuickBooks()`, and nothing is ever written back.
 
 The seed reproduces `design/saas/SAAS-BRIEF.md` to the dollar and the day;
 `__tests__/money.test.ts` holds it to that.
+
+## As rows (`tables.ts`, #121)
+
+`grantsTables` turns the slice into the rows of the "Grants" and "Money" tables in
+`docs/SCHEMA.md` and back. What comes apart: `Grant.dates` and `broughtIn` are columns on
+`grants`; `Grant.programs` is `grant_programs`; a share's target is `target_kind` with
+`program_id` and `fiscal_year`, or `project_id`; a task's and an award term's `order` is
+`sort_order`; a template's items, a split rule's parts (numbered from 1 in `part`), a reminder
+plan's recipients, the defaults' `alsoNotifyIds` and a budget line's `accountCodes` are child
+tables; the log is `activity` rows with subject kind `grant`.
+
+- **Budget versions.** Every grant has its first budget, `budget_versions` number 1 with the id
+  `firstBudgetId(grant.id)` (`<grant id>-budget-1`), and a line's `planned` is its
+  `budget_line_amounts` row there (decision 0005, "Budget changes"). Read back, a line takes
+  the amount in its grant's highest-numbered version.
+- **QuickBooks.** One `quickbooks_connection` row; a blank company or last sync is `null`, and
+  reads back blank.
+- **Not stored.** `incoming`, the demo's stand-in for the next sync, reads back empty.

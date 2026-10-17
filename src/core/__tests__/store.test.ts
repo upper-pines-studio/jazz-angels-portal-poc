@@ -30,6 +30,11 @@ const counter: ModuleSlice<CountState, { bump(): void }> = {
   reducer: (state, action) => (action.type === 'counter/bump' ? { count: state.count + 1 } : state),
   createActions: dispatch => ({ bump: () => dispatch({ type: 'counter/bump' }) }),
   rules: { bump: () => true },
+  tables: {
+    keys: { counters: ['id'] },
+    toRows: s => ({ counters: [{ id: 1, count: s.count }] }),
+    fromRows: t => ({ count: Number(t.counters?.[0]?.count ?? 0) }),
+  },
   normalise: raw =>
     raw && typeof (raw as CountState).count === 'number' ? (raw as CountState) : undefined,
 };
@@ -42,6 +47,11 @@ const notes: ModuleSlice<NoteState, { add(text: string): void }> = {
     action.type === 'notes/add' ? { notes: [...state.notes, String(action.text)] } : state,
   createActions: dispatch => ({ add: text => dispatch({ type: 'notes/add', text }) }),
   rules: { add: 'staff' },
+  tables: {
+    keys: { notes: ['id'] },
+    toRows: s => ({ notes: s.notes.map((text, i) => ({ id: i + 1, text })) }),
+    fromRows: t => ({ notes: (t.notes ?? []).map(r => String(r.text)) }),
+  },
 };
 
 const SLICES = [counter, notes] as unknown as PortalSlice[];

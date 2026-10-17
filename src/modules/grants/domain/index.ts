@@ -17,3 +17,4 @@ export * from './inflight';
 export * from './officeDocuments';
 export * from './renewals';
 export * from './slice';
+export * from './tables';

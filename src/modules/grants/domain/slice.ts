@@ -20,6 +20,7 @@ import {
 import { changeProblem, giveProblem, resolveTarget, shareTo } from './shares';
 import { availableTransitions, isPostAward, phaseLabel } from './phases';
 import { makeEmpty, makeSeed } from './seed';
+import { grantsTables } from './tables';
 import { instantiateDocumentRegister, instantiateTemplate } from './templates';
 import type { PortalState, ProgramId, Role } from '../../../core/types';
 import type {
@@ -1528,6 +1529,7 @@ export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
   id: 'grants',
   seed: () => makeSeed(),
   empty: () => makeEmpty(),
+  tables: grantsTables,
   reducer(state, action) {
     if (!action.type.startsWith('grants/')) return state;
     return reducer(state, { ...action, type: action.type.slice('grants/'.length) } as GrantsAction);

@@ -18,6 +18,7 @@ import {
   weekStart,
 } from './derive';
 import { makeEmpty, makeSeed } from './seed';
+import { timesheetsTables } from './tables';
 import type {
   TimeEntry,
   TimeEntryEvent,
@@ -287,6 +288,7 @@ export const timesheetsSlice: ModuleSlice<TimesheetsState, TimesheetsActions> = 
   id: 'timesheets',
   seed: () => makeSeed(),
   empty: () => makeEmpty(),
+  tables: timesheetsTables,
   reducer(state, action) {
     if (!action.type.startsWith('timesheets/')) return state;
     return reducer(state, {

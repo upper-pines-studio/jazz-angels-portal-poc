@@ -16,6 +16,7 @@ timesheets/
     seed.ts       the demo hours
     derive.ts     weeks, months, totals by program, own drafts, sent back, who may do what, history
     slice.ts      the reducer, the actions, the `declare module`
+    tables.ts     the entries as time_entries rows, their history as activity rows (#121)
   screens/
     Timesheets.tsx      /timesheets
     LogHoursDialog.tsx  Log hours, and Edit hours on your own draft

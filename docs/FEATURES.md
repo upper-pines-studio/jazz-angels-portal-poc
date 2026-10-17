@@ -151,7 +151,7 @@ Work that is known to be missing or wrong. Remove a line when it is fixed.
 
 | Gap | Where |
 | --- | --- |
-| No backend. Everything is localStorage behind the `Repository` interface; sign-in is a hash check in the browser. The schema the backend starts from is `docs/SCHEMA.md` (#22). | `core/repository.ts`, `core/auth.ts` |
+| No backend. Everything is localStorage behind the `Repository` interface; sign-in is a hash check in the browser. The schema the backend starts from is `docs/SCHEMA.md` (#22); each slice already turns its state into those tables' rows and back (its `tables`, #121), which nothing calls yet. | `core/repository.ts`, `core/auth.ts`, `core/rows.ts` |
 | Permissions are checked in the browser only; anyone with the dev tools can change their role. Row-level security comes with the backend; `docs/SCHEMA.md` lists it table by table (#22). | `core/permissions.ts` |
 | QuickBooks is simulated. No real connection, and a sync brings new transactions only once. | `grants/domain/seed-money.ts` (`INCOMING`), `slice.ts` (`sync`) |
 | The student import adds new students only. A name already in the portal is flagged and starts on Skip; nothing updates an existing student from a file. | `teaching/domain/import.ts` |

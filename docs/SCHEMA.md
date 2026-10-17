@@ -29,7 +29,11 @@ type turns out to be wrong for a table, file an issue rather than bend the table
   (`Grant.dates` becomes eight date columns, `Venue.address` four); a list becomes a child table
   (`Grant.programs` is `grant_programs`, `OfficeDocument.versions` is
   `office_document_versions`). A list of plain values that point at nothing stays an array
-  column: reminder offsets (`int[]`) and the modules switched on (`text[]`).
+  column: reminder offsets (`int[]`) and the modules switched on (`text[]`). The one `jsonb`
+  column is a time entry step's `activity.detail`, which only the History dialog reads.
+- **The mapping in code.** Each slice turns its state into these tables' rows and back
+  (`tables` on the slice, `src/core/rows.ts`, #121), so the row diff of decision 0008 knows
+  which table each change lands in.
 - **Singletons.** The office's settings, its QuickBooks connection and its reminder defaults are
   one row each.
 - **Nullable** is marked `null` in the diagrams and "yes" in the tables below; every other column
@@ -170,6 +174,8 @@ erDiagram
     text who_id FK "null; staff"
     text who "null; a name saved before rows carried an id"
     text text
+    text kind "null; a time entry's step: logged | changed | submitted | recalled | approved | sent-back"
+    jsonb detail "null; a step's reason, changed fields, rebuilt and undated flags"
   }
 
   staff ||--o{ logins : "signs in as"
@@ -590,7 +596,7 @@ foreign keys; the modules still read each other only through their `index.ts`.
 | `GrantDocument.officeDocumentId` (grants to core) | `grant_documents.office_document_id`, nullable |
 | `Ensemble.venueId`, `ClassMeeting.venueId`, `Ensemble.leadStaffId`, every `programId` and staff id in a module | Foreign keys to the core tables |
 | `Activity.grantId` (grants' own log) | `activity.subject_kind = 'grant'` and `subject_id`, no foreign key, since the subject can be any kind |
-| `TimeEntry.history` (each entry's own steps, #95) | Rows of `activity` with `subject_kind = 'time-entry'` and `subject_id` the entry's id, one per step: `who_id` from `whoId`, `at` from the step's date, `text` from the step ("Approved", "Sent back: reason", "Changed: hours 1.25 to 1.50"). Until the backend they live on the entry, saved with it. A step rebuilt from an entry saved before #95 has no date for logged and submitted; it takes the entry's `date` as `at` when moved |
+| `TimeEntry.history` (each entry's own steps, #95) | Rows of `activity` with `subject_kind = 'time-entry'` and `subject_id` the entry's id, one per step: `who_id` from `whoId`, `at` from the step's date, `text` from the step ("Approved", "Sent back: reason", "Changed: hours 1.25 to 1.50"). `kind` is the step's kind and `detail` what else it carries (a send back's `reason`, a change's `changes` with each field before and after, `rebuilt`), so the History dialog reads the step as it was recorded, not back out of `text` (#121). Until the backend they live on the entry, saved with it. A step rebuilt from an entry saved before #95 has no date for logged and submitted; it takes the entry's `date` as `at` when moved, and `detail.undated` says so |
 | `time_charges.grant_id` (timesheets to grants, 0005) | New: references `grants` |
 
 ## Archive, and no cascading deletes
