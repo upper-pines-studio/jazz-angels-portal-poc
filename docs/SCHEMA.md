@@ -16,7 +16,12 @@ type turns out to be wrong for a table, file an issue rather than bend the table
   `grants.amount_awarded`, `archivedById` is `archived_by`.
 - **Ids** are `text`, as today. The seeded ids stay (`studio-sessions`; Operations keeps
   `general-operating`, decision 0006), so saved data and exports load unchanged; new rows may get
-  generated ids.
+  generated ids. A generated id is made in the browser before the change is first sent, as a
+  prefix and the full 32 hex characters of `crypto.randomUUID()` (`g-3f9c…`, 122 random bits), so
+  a resent insert is an upsert of the same row (decision 0008, #126). An id derived from its
+  parent's (`<grant id>-t1` for a new grant's tasks, `<entry id>:1` for a time entry's steps) is
+  made only in the change that inserts the parent. Ids saved before this, 10 hex characters, stay
+  valid.
 - **Enums** are the type's string unions, kept as `text` with a check (or a Postgres enum). The
   diagrams list the values for reading; the type is the source of truth, and a value added there
   is added to the check.
@@ -28,7 +33,9 @@ type turns out to be wrong for a table, file an issue rather than bend the table
 - **Singletons.** The office's settings, its QuickBooks connection and its reminder defaults are
   one row each.
 - **Nullable** is marked `null` in the diagrams and "yes" in the tables below; every other column
-  is `not null`.
+  is `not null`. A cleared field is written as `null`: the browser keeps it as a missing field,
+  the change sent to the database names the column with `null`, and a `null` read back becomes a
+  missing field again (decision 0008, #122, #123).
 
 ## What is not stored
 
@@ -714,6 +721,29 @@ submitted (the store ignores a mark then; reopening the roll is the way to chang
   the grants slice where a change and its activity line save together (decision 0005, "One
   activity log"), and a time entry's steps stay on the entry for the same reason (#95). With the backend, a change and its `activity` row are written in one
   transaction.
+- **One apply, one transaction (decision 0008).** A change touches one slice, and the store
+  hands the backend one `apply` for it: the rows inserted, the columns updated and the rows
+  deleted, per table, worked out from the slice before and after (#122). The backend writes all
+  of it, across the slice's tables, in one transaction, or none of it. Import and reset (the
+  whole portal replaced) never reach the database (#125).
+- **A stale write is refused (decision 0008, #124).** An update names the old values of the
+  columns it changes, and a delete the row as it was read; the database refuses the write when
+  the row no longer matches, and the browser rolls the change back and says so (decision 0003).
+  There is no version column.
+- **Triggers for what a row policy cannot express.** A policy sees the old row or the new one,
+  never both, so these are `before update` (or `before insert`) triggers, refusing with a
+  sentence the screen can show:
+  - **Transitions:** a time entry changes only while a draft, moves only draft to submitted,
+    submitted to draft, submitted to approved or approved to draft; nobody changes or deletes an
+    approved entry; Send back requires `sent_back_reason`; a report is deleted only before it is
+    sent, a payment only before it is received.
+  - **Never approving one's own entry:** an approval is refused when `approved_by` would equal
+    `staff_id`; Send back the same.
+  - **The closed roll:** no `attendance` row is inserted, changed or deleted once its meeting's
+    `roll_submitted_at` is set.
+  - **Operations:** `general-operating` is never archived, renamed or made in-school.
+  - **The "by" columns:** every column in "Who did it" above is overwritten with the signed-in
+    person's staff id, whatever the change sent.
 - **Sessions on one line never overlap (decision 0007, #83).** A term's line is its `program_id`,
   with null (a session for all programs) treated as one value of its own. Two current terms on
   one line may not share a day; terms on different lines may. An archived term counts toward no
