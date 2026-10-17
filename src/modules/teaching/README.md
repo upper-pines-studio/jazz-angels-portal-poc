@@ -55,6 +55,13 @@ Dates are ISO `YYYY-MM-DD`; times are 24-hour `HH:MM` and are read back through
 `timeLabel('16:00') === '4:00pm'`. **Present and late both count as turning
 up** — that is the one rule every rate in here follows.
 
+**As rows** (`domain/tables.ts`, #121). `teachingTables` writes `terms`, `ensembles`,
+`class_meetings` (`start` and `end` as `start_time` and `end_time`), `students`,
+`student_private` and `attendance`. A student is two rows: the roster on `students`, and the
+guardian's name, phone, email and address (four columns) with the photo release on
+`student_private`, so the database can keep them from whoever `asSeenBy` keeps them from today.
+A student read back without a private row has no guardian on file and the release Not asked yet.
+
 ## Actions
 
 | Action | What it does |

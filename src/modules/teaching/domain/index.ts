@@ -9,3 +9,4 @@ export * from './guardian';
 export * from './import';
 export * from './seed';
 export * from './slice';
+export * from './tables';
