@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { archiveFields, isArchived, normaliseArchived, restoreFields } from './archive';
+import { clockToday, watchToday } from './clock';
 import { DEMO_TODAY_KEY, demoTodayFrom, demoTodayToStore, isDemo } from './demo';
 import {
   OPERATIONS_ARCHIVE_REFUSAL,
@@ -20,7 +21,6 @@ import {
   officeDocumentVersionProblem,
   versionFields,
 } from './documents';
-import { toISO } from './format';
 import type { ActionRules, AnyAction, ModuleSlice } from './module';
 import { OWN_ROLE_REFUSAL, can, mayChangeStaff } from './permissions';
 import type { Need, Subject } from './permissions';
@@ -690,29 +690,55 @@ export interface StoreProviderProps {
  */
 export function StoreProvider(props: StoreProviderProps) {
   const { slices, today: fixedToday, demo = isDemo(), repository: repo = localRepository } = props;
-  const clock = useMemo(() => fixedToday ?? toISO(new Date()), [fixedToday]);
+  // The real date moves on past midnight, so a tab left open overnight does
+  // not save yesterday on an archive, a task or an hours entry.
+  const [realToday, setRealToday] = React.useState(() => clockToday());
+  useEffect(() => {
+    if (fixedToday) return;
+    return watchToday(realToday, setRealToday);
+  }, [fixedToday]);
+  const clock = fixedToday ?? realToday;
   const all = useMemo<PortalSlice[]>(() => [coreSlice as PortalSlice, ...(slices ?? [])], [slices]);
-  const [loaded, setLoaded] = React.useState<{ all: PortalSlice[]; state: PortalState }>();
+  const [loaded, setLoaded] = React.useState<Loaded>();
   // Why the load failed: the repository's own sentence when saved data could not be read.
   const [loadFailed, setLoadFailed] = React.useState<string>();
+  const generation = React.useRef(0);
+  // The last live store's `whenSaved`, kept after it unmounts so a reload can wait on it.
+  const lastWhenSaved = React.useRef<() => Promise<boolean>>();
 
+  // A new date does not reload: a slice reads today only when it starts fresh,
+  // and a reload would replace the live store with its saves still queued. The
+  // date reaches the actions through LiveProvider's `clock` instead. A new
+  // repository, demo mode or set of slices does reload, once the saves the last
+  // live store has in flight have landed (or failed and said so), so none is
+  // dropped silently and the new load reads them.
   useEffect(() => {
     let current = true;
-    Promise.all(all.map(slice => repo.load(slice, clock, demo))).then(
-      values => {
-        if (!current) return;
-        const state: Record<string, unknown> = {};
-        all.forEach((slice, i) => (state[slice.id] = values[i]));
-        setLoaded({ all, state: state as unknown as PortalState });
-      },
-      (error: unknown) => {
-        if (current) setLoadFailed(error instanceof UnreadableDataError ? error.message : '');
-      },
-    );
+    const settled = lastWhenSaved.current?.() ?? Promise.resolve(true);
+    settled
+      .then(() => Promise.all(all.map(slice => repo.load(slice, clock, demo))))
+      .then(
+        values => {
+          if (!current) return;
+          const state: Record<string, unknown> = {};
+          all.forEach((slice, i) => (state[slice.id] = values[i]));
+          generation.current += 1;
+          setLoaded({
+            all,
+            repo,
+            demo,
+            state: state as unknown as PortalState,
+            generation: generation.current,
+          });
+        },
+        (error: unknown) => {
+          if (current) setLoadFailed(error instanceof UnreadableDataError ? error.message : '');
+        },
+      );
     return () => {
       current = false;
     };
-  }, [all, clock, demo, repo]);
+  }, [all, demo, repo]);
 
   if (loadFailed !== undefined)
     return (
@@ -720,17 +746,31 @@ export function StoreProvider(props: StoreProviderProps) {
         The portal could not load its data. {loadFailed || 'Reload the page to try again.'}
       </p>
     );
-  if (!loaded || loaded.all !== all) return null;
+  // Nothing renders between a change and its load, so no change goes to the old repository.
+  if (!loaded || loaded.all !== all || loaded.repo !== repo || loaded.demo !== demo) return null;
   return (
     <LiveProvider
+      // Each load gets its own live store, built from that load's state and repository.
+      key={loaded.generation}
       {...props}
       all={all}
       initial={loaded.state}
       clock={clock}
       demo={demo}
       repo={repo}
+      whenSavedRef={lastWhenSaved}
     />
   );
+}
+
+/** One finished load, with what it was loaded for, so a stale one never shows. */
+interface Loaded {
+  all: PortalSlice[];
+  repo: Repository;
+  demo: boolean;
+  state: PortalState;
+  /** Counts the loads; LiveProvider's key. */
+  generation: number;
 }
 
 interface LiveProviderProps extends StoreProviderProps {
@@ -739,6 +779,8 @@ interface LiveProviderProps extends StoreProviderProps {
   clock: string;
   demo: boolean;
   repo: Repository;
+  /** Where the live store's `whenSaved` is left for the next reload to wait on. */
+  whenSavedRef: React.MutableRefObject<(() => Promise<boolean>) | undefined>;
 }
 
 function LiveProvider({
@@ -752,6 +794,7 @@ function LiveProvider({
   onUnknownUser,
   onRefused,
   onSaveFailed,
+  whenSavedRef,
   children,
 }: LiveProviderProps) {
   const failedRef = React.useRef(onSaveFailed);
@@ -765,6 +808,7 @@ function LiveProvider({
       onSaveFailed: message => failedRef.current?.(message),
     }),
   );
+  whenSavedRef.current = live.whenSaved;
   const state = React.useSyncExternalStore(live.subscribe, live.getState);
   const saving = React.useSyncExternalStore(live.subscribe, live.getSaving);
 

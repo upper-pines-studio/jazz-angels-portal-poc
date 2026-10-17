@@ -36,7 +36,9 @@ actions.grants.transition(id, 'submitted', { date: today });
   names a module.
 - `today: string` — today as `YYYY-MM-DD`: the demo date when the demo is on
   and this browser uses one, else the clock. Pass it to every derive function
-  rather than calling `new Date()` in a screen.
+  rather than calling `new Date()` in a screen. The clock moves on at local
+  midnight, and when the tab is shown again or gets focus (`clock.ts`), so a
+  tab left open overnight does not keep yesterday.
 - `demo: boolean`, `demoToday: string | undefined` — whether this is a demo
   build, and the demo date in use (Settings shows and moves it).
 - `user: SignedInUser` — `{ id, name, role }` of whoever is signed in, read
@@ -74,7 +76,11 @@ interface Repository {
 ```
 
 `StoreProvider` calls `load` once per slice when it mounts and renders nothing
-until they are all in. After that every change goes through `live.ts`:
+until they are all in. A new `repository`, `demo` or set of slices loads again:
+it waits for the saves still in flight, renders nothing meanwhile, then starts
+a new live store on the new load. A new day does not load again; a slice reads
+`today` only when it starts fresh. After the load every change goes through
+`live.ts`:
 
 1. `dispatch` runs the reducer and the screens see the change at once.
 2. Each slice the change touched is handed to `apply(sliceId, action, next)`:
@@ -148,6 +154,7 @@ carry it. Unset means the seed's day, `SEED_TODAY`; "Use the real date" stores
 | `live.ts` | `createLiveStore`: the state, the per-slice apply queue, the rollback, `Saving` and `whenSaved`. No React, so the tests drive it with a fake repository. |
 | `store.tsx` | `StoreProvider` (its `onRefused` shows a refused action's reason, its `onSaveFailed` a change that could not be saved, its `repository` defaults to localStorage), `useStore`, `useCan`, `coreSlice`, `guardActions` (wraps every slice's actions in its `rules`), `refusalMessage`, `newId`, `resolveToday`, `savedStaff()` (the staff list as saved, which sign-in reads before the store mounts). |
 | `demo.ts` | `isDemo()` (the `VITE_DEMO` switch), `DEMO_TODAY_KEY` and the demo-date preference helpers. |
+| `clock.ts` | The one reading of the device clock for today: `clockToday()`, `msUntilMidnight(now)`, and `watchToday(since, onChange)`, which calls back when the local day changes (at midnight, on `visibilitychange`, on `focus`). `StoreProvider` uses it. |
 | `roles.ts` | `ROLES`, `ROLE_LABELS` (the words the screens use: Admin, Director, Office manager, Bookkeeper, Teacher, Office assistant, Read-only), `isRole`. |
 | `archive.ts` | Decision 0002 in one place: `Archivable` (`archivedAt`, `archivedById`), `isArchived`, `archivedBy(record, date)` (archived on or before a day), `activeOnly`, `archivedOnly`, `withArchived(rows, include)` (current first, archived after), `pickable(rows, keepId)` (current, plus the one already chosen), `archiveFields(user, today)`, `restoreFields()`, `normaliseArchived` (every slice's `normalise` runs the nine archivable record types through it: the seven of decision 0002, plus sessions and programs). |
 | `documents.ts` | The office's documents (decision 0005); see "Office documents" below. |
