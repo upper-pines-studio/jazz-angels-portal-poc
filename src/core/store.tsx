@@ -28,7 +28,7 @@ import { REPLACE, createLiveStore } from './live';
 import type { Saving } from './live';
 import type { Repository } from './persistence';
 import * as repository from './repository';
-import { localRepository } from './repository';
+import { localRepository, UnreadableDataError } from './repository';
 import type { PortalSlice } from './repository';
 import { ROLE_LABELS, isRole } from './roles';
 import { DEFAULT_ENABLED_MODULES, loginStaff, makeCoreEmpty, makeCoreSeed } from './seed';
@@ -693,7 +693,8 @@ export function StoreProvider(props: StoreProviderProps) {
   const clock = useMemo(() => fixedToday ?? toISO(new Date()), [fixedToday]);
   const all = useMemo<PortalSlice[]>(() => [coreSlice as PortalSlice, ...(slices ?? [])], [slices]);
   const [loaded, setLoaded] = React.useState<{ all: PortalSlice[]; state: PortalState }>();
-  const [loadFailed, setLoadFailed] = React.useState(false);
+  // Why the load failed: the repository's own sentence when saved data could not be read.
+  const [loadFailed, setLoadFailed] = React.useState<string>();
 
   useEffect(() => {
     let current = true;
@@ -704,8 +705,8 @@ export function StoreProvider(props: StoreProviderProps) {
         all.forEach((slice, i) => (state[slice.id] = values[i]));
         setLoaded({ all, state: state as unknown as PortalState });
       },
-      () => {
-        if (current) setLoadFailed(true);
+      (error: unknown) => {
+        if (current) setLoadFailed(error instanceof UnreadableDataError ? error.message : '');
       },
     );
     return () => {
@@ -713,10 +714,10 @@ export function StoreProvider(props: StoreProviderProps) {
     };
   }, [all, clock, demo, repo]);
 
-  if (loadFailed)
+  if (loadFailed !== undefined)
     return (
       <p role="alert" style={{ padding: 'var(--space-7)', font: 'var(--type-body)' }}>
-        The portal could not load its data. Reload the page to try again.
+        The portal could not load its data. {loadFailed || 'Reload the page to try again.'}
       </p>
     );
   if (!loaded || loaded.all !== all) return null;
