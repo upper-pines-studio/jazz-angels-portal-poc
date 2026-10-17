@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { format, parseISO } from 'date-fns';
 import { Button } from '../../../../design-system';
 import { dateShort, daysUntil, isArchived, useCan, useStore } from '../../../../core';

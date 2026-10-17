@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import { usePageHeader } from '../../Shell';
 import {
   ArchiveDialog,

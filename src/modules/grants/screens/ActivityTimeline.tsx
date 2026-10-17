@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { dateLong, toISO, useStore } from '../../../core';
 import { activityWho } from '../domain';
 import type { Activity, Grant } from '../domain';

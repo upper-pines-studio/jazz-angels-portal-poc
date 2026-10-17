@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { Sidebar, TopBar, Icon, IconButton, Avatar, Breadcrumb, Button } from '../design-system';
 import { ROLE_LABELS, meetsAny, repository, useStore } from '../core';
 import type { PortalState, Saving, SignedInUser } from '../core';

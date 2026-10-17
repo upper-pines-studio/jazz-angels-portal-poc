@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { Button, EmptyState, Icon } from '../../../../design-system';
 import { dateLong, money, useCan, useStore } from '../../../../core';
 import {

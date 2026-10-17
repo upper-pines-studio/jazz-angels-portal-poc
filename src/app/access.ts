@@ -1,4 +1,4 @@
-import { matchPath } from 'react-router-dom';
+import { matchPath } from 'react-router';
 import { meetsAny } from '../core';
 import type { ModuleRoute, PortalState, Requires, SignedInUser } from '../core';
 import { MODULES } from '../modules';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { usePageHeader } from '../../Shell';
 import { TableScroll } from '../../components/TableScroll';
 import { ArchivedName, ShowArchivedSwitch } from '../../components/archive';

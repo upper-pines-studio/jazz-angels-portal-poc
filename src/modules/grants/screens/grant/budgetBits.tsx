@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Icon } from '../../../../design-system';
 import { money, useStore } from '../../../../core';
 import { accountName, className, lineMatched } from '../../domain';

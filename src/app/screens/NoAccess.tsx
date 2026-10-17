@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Button, Card, EmptyState, Icon } from '../../design-system';
 import { ROLE_LABELS, useStore } from '../../core';
 import { usePageHeader } from '../Shell';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { format } from 'date-fns';
 import { Button, Card, EmptyState, Icon } from '../../../design-system';
 import { OwnerAvatar } from '../../../app/components/badges';
