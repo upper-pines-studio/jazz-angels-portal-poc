@@ -1,3 +1,4 @@
+import { insertRow } from '../../../core/module';
 import type { ActionRule, AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import { archiveFields, normaliseArchived, restoreFields } from '../../../core/archive';
 import { can } from '../../../core/permissions';
@@ -180,6 +181,11 @@ function withId<T extends { id: string }>(rows: T[], id: string, patch: Partial<
   return rows.map(row => (row.id === id ? { ...row, ...patch } : row));
 }
 
+/** Whether the activity log already has this row: the change that writes it was applied. */
+function logged(state: GrantsState, activityId: string): boolean {
+  return state.activity.some(a => a.id === activityId);
+}
+
 /**
  * Put one transaction back as the snapshot has it. Backup added to its parts
  * since then follows the same rule as a reassign, so it is not lost; with no
@@ -240,10 +246,9 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
     case 'batch':
       return action.actions.reduce(reducer, state);
 
-    case 'insert': {
-      const rows = state[action.key] as unknown[];
-      return { ...state, [action.key]: [...rows, action.item] } as GrantsState;
-    }
+    case 'insert':
+      // Sent twice (a retry), it is still one row.
+      return insertRow(state, action.key, action.item);
 
     case 'update': {
       const rows = state[action.key] as Array<{ id: string }>;
@@ -260,6 +265,8 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
 
     case 'add-grant': {
       const { grant } = action;
+      // Sent twice (a retry), it is still one grant, with one of everything it brings.
+      if (state.grants.some(g => g.id === grant.id)) return state;
       const template = action.templateId
         ? state.templates.find(t => t.id === action.templateId)
         : undefined;
@@ -288,7 +295,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
 
       return {
         ...state,
-        funders: action.funder ? [...state.funders, action.funder] : state.funders,
+        funders: action.funder ? insertRow(state, 'funders', action.funder).funders : state.funders,
         grants: [...state.grants, grant],
         tasks: [...state.tasks, ...tasks],
         documents: [...state.documents, ...documents],
@@ -313,7 +320,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
 
     case 'transition': {
       const grant = state.grants.find(g => g.id === action.grantId);
-      if (!grant) return state;
+      if (!grant || logged(state, action.activityId)) return state;
 
       const { to, payload } = action;
       const date = payload.date ?? action.at.slice(0, 10);
@@ -360,7 +367,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
 
     case 'duplicate-template': {
       const source = state.templates.find(t => t.id === action.id);
-      if (!source) return state;
+      if (!source || state.templates.some(t => t.id === action.newTemplateId)) return state;
       const copy: ChecklistTemplate = {
         ...source,
         id: action.newTemplateId,
@@ -376,6 +383,8 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
     case 'assign-transaction': {
       const tx = state.transactions.find(t => t.id === action.id);
       if (!tx || !action.parts.length) return state;
+      // Sent twice (a retry), it is still one assignment with one row per part.
+      if (action.parts.some(part => logged(state, part.activityId))) return state;
 
       // Reassigning keeps the backup: a part that stays on its line keeps its
       // expense, and a part that goes hands its files and note on (`backupCarry`).
@@ -438,6 +447,7 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
 
     case 'move-expenses': {
       if (moveExpensesRefusal(state, action.fromLineId, action.toLineId)) return state;
+      if (logged(state, action.activityId)) return state;
       const from = state.budgetLines.find(l => l.id === action.fromLineId)!;
       const to = state.budgetLines.find(l => l.id === action.toLineId)!;
       const moving = state.expenses.filter(e => e.budgetLineId === from.id);
@@ -480,13 +490,16 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
       };
     }
 
-    case 'sync':
+    case 'sync': {
+      // A transaction already pulled is not pulled twice.
+      const pulled = new Set(state.transactions.map(t => t.id));
       return {
         ...state,
         quickbooks: { ...state.quickbooks, lastSyncedAt: action.at },
-        transactions: [...state.incoming, ...state.transactions],
+        transactions: [...state.incoming.filter(t => !pulled.has(t.id)), ...state.transactions],
         incoming: [],
       };
+    }
 
     case 'set-quickbooks':
       return { ...state, quickbooks: { ...state.quickbooks, ...action.patch } };
