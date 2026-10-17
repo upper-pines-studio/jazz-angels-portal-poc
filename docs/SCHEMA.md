@@ -16,7 +16,7 @@ type turns out to be wrong for a table, file an issue rather than bend the table
   `grants.amount_awarded`, `archivedById` is `archived_by`.
 - **Ids** are `text`, as today. The seeded ids stay (`studio-sessions`; Operations keeps
   `general-operating`, decision 0006), so saved data and exports load unchanged; new rows may get
-  generated ids.
+  generated ids. Their format (length, made on the client or the server) is open: decision 0008.
 - **Enums** are the type's string unions, kept as `text` with a check (or a Postgres enum). The
   diagrams list the values for reading; the type is the source of truth, and a value added there
   is added to the check.
@@ -28,7 +28,7 @@ type turns out to be wrong for a table, file an issue rather than bend the table
 - **Singletons.** The office's settings, its QuickBooks connection and its reminder defaults are
   one row each.
 - **Nullable** is marked `null` in the diagrams and "yes" in the tables below; every other column
-  is `not null`.
+  is `not null`. How a cleared field reaches a nullable column is open: decision 0008.
 
 ## What is not stored
 

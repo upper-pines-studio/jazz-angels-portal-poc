@@ -13,3 +13,4 @@ change; do not leave a stale one behind.
 | [0005](0005-roadmap-items-that-shape-the-schema.md) | Roadmap items to settle before the schema is written | Answered |
 | [0006](0006-programs-projects-and-shares.md) | Programs, projects and how a grant's money is shared | Decided, spending by program open |
 | [0007](0007-sessions-per-program.md) | Sessions for one program never overlap; each program has its own current session | Decided |
+| [0008](0008-backend-repository-contract.md) | How the backend Repository writes rows: the apply payload, cleared fields, import and reset, id format | Proposed, awaiting a decision |
