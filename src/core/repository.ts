@@ -55,22 +55,82 @@ export function fresh(slice: PortalSlice, today: string, demo: boolean): unknown
   return demo ? slice.seed(today) : slice.empty();
 }
 
-/** One slice as stored and accepted by its `normalise`, or undefined when nothing readable is. */
-function readSlice(slice: PortalSlice, demo: boolean): unknown | undefined {
+/**
+ * Where a slice's backup goes when what is stored under its key cannot be read:
+ * `ja-portal:grants:unreadable-2026-10-16T09:30:00.000Z`. Kept so the data can be
+ * recovered by hand; nothing in the portal reads it back.
+ */
+export function unreadableKey(sliceId: string, at: string): string {
+  return `${STORAGE_PREFIX}:${sliceId}:unreadable-${at}`;
+}
+
+/**
+ * What a slice's key holds: nothing, data its `normalise` accepts, or data that
+ * cannot be read (not JSON, or rejected by `normalise`), with the raw string so
+ * it can be kept. "Missing" and "unreadable" are told apart because only a
+ * missing slice may be started fresh over its key.
+ */
+type Stored =
+  { kind: 'missing' } | { kind: 'read'; value: unknown } | { kind: 'unreadable'; raw: string };
+
+function readSlice(slice: PortalSlice, demo: boolean): Stored {
   const ls = storage();
-  if (!ls) return undefined;
+  if (!ls) return { kind: 'missing' };
+  let raw: string | null;
   try {
-    const raw = ls.getItem(storageKey(slice.id));
-    if (!raw) return undefined;
-    return accept(slice, JSON.parse(raw), demo);
+    raw = ls.getItem(storageKey(slice.id));
   } catch {
-    return undefined;
+    return { kind: 'missing' };
+  }
+  if (!raw) return { kind: 'missing' };
+  try {
+    const value = accept(slice, JSON.parse(raw), demo);
+    return value === undefined ? { kind: 'unreadable', raw } : { kind: 'read', value };
+  } catch {
+    return { kind: 'unreadable', raw };
   }
 }
 
-/** Read one slice, falling back to a fresh one when nothing readable is stored. */
+/**
+ * Read one slice, or a fresh one when nothing readable is stored. It writes
+ * nothing, so unreadable data stays where it is; sign-in reads the staff this way
+ * before the store mounts. The store itself loads through `localRepository`.
+ */
 export function loadSlice(slice: PortalSlice, today: string, demo: boolean): unknown {
-  return readSlice(slice, demo) ?? fresh(slice, today, demo);
+  const stored = readSlice(slice, demo);
+  return stored.kind === 'read' ? stored.value : fresh(slice, today, demo);
+}
+
+/**
+ * The saved data for one slice could not be read. `localRepository.load`
+ * rejects with it after putting the raw data aside, and the store shows its
+ * message in place of the portal.
+ */
+export class UnreadableDataError extends Error {
+  constructor(
+    readonly sliceId: string,
+    readonly backupKey: string | undefined,
+  ) {
+    super(
+      `The ${sliceId} data saved in this browser could not be read. It was kept as it was` +
+        (backupKey ? `, with a copy under ${backupKey}, ` : ', ') +
+        'so nothing is lost.',
+    );
+    this.name = 'UnreadableDataError';
+  }
+}
+
+/** Copy unreadable data to its own key. Undefined when the browser will not store it. */
+function keepUnreadable(sliceId: string, raw: string): string | undefined {
+  const ls = storage();
+  if (!ls) return undefined;
+  const key = unreadableKey(sliceId, new Date().toISOString());
+  try {
+    ls.setItem(key, raw);
+    return key;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -135,7 +195,7 @@ export function savePreference(key: string, value: string): void {
   }
 }
 
-/** The whole portal: every registered slice, loaded, or fresh when nothing is stored. */
+/** The whole portal: every registered slice, loaded, or fresh when nothing readable is stored. Writes nothing. */
 export function loadState(slices: PortalSlice[], today: string, demo: boolean): PortalState {
   const state: Record<string, unknown> = {};
   for (const slice of slices) state[slice.id] = loadSlice(slice, today, demo);
@@ -148,15 +208,22 @@ export function saveState(slices: PortalSlice[], state: PortalState): void {
 }
 
 /**
- * The Repository on localStorage. `load` reads one slice's key (and writes a
- * fresh slice there when nothing readable is stored); `apply` writes
- * the slice's new state whole, so it has no need to read the action (a backend
- * will). Both answer at once, but as promises, like a backend.
+ * The Repository on localStorage. `load` reads one slice's key. When the key is
+ * missing it writes a fresh slice there; when the key holds data that cannot be
+ * read it copies that data to an `unreadableKey`, leaves the original alone and
+ * rejects with an `UnreadableDataError`, so nothing saved is ever written over.
+ * `apply` writes the slice's new state whole, so it has no need to read the
+ * action (a backend will). Both answer at once, but as promises, like a backend.
  */
 export const localRepository: Repository = {
   load(slice, today, demo) {
     const stored = readSlice(slice, demo);
-    if (stored !== undefined) return Promise.resolve(stored);
+    if (stored.kind === 'read') return Promise.resolve(stored.value);
+    if (stored.kind === 'unreadable') {
+      return Promise.reject(
+        new UnreadableDataError(slice.id, keepUnreadable(slice.id, stored.raw)),
+      );
+    }
     // A slice that starts fresh is kept as it started, so a later demo date
     // does not reseed it under the slices that point into it.
     const start = fresh(slice, today, demo);
@@ -190,8 +257,9 @@ export function exportJson(slices: PortalSlice[], state: PortalState): string {
 /**
  * Parse an exported file back into state. A file written before a module
  * existed is fine: any slice it does not carry starts fresh instead, the demo
- * data in a demo build and empty otherwise. Throws with a readable message on
- * garbage. Nothing is written here: the store applies the result, one slice
+ * data in a demo build and empty otherwise. A slice the file does carry but
+ * its `normalise` rejects stops the whole import, so an office never loses a
+ * module's data to a bad file. Throws with a readable message on garbage. Nothing is written here: the store applies the result, one slice
  * at a time, like any other change.
  */
 export function readImport(
@@ -218,13 +286,18 @@ export function readImport(
   const state: Record<string, unknown> = {};
   let recognised = 0;
   for (const slice of slices) {
-    const value = slice.id in bag ? accept(slice, bag[slice.id], demo) : undefined;
-    if (value === undefined) {
+    if (!(slice.id in bag)) {
       state[slice.id] = fresh(slice, today, demo);
-    } else {
-      state[slice.id] = value;
-      recognised += 1;
+      continue;
     }
+    const value = accept(slice, bag[slice.id], demo);
+    if (value === undefined) {
+      throw new Error(
+        `The ${slice.id} data in that file could not be read, so nothing was imported.`,
+      );
+    }
+    state[slice.id] = value;
+    recognised += 1;
   }
   if (recognised === 0) {
     throw new Error('That file is missing portal data, so it was not imported.');

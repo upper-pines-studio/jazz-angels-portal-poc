@@ -13,6 +13,7 @@ import {
   saveSlice,
   saveState,
   storageKey,
+  UnreadableDataError,
 } from '../repository';
 import type { PortalSlice } from '../repository';
 import { coreSlice } from '../store';
@@ -81,12 +82,13 @@ describe('one key per slice', () => {
     expect(loadState(SLICES, TODAY, DEMO).core.staff).toHaveLength(10);
   });
 
-  it('falls back to the seed on unreadable or malformed data', () => {
+  it('falls back to the seed on unreadable or malformed data, and writes nothing', () => {
     const { ls } = installStorage();
     ls.setItem(storageKey('notes'), '{{{');
     expect(bag(loadState(SLICES, TODAY, DEMO)).notes).toEqual({ notes: ['first'] });
     ls.setItem(storageKey('notes'), JSON.stringify({ notes: 'nope' }));
     expect(bag(loadState(SLICES, TODAY, DEMO)).notes).toEqual({ notes: ['first'] });
+    expect(ls.getItem(storageKey('notes'))).toBe(JSON.stringify({ notes: 'nope' }));
   });
 
   it('works with no localStorage at all', () => {
@@ -148,6 +150,21 @@ describe('export and import', () => {
     expect(bag(loadState(SLICES, TODAY, DEMO)).notes).toEqual({ notes: ['first'] });
   });
 
+  it('refuses the whole file when a slice it carries cannot be read', () => {
+    const { data } = installStorage();
+    saveSlice('notes', { notes: ['kept'] });
+    const before = new Map(data);
+    const file = JSON.stringify({
+      version: 1,
+      savedAt: '2026-09-01T00:00:00.000Z',
+      slices: { core: coreSlice.seed(TODAY), notes: { notes: 'an older shape' } },
+    });
+    expect(() => readImport(SLICES, file, TODAY, DEMO)).toThrow(
+      'The notes data in that file could not be read, so nothing was imported.',
+    );
+    expect(data).toEqual(before);
+  });
+
   it('throws on garbage', () => {
     expect(() => readImport(SLICES, 'not json at all', TODAY, DEMO)).toThrow(/valid JSON/);
     expect(() => readImport(SLICES, '"a string"', TODAY, DEMO)).toThrow();
@@ -184,6 +201,44 @@ describe('the localStorage repository', () => {
     const { data } = installStorage();
     await localRepository.load(notes as unknown as PortalSlice, TODAY, DEMO);
     expect(JSON.parse(data.get(storageKey('notes'))!)).toEqual({ notes: ['first'] });
+  });
+
+  it('starts a missing slice fresh and saves it, writing no backup', async () => {
+    const { data } = installStorage();
+    expect(await localRepository.load(notes as unknown as PortalSlice, TODAY, DEMO)).toEqual({
+      notes: ['first'],
+    });
+    expect([...data.keys()]).toEqual([storageKey('notes')]);
+  });
+
+  it.each([
+    ['is not JSON', '{{{'],
+    ['its normalise rejects', JSON.stringify({ notes: 'an older shape' })],
+  ])('keeps saved data that %s, backs it up and rejects', async (_, raw) => {
+    const { data } = installStorage();
+    data.set(storageKey('notes'), raw);
+    const load = localRepository.load(notes as unknown as PortalSlice, TODAY, DEMO);
+    await expect(load).rejects.toThrow(UnreadableDataError);
+    await expect(load).rejects.toThrow(/The notes data saved in this browser could not be read/);
+    await expect(load).rejects.toThrow(/kept as it was/);
+    // The original key is untouched, and a backup holds the same string.
+    expect(data.get(storageKey('notes'))).toBe(raw);
+    const backups = [...data.keys()].filter(k => k.startsWith('ja-portal:notes:unreadable-'));
+    expect(backups).toHaveLength(1);
+    expect(data.get(backups[0])).toBe(raw);
+    expect(backups[0]).toMatch(/^ja-portal:notes:unreadable-\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('still rejects, and still keeps the data, when the backup cannot be written', async () => {
+    const { data, ls } = installStorage();
+    data.set(storageKey('notes'), '{{{');
+    ls.setItem = () => {
+      throw new Error('QuotaExceededError');
+    };
+    await expect(
+      localRepository.load(notes as unknown as PortalSlice, TODAY, DEMO),
+    ).rejects.toMatchObject({ sliceId: 'notes', backupKey: undefined });
+    expect([...data.entries()]).toEqual([[storageKey('notes'), '{{{']]);
   });
 
   it('applies a change by writing the slice it is given, and only that one', async () => {
@@ -244,6 +299,16 @@ describe('with the demo off', () => {
     const { ls } = installStorage();
     ls.setItem(storageKey('notes'), '{{{');
     expect(bag(loadState(SLICES, TODAY, OFF)).notes).toEqual({ notes: [] });
+  });
+
+  it('does not write empty data over a saved slice it cannot read', async () => {
+    const { data } = installStorage();
+    const older = JSON.stringify({ items: ['a grant saved before notes existed'] });
+    data.set(storageKey('notes'), older);
+    await expect(localRepository.load(notes as unknown as PortalSlice, TODAY, OFF)).rejects.toThrow(
+      /notes data/,
+    );
+    expect(data.get(storageKey('notes'))).toBe(older);
   });
 
   it('fills a slice the import does not carry with empty data', () => {
