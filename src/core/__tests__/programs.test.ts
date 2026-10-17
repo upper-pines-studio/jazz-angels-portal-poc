@@ -43,7 +43,8 @@ describe('adding and renaming a program', () => {
   it('gives a new program a generated id, not one made from its name', () => {
     const c = core();
     const id = c.actions.addProgram({ name: '  Summer Jazz Camp ', short: ' Camp ' });
-    expect(id).toMatch(/^p-[0-9a-z]{10}$/);
+    // The id comes from the store's `newId`, never from the name.
+    expect(id).toBe('p-1');
     expect(c.state().core.programs.at(-1)).toEqual({
       id,
       name: 'Summer Jazz Camp',

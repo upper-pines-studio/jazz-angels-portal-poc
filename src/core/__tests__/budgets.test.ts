@@ -143,7 +143,8 @@ describe('projects', () => {
   it('adds a project under a program, tidied, with a generated id', () => {
     const c = core();
     const id = c.actions.addProject(SHOWCASE);
-    expect(id).toMatch(/^prj-[0-9a-z]{10}$/);
+    // The id comes from the store's `newId`, never from the name.
+    expect(id).toBe('prj-1');
     expect(c.state().core.projects.at(-1)).toEqual({ ...SHOWCASE, id, name: 'Fall Recital' });
     expect(describeCoreChange(c.sent[0])).toBe('the project');
   });

@@ -19,12 +19,34 @@ export type Dispatch = (action: AnyAction) => void;
 export interface SliceContext {
   /** Today as ISO `YYYY-MM-DD`. */
   today: string;
+  /**
+   * The one place a new row's id comes from. An action makes its ids here,
+   * before it dispatches, so Try again sends the same ids a second time.
+   */
   newId(prefix: string): string;
   /**
    * Who is signed in. Every action that records who did something (an
    * activity row, an approval, an upload, a transaction's status) credits them.
    */
   user: SignedInUser;
+}
+
+/** The keys of a state that hold a list of rows with ids. */
+type RowKey<S> = {
+  [K in keyof S]: S[K] extends ReadonlyArray<{ id: string }> ? K : never;
+}[keyof S];
+
+type RowOf<S, K extends keyof S> = S[K] extends ReadonlyArray<infer R> ? R : never;
+
+/**
+ * Add one row to a list in a slice's state, unless a row with its id is
+ * already there: sent twice (a retry), it is still one row, and the state
+ * comes back as it was. Every reducer that inserts goes through it.
+ */
+export function insertRow<S, K extends RowKey<S>>(state: S, key: K, row: RowOf<S, K>): S {
+  const rows = state[key] as unknown as ReadonlyArray<{ id: string }>;
+  if (rows.some(r => r.id === (row as { id: string }).id)) return state;
+  return { ...state, [key]: [...rows, row] };
 }
 
 /**

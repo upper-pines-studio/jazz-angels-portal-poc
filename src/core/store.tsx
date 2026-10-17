@@ -21,6 +21,7 @@ import {
   officeDocumentVersionProblem,
   versionFields,
 } from './documents';
+import { insertRow } from './module';
 import type { ActionRules, AnyAction, ModuleSlice } from './module';
 import { OWN_ROLE_REFUSAL, can, mayChangeStaff } from './permissions';
 import type { Need, Subject } from './permissions';
@@ -93,20 +94,19 @@ function coreReducer(state: CoreState, raw: AnyAction): CoreState {
   const action = raw as CoreAction;
   switch (action.type) {
     case 'core/add-staff':
-      return { ...state, staff: [...state.staff, action.member] };
+      return insertRow(state, 'staff', action.member);
     case 'core/update-staff':
       return { ...state, staff: withId(state.staff, action.id, action.patch) };
     case 'core/add-program':
-      if (state.programs.some(p => p.id === action.program.id)) return state;
-      return { ...state, programs: [...state.programs, action.program] };
+      return insertRow(state, 'programs', action.program);
     case 'core/update-program':
       return { ...state, programs: withId(state.programs, action.id, action.patch) };
     case 'core/add-organization':
-      return { ...state, organizations: [...state.organizations, action.organization] };
+      return insertRow(state, 'organizations', action.organization);
     case 'core/update-organization':
       return { ...state, organizations: withId(state.organizations, action.id, action.patch) };
     case 'core/add-venue':
-      return { ...state, venues: [...state.venues, action.venue] };
+      return insertRow(state, 'venues', action.venue);
     case 'core/update-venue':
       return { ...state, venues: withId(state.venues, action.id, action.patch) };
     case 'core/set-program-budget': {
@@ -117,24 +117,27 @@ function coreReducer(state: CoreState, raw: AnyAction): CoreState {
       return { ...state, programBudgets: [...rest, budget] };
     }
     case 'core/add-project':
-      return { ...state, projects: [...state.projects, action.project] };
+      return insertRow(state, 'projects', action.project);
     case 'core/update-project':
       return { ...state, projects: withId(state.projects, action.id, action.patch) };
     case 'core/add-office-document':
-      if (state.officeDocuments.some(d => d.id === action.document.id)) return state;
-      return { ...state, officeDocuments: [...state.officeDocuments, action.document] };
+      return insertRow(state, 'officeDocuments', action.document);
     case 'core/update-office-document':
       return {
         ...state,
         officeDocuments: withId(state.officeDocuments, action.id, action.patch),
       };
-    case 'core/add-office-document-version':
+    case 'core/add-office-document-version': {
+      const document = state.officeDocuments.find(d => d.id === action.id);
+      // Sent twice (a retry), it is still one version.
+      if (!document || document.versions.some(v => v.id === action.version.id)) return state;
       return {
         ...state,
-        officeDocuments: state.officeDocuments.map(d =>
-          d.id === action.id ? { ...d, versions: [...d.versions, action.version] } : d,
-        ),
+        officeDocuments: withId(state.officeDocuments, action.id, {
+          versions: [...document.versions, action.version],
+        }),
       };
+    }
     case 'core/update-settings':
       return { ...state, settings: { ...state.settings, ...action.patch } };
     default:
@@ -270,7 +273,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     const archived = () => archiveFields(ctx.user, ctx.today);
     return {
       addStaff(input) {
-        const id = newId('s');
+        const id = ctx.newId('s');
         dispatch({ type: 'core/add-staff', member: { ...input, id } });
         return id;
       },
@@ -278,7 +281,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
         dispatch({ type: 'core/update-staff', id, patch });
       },
       addProgram(input) {
-        const id = newId('p');
+        const id = ctx.newId('p');
         dispatch({ type: 'core/add-program', program: { ...programFields(input), id } });
         return id;
       },
@@ -298,7 +301,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
         dispatch({ type: 'core/set-program-budget', budget: { programId, fiscalYear, amount } });
       },
       addProject(input) {
-        const id = newId('prj');
+        const id = ctx.newId('prj');
         const { name, programId, start, end, budget } = projectFields(input);
         dispatch({
           type: 'core/add-project',
@@ -322,7 +325,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
         dispatch({ type: 'core/update-project', id, patch: restoreFields() });
       },
       addOrganization(input) {
-        const id = newId('org');
+        const id = ctx.newId('org');
         dispatch({ type: 'core/add-organization', organization: { ...input, id } });
         return id;
       },
@@ -330,7 +333,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
         dispatch({ type: 'core/update-organization', id, patch });
       },
       addVenue(input) {
-        const id = newId('v');
+        const id = ctx.newId('v');
         dispatch({ type: 'core/add-venue', venue: { ...input, id } });
         return id;
       },
