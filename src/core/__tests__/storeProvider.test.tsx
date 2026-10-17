@@ -32,6 +32,11 @@ const counter: ModuleSlice<CountState, { bump(): void }> = {
   reducer: (state, action) => (action.type === 'counter/bump' ? { count: state.count + 1 } : state),
   createActions: dispatch => ({ bump: () => dispatch({ type: 'counter/bump' }) }),
   rules: { bump: 'staff' },
+  tables: {
+    keys: { counters: ['id'] },
+    toRows: s => ({ counters: [{ id: 1, count: s.count }] }),
+    fromRows: t => ({ count: Number(t.counters?.[0]?.count ?? 0) }),
+  },
 };
 const SLICES = [counter] as unknown as PortalSlice[];
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeEmpty, makeSeed } from '../seed';
+import { grantsSlice } from '../slice';
 import { firstBudgetId, grantsTables } from '../tables';
 import type { GrantsState } from '../types';
 
@@ -14,6 +15,10 @@ describe('grants tables (#121)', () => {
     const rows = grantsTables.toRows(state);
     expect(Object.keys(rows)).toEqual(Object.keys(grantsTables.keys));
     expect(grantsTables.fromRows(rows)).toEqual(stored(state));
+  });
+
+  it('is the mapping on the grants slice', () => {
+    expect(grantsSlice.tables).toBe(grantsTables);
   });
 
   it("puts a grant's dates and how it was brought in on its row, and its programs in grant_programs", () => {

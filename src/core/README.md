@@ -173,7 +173,9 @@ carry it. Unset means the seed's day, `SEED_TODAY`; "Use the real date" stores
 | File | What is in it |
 | --- | --- |
 | `types.ts` | `StaffMember` (`title` is the job title, `role` is one of the seven `Role`s of decision 0001), `SignedInUser`, `Program` (archivable; `ProgramId` is a plain string: the seeded ids stay as they were, a new program gets a generated `p-…` id, and no id means anything; `inSchool` marks a program taught in schools, whose hours are Timesheets' "In-school hours"; Operations is the one `Program` record that is not a program, see `derive.ts`), `Organization`, `Venue`, `Address`, `ProgramBudget` (a program's whole-dollar budget for one fiscal year, named by `FiscalYearLabel` "FY27"), `Project` (archivable one-off work under one program: name, `programId`, start and end, budget), `ProjectInput`, `FundingTarget` (a program's fiscal year, or a project: where money can go), `FileFormat` and `FileFacts` (a stored file's name, format, size and pages, not its contents; a grant's `GrantFile` builds on it), `OfficeDocument` (archivable: kind, name, versions), `OfficeDocumentKind`, `OfficeDocumentVersion` (`FileFacts` plus a stable `id`, `addedAt`, `addedById`, optional `expires`), `OfficeDocumentInput` and `OfficeDocumentVersionInput` (what Add document and Add version collect), `AppSettings` (the fiscal year and the module switches; the demo date is not in it), `CoreState`, and the augmentable `PortalState` / `PortalActions`. |
-| `module.ts` | `insertRow(state, key, row)` (adds a row unless its id is already there, else gives the state back untouched), `ModuleSlice` (`seed(today)` the demo data, `empty()` a new office, `normalise(raw, demo)`, its `rules`: what each action needs, and an optional `describe(action)`: the change in plain words for a failed save), `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are gated Cards for the Settings screen), `ModuleRoute` (`requires`, `allows`), `Requires`, `NavItem`, `NavSection`, `StatSpec`, `AttentionItem` (its optional `statusLabel` gives the status Badge its own words, "Out of date", while the tone follows `status`, and `statusOutlined` draws it in outlined gold, "Sent back"), `GatedCard`, `FundingContribution` and `FundingSource` (a module's `funding`: what it puts toward a program's year or a project, and optionally its own `panel` for the sheet), `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
+| `module.ts` | `insertRow(state, key, row)` (adds a row unless its id is already there, else gives the state back untouched), `ModuleSlice` (`seed(today)` the demo data, `empty()` a new office, `normalise(raw, demo)`, its `rules`: what each action needs, its `tables`: how its state maps onto the tables of `docs/SCHEMA.md`, and an optional `describe(action)`: the change in plain words for a failed save), `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are gated Cards for the Settings screen), `ModuleRoute` (`requires`, `allows`), `Requires`, `NavItem`, `NavSection`, `StatSpec`, `AttentionItem` (its optional `statusLabel` gives the status Badge its own words, "Out of date", while the tone follows `status`, and `statusOutlined` draws it in outlined gold, "Sent back"), `GatedCard`, `FundingContribution` and `FundingSource` (a module's `funding`: what it puts toward a program's year or a project, and optionally its own `panel` for the sheet), `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
+| `rows.ts` | The row mapping of decision 0008 (#121): `Row`, `Tables` (rows by table name), `SliceTables` (a slice's `keys`, `toRows`, `fromRows`), and the helpers the mappings share: `orNull`, `withoutNulls`, `groupBy`. See "Rows by table" below. |
+| `tables.ts` | `coreTables`, core's own mapping, and what the modules' mappings reuse: `ArchivedColumns`, `archivedColumns` / `archivedFields` (the two archive columns and back), `addressFrom` (an address from its four columns). |
 | `persistence.ts` | The `Repository` interface: `load` one slice, `apply` one change, both promises; `acceptsReplace`, whether import and reset may reach it. |
 | `live.ts` | `createLiveStore`: the state, the per-slice apply queue, the rollback, `Saving` and `whenSaved`. No React, so the tests drive it with a fake repository. |
 | `store.tsx` | `StoreProvider` (its `onRefused` shows a refused action's reason, its `onSaveFailed` a change that could not be saved, its `repository` defaults to localStorage), `useStore`, `useCan`, `coreSlice`, `guardActions` (wraps every slice's actions in its `rules`), `refusalMessage`, `newId`, `resolveToday`, `savedStaff()` (the staff list as saved, which sign-in reads before the store mounts). |
@@ -200,6 +202,42 @@ so a district lists its schools. Jazz Angels' own studio is a venue of kind
 the name: `placeLabel(state, venueId, room)` renders "Studio 1" for the studio
 and "Paramount Middle School · Band room B-12" for anywhere else. The office
 manages both on the Partners screen (`src/app/screens/partners/`).
+
+## Rows by table
+
+Each slice says how its state maps onto the tables in `docs/SCHEMA.md`, as
+`tables` on its `ModuleSlice` (decision 0008, #121). Core only calls it; the
+row diff a backend `Repository` will be handed is worked out from it (#122).
+Nothing calls it yet, and `localRepository` keeps writing whole slices.
+
+```ts
+coreSlice.tables.toRows(state.core);
+// { staff: [{ id, name, title, role, teaches, archived_at, archived_by }], …,
+//   settings: [{ id: 1, fiscal_year_start_month: 7, enabled_modules: [...] }] }
+coreSlice.tables.fromRows(rows); // the CoreState again
+```
+
+- `keys` names every table the slice writes, parents before children (the
+  order a backend inserts in), each with the columns of its primary key:
+  `staff: ['id']`, `program_budgets: ['program_id', 'fiscal_year']`.
+- `toRows(state)` gives every table in `keys`, an empty one as `[]`. Columns
+  are named as SCHEMA.md names them. A row carries only stored columns, never
+  a derived value, and every row of a table has every column: a field the
+  state leaves out is `null` (`orNull`), never `undefined`.
+- `fromRows(tables)` gives the state back. A `null` column becomes a missing
+  field (`withoutNulls`); a child table is grouped under its parent in the
+  rows' order (`groupBy`); a singleton with no row (`settings`) takes the
+  slice's default.
+- `fromRows(toRows(state))` equals `state` for the demo seed and an empty
+  office, bar what SCHEMA.md does not store. The round trip is tested per
+  slice, and `src/app/__tests__/tables.test.ts` reads SCHEMA.md itself: every
+  table it draws is written by a slice or named with why not, and every column
+  a slice writes is one it draws.
+
+Core writes `staff`, `programs`, `program_budgets`, `projects`,
+`organizations`, `venues` (the address as four columns), `office_documents`,
+`office_document_versions` (a document's versions, one row each) and
+`settings` (one row). `logins` is not core's: the sign-ins live in `auth.ts`.
 
 ## Core actions
 

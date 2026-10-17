@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { withoutNulls } from '../rows';
 import { defaultSettings, makeCoreEmpty, makeCoreSeed } from '../seed';
+import { coreSlice } from '../store';
 import { coreTables } from '../tables';
 
 describe('core tables (#121)', () => {
@@ -11,6 +12,10 @@ describe('core tables (#121)', () => {
     const rows = coreTables.toRows(state);
     expect(Object.keys(rows)).toEqual(Object.keys(coreTables.keys));
     expect(coreTables.fromRows(rows)).toEqual(state);
+  });
+
+  it('is the mapping on the core slice', () => {
+    expect(coreSlice.tables).toBe(coreTables);
   });
 
   it('gives a venue its address as four columns, and none as four nulls', () => {
