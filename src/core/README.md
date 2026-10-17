@@ -98,8 +98,12 @@ There is no offline queue and nothing retries on its own (decision 0003).
 
 `localRepository` in `repository.ts` is the first implementation and the only
 one: one localStorage key per slice, `ja-portal:<sliceId>:v1`. `load` reads the
-key (and keeps a slice that started fresh, so it loads the same next time);
-`apply` writes the slice's new state and rejects when the browser will not
+key, and keeps a slice that started fresh, so it loads the same next time. Only
+a missing key starts fresh: when the key holds data that cannot be read (not
+JSON, or rejected by the slice's `normalise`), `load` copies it to
+`ja-portal:<sliceId>:unreadable-<ISO time>`, leaves the original key alone and
+rejects with an `UnreadableDataError` naming the slice, which `StoreProvider`
+shows in place of the portal. `apply` writes the slice's new state and rejects when the browser will not
 store it (full, or storage switched off). In `npm run dev`, setting the
 preference `ja-portal:fail-saves` to `1` (`FAIL_SAVES_KEY`; in devtools,
 `localStorage.setItem('ja-portal:fail-saves', '1')`) makes every apply fail,
@@ -108,7 +112,9 @@ ignores it.
 
 Export and import use one envelope, `{ version, savedAt, slices }`; a file
 written before a module existed imports fine, because any slice it does not
-carry starts fresh instead. `readImport` and `freshState` only build the new
+carry starts fresh instead. A slice it does carry but cannot read refuses the
+whole file ("The grants data in that file could not be read, so nothing was
+imported."). `readImport` and `freshState` only build the new
 state; the store applies it like any other change. Preferences
 (`loadPreference` / `savePreference`) and `savedStaff()`, which sign-in reads
 before the store mounts, stay outside the interface: they are this browser's.
@@ -187,7 +193,7 @@ manages both on the Partners screen (`src/app/screens/partners/`).
 | `archiveVenue(id)` / `restoreVenue(id)` | Archives a venue or restores it. Classes that met there keep it. Needs Partners: Edit. |
 | `resetDemo()` | Reseeds every slice, one apply per slice. Demo only: with the demo off it changes nothing and says so. |
 | `setDemoToday(iso)` | Moves the demo date, or `undefined` for the clock. A browser preference, not data. Demo only. |
-| `importJson(text)` | Replaces every slice from an exported file, one apply per slice. Throws on an unreadable file. |
+| `importJson(text)` | Replaces every slice from an exported file, one apply per slice. Throws on an unreadable file, or on a slice in it that cannot be read, and changes nothing. |
 | `exportJson()` | The whole portal as pretty JSON. |
 
 See `src/modules/README.md` for how to add a module.
