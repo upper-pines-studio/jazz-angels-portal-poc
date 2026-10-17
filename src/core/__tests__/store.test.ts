@@ -54,6 +54,94 @@ describe('newId', () => {
     expect(ids.size).toBe(200);
     expect([...ids].every(id => id.startsWith('g-'))).toBe(true);
   });
+
+  // Decision 0008, 4A (#126): the whole UUID, 122 random bits, not the first 10 hex.
+  it('is the prefix and the 32 hex characters of a whole randomUUID', () => {
+    for (const prefix of ['g', 'act', 'te']) {
+      expect(newId(prefix)).toMatch(new RegExp(`^${prefix}-[0-9a-f]{32}$`));
+    }
+  });
+
+  it('keeps every character of the UUID, only the dashes go', () => {
+    const uuid = '3f9c2a71-0b4e-4d8a-9c1f-5e6d7a8b9c0d';
+    const spy = vi.spyOn(crypto, 'randomUUID').mockReturnValue(uuid);
+    try {
+      expect(newId('g')).toBe('g-3f9c2a710b4e4d8a9c1f5e6d7a8b9c0d');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('has no fallback: without randomUUID it throws rather than make a weaker id', () => {
+    const random = vi.spyOn(Math, 'random');
+    const now = vi.spyOn(Date, 'now');
+    vi.stubGlobal('crypto', {});
+    try {
+      expect(() => newId('g')).toThrow();
+      expect(random).not.toHaveBeenCalled();
+      expect(now).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+      random.mockRestore();
+      now.mockRestore();
+    }
+  });
+
+  it('loads an export whose ids are the older 10 hex characters, and works on them', () => {
+    const saved = coreSlice.seed('2026-09-13');
+    const file = JSON.stringify({
+      version: 1,
+      savedAt: '2026-09-01T00:00:00.000Z',
+      slices: {
+        core: {
+          ...saved,
+          staff: [
+            ...saved.staff,
+            {
+              id: 's-0a1b2c3d4e',
+              name: 'Dana Whitfield',
+              title: 'Teaching Artist',
+              role: 'teacher',
+              teaches: true,
+            },
+          ],
+          organizations: [
+            ...saved.organizations,
+            { id: 'org-9f8e7d6c5b', name: 'Bellflower Unified', kind: 'district' },
+          ],
+        },
+      },
+    });
+    const loaded = repository.readImport(
+      [coreSlice] as unknown as PortalSlice[],
+      file,
+      '2026-09-13',
+      true,
+    );
+    expect(loaded.core.staff.map(s => s.id)).toContain('s-0a1b2c3d4e');
+    expect(loaded.core.organizations.map(o => o.id)).toContain('org-9f8e7d6c5b');
+
+    // A short id is patched like any other, and a new row beside it gets a full-length id.
+    const dispatched: AnyAction[] = [];
+    const actions = coreSlice.createActions(
+      a => dispatched.push(a),
+      () => loaded,
+      { today: '2026-09-13', newId, user: BARRY },
+    );
+    actions.updateStaff('s-0a1b2c3d4e', { title: 'Lead Teaching Artist' });
+    const added = actions.addStaff({
+      name: 'Rosa Diaz',
+      title: 'Teaching Artist',
+      role: 'teacher',
+      teaches: true,
+    });
+    expect(added).toMatch(/^s-[0-9a-f]{32}$/);
+
+    let state = loaded.core;
+    for (const action of dispatched) state = coreSlice.reducer(state, action);
+    expect(state.staff.find(s => s.id === 's-0a1b2c3d4e')?.title).toBe('Lead Teaching Artist');
+    expect(state.staff.find(s => s.id === added)?.name).toBe('Rosa Diaz');
+  });
 });
 
 describe('composing slices', () => {

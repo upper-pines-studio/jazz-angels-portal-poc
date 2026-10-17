@@ -59,6 +59,16 @@ Every new row's id comes from `ctx.newId`, made in the action before it
 dispatches, so Try again sends the same ids. Every reducer that inserts goes
 through `insertRow` (`module.ts`), which skips an id that is already there:
 sent twice, an insert is still one row.
+**Ids.** `newId(prefix)` gives the prefix and the full 32 hex characters of
+`crypto.randomUUID()`, `g-3f9c…` (decision 0008, 4A). There is no fallback:
+without `randomUUID` it throws, since a weaker id could collide and an insert
+that skips an existing id would hide it. Seeded ids (`general-operating`,
+`studio-sessions`) and ids saved before this, 10 hex characters, stay valid;
+nothing is migrated. A derived id is built from its parent's
+(`${grant.id}-t1`, `${grant.id}-d1`, `${templateId}-i1`,
+`att-${meetingId}-${studentId}`, `${entryId}:1`), and is made only in the same
+change that inserts its parent. A row added to a parent later gets its own
+`newId`.
 `StoreProvider` takes the signed-in staff id as `userId` (App passes the
 login's `staffId`); if that id names nobody in the staff list, or someone
 archived, it renders nothing and calls `onUnknownUser('no-staff' | 'archived')`,

@@ -55,14 +55,15 @@ import type {
 // Ids
 // ---------------------------------------------------------------------------
 
-/** `crypto.randomUUID()` where available, with a plain fallback for old runtimes. */
+/**
+ * The prefix and the whole `crypto.randomUUID()` without its dashes: `g-` and 32
+ * hex characters, 122 random bits (decision 0008, 4A). No fallback: `randomUUID`
+ * is there on `https` and `localhost` in every supported browser, and a weaker id
+ * could collide, which an insert that skips an existing id would hide. Ids saved
+ * before this, 10 hex characters, stay valid.
+ */
 export function newId(prefix: string): string {
-  const cryptoObj = (globalThis as { crypto?: Crypto }).crypto;
-  const raw =
-    typeof cryptoObj?.randomUUID === 'function'
-      ? cryptoObj.randomUUID()
-      : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
-  return `${prefix}-${raw.replace(/-/g, '').slice(0, 10)}`;
+  return `${prefix}-${crypto.randomUUID().replace(/-/g, '')}`;
 }
 
 // ---------------------------------------------------------------------------
