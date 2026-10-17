@@ -24,4 +24,11 @@ export interface Repository {
    * store then puts the slice back as it was (decision 0003).
    */
   apply(sliceId: string, action: AnyAction, next: unknown): Promise<void>;
+  /**
+   * Whether every slice may be replaced at once (`portal/replace`: Import JSON,
+   * Reset demo data). `localRepository` says yes. A backend says no: a
+   * whole-portal replace would delete rows, which decision 0002 forbids, so
+   * Settings leaves Import out and the store refuses both (decision 0008, 3C).
+   */
+  readonly acceptsReplace: boolean;
 }

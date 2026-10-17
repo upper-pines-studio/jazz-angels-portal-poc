@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createLiveStore } from '../live';
+import { REPLACE_REFUSED, createLiveStore } from '../live';
 import type { AnyAction, ModuleSlice } from '../module';
 import type { Repository } from '../persistence';
 import * as repository from '../repository';
@@ -294,7 +294,7 @@ describe('the core slice', () => {
  * A repository that answers when the test says so: each apply waits in
  * `pending` until `succeed()` or `fail()` settles the oldest one.
  */
-function fakeRepository() {
+function fakeRepository(acceptsReplace = true) {
   const pending: Array<{
     sliceId: string;
     action: AnyAction;
@@ -304,6 +304,7 @@ function fakeRepository() {
   }> = [];
   const saved: Record<string, unknown> = {};
   const repo: Repository = {
+    acceptsReplace,
     load: slice => Promise.resolve(slice.seed('2026-09-13')),
     apply: (sliceId, action, next) =>
       new Promise((resolve, reject) => pending.push({ sliceId, action, next, resolve, reject })),
@@ -531,6 +532,24 @@ describe('saving through the repository', () => {
     await fake.fail();
     expect(failures).toEqual(["Couldn't save the new data"]);
     expect(asTest(store.getState())).toEqual({ counter: { count: 9 }, notes: { notes: [] } });
+  });
+
+  it('refuses an import or a reset on a repository that does not accept a replace', () => {
+    const fake = fakeRepository(false);
+    const store = live(fake.repo);
+    expect(() =>
+      store.dispatch({
+        type: 'portal/replace',
+        state: { counter: { count: 9 }, notes: { notes: ['imported'] } },
+      }),
+    ).toThrow(REPLACE_REFUSED);
+    expect(asTest(store.getState())).toEqual({ counter: { count: 0 }, notes: { notes: [] } });
+    expect(fake.pending).toHaveLength(0);
+    expect(store.getSaving().status).toBe('idle');
+
+    // Every other change still saves as usual.
+    store.dispatch({ type: 'counter/bump' });
+    expect(fake.pending.map(p => p.sliceId)).toEqual(['counter']);
   });
 
   it('applies nothing for a change that changes nothing', () => {
