@@ -14,17 +14,22 @@ import type { PortalState } from './types';
  * failed change, and the changes queued behind it on the same slice are
  * dropped with it: each was made on top of the one that failed. Other slices
  * keep going. `onSaveFailed` gets one sentence saying what was not saved.
+ *
+ * Each slice keeps its own failure until it next saves, so a success on one
+ * slice never hides another's: the top bar reports an error while any slice
+ * has one, in the words of the most recent, and Try again sends every slice's
+ * dropped changes again.
  */
 
 export type SaveStatus = 'idle' | 'saving' | 'error';
 
 /** What the shell shows in the top bar. */
 export interface Saving {
-  /** `saving` while any apply is in flight; `error` from a failure to the next success. */
+  /** `saving` while any apply is in flight; `error` while any slice has a failure its next success has not cleared. */
   status: SaveStatus;
-  /** The sentence for the failure: "Couldn't save the roll call mark". */
+  /** The sentence for the most recent failure: "Couldn't save the roll call mark". */
   error?: string;
-  /** Sends the changes that were not saved again, while they are still the latest failure. */
+  /** Sends the changes that were not saved again, on every slice that has a failure. */
   retry?: () => void;
 }
 
@@ -32,9 +37,17 @@ export interface Saving {
 export const REPLACE = 'portal/replace';
 
 interface Change {
+  /** Which dispatch made it: one number for every slice the action touched. */
+  seq: number;
   action: AnyAction;
   before: unknown;
   after: unknown;
+}
+
+/** A slice whose last apply failed: what to say, and what it dropped, in order. */
+interface Failure {
+  error: string;
+  unsaved: Array<{ seq: number; action: AnyAction }>;
 }
 
 interface Waiter {
@@ -75,9 +88,9 @@ export function createLiveStore({
 }: LiveStoreOptions): LiveStore {
   let state = initial;
   let saving: Saving = IDLE;
-  let error: string | undefined;
-  /** What the last failure dropped, per slice, in the order it was made. */
-  let unsaved: Array<{ sliceId: string; action: AnyAction }> = [];
+  /** Per slice, oldest failure first: re-set on each failure, so the last is the most recent. */
+  const failures = new Map<string, Failure>();
+  let seq = 0;
   const queues = new Map<string, Change[]>();
   const listeners = new Set<() => void>();
   let waiters: Waiter[] = [];
@@ -86,8 +99,10 @@ export function createLiveStore({
   const emit = () => listeners.forEach(l => l());
 
   function refresh() {
+    const latest = [...failures.values()].pop();
+    const error = latest?.error;
     const status: SaveStatus = error ? 'error' : busy() ? 'saving' : 'idle';
-    const retry = error && unsaved.length ? resend : undefined;
+    const retry = latest ? resend : undefined;
     if (status === saving.status && error === saving.error && retry === saving.retry) return;
     saving = status === 'idle' ? IDLE : { status, error, retry };
   }
@@ -104,11 +119,12 @@ export function createLiveStore({
     const next = reducer(prev, action);
     if (next === prev) return;
     state = next;
+    seq += 1;
     const before = prev as unknown as Record<string, unknown>;
     const after = next as unknown as Record<string, unknown>;
     for (const sliceId of Object.keys(after)) {
       if (before[sliceId] === after[sliceId]) continue;
-      enqueue(sliceId, { action, before: before[sliceId], after: after[sliceId] });
+      enqueue(sliceId, { seq, action, before: before[sliceId], after: after[sliceId] });
     }
     refresh();
     emit();
@@ -137,9 +153,9 @@ export function createLiveStore({
 
   function saved(sliceId: string, queue: Change[]) {
     queue.shift();
-    // The next success clears the failure, and with it the offer to resend.
-    error = undefined;
-    unsaved = [];
+    // The slice's next success clears its failure, and with it the offer to
+    // resend what it dropped. Other slices keep theirs.
+    failures.delete(sliceId);
     if (queue.length) run(sliceId, queue);
     refresh();
     settle();
@@ -153,8 +169,13 @@ export function createLiveStore({
       [sliceId]: change.before,
     } as unknown as PortalState;
     const what = describe?.(sliceId, change.action) || 'that change';
-    error = `Couldn't save ${what}`;
-    unsaved = [...unsaved, ...dropped.map(d => ({ sliceId, action: d.action }))];
+    const error = `Couldn't save ${what}`;
+    const earlier = failures.get(sliceId)?.unsaved ?? [];
+    failures.delete(sliceId);
+    failures.set(sliceId, {
+      error,
+      unsaved: [...earlier, ...dropped.map(d => ({ seq: d.seq, action: d.action }))],
+    });
     waiters.forEach(w => (w.failed = true));
     refresh();
     onSaveFailed?.(error);
@@ -162,20 +183,31 @@ export function createLiveStore({
     emit();
   }
 
-  /** Dispatch the dropped changes again, on the slice as it stands now. */
+  /**
+   * Dispatch every slice's dropped changes again, on the state as it stands
+   * now, in the order they were first made. A change that failed on two
+   * slices is sent once.
+   */
   function resend() {
-    const again = unsaved;
-    unsaved = [];
-    error = undefined;
+    const again = new Map<number, { action: AnyAction; sliceIds: string[] }>();
+    for (const [sliceId, { unsaved }] of failures) {
+      for (const { seq: made, action } of unsaved) {
+        const entry = again.get(made) ?? { action, sliceIds: [] };
+        entry.sliceIds.push(sliceId);
+        again.set(made, entry);
+      }
+    }
+    failures.clear();
     refresh();
     emit();
-    for (const { sliceId, action } of again) {
+    for (const [, { action, sliceIds }] of [...again].sort(([a], [b]) => a - b)) {
       if (action.type === REPLACE) {
-        // Only the slice that failed: the others saved the first time.
+        // Only the slices that failed: the others saved the first time.
         const whole = action.state as Record<string, unknown>;
+        const failed = Object.fromEntries(sliceIds.map(id => [id, whole[id]]));
         dispatch({
           type: REPLACE,
-          state: { ...(state as unknown as Record<string, unknown>), [sliceId]: whole[sliceId] },
+          state: { ...(state as unknown as Record<string, unknown>), ...failed },
         });
       } else dispatch(action);
     }

@@ -43,8 +43,8 @@ actions.grants.transition(id, 'submitted', { date: today });
   from their staff record, so a rename or a new role in Settings shows at once.
 - `actions: PortalActions` — one namespace per slice. Every change is persisted.
 - `saving: Saving` — `{ status: 'idle' | 'saving' | 'error', error?, retry? }`:
-  whether a change is on its way to the repository, or the last one could not
-  be saved. The shell's top bar shows it.
+  whether a change is on its way to the repository, or a slice has a change it
+  could not save. The shell's top bar shows it.
 - `whenSaved(): Promise<boolean>` — resolves once everything dispatched so far
   has been applied: `true`, or `false` when something failed and was rolled
   back. Roll call waits on it before it leaves the page.
@@ -88,9 +88,13 @@ until they are all in. After that every change goes through `live.ts`:
    it (each was made on top of it). Other slices carry on. `saving` becomes
    `error` with "Couldn't save <what>", where <what> comes from the slice's
    `describe(action)` ("the roll call mark"), else "that change";
-   `onSaveFailed` gets the same sentence (App shows it as a toast), and
-   `saving.retry` dispatches the dropped changes again. The next successful
-   apply clears the error.
+   `onSaveFailed` gets the same sentence (App shows it as a toast). Each slice
+   keeps its failure until its own next successful apply clears it, so a save
+   on another slice, or on the rest of an import, leaves it standing. While
+   any slice has one, `saving` stays `error` with the most recent sentence,
+   and `saving.retry` dispatches every slice's dropped changes again, in the
+   order they were made (an import goes again for the slices that failed
+   only).
 
 There is no offline queue and nothing retries on its own (decision 0003).
 `StoreProvider` takes the repository as a prop (`repository`), defaulting to

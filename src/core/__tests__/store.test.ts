@@ -401,7 +401,7 @@ describe('saving through the repository', () => {
     expect(fake.saved.counter).toEqual({ count: 1 });
   });
 
-  it('clears the failure on the next success', async () => {
+  it("clears a slice's failure on that slice's next success, not another's", async () => {
     const fake = fakeRepository();
     const store = live(fake.repo);
     store.dispatch({ type: 'counter/bump' });
@@ -409,9 +409,80 @@ describe('saving through the repository', () => {
     expect(store.getSaving().status).toBe('error');
 
     store.dispatch({ type: 'notes/add', text: 'fine' });
+    await fake.succeed();
     expect(store.getSaving().status).toBe('error');
+    expect(store.getSaving().error).toBe("Couldn't save the count");
+
+    store.dispatch({ type: 'counter/bump' });
     await fake.succeed();
     expect(store.getSaving()).toEqual({ status: 'idle' });
+  });
+
+  it('keeps a failed slice of an import when another slice saves after it (#112)', async () => {
+    const fake = fakeRepository();
+    const store = live(fake.repo);
+    store.dispatch({
+      type: 'portal/replace',
+      state: { counter: { count: 9 }, notes: { notes: ['imported'] } },
+    });
+    await fake.fail(); // counter, the way grants might be rejected
+    await fake.succeed(); // notes, the way teaching might then save
+    expect(store.getSaving().status).toBe('error');
+    expect(store.getSaving().error).toBe("Couldn't save the new data");
+
+    store.getSaving().retry!();
+    // Only the slice that failed goes again.
+    expect(fake.pending.map(p => [p.sliceId, p.next])).toEqual([['counter', { count: 9 }]]);
+    await fake.succeed();
+    expect(store.getSaving()).toEqual({ status: 'idle' });
+    expect(fake.saved).toEqual({ counter: { count: 9 }, notes: { notes: ['imported'] } });
+  });
+
+  it('reports the most recent of several failures and resends them all', async () => {
+    const fake = fakeRepository();
+    const store = live(fake.repo);
+    store.dispatch({ type: 'counter/bump' });
+    store.dispatch({ type: 'notes/add', text: 'lost' });
+    await fake.fail();
+    await fake.fail();
+    expect(store.getSaving().error).toBe("Couldn't save that change");
+
+    store.getSaving().retry!();
+    expect(fake.pending.map(p => [p.sliceId, p.action.type])).toEqual([
+      ['counter', 'counter/bump'],
+      ['notes', 'notes/add'],
+    ]);
+    await fake.fail(); // the count again
+    await fake.succeed();
+    // The note saved; the count's failure stands, and only it goes again.
+    expect(store.getSaving().error).toBe("Couldn't save the count");
+    store.getSaving().retry!();
+    expect(fake.pending.map(p => p.sliceId)).toEqual(['counter']);
+    await fake.succeed();
+    expect(store.getSaving()).toEqual({ status: 'idle' });
+    expect(asTest(store.getState())).toEqual({ counter: { count: 1 }, notes: { notes: ['lost'] } });
+  });
+
+  it('resends an import that failed on every slice as one change', async () => {
+    const fake = fakeRepository();
+    const store = live(fake.repo);
+    store.dispatch({
+      type: 'portal/replace',
+      state: { counter: { count: 9 }, notes: { notes: ['imported'] } },
+    });
+    await fake.fail();
+    await fake.fail();
+    expect(asTest(store.getState())).toEqual({ counter: { count: 0 }, notes: { notes: [] } });
+
+    store.getSaving().retry!();
+    expect(fake.pending.map(p => [p.sliceId, p.action.type])).toEqual([
+      ['counter', 'portal/replace'],
+      ['notes', 'portal/replace'],
+    ]);
+    expect(asTest(store.getState())).toEqual({
+      counter: { count: 9 },
+      notes: { notes: ['imported'] },
+    });
   });
 
   it('sends what failed again on retry', async () => {
