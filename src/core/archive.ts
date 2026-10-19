@@ -18,6 +18,9 @@ export interface Archivable {
   archivedById?: string;
 }
 
+/** The two fields by name: optional on every archivable record as it is loaded. */
+export const ARCHIVE_FIELDS = ['archivedAt', 'archivedById'] as const;
+
 /** True when the record is archived. A missing record is not. */
 export function isArchived(record: Archivable | undefined | null): boolean {
   return !!record?.archivedAt;

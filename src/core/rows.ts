@@ -61,6 +61,73 @@ export function withoutNulls<T extends object>(
   return Object.fromEntries(kept) as { [K in keyof T]?: Exclude<T[K], null | undefined> };
 }
 
+/**
+ * A row as loaded (decision 0008, 2A). A cleared field is `null` on the wire
+ * and in the database, and a missing field in state, so each of `optional`
+ * that is `null` is left out. A `null` in any other field is a required field
+ * with no value, and so is a row that is not an object: undefined, so the
+ * slice's `normalise` rejects the slice and the portal keeps what is stored.
+ * Every slice's `normalise` runs its state through `sliceNullsAsMissing`, which
+ * calls this on each row.
+ */
+export function nullsAsMissing<T extends object>(
+  row: T,
+  optional: readonly (keyof T & string)[],
+): T | undefined {
+  return dropNulls(row, optional) as T | undefined;
+}
+
+function dropNulls(row: unknown, optional: readonly string[]): object | undefined {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return undefined;
+  const nulls = Object.entries(row).filter(([, value]) => value === null);
+  if (nulls.length === 0) return row;
+  if (nulls.some(([key]) => !optional.includes(key))) return undefined;
+  return withoutNulls(row);
+}
+
+/** A collection's row type, or the type itself for a field that is not a list. */
+type Element<V> = V extends readonly (infer R)[] ? R : V;
+
+/**
+ * The optional fields of each collection (or object, like `settings`) a slice
+ * keeps, by its key. A key left out has none: all its fields are required.
+ */
+export type OptionalFields<S> = {
+  readonly [K in keyof S]?: readonly (keyof Element<NonNullable<S[K]>> & string)[];
+};
+
+/**
+ * A slice's state as loaded: the state itself, each of its collections row by
+ * row and each object it holds through `nullsAsMissing`, with the optional
+ * fields `optional` names. A collection the payload does not have stays
+ * missing, for the slice to default or reject. Undefined when anything is
+ * rejected.
+ */
+export function sliceNullsAsMissing<S extends object>(
+  state: S,
+  optional: OptionalFields<S>,
+): S | undefined {
+  const loaded = dropNulls(state, []);
+  if (!loaded) return undefined;
+  const fieldsOf = optional as { readonly [key: string]: readonly string[] | undefined };
+  const out: { [key: string]: unknown } = {};
+  for (const [key, value] of Object.entries(loaded)) {
+    const fields = fieldsOf[key] ?? [];
+    if (Array.isArray(value)) {
+      const rows = value.map(row => dropNulls(row, fields));
+      if (rows.some(row => row === undefined)) return undefined;
+      out[key] = rows;
+    } else if (value && typeof value === 'object') {
+      const kept = dropNulls(value, fields);
+      if (!kept) return undefined;
+      out[key] = kept;
+    } else {
+      out[key] = value;
+    }
+  }
+  return out as S;
+}
+
 /** The rows grouped by one column, each group in the rows' order. */
 export function groupBy<R extends Row>(rows: readonly R[], column: keyof R): Map<RowValue, R[]> {
   const groups = new Map<RowValue, R[]>();

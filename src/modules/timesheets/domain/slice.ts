@@ -1,6 +1,8 @@
 import { insertRow } from '../../../core/module';
 import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import type { PortalState } from '../../../core/types';
+import { nullsAsMissing, sliceNullsAsMissing } from '../../../core/rows';
+import type { OptionalFields } from '../../../core/rows';
 import {
   APPROVED_REFUSAL,
   CHANGE_DRAFT_ONLY_REFUSAL,
@@ -276,6 +278,16 @@ const KINDS: TimeEntryEventKind[] = [
 ];
 
 /** A saved step the dialog can read: an id, a kind it knows and who did it. */
+/**
+ * The fields an entry and a step in its history may leave out. Stored as
+ * `null`, each loads as a missing field; a `null` in any other field rejects
+ * the slice (decision 0008, 2A).
+ */
+const OPTIONAL: OptionalFields<TimesheetsState> = {
+  entries: ['ensembleId', 'approvedBy', 'approvedAt', 'sentBackBy', 'sentBackAt', 'sentBackReason'],
+};
+const EVENT_OPTIONAL: Array<keyof TimeEntryEvent> = ['at', 'reason', 'changes', 'rebuilt'];
+
 function isEvent(raw: unknown): raw is TimeEntryEvent {
   if (!raw || typeof raw !== 'object') return false;
   const e = raw as Partial<TimeEntryEvent>;
@@ -349,19 +361,25 @@ export const timesheetsSlice: ModuleSlice<TimesheetsState, TimesheetsActions> = 
   },
   normalise(raw) {
     if (!raw || typeof raw !== 'object') return undefined;
-    const candidate = raw as Partial<TimesheetsState>;
-    if (!Array.isArray(candidate.entries)) return undefined;
-    return {
-      entries: candidate.entries.map(raw => {
-        const entry = {
-          ...raw,
-          hours: typeof raw.hours === 'number' ? raw.hours : 0,
-          status: STATUSES.includes(raw.status) ? raw.status : 'draft',
-        };
-        // An entry saved before the history was kept gets what its fields can tell (#95).
-        const kept = Array.isArray(raw.history) ? raw.history.filter(isEvent) : [];
-        return { ...entry, history: kept.length > 0 ? kept : rebuildHistory(entry) };
-      }),
-    };
+    const candidate = sliceNullsAsMissing(raw as Partial<TimesheetsState>, OPTIONAL);
+    if (!candidate || !Array.isArray(candidate.entries)) return undefined;
+    const entries: TimeEntry[] = [];
+    for (const raw of candidate.entries) {
+      const entry = {
+        ...raw,
+        hours: typeof raw.hours === 'number' ? raw.hours : 0,
+        status: STATUSES.includes(raw.status) ? raw.status : 'draft',
+      };
+      // Each step becomes a row of the activity table, so it loads as a row
+      // does; one that is not a step at all is left for `isEvent` to drop.
+      const steps = Array.isArray(raw.history)
+        ? raw.history.map(e => (e && typeof e === 'object' ? nullsAsMissing(e, EVENT_OPTIONAL) : e))
+        : [];
+      if (steps.some(e => e === undefined)) return undefined;
+      // An entry saved before the history was kept gets what its fields can tell (#95).
+      const kept = (steps as TimeEntryEvent[]).filter(isEvent);
+      entries.push({ ...entry, history: kept.length > 0 ? kept : rebuildHistory(entry) });
+    }
+    return { entries };
   },
 };
