@@ -14,7 +14,7 @@ import { AppDialog } from '../../../app/components/AppDialog';
 import { usePageHeader } from '../../../app/Shell';
 import { useToast } from '../../../app/ToastHost';
 import { PhaseBadge } from './badges';
-import { useCan, useStore } from '../../../core';
+import { newId, useCan, useStore } from '../../../core';
 import { DEFAULT_TEMPLATE_ID, PHASES, PHASE_ORDER, timingLabel } from '../domain';
 import type { ChecklistTemplate, ChecklistTemplateItem, DateAnchor, Phase } from '../domain';
 import './playbook.css';
@@ -95,7 +95,7 @@ export default function Playbook() {
   function addStep(phase: Phase) {
     if (!selected) return;
     const item: ChecklistTemplateItem = {
-      id: `${selected.id}-i${Date.now()}`,
+      id: newId('ti'),
       phase,
       title: 'New step',
       offsetDays: 0,
