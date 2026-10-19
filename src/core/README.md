@@ -86,6 +86,7 @@ identity, so nothing else re-renders. `portal/replace` swaps every slice at once
 interface Repository {
   load(slice: ModuleSlice, today: string, demo: boolean): Promise<unknown>; // one per slice
   apply(sliceId: string, action: AnyAction, next: unknown): Promise<void>;  // one per change
+  readonly acceptsReplace: boolean; // whether portal/replace (import, reset) may reach it
 }
 ```
 
@@ -115,6 +116,15 @@ a new live store on the new load. A new day does not load again; a slice reads
    and `saving.retry` dispatches every slice's dropped changes again, in the
    order they were made (an import goes again for the slices that failed
    only).
+
+**Import and reset stay off a backend** (decision 0008, 3C). A whole-portal
+replace would delete rows, which decision 0002 forbids, so a repository says
+whether it takes one with `acceptsReplace`. `localRepository` says yes. One
+that says no gets no `portal/replace`: `useStore().acceptsReplace` is false,
+Settings leaves out Import JSON and Reset demo data (Export only reads, so it
+stays), `importJson` throws and `resetDemo` is refused with `NO_REPLACE`, and
+a `portal/replace` dispatched anyway throws `REPLACE_REFUSED` (`live.ts`)
+before anything changes, as the bug it is.
 
 There is no offline queue and nothing retries on its own (decision 0003).
 `StoreProvider` takes the repository as a prop (`repository`), defaulting to
@@ -164,7 +174,7 @@ carry it. Unset means the seed's day, `SEED_TODAY`; "Use the real date" stores
 | --- | --- |
 | `types.ts` | `StaffMember` (`title` is the job title, `role` is one of the seven `Role`s of decision 0001), `SignedInUser`, `Program` (archivable; `ProgramId` is a plain string: the seeded ids stay as they were, a new program gets a generated `p-…` id, and no id means anything; `inSchool` marks a program taught in schools, whose hours are Timesheets' "In-school hours"; Operations is the one `Program` record that is not a program, see `derive.ts`), `Organization`, `Venue`, `Address`, `ProgramBudget` (a program's whole-dollar budget for one fiscal year, named by `FiscalYearLabel` "FY27"), `Project` (archivable one-off work under one program: name, `programId`, start and end, budget), `ProjectInput`, `FundingTarget` (a program's fiscal year, or a project: where money can go), `FileFormat` and `FileFacts` (a stored file's name, format, size and pages, not its contents; a grant's `GrantFile` builds on it), `OfficeDocument` (archivable: kind, name, versions), `OfficeDocumentKind`, `OfficeDocumentVersion` (`FileFacts` plus a stable `id`, `addedAt`, `addedById`, optional `expires`), `OfficeDocumentInput` and `OfficeDocumentVersionInput` (what Add document and Add version collect), `AppSettings` (the fiscal year and the module switches; the demo date is not in it), `CoreState`, and the augmentable `PortalState` / `PortalActions`. |
 | `module.ts` | `insertRow(state, key, row)` (adds a row unless its id is already there, else gives the state back untouched), `ModuleSlice` (`seed(today)` the demo data, `empty()` a new office, `normalise(raw, demo)`, its `rules`: what each action needs, and an optional `describe(action)`: the change in plain words for a failed save), `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are gated Cards for the Settings screen), `ModuleRoute` (`requires`, `allows`), `Requires`, `NavItem`, `NavSection`, `StatSpec`, `AttentionItem` (its optional `statusLabel` gives the status Badge its own words, "Out of date", while the tone follows `status`, and `statusOutlined` draws it in outlined gold, "Sent back"), `GatedCard`, `FundingContribution` and `FundingSource` (a module's `funding`: what it puts toward a program's year or a project, and optionally its own `panel` for the sheet), `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
-| `persistence.ts` | The `Repository` interface: `load` one slice, `apply` one change, both promises. |
+| `persistence.ts` | The `Repository` interface: `load` one slice, `apply` one change, both promises; `acceptsReplace`, whether import and reset may reach it. |
 | `live.ts` | `createLiveStore`: the state, the per-slice apply queue, the rollback, `Saving` and `whenSaved`. No React, so the tests drive it with a fake repository. |
 | `store.tsx` | `StoreProvider` (its `onRefused` shows a refused action's reason, its `onSaveFailed` a change that could not be saved, its `repository` defaults to localStorage), `useStore`, `useCan`, `coreSlice`, `guardActions` (wraps every slice's actions in its `rules`), `refusalMessage`, `newId`, `resolveToday`, `savedStaff()` (the staff list as saved, which sign-in reads before the store mounts). |
 | `demo.ts` | `isDemo()` (the `VITE_DEMO` switch), `DEMO_TODAY_KEY` and the demo-date preference helpers. |
@@ -216,9 +226,9 @@ manages both on the Partners screen (`src/app/screens/partners/`).
 | `archiveStaff(id)` / `restoreStaff(id)` | Archives a person (they cannot sign in and leave the staff list and pickers; their work still names them) or restores them. Same rule as editing them (`mayChangeStaff`); nobody archives themself ("You can't archive yourself. Ask someone else who manages staff."). |
 | `archiveOrganization(id)` / `restoreOrganization(id)` | Archives a partner or restores it. Its venues are not touched. Needs Partners: Edit. |
 | `archiveVenue(id)` / `restoreVenue(id)` | Archives a venue or restores it. Classes that met there keep it. Needs Partners: Edit. |
-| `resetDemo()` | Reseeds every slice, one apply per slice. Demo only: with the demo off it changes nothing and says so. |
+| `resetDemo()` | Reseeds every slice, one apply per slice. Demo only: with the demo off it changes nothing and says so. Refused the same way on a repository that does not accept a replace. |
 | `setDemoToday(iso)` | Moves the demo date, or `undefined` for the clock. A browser preference, not data. Demo only. |
-| `importJson(text)` | Replaces every slice from an exported file, one apply per slice. Throws on an unreadable file, or on a slice in it that cannot be read, and changes nothing. |
+| `importJson(text)` | Replaces every slice from an exported file, one apply per slice. Throws on an unreadable file, on a slice in it that cannot be read, or on a repository that does not accept a replace (`NO_REPLACE`), and changes nothing. |
 | `exportJson()` | The whole portal as pretty JSON. |
 
 See `src/modules/README.md` for how to add a module.

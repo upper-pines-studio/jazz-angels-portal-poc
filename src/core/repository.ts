@@ -214,8 +214,10 @@ export function saveState(slices: PortalSlice[], state: PortalState): void {
  * rejects with an `UnreadableDataError`, so nothing saved is ever written over.
  * `apply` writes the slice's new state whole, so it has no need to read the
  * action (a backend will). Both answer at once, but as promises, like a backend.
+ * It accepts a whole-state replace: each slice is one key, written over whole.
  */
 export const localRepository: Repository = {
+  acceptsReplace: true,
   load(slice, today, demo) {
     const stored = readSlice(slice, demo);
     if (stored.kind === 'read') return Promise.resolve(stored.value);

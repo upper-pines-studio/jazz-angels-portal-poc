@@ -66,11 +66,14 @@ interface PersonDraft {
 }
 
 export default function Settings() {
-  const { state, today, actions, user, demo, demoToday } = useStore();
+  const { state, today, actions, user, demo, demoToday, acceptsReplace } = useStore();
   const allowed = useCan();
   // Staff and roles; the system's own settings with import, export and reset (decision 0001).
   const mayStaff = allowed('staff', 'edit');
   const maySystem = allowed('modules', 'edit');
+  // Import and reset replace every slice at once, which only a repository that
+  // accepts it can take (decision 0008, 3C). Export only reads, so it stays.
+  const mayReset = demo && acceptsReplace;
   const toast = useToast();
   const nav = useNavigate();
   const loc = useLocation();
@@ -474,25 +477,29 @@ export default function Settings() {
             >
               Export JSON
             </Button>
-            <Button
-              variant="secondary"
-              iconLeft={<Icon name="upload" size={15} />}
-              onClick={() => fileInput.current?.click()}
-            >
-              Import JSON
-            </Button>
-            <input
-              ref={fileInput}
-              type="file"
-              accept="application/json,.json"
-              style={{ display: 'none' }}
-              onChange={e => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (file) void importJson(file);
-              }}
-            />
-            {demo && confirmReset && (
+            {acceptsReplace && (
+              <>
+                <Button
+                  variant="secondary"
+                  iconLeft={<Icon name="upload" size={15} />}
+                  onClick={() => fileInput.current?.click()}
+                >
+                  Import JSON
+                </Button>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="application/json,.json"
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (file) void importJson(file);
+                  }}
+                />
+              </>
+            )}
+            {mayReset && confirmReset && (
               <>
                 <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-muted)' }}>
                   This replaces everything with the demo data. Reset?
@@ -517,7 +524,7 @@ export default function Settings() {
                 </Button>
               </>
             )}
-            {demo && !confirmReset && (
+            {mayReset && !confirmReset && (
               <Button
                 variant="secondary"
                 style={{ color: 'var(--danger-500)' }}

@@ -576,6 +576,12 @@ export function guardActions<A extends object>(
 /** What a demo-only action says when it is called in a build without the demo. */
 export const NO_DEMO = 'The demo data is not part of this portal.';
 
+/**
+ * What import and reset say when the repository does not accept a whole-state
+ * replace (decision 0008, 3C). Settings leaves Import out there, so it is rarely seen.
+ */
+export const NO_REPLACE = "This portal's data can't be replaced all at once.";
+
 /** Replace every slice at once (reset, import). */
 interface ReplaceAction extends AnyAction {
   type: typeof REPLACE;
@@ -645,6 +651,8 @@ export interface StoreValue {
   actions: PortalActions;
   /** Whether this is a demo build (`isDemo()`): the sample data, the demo date, the reset. */
   demo: boolean;
+  /** Whether the repository accepts a whole-state replace. Settings offers Import and Reset only when it does. */
+  acceptsReplace: boolean;
   /** The demo date in use, or undefined when today is the clock. Always undefined outside a demo. */
   demoToday: string | undefined;
   /** Whether a change is being saved, or the last one could not be. The shell shows it. */
@@ -856,6 +864,7 @@ function LiveProvider({
         resetDemo() {
           // Settings offers it only in a demo build; anywhere else it changes nothing.
           if (!demo) return refuse(NO_DEMO);
+          if (!repo.acceptsReplace) return refuse(NO_REPLACE);
           replace(repository.freshState(all, today, demo));
         },
         setDemoToday(iso) {
@@ -864,6 +873,7 @@ function LiveProvider({
           setDemoTodayState(iso);
         },
         importJson(text: string) {
+          if (!repo.acceptsReplace) throw new Error(NO_REPLACE);
           replace(repository.readImport(all, text, today, demo));
         },
         exportJson() {
@@ -883,7 +893,7 @@ function LiveProvider({
     bag.core = { ...(bag.core as CoreDataActions), ...data } satisfies CoreActions;
 
     return bag as unknown as PortalActions;
-  }, [all, today, user, demo, live]);
+  }, [all, today, user, demo, repo, live]);
 
   const value = useMemo<StoreValue>(
     () => ({
@@ -892,11 +902,12 @@ function LiveProvider({
       user,
       actions,
       demo,
+      acceptsReplace: repo.acceptsReplace,
       demoToday: demo ? demoToday : undefined,
       saving,
       whenSaved: live.whenSaved,
     }),
-    [state, today, user, actions, demo, demoToday, saving, live],
+    [state, today, user, actions, demo, repo, demoToday, saving, live],
   );
 
   return <StoreContext.Provider value={value}>{member ? children : null}</StoreContext.Provider>;

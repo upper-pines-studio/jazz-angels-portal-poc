@@ -6,7 +6,13 @@ import type { AnyAction, ModuleSlice } from '../module';
 import type { Repository } from '../persistence';
 import type { PortalSlice } from '../repository';
 import { SEED_TODAY } from '../seed';
-import { StoreProvider, useStore, type StoreProviderProps, type StoreValue } from '../store';
+import {
+  NO_REPLACE,
+  StoreProvider,
+  useStore,
+  type StoreProviderProps,
+  type StoreValue,
+} from '../store';
 
 /**
  * StoreProvider rendered for real (#113): the clock moves on with no `today`
@@ -30,10 +36,11 @@ const counter: ModuleSlice<CountState, { bump(): void }> = {
 const SLICES = [counter] as unknown as PortalSlice[];
 
 /** A repository whose counter starts at `count`, holding each apply until the test settles it. */
-function fakeRepository(count: number) {
+function fakeRepository(count: number, acceptsReplace = true) {
   const loads: string[] = [];
   const applies: Array<{ sliceId: string; next: unknown; resolve: () => void }> = [];
   const repo: Repository = {
+    acceptsReplace,
     load: (slice, today) => {
       loads.push(slice.id);
       return Promise.resolve(slice.id === 'counter' ? { count } : slice.seed(today));
@@ -55,9 +62,12 @@ function Probe() {
 const count = () => (store!.state as unknown as { counter: CountState }).counter.count;
 const bump = () => (store!.actions as unknown as { counter: { bump(): void } }).counter.bump();
 
-async function render(props: Omit<StoreProviderProps, 'userId' | 'slices' | 'children'>) {
+async function render(
+  props: Omit<StoreProviderProps, 'userId' | 'slices' | 'children'>,
+  userId = 's-barry',
+) {
   const tree: ReactNode = (
-    <StoreProvider slices={SLICES} userId="s-barry" {...props}>
+    <StoreProvider slices={SLICES} userId={userId} {...props}>
       <Probe />
     </StoreProvider>
   );
@@ -165,5 +175,55 @@ describe('a new repository', () => {
     expect(first.applies.map(a => a.next)).toEqual([{ count: 2 }]);
     expect(second.loads).toEqual(['core', 'counter']);
     expect(count()).toBe(5);
+  });
+});
+
+describe('a repository that refuses a replace (decision 0008, 3C)', () => {
+  // Import, export and reset are the Admin's (decision 0001).
+  const ADMIN = 's-gwen';
+  const core = () =>
+    store!.actions.core as unknown as {
+      importJson(text: string): void;
+      exportJson(): string;
+      resetDemo(): void;
+    };
+
+  it('says so, and import and reset change nothing', async () => {
+    const fake = fakeRepository(3, false);
+    const refusals: string[] = [];
+    await render(
+      {
+        today: SEED_TODAY,
+        demo: true,
+        repository: fake.repo,
+        onRefused: m => refusals.push(m),
+      },
+      ADMIN,
+    );
+    expect(store!.acceptsReplace).toBe(false);
+    const file = core().exportJson();
+
+    act(() => expect(() => core().importJson(file)).toThrow(NO_REPLACE));
+    act(() => core().resetDemo());
+    expect(refusals).toEqual([NO_REPLACE]);
+    expect(count()).toBe(3);
+    expect(fake.applies).toHaveLength(0);
+  });
+
+  it('still exports', async () => {
+    const fake = fakeRepository(3, false);
+    await render({ today: SEED_TODAY, demo: false, repository: fake.repo }, ADMIN);
+    const file = JSON.parse(core().exportJson()) as { slices: { counter: CountState } };
+    expect(file.slices.counter).toEqual({ count: 3 });
+  });
+
+  it('takes an import on a repository that accepts one, as before', async () => {
+    const fake = fakeRepository(3);
+    await render({ today: SEED_TODAY, demo: false, repository: fake.repo }, ADMIN);
+    expect(store!.acceptsReplace).toBe(true);
+    const file = core().exportJson().replace('"count": 3', '"count": 8');
+    act(() => core().importJson(file));
+    expect(count()).toBe(8);
+    expect(fake.applies.map(a => a.sliceId)).toContain('counter');
   });
 });

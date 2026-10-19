@@ -461,6 +461,7 @@ describe('a roll call that does not save', () => {
     let fail = true;
     const failures: string[] = [];
     const repo: Repository = {
+      acceptsReplace: true,
       load: slice => Promise.resolve(slice.seed(SEED_TODAY)),
       apply: () => (fail ? Promise.reject(new Error('No connection.')) : Promise.resolve()),
     };

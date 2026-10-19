@@ -36,6 +36,13 @@ export interface Saving {
 /** What `replace` dispatches: every slice at once (import, reset). */
 export const REPLACE = 'portal/replace';
 
+/**
+ * What `dispatch` throws when a `REPLACE` reaches a repository that does not
+ * accept one (decision 0008, 3C). The store refuses import and reset before
+ * this, so reaching it is a bug, not something to save slice by slice.
+ */
+export const REPLACE_REFUSED = 'portal/replace was dispatched to a repository that refuses it.';
+
 interface Change {
   /** Which dispatch made it: one number for every slice the action touched. */
   seq: number;
@@ -115,6 +122,7 @@ export function createLiveStore({
   }
 
   function dispatch(action: AnyAction) {
+    if (action.type === REPLACE && !repository.acceptsReplace) throw new Error(REPLACE_REFUSED);
     const prev = state;
     const next = reducer(prev, action);
     if (next === prev) return;
