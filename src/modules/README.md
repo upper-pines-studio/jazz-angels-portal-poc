@@ -38,6 +38,8 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
     addMeeting: 'schedule',
     setMark: (user, state, meetingId) => mayTakeRoll(state, user, meetingId),
   },
+  // The state as the rows of its tables in docs/SCHEMA.md, and back (domain/tables.ts).
+  tables: teachingTables,
   normalise(raw) { /* validate a loaded payload, or return undefined */ },
   // The change in plain words, for "Couldn't save the roll call mark".
   describe(action) { /* 'the roll call mark', or undefined for "that change" */ },
@@ -51,6 +53,20 @@ follows from an action (a submitted roll is closed, only a draft is submitted)
 live in `createActions`, which reads the state first. Each change is one
 `repository.apply`, so a backend writes rows from it without knowing the
 module. Grants, teaching and timesheets all work this way.
+
+**The tables.** In `domain/tables.ts`, say how the state maps onto the
+module's tables in `docs/SCHEMA.md`: a `SliceTables` (`src/core/rows.ts`) with
+`keys` (each table, parents first, with its primary key's columns),
+`toRows(state)` and `fromRows(tables)`, columns named as SCHEMA.md names them.
+A one-to-one shape becomes columns, a list a child table: grants writes
+`Grant.dates` as columns on `grants` and `Grant.programs` as
+`grant_programs`; teaching writes a student's guardian and photo release to
+`student_private`; timesheets writes each step of an entry's history as an
+`activity` row. Rows carry only stored columns, a missing field is `null`, and
+a `null` read back is a missing field. Add a round-trip test of the demo seed
+and of `empty()` beside the others, and a new table or column to SCHEMA.md
+first: `src/app/__tests__/tables.test.ts` fails on a table or column the
+document does not draw, and on a drawn table no slice writes.
 
 **2. The manifest.** In `manifest.tsx`, name the module, its rail section, its
 routes and what it puts on the dashboard:

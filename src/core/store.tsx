@@ -32,6 +32,7 @@ import * as repository from './repository';
 import { localRepository, UnreadableDataError } from './repository';
 import type { PortalSlice } from './repository';
 import { ROLE_LABELS, isRole } from './roles';
+import { coreTables } from './tables';
 import { DEFAULT_ENABLED_MODULES, loginStaff, makeCoreEmpty, makeCoreSeed } from './seed';
 import type {
   AppSettings,
@@ -270,6 +271,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
   empty: () => makeCoreEmpty(),
   reducer: coreReducer,
   describe: describeCoreChange,
+  tables: coreTables,
   createActions(dispatch, getState, ctx) {
     const archived = () => archiveFields(ctx.user, ctx.today);
     return {

@@ -47,6 +47,11 @@ const notes: ModuleSlice<NoteState, Record<string, never>> = {
   reducer: state => state,
   createActions: () => ({}),
   rules: {},
+  tables: {
+    keys: { notes: ['id'] },
+    toRows: s => ({ notes: s.notes.map((text, i) => ({ id: i + 1, text })) }),
+    fromRows: t => ({ notes: (t.notes ?? []).map(r => String(r.text)) }),
+  },
   normalise: raw => (Array.isArray((raw as NoteState)?.notes) ? (raw as NoteState) : undefined),
 };
 
