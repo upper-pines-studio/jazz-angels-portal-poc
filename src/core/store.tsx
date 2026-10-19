@@ -817,6 +817,7 @@ function LiveProvider({
     createLiveStore({
       initial,
       reducer: makeReducer(all),
+      slices: all,
       repository: repo,
       describe: (sliceId, action) => describeChange(all, sliceId, action),
       onSaveFailed: message => failedRef.current?.(message),

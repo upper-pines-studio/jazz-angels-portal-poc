@@ -1,4 +1,4 @@
-import type { AnyAction, ModuleSlice } from './module';
+import type { ModuleSlice } from './module';
 import type { Repository } from './persistence';
 import type { PortalState } from './types';
 
@@ -212,8 +212,8 @@ export function saveState(slices: PortalSlice[], state: PortalState): void {
  * missing it writes a fresh slice there; when the key holds data that cannot be
  * read it copies that data to an `unreadableKey`, leaves the original alone and
  * rejects with an `UnreadableDataError`, so nothing saved is ever written over.
- * `apply` writes the slice's new state whole, so it has no need to read the
- * action (a backend will). Both answer at once, but as promises, like a backend.
+ * `apply` writes the slice's new state (`next`) whole, so it never reads the
+ * row diff (a backend writes that) or the action. Both answer at once, but as promises, like a backend.
  * It accepts a whole-state replace: each slice is one key, written over whole.
  */
 export const localRepository: Repository = {
@@ -232,7 +232,7 @@ export const localRepository: Repository = {
     saveSlice(slice.id, start);
     return Promise.resolve(start);
   },
-  apply(sliceId: string, _action: AnyAction, next: unknown) {
+  apply({ sliceId, next }) {
     try {
       if (failingOnPurpose())
         throw new Error(`Saving is switched off in this browser (${FAIL_SAVES_KEY}).`);

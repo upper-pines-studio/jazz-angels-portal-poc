@@ -2,7 +2,7 @@
 import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AnyAction, ModuleSlice } from '../module';
+import type { ModuleSlice } from '../module';
 import type { Repository } from '../persistence';
 import type { PortalSlice } from '../repository';
 import { SEED_TODAY } from '../seed';
@@ -50,7 +50,7 @@ function fakeRepository(count: number, acceptsReplace = true) {
       loads.push(slice.id);
       return Promise.resolve(slice.id === 'counter' ? { count } : slice.seed(today));
     },
-    apply: (sliceId: string, _action: AnyAction, next: unknown) =>
+    apply: ({ sliceId, next }) =>
       new Promise<void>(resolve => applies.push({ sliceId, next, resolve })),
   };
   return { repo, loads, applies };
