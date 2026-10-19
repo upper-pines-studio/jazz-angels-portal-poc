@@ -207,6 +207,12 @@ export type OfficeDocumentKind =
 export interface OfficeDocumentVersion extends FileFacts {
   /** Stable, so a grant can point at the version it sent (#68). */
   id: string;
+  /**
+   * 1, 2, 3 within its document, in the order added (#131): the highest held
+   * plus one, set when it is added and never changed. It breaks a same-day tie
+   * for current, since a database keeps no list order.
+   */
+  number: number;
   /** ISO `YYYY-MM-DD`: the day it was added. The newest added is current. */
   addedAt: string;
   /** The staff id of whoever added it. */
@@ -224,7 +230,7 @@ export interface OfficeDocument extends Archivable {
   kind: OfficeDocumentKind;
   /** "Certificate of liability insurance" */
   name: string;
-  /** In the order they were added, oldest first. */
+  /** In the order they were added, oldest first: by `number`. */
   versions: OfficeDocumentVersion[];
 }
 

@@ -345,17 +345,20 @@ export function coversWholeStudio(grant: Pick<Grant, 'programs'>): boolean {
 }
 
 /**
- * The grant's programs in words: "In-School Program and Homeschool Program",
+ * The grant's programs in words: "Homeschool Program and In-School Program",
  * or with three, "A, B and C". `short` uses the short names a narrow column has room for.
+ * Always by program name, short or not: `grant_programs` keeps no order (#131),
+ * so the order they were picked in is not kept.
  */
 export function programNames(
   state: PortalState,
   grant: Pick<Grant, 'programs'>,
   short = false,
 ): string {
-  const names = grant.programs.map(id =>
-    short ? (programById(state, id)?.short ?? programName(state, id)) : programName(state, id),
-  );
+  const names = grant.programs
+    .map(id => ({ id, name: programName(state, id) }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(({ id, name }) => (short ? (programById(state, id)?.short ?? name) : name));
   if (names.length < 2) return names[0] ?? '—';
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }

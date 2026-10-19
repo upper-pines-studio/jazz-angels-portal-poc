@@ -56,11 +56,16 @@ export const EXPIRES_SOON_DAYS = 30;
  */
 export type OfficeDocumentStatus = 'out-of-date' | 'expires-soon' | 'current';
 
+/** Newest first: the later day, then on the same day the higher number (#131). */
+function newerFirst(a: OfficeDocumentVersion, b: OfficeDocumentVersion): number {
+  return b.addedAt.localeCompare(a.addedAt) || b.number - a.number;
+}
+
 /**
- * The version that is current: the newest added (a later one in the list wins
- * a tie). Given `on`, an ISO date, the version that was current that day: the
- * newest added on or before it, so a grant submitted earlier can name what it
- * sent (#68). Undefined when there is none.
+ * The version that is current: the newest added (the higher `number` wins a
+ * same-day tie, #131). Given `on`, an ISO date, the version that was current
+ * that day: the newest added on or before it, so a grant submitted earlier can
+ * name what it sent (#68). Undefined when there is none.
  */
 export function currentVersion(
   doc: OfficeDocument,
@@ -69,17 +74,19 @@ export function currentVersion(
   let best: OfficeDocumentVersion | undefined;
   for (const v of doc.versions) {
     if (on && v.addedAt > on) continue;
-    if (!best || v.addedAt >= best.addedAt) best = v;
+    if (!best || newerFirst(v, best) < 0) best = v;
   }
   return best;
 }
 
 /** The versions newest first, the current one at the top. */
 export function versionsNewestFirst(doc: OfficeDocument): OfficeDocumentVersion[] {
-  return doc.versions
-    .map((v, i) => ({ v, i }))
-    .sort((a, b) => b.v.addedAt.localeCompare(a.v.addedAt) || b.i - a.i)
-    .map(x => x.v);
+  return [...doc.versions].sort(newerFirst);
+}
+
+/** The number the next version added to `doc` takes: the highest held plus one, 1 for the first. */
+export function nextVersionNumber(doc: Pick<OfficeDocument, 'versions'> | undefined): number {
+  return Math.max(0, ...(doc?.versions ?? []).map(v => v.number)) + 1;
 }
 
 /** One version's status against `today` (the store's today, which follows the demo date). */
@@ -184,9 +191,13 @@ export function newOfficeDocumentProblem(input: OfficeDocumentInput): string | u
   return officeDocumentProblem(input) ?? officeDocumentVersionProblem(input);
 }
 
-/** A version as stored: the file's facts, the day, who, and the expiry when there is one. */
+/**
+ * A version as stored: the file's facts, its number in the document, the day,
+ * who, and the expiry when there is one.
+ */
 export function versionFields(
   id: string,
+  number: number,
   input: OfficeDocumentVersionInput,
   addedAt: string,
   addedById: string,
@@ -194,6 +205,7 @@ export function versionFields(
   const { name, format, sizeKb, pages } = input.file;
   return {
     id,
+    number,
     name: name.trim(),
     format,
     sizeKb: Math.round(sizeKb),
@@ -208,12 +220,15 @@ export function versionFields(
 // Loading
 // ---------------------------------------------------------------------------
 
-function normaliseVersion(raw: Partial<OfficeDocumentVersion>): OfficeDocumentVersion | undefined {
+type UnnumberedVersion = Omit<OfficeDocumentVersion, 'number'> & { number?: number };
+
+function normaliseVersion(raw: Partial<OfficeDocumentVersion>): UnnumberedVersion | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   if (typeof raw.id !== 'string' || typeof raw.addedAt !== 'string') return undefined;
   if (typeof raw.name !== 'string' || !FORMATS.includes(raw.format as FileFormat)) return undefined;
   return {
     id: raw.id,
+    ...(Number.isInteger(raw.number) && raw.number! > 0 ? { number: raw.number } : {}),
     name: raw.name,
     format: raw.format as FileFormat,
     sizeKb: typeof raw.sizeKb === 'number' ? raw.sizeKb : 0,
@@ -224,12 +239,22 @@ function normaliseVersion(raw: Partial<OfficeDocumentVersion>): OfficeDocumentVe
   };
 }
 
+/**
+ * Versions saved before they had numbers (#131) take them after the highest
+ * held, in list order: the order that broke a same-day tie then, so the
+ * current version stays the same.
+ */
+function numbered(versions: UnnumberedVersion[]): OfficeDocumentVersion[] {
+  let next = Math.max(0, ...versions.map(v => v.number ?? 0)) + 1;
+  return versions.map(v => ({ ...v, number: v.number ?? next++ }));
+}
+
 /** An office document as saved, or undefined when it is not one. A version it cannot read is dropped. */
 export function normaliseOfficeDocument(raw: Partial<OfficeDocument>): OfficeDocument | undefined {
   if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string') return undefined;
-  const versions = Array.isArray(raw.versions)
-    ? raw.versions.flatMap(v => normaliseVersion(v) ?? [])
-    : [];
+  const versions = numbered(
+    Array.isArray(raw.versions) ? raw.versions.flatMap(v => normaliseVersion(v) ?? []) : [],
+  );
   return normaliseArchived({
     ...raw,
     id: raw.id,

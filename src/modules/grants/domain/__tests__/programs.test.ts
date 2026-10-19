@@ -54,16 +54,30 @@ describe('a grant names several programs (decision 0006)', () => {
     expect(grantsForProgram(state, 'jazz-legacy').map(g => g.id)).not.toContain(port.id);
   });
 
-  it('reads the programs in words', () => {
+  it('reads the programs in words, by program name', () => {
     expect(programNames(state, { programs: ['in-school'] })).toBe('In-School Program');
-    expect(programNames(state, port)).toBe('In-School Program and Homeschool Program');
+    expect(programNames(state, port)).toBe('Homeschool Program and In-School Program');
     expect(programNames(state, { programs: ['studio-sessions', 'in-school', 'homeschool'] })).toBe(
-      'Studio Semester Sessions, In-School Program and Homeschool Program',
+      'Homeschool Program, In-School Program and Studio Semester Sessions',
     );
   });
 
-  it('uses the short names for a narrow column', () => {
-    expect(programNames(state, port, true)).toBe('In-school and Homeschool');
+  it('names them in the same order however they were stored (#131)', () => {
+    // A database gives a grant's programs back in no order.
+    const orders = [
+      ['studio-sessions', 'in-school', 'homeschool'],
+      ['homeschool', 'studio-sessions', 'in-school'],
+      ['in-school', 'homeschool', 'studio-sessions'],
+    ];
+    const read = orders.map(programs => programNames(state, { programs }));
+    expect(new Set(read).size).toBe(1);
+    expect(programNames(state, { programs: ['in-school', 'homeschool'] }, true)).toBe(
+      programNames(state, { programs: ['homeschool', 'in-school'] }, true),
+    );
+  });
+
+  it('uses the short names for a narrow column, still by full name', () => {
+    expect(programNames(state, port, true)).toBe('Homeschool and In-school');
   });
 
   it('counts a grant on Operations (id general-operating) as the whole studio, among others too', () => {

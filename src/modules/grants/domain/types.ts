@@ -695,7 +695,7 @@ export type ShareWarningKind =
 
 export interface ShareWarning {
   kind: ShareWarningKind;
-  /** One plain sentence: "Restricted to In-School Program and Homeschool Program". */
+  /** One plain sentence: "Restricted to Homeschool Program and In-School Program". */
   message: string;
 }
 

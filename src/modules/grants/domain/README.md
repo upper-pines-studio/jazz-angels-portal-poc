@@ -213,7 +213,7 @@ out. History keeps them: `grantById`, `grantsByFunder`, `funderTotals` ("awarded
 last-year views read. `fundersList(state, includeArchived?)` is the Funders list.
 
 Lookup helpers, because every screen needs them: `grantById`, `funderById`,
-`grantsByFunder`, `grantsForProgram` (a grant is under each program it names), `programNames(state, grant, short?)` ("A, B and C"), `coversWholeStudio(grant)` (it names Operations, core's `OPERATIONS_ID`), `funderTotals`, `grantActivity` (newest
+`grantsByFunder`, `grantsForProgram` (a grant is under each program it names), `programNames(state, grant, short?)` ("A, B and C", by program name: `grant_programs` keeps no order, #131), `coversWholeStudio(grant)` (it names Operations, core's `OPERATIONS_ID`), `funderTotals`, `grantActivity` (newest
 first), `funderActivity(state, funderId)` (every row on the funder's grants, archived grants
 included, newest first, each as `{ row, grant }`: a `FunderActivityLine`; the funder's Recent
 activity), `funderLastActivity(state, funderId)` (the day of its newest row, for the Funders list),
@@ -400,7 +400,7 @@ toward one fiscal year.
   `fundingSummary(targetBudget(state, target), sources)` gives the budget,
   awarded, if awarded and still to find. `grantsPayingFor` is the same as grants.
 - **Warnings, never refusals** (`ShareWarning`, `{ kind, message }`):
-  `outside-restriction` ("Restricted to In-School Program and Homeschool
+  `outside-restriction` ("Restricted to Homeschool Program and In-School
   Program", for a restricted grant's money outside its programs, a project
   judged by its program), `project-outside-period` ("Runs past the grant
   period, which ends Jun 30, 2027"), `year-after-period` ("FY28 starts after

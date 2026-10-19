@@ -167,7 +167,7 @@ describe('warnings, never refusals', () => {
     expect(targetWarnings(state, grant(PORT), fy27('studio-sessions'))).toEqual([
       {
         kind: 'outside-restriction',
-        message: 'Restricted to In-School Program and Homeschool Program',
+        message: 'Restricted to Homeschool Program and In-School Program',
       },
     ]);
     // Through a project, by the project's program.

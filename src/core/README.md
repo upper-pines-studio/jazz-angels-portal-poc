@@ -172,7 +172,7 @@ carry it. Unset means the seed's day, `SEED_TODAY`; "Use the real date" stores
 
 | File | What is in it |
 | --- | --- |
-| `types.ts` | `StaffMember` (`title` is the job title, `role` is one of the seven `Role`s of decision 0001), `SignedInUser`, `Program` (archivable; `ProgramId` is a plain string: the seeded ids stay as they were, a new program gets a generated `p-…` id, and no id means anything; `inSchool` marks a program taught in schools, whose hours are Timesheets' "In-school hours"; Operations is the one `Program` record that is not a program, see `derive.ts`), `Organization`, `Venue`, `Address`, `ProgramBudget` (a program's whole-dollar budget for one fiscal year, named by `FiscalYearLabel` "FY27"), `Project` (archivable one-off work under one program: name, `programId`, start and end, budget), `ProjectInput`, `FundingTarget` (a program's fiscal year, or a project: where money can go), `FileFormat` and `FileFacts` (a stored file's name, format, size and pages, not its contents; a grant's `GrantFile` builds on it), `OfficeDocument` (archivable: kind, name, versions), `OfficeDocumentKind`, `OfficeDocumentVersion` (`FileFacts` plus a stable `id`, `addedAt`, `addedById`, optional `expires`), `OfficeDocumentInput` and `OfficeDocumentVersionInput` (what Add document and Add version collect), `AppSettings` (the fiscal year and the module switches; the demo date is not in it), `CoreState`, and the augmentable `PortalState` / `PortalActions`. |
+| `types.ts` | `StaffMember` (`title` is the job title, `role` is one of the seven `Role`s of decision 0001), `SignedInUser`, `Program` (archivable; `ProgramId` is a plain string: the seeded ids stay as they were, a new program gets a generated `p-…` id, and no id means anything; `inSchool` marks a program taught in schools, whose hours are Timesheets' "In-school hours"; Operations is the one `Program` record that is not a program, see `derive.ts`), `Organization`, `Venue`, `Address`, `ProgramBudget` (a program's whole-dollar budget for one fiscal year, named by `FiscalYearLabel` "FY27"), `Project` (archivable one-off work under one program: name, `programId`, start and end, budget), `ProjectInput`, `FundingTarget` (a program's fiscal year, or a project: where money can go), `FileFormat` and `FileFacts` (a stored file's name, format, size and pages, not its contents; a grant's `GrantFile` builds on it), `OfficeDocument` (archivable: kind, name, versions), `OfficeDocumentKind`, `OfficeDocumentVersion` (`FileFacts` plus a stable `id`, its `number` in the document, `addedAt`, `addedById`, optional `expires`), `OfficeDocumentInput` and `OfficeDocumentVersionInput` (what Add document and Add version collect), `AppSettings` (the fiscal year and the module switches; the demo date is not in it), `CoreState`, and the augmentable `PortalState` / `PortalActions`. |
 | `module.ts` | `insertRow(state, key, row)` (adds a row unless its id is already there, else gives the state back untouched), `ModuleSlice` (`seed(today)` the demo data, `empty()` a new office, `normalise(raw, demo)`, its `rules`: what each action needs, its `tables`: how its state maps onto the tables of `docs/SCHEMA.md`, and an optional `describe(action)`: the change in plain words for a failed save), `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are gated Cards for the Settings screen), `ModuleRoute` (`requires`, `allows`), `Requires`, `NavItem`, `NavSection`, `StatSpec`, `AttentionItem` (its optional `statusLabel` gives the status Badge its own words, "Out of date", while the tone follows `status`, and `statusOutlined` draws it in outlined gold, "Sent back"), `GatedCard`, `FundingContribution` and `FundingSource` (a module's `funding`: what it puts toward a program's year or a project, and optionally its own `panel` for the sheet), `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
 | `rows.ts` | The row mapping of decision 0008 (#121): `Row`, `Tables` (rows by table name), `SliceTables` (a slice's `keys`, `toRows`, `fromRows`), and the helpers the mappings share: `orNull`, `withoutNulls`, `groupBy`. See "Rows by table" below. |
 | `tables.ts` | `coreTables`, core's own mapping, and what the modules' mappings reuse: `ArchivedColumns`, `archivedColumns` / `archivedFields` (the two archive columns and back), `addressFrom` (an address from its four columns). |
@@ -236,7 +236,8 @@ coreSlice.tables.fromRows(rows); // the CoreState again
 
 Core writes `staff`, `programs`, `program_budgets`, `projects`,
 `organizations`, `venues` (the address as four columns), `office_documents`,
-`office_document_versions` (a document's versions, one row each) and
+`office_document_versions` (a document's versions, one row each, read back in `number`
+order) and
 `settings` (one row). `logins` is not core's: the sign-ins live in `auth.ts`.
 
 ## Core actions
@@ -276,21 +277,24 @@ See `src/modules/README.md` for how to add a module.
 The papers every funder asks for, kept once for the office (decision 0005, #66). In code they
 are "office documents", never "organization documents": an `Organization` is a partner. They
 live in `state.core.officeDocuments`; each `OfficeDocument` holds its versions, in the order they
-were added, and every document and version has a stable id, so a grant can point at one. A
+were added, and every document and version has a stable id, so a grant can point at one. Each
+version also has a `number`, 1, 2, 3 within its document: the highest held plus one, made by the
+action creator before it dispatches, so a retry sends the same number (#131). A
 grant's register row points at a document, and the grants module works out the version it shows
 from the grant's submitted date (`linkedOfficeDocument`, #68).
 
 | Export | What it does |
 | --- | --- |
 | `OFFICE_DOCUMENT_KINDS`, `officeDocumentKindLabel(kind)`, `isOfficeDocumentKind` | The seven kinds in list order with their words: IRS determination letter, Audit or financials, Board list, Insurance certificate, W-9, Organization budget, Other. |
-| `currentVersion(doc, on?)` | The newest version added (a later one in the list wins a tie). Given an ISO date, the version current that day: the newest added on or before it, or undefined. #68 reads a grant's submitted date this way. |
-| `versionsNewestFirst(doc)` | The versions, current first. |
+| `currentVersion(doc, on?)` | The newest version added (the higher `number` wins a same-day tie, #131). Given an ISO date, the version current that day: the newest added on or before it, or undefined. #68 reads a grant's submitted date this way. |
+| `versionsNewestFirst(doc)` | The versions, current first: by `addedAt`, then `number`. |
+| `nextVersionNumber(doc)` | The `number` the next version added takes: the highest held plus one, 1 for the first. |
 | `versionStatus(version, today)` | `'out-of-date'` from the expiry day on (and with no version), `'expires-soon'` within `EXPIRES_SOON_DAYS` (30) days, else `'current'`; always `'current'` with no expiry. Pass the store's `today`, which follows the demo date. |
 | `officeDocumentStatus(doc, today)` | `versionStatus` of the current version. |
 | `officeDocumentById(state, id)`, `officeDocumentsList(state, includeArchived?)` | One document (archived too), or the list by kind then name, archived ones after when asked. |
 | `officeDocumentsNeedingAttention(state, today)` | The current documents out of date or expiring soon, out of date first, then by expiry, each with its version and status. The dashboard's rows (`app/screens/documents/status.ts`). |
 | `officeDocumentProblem`, `officeDocumentVersionProblem`, `newOfficeDocumentProblem` | Why the store would refuse a name and kind, a version, or a new document, in its words; undefined when it would not. The dialogs use them to switch their buttons off. |
-| `versionFields(id, input, addedAt, addedById)`, `normaliseOfficeDocument(raw)` | A version as stored; a saved document checked on load. |
+| `versionFields(id, number, input, addedAt, addedById)`, `normaliseOfficeDocument(raw)` | A version as stored; a saved document checked on load. |
 
 ## Auth exports
 
@@ -318,4 +322,6 @@ are dropped (`normaliseArchived`). It drops a `demoToday` an older
 save carries in its settings. A save from before budgets and projects loads with none, demo or not
 (decision 0006), and a budget row it cannot read is dropped. A save from before office documents
 loads with none, demo or not (decision 0005); a saved document keeps its fields, an unknown kind
-reads as Other, a version it cannot read is dropped, and its archive fields are checked.
+reads as Other, a version it cannot read is dropped, versions saved without a `number` get one
+after the highest held in list order (so the current version stays the same, #131), and its
+archive fields are checked.

@@ -38,7 +38,7 @@ test('add a grant in three steps, find it in the table and open it', async ({ pa
   await expect(page.getByRole('heading', { level: 1, name: TITLE })).toBeVisible();
   await expect(
     page.getByText(
-      'Herb Alpert Foundation · Studio Semester Sessions, In-School Program and Homeschool Program',
+      'Herb Alpert Foundation · Homeschool Program, In-School Program and Studio Semester Sessions',
     ),
   ).toBeVisible();
 
@@ -60,7 +60,7 @@ test('the grants list shows every program a grant names and filters by any of th
   const port = page.getByText('In-School Program expansion', { exact: true });
   await expect(port).toBeVisible();
   // The Port of Long Beach grant is for In-School and Homeschool.
-  await expect(page.getByText('In-school and Homeschool', { exact: true })).toBeVisible();
+  await expect(page.getByText('Homeschool and In-school', { exact: true })).toBeVisible();
 
   const filter = page.locator('select').filter({ hasText: 'All programs' });
   await filter.selectOption({ label: 'Homeschool Program' });
