@@ -26,10 +26,12 @@ export interface SliceChange {
   /** The slice it changed: `grants`. */
   sliceId: string;
   /**
-   * The change as the slice dispatched it (`{ type: 'grants/toggle-task', … }`):
-   * a label for logs and for "Couldn't save …", not what to write. Several
-   * grants actions are worked out from the state, so only `rows` says what
-   * changed.
+   * The change as the slice dispatched it (`{ type: 'grants/batch', … }`): a
+   * label for logs and for "Couldn't save …", not what to write. Write
+   * `rows`: it covers every table the change touched, and core's own reducer
+   * and the few allow-listed slice cases (`grants/sync`, the reminder plans)
+   * still work out their rows from the state, so the action alone does not
+   * say what changed.
    */
   action: AnyAction;
   /**

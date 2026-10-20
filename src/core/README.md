@@ -109,8 +109,9 @@ a new live store on the new load. A new day does not load again; a slice reads
    change inserted, updated and deleted (`change.rows`, see "The row diff"
    below), for a backend that writes rows, and the slice's whole new state
    (`change.next`), for one that writes documents. The action rides along as a
-   label only: several grants actions work out their rows from the state, so
-   the action alone does not say what changed. An import or a reset
+   label only: core's own reducer and the few allow-listed slice cases
+   (`grants/sync`, the reminder plans) still work out their rows from the
+   state, so the action alone does not say what changed. An import or a reset
    (`portal/replace`) is one apply per slice.
 3. Applies run one at a time per slice, in order. While any is in flight
    `saving.status` is `saving`.
