@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnyAction } from '../../../../core/module';
 import { makeCoreSeed } from '../../../../core/seed';
 import { guardActions } from '../../../../core/store';
@@ -14,30 +14,45 @@ const base = (): GrantsState => makeSeed();
 
 const grantOf = (state: GrantsState, id: string): Grant => state.grants.find(g => g.id === id)!;
 
-describe('reducer: add-grant', () => {
-  const state = reducer(base(), {
-    type: 'add-grant',
-    grant: {
-      id: 'g-new',
-      funderId: 'f-new',
-      title: 'Test grant',
-      programs: ['in-school'],
-      restriction: 'restricted',
-      ownerId: 's-barry',
-      phase: 'prospect',
-      loiRequired: false,
-      amountRequested: 9000,
-      dates: { applicationDue: '2026-11-02' },
-      createdAt: '2026-09-13',
-    },
-    funder: { id: 'f-new', name: 'Test Funder', type: 'foundation' },
+const BARRY: SignedInUser = { id: 's-barry', name: 'Barry Cogert', role: 'director' };
+
+/**
+ * The slice's real actions over the seed, signed in as `user`. `ids` hands out
+ * each prefix's ids in turn; past the list, a prefix gets `<prefix>-<n>`.
+ */
+function slice(user: SignedInUser = BARRY, ids: Record<string, string[]> = {}) {
+  let grants = base();
+  let n = 0;
+  const sent: AnyAction[] = [];
+  const portal = () => ({ core: makeCoreSeed(), grants }) as unknown as PortalState;
+  const actionsOn = (today: string) =>
+    grantsSlice.createActions(
+      (action: AnyAction) => {
+        sent.push(action);
+        grants = grantsSlice.reducer(grants, action);
+      },
+      portal,
+      { today, newId: prefix => ids[prefix]?.shift() ?? `${prefix}-${(n += 1)}`, user },
+    );
+  return { actions: actionsOn('2026-09-13'), actionsOn, grants: () => grants, sent };
+}
+
+describe('addGrant', () => {
+  const h = slice(BARRY, { g: ['g-new'], f: ['f-new'], act: ['act-new'] });
+  h.actions.addGrant({
+    newFunder: { name: 'Test Funder', type: 'foundation' },
+    title: 'Test grant',
+    programs: ['in-school'],
+    restriction: 'restricted',
+    ownerId: 's-barry',
+    loiRequired: false,
+    amountRequested: 9000,
+    dates: { applicationDue: '2026-11-02' },
     templateId: 'tpl-foundation-standard',
     excludeTemplateItemIds: [],
     includeDocumentRegister: true,
-    activityId: 'act-new',
-    at: '2026-09-13T10:00:00.000Z',
-    whoId: 's-barry',
   });
+  const state = h.grants();
 
   it('adds the funder and the grant', () => {
     expect(state.funders.some(f => f.id === 'f-new')).toBe(true);
@@ -67,19 +82,22 @@ describe('reducer: add-grant', () => {
   });
 });
 
-describe('reducer: transition', () => {
-  const at = '2026-09-13T10:00:00.000Z';
+describe('transition', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-13T10:00:00.000Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  /** The state after one transition, its activity row given `id`. */
+  const moved = (id: string, ...args: Parameters<GrantsActions['transition']>) => {
+    const h = slice(BARRY, { act: [id] });
+    h.actions.transition(...args);
+    return h.grants();
+  };
 
   it('records the submitted date', () => {
-    const next = reducer(base(), {
-      type: 'transition',
-      grantId: 'g-arts-council-lb-2026',
-      to: 'submitted',
-      payload: { date: '2026-09-13' },
-      activityId: 'a1',
-      at,
-      whoId: 's-barry',
-    });
+    const next = moved('a1', 'g-arts-council-lb-2026', 'submitted', { date: '2026-09-13' });
     const grant = grantOf(next, 'g-arts-council-lb-2026');
     expect(grant.phase).toBe('submitted');
     expect(grant.dates.submitted).toBe('2026-09-13');
@@ -87,19 +105,11 @@ describe('reducer: transition', () => {
   });
 
   it('records the award amount and period', () => {
-    const next = reducer(base(), {
-      type: 'transition',
-      grantId: 'g-signal-hill-2026',
-      to: 'awarded',
-      payload: {
-        date: '2026-10-16',
-        amountAwarded: 5500,
-        periodStart: '2026-11-01',
-        periodEnd: '2027-10-31',
-      },
-      activityId: 'a2',
-      at,
-      whoId: 's-denise',
+    const next = moved('a2', 'g-signal-hill-2026', 'awarded', {
+      date: '2026-10-16',
+      amountAwarded: 5500,
+      periodStart: '2026-11-01',
+      periodEnd: '2027-10-31',
     });
     const grant = grantOf(next, 'g-signal-hill-2026');
     expect(grant).toMatchObject({ phase: 'awarded', amountAwarded: 5500 });
@@ -112,14 +122,9 @@ describe('reducer: transition', () => {
   });
 
   it('records a decline with its reason', () => {
-    const next = reducer(base(), {
-      type: 'transition',
-      grantId: 'g-signal-hill-2026',
-      to: 'declined',
-      payload: { date: '2026-10-16', reason: 'Funds went to park programming' },
-      activityId: 'a3',
-      at,
-      whoId: 's-denise',
+    const next = moved('a3', 'g-signal-hill-2026', 'declined', {
+      date: '2026-10-16',
+      reason: 'Funds went to park programming',
     });
     expect(grantOf(next, 'g-signal-hill-2026').dates.decided).toBe('2026-10-16');
     expect(next.activity.find(a => a.id === 'a3')?.text).toBe(
@@ -128,31 +133,15 @@ describe('reducer: transition', () => {
   });
 
   it('falls back to the action timestamp when no date is given', () => {
-    const next = reducer(base(), {
-      type: 'transition',
-      grantId: 'g-port-of-long-beach-2026',
-      to: 'submitted',
-      payload: {},
-      activityId: 'a4',
-      at,
-      whoId: 's-barry',
-    });
+    const next = moved('a4', 'g-port-of-long-beach-2026', 'submitted', {});
     expect(grantOf(next, 'g-port-of-long-beach-2026').dates.submitted).toBe('2026-09-13');
   });
 
   it('leaves an unknown grant alone', () => {
-    const start = base();
-    expect(
-      reducer(start, {
-        type: 'transition',
-        grantId: 'nope',
-        to: 'closed',
-        payload: {},
-        activityId: 'a5',
-        at,
-        whoId: 's-barry',
-      }),
-    ).toBe(start);
+    const h = slice();
+    const start = h.grants();
+    h.actions.transition('nope', 'closed', {});
+    expect(h.grants()).toBe(start);
   });
 });
 
@@ -179,20 +168,24 @@ describe('reducer: collections', () => {
   });
 
   it('toggles a task both ways', () => {
-    const start = base();
-    const id = start.tasks.find(t => !t.done)!.id;
-    const on = reducer(start, { type: 'toggle-task', id, date: '2026-09-13' });
-    expect(on.tasks.find(t => t.id === id)).toMatchObject({ done: true, doneAt: '2026-09-13' });
-    const off = reducer(on, { type: 'toggle-task', id, date: '2026-09-14' });
-    expect(off.tasks.find(t => t.id === id)).toMatchObject({ done: false, doneAt: undefined });
+    const h = slice();
+    const id = h.grants().tasks.find(t => !t.done)!.id;
+    h.actions.toggleTask(id);
+    expect(h.grants().tasks.find(t => t.id === id)).toMatchObject({
+      done: true,
+      doneAt: '2026-09-13',
+    });
+    h.actionsOn('2026-09-14').toggleTask(id);
+    expect(h.grants().tasks.find(t => t.id === id)).toMatchObject({
+      done: false,
+      doneAt: undefined,
+    });
   });
 
   it('duplicates a template with fresh item ids', () => {
-    const state = reducer(base(), {
-      type: 'duplicate-template',
-      id: 'tpl-foundation-standard',
-      newTemplateId: 'tpl-copy',
-    });
+    const h = slice(BARRY, { tpl: ['tpl-copy'] });
+    expect(h.actions.duplicateTemplate('tpl-foundation-standard')).toBe('tpl-copy');
+    const state = h.grants();
     const copy = state.templates.find(t => t.id === 'tpl-copy')!;
     expect(copy.name).toBe('Foundation grant — standard (copy)');
     expect(copy.items).toHaveLength(state.templates[0].items.length);

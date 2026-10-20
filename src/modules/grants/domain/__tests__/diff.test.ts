@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyDiff, diffSlice } from '../../../../core/diff';
 import type { RowDiff } from '../../../../core/diff';
 import type { AnyAction } from '../../../../core/module';
@@ -7,17 +7,19 @@ import { makeCoreSeed } from '../../../../core/seed';
 import type { PortalState, SignedInUser } from '../../../../core/types';
 import { transactionSnapshot } from '../money';
 import { makeSeed } from '../seed';
-import { grantsSlice, reducer } from '../slice';
-import type { GrantsAction } from '../slice';
+import { grantsSlice } from '../slice';
+import type { GrantsActions } from '../slice';
 import { grantsTables } from '../tables';
-import type { GrantsState } from '../types';
+import type { Allocation, GrantsState } from '../types';
 
 /**
  * The rows `Repository.apply` is handed for the grants actions that work out
- * their rows from the state (decision 0008, question 1, #122): the action
- * alone does not say what changed, so each test pins the exact inserts,
- * updates and deletes, hidden deletes included. Then the clearing actions
- * (question 2): a field cleared with `undefined` goes out as `null`.
+ * their rows from the state (decision 0008, question 1, #122): each test pins
+ * the exact inserts, updates and deletes, the deletes no argument names
+ * included. They run the slice's real actions, so they hold whether the rows
+ * are worked out in the reducer or in `createActions` (#127). Then the
+ * clearing actions (question 2): a field cleared with `undefined` goes out as
+ * `null`.
  */
 
 const HA = 'g-herb-alpert-2026';
@@ -27,10 +29,33 @@ const NOTE = 'Quote approved by Barry on Jul 12. Horn is loaner #14 from the ins
 const AT = '2026-09-13T10:00:00.000Z';
 const TODAY = '2026-09-13';
 
-const step = (state: GrantsState, action: GrantsAction) => {
-  const next = reducer(state, action);
-  return { next, diff: diffSlice(grantsTables, state, next) };
-};
+const KEISHA: SignedInUser = { id: 's-keisha', name: 'Keisha', role: 'office-manager' };
+
+/**
+ * The slice's real actions over `start`, signed in as Keisha with the clock at
+ * AT. `ids` hands out each prefix's ids in turn, so a test names the rows it
+ * expects; past the list, a prefix gets `<prefix>-new`.
+ */
+function harness(start: GrantsState = makeSeed(), ids: Record<string, string[]> = {}) {
+  let grants = start;
+  const portal = () => ({ core: makeCoreSeed(), grants }) as unknown as PortalState;
+  const actionsOn = (today: string) =>
+    grantsSlice.createActions(
+      (action: AnyAction) => {
+        grants = grantsSlice.reducer(grants, action);
+      },
+      portal,
+      { today, newId: prefix => ids[prefix]?.shift() ?? `${prefix}-new`, user: KEISHA },
+    );
+  const actions = actionsOn(TODAY);
+  /** Run one change, and return the state after it and what it did as rows. */
+  const step = (run: (a: GrantsActions) => void, a: GrantsActions = actions) => {
+    const before = grants;
+    run(a);
+    return { next: grants, diff: diffSlice(grantsTables, before, grants) };
+  };
+  return { actions, actionsOn, step, portal };
+}
 
 /** One table's part of a diff, the lists it leaves out empty. */
 const table = (name: string, part: Partial<Omit<RowDiff[number], 'table'>>): RowDiff[number] => ({
@@ -97,34 +122,22 @@ const activityRow = (id: string, grantId: string, text: string): Row => ({
 });
 
 /** Split the transaction off its old line: no part stays where the expense was. */
-const SPLIT: GrantsAction = {
-  type: 'assign-transaction',
-  id: TX,
-  parts: [
-    {
-      grantId: LBCF,
-      budgetLineId: 'bl-lbcf-repair',
-      amount: 600,
-      expenseId: 'ex-new-1',
-      activityId: 'act-split-1',
-    },
-    {
-      grantId: HA,
-      budgetLineId: 'bl-ha-music',
-      amount: 640,
-      expenseId: 'ex-new-2',
-      activityId: 'act-split-2',
-    },
-  ],
-  by: 's-keisha',
-  date: TODAY,
-  at: AT,
-  whoId: 's-keisha',
-};
+const SPLIT: Allocation[] = [
+  { grantId: LBCF, budgetLineId: 'bl-lbcf-repair', amount: 600 },
+  { grantId: HA, budgetLineId: 'bl-ha-music', amount: 640 },
+];
+const SPLIT_IDS = () => ({ ex: ['ex-new-1', 'ex-new-2'], act: ['act-split-1', 'act-split-2'] });
+const split = (a: GrantsActions) => a.assignTransaction(TX, SPLIT);
 
 describe('grants compound actions as rows', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(AT));
+  });
+  afterEach(() => vi.useRealTimers());
+
   it('assign-transaction deletes the old part, inserts the new ones and moves the files', () => {
-    const { diff } = step(makeSeed(), SPLIT);
+    const { diff } = harness(makeSeed(), SPLIT_IDS()).step(split);
     expect(diff).toEqual([
       table('transactions', {
         updates: [
@@ -183,25 +196,16 @@ describe('grants compound actions as rows', () => {
   });
 
   it('assign-transaction keeps the id of a part that stays on its line', () => {
-    const { diff } = step(makeSeed(), {
-      ...SPLIT,
-      parts: [
-        {
-          grantId: HA,
-          budgetLineId: 'bl-ha-repair',
-          amount: 740,
-          expenseId: 'ex-unused',
-          activityId: 'act-keep-1',
-        },
-        {
-          grantId: LBCF,
-          budgetLineId: 'bl-lbcf-repair',
-          amount: 500,
-          expenseId: 'ex-new-1',
-          activityId: 'act-keep-2',
-        },
-      ],
-    } as GrantsAction);
+    const h = harness(makeSeed(), {
+      ex: ['ex-unused', 'ex-new-1'],
+      act: ['act-keep-1', 'act-keep-2'],
+    });
+    const { diff } = h.step(a =>
+      a.assignTransaction(TX, [
+        { grantId: HA, budgetLineId: 'bl-ha-repair', amount: 740 },
+        { grantId: LBCF, budgetLineId: 'bl-lbcf-repair', amount: 500 },
+      ]),
+    );
     expect(diff).toEqual([
       table('transactions', {
         updates: [
@@ -243,11 +247,10 @@ describe('grants compound actions as rows', () => {
   });
 
   it('restore-transactions deletes the current parts and puts the old one and its files back', () => {
-    const seed = makeSeed();
-    const portal = { core: makeCoreSeed(), grants: seed } as unknown as PortalState;
-    const snapshot = transactionSnapshot(portal, TX)!;
-    const { next: split } = step(seed, SPLIT);
-    const { diff } = step(split, { type: 'restore-transactions', snapshots: [snapshot] });
+    const h = harness(makeSeed(), SPLIT_IDS());
+    const snapshot = transactionSnapshot(h.portal(), TX)!;
+    const { next: assigned } = h.step(split);
+    const { diff } = h.step(a => a.restoreTransactions([snapshot]));
     expect(diff).toEqual([
       table('transactions', {
         updates: [
@@ -262,8 +265,8 @@ describe('grants compound actions as rows', () => {
         inserts: [EX_HA_2],
         // The hidden deletes: the action carries only the snapshot.
         deletes: [
-          { key: { id: 'ex-new-1' }, was: one(split, 'expenses', 'ex-new-1') },
-          { key: { id: 'ex-new-2' }, was: one(split, 'expenses', 'ex-new-2') },
+          { key: { id: 'ex-new-1' }, was: one(assigned, 'expenses', 'ex-new-1') },
+          { key: { id: 'ex-new-2' }, was: one(assigned, 'expenses', 'ex-new-2') },
         ],
       }),
       table('grant_files', {
@@ -284,17 +287,13 @@ describe('grants compound actions as rows', () => {
   });
 
   it('set-transaction-status on Send back deletes the parts and their files and clears who assigned it', () => {
-    const { diff } = step(makeSeed(), {
-      type: 'set-transaction-status',
-      id: TX,
-      status: 'to-assign',
-    });
+    const { diff } = harness().step(a => a.unassignTransaction(TX));
     expect(diff).toEqual([
       table('transactions', {
         updates: [
           {
             key: { id: TX },
-            // Cleared with undefined in the reducer, sent as null.
+            // Cleared with undefined in the state, sent as null.
             set: { status: 'to-assign', assigned_by: null, assigned_at: null },
             was: { status: 'assigned', assigned_by: 's-denise', assigned_at: '2026-07-20' },
           },
@@ -311,13 +310,7 @@ describe('grants compound actions as rows', () => {
   });
 
   it('set-transaction-status on set-aside deletes the parts and their files too', () => {
-    const { diff } = step(makeSeed(), {
-      type: 'set-transaction-status',
-      id: TX,
-      status: 'not-grant-funded',
-      by: 's-keisha',
-      date: TODAY,
-    });
+    const { diff } = harness().step(a => a.markNotGrantFunded(TX));
     expect(diff).toEqual([
       table('transactions', {
         updates: [
@@ -339,14 +332,8 @@ describe('grants compound actions as rows', () => {
   });
 
   it('move-expenses updates every expense on the line, read from the state', () => {
-    const { diff } = step(makeSeed(), {
-      type: 'move-expenses',
-      fromLineId: 'bl-ha-stipends',
-      toLineId: 'bl-ha-venue',
-      activityId: 'act-move',
-      at: AT,
-      whoId: 's-keisha',
-    });
+    const h = harness(makeSeed(), { act: ['act-move'] });
+    const { diff } = h.step(a => a.moveExpenses('bl-ha-stipends', 'bl-ha-venue'));
     const moved = (id: string) => ({
       key: { id },
       set: { budget_line_id: 'bl-ha-venue' },
@@ -369,32 +356,25 @@ describe('grants compound actions as rows', () => {
   });
 
   it('add-grant inserts the funder, the grant, its programs, the template tasks, the register and the log row', () => {
-    const { next, diff } = step(makeSeed(), {
-      type: 'add-grant',
-      grant: {
-        id: 'g-new',
-        funderId: 'f-new',
+    const h = harness(makeSeed(), { g: ['g-new'], f: ['f-new'], act: ['act-new'] });
+    const { next, diff } = h.step(a =>
+      a.addGrant({
+        newFunder: { name: 'Test Funder', type: 'foundation' },
         title: 'Test grant',
         programs: ['in-school', 'studio'],
         restriction: 'restricted',
         ownerId: 's-barry',
-        phase: 'prospect',
         loiRequired: false,
         amountRequested: 9000,
         dates: { applicationDue: '2026-11-02' },
-        createdAt: TODAY,
-      },
-      funder: { id: 'f-new', name: 'Test Funder', type: 'foundation' },
-      templateId: 'tpl-corporate-sponsorship',
-      excludeTemplateItemIds: [],
-      includeDocumentRegister: true,
-      activityId: 'act-new',
-      at: AT,
-      whoId: 's-keisha',
-    });
+        templateId: 'tpl-corporate-sponsorship',
+        excludeTemplateItemIds: [],
+        includeDocumentRegister: true,
+      }),
+    );
     const ofNew = (r: Row) => r.grant_id === 'g-new';
     const tasks = rows(next, 'tasks', ofNew);
-    // The ids are made in the reducer, from the template as it stands in state.
+    // The ids come from the grant's, the tasks from the template as it stands in state.
     expect(tasks.map(t => t.id)).toEqual(
       Array.from({ length: tasks.length }, (_, i) => `g-new-t${i + 1}`),
     );
@@ -449,15 +429,10 @@ describe('grants compound actions as rows', () => {
   });
 
   it('transition merges the new date into the grant and logs the label from state', () => {
-    const { diff } = step(makeSeed(), {
-      type: 'transition',
-      grantId: 'g-port-of-long-beach-2026',
-      to: 'submitted',
-      payload: { date: '2026-09-12' },
-      activityId: 'act-moved',
-      at: AT,
-      whoId: 's-keisha',
-    });
+    const h = harness(makeSeed(), { act: ['act-moved'] });
+    const { diff } = h.step(a =>
+      a.transition('g-port-of-long-beach-2026', 'submitted', { date: '2026-09-12' }),
+    );
     expect(diff).toEqual([
       table('grants', {
         updates: [
@@ -476,7 +451,8 @@ describe('grants compound actions as rows', () => {
 
   it('toggle-task sends the value it flipped to, and clears doneAt with null', () => {
     const task = 'g-herb-alpert-2026-t1';
-    const { next, diff } = step(makeSeed(), { type: 'toggle-task', id: task, date: TODAY });
+    const h = harness();
+    const { diff } = h.step(a => a.toggleTask(task));
     expect(diff).toEqual([
       table('tasks', {
         updates: [
@@ -489,7 +465,7 @@ describe('grants compound actions as rows', () => {
       }),
     ]);
     // Ticked again, it is an absolute value, not a flip.
-    expect(step(next, { type: 'toggle-task', id: task, date: '2026-09-14' }).diff).toEqual([
+    expect(h.step(a => a.toggleTask(task), h.actionsOn('2026-09-14')).diff).toEqual([
       table('tasks', {
         updates: [
           {
@@ -503,11 +479,8 @@ describe('grants compound actions as rows', () => {
   });
 
   it('duplicate-template inserts the copy and its items, built from the source in state', () => {
-    const { next, diff } = step(makeSeed(), {
-      type: 'duplicate-template',
-      id: 'tpl-corporate-sponsorship',
-      newTemplateId: 'tpl-copy',
-    });
+    const h = harness(makeSeed(), { tpl: ['tpl-copy'] });
+    const { next, diff } = h.step(a => a.duplicateTemplate('tpl-corporate-sponsorship'));
     const items = rows(next, 'checklist_template_items', r => r.template_id === 'tpl-copy');
     expect(items.map(i => i.id)).toEqual(Array.from({ length: 6 }, (_, i) => `tpl-copy-i${i + 1}`));
     expect(diff).toEqual([
@@ -527,7 +500,7 @@ describe('grants compound actions as rows', () => {
   // #114: sent again after the server committed, the same rows change nothing.
   it('writes the same rows again as no change', () => {
     const before = makeSeed();
-    const { next, diff } = step(before, SPLIT);
+    const { next, diff } = harness(before, SPLIT_IDS()).step(split);
     const once = applyDiff(grantsTables.keys, grantsTables.toRows(before), diff);
     const twice = applyDiff(grantsTables.keys, once, diff);
     expect(twice).toEqual(once);
