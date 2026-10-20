@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { AnyAction } from '../../../../core/module';
 import { makeCoreSeed } from '../../../../core/seed';
 import type { PortalState } from '../../../../core/types';
 import { grantMoney } from '../derive';
@@ -23,7 +24,7 @@ import {
   usualShares,
 } from '../money';
 import { SEED_TODAY, makeSeed } from '../seed';
-import { reducer } from '../slice';
+import { grantsSlice, reducer } from '../slice';
 
 const make = (): PortalState =>
   ({ core: makeCoreSeed(), grants: makeSeed() }) as unknown as PortalState;
@@ -263,42 +264,30 @@ describe('transactions', () => {
   });
 
   it('a split becomes two expenses and moves both budgets', () => {
-    const next = reducer(state.grants, {
-      type: 'assign-transaction',
-      id: 'tx-new-2',
-      parts: [
-        {
-          grantId: HA,
-          budgetLineId: 'bl-ha-venue',
-          amount: 1800,
-          expenseId: 'ex-a',
-          activityId: 'act-a',
-        },
-        {
-          grantId: LBCF,
-          budgetLineId: 'bl-lbcf-venue',
-          amount: 600,
-          expenseId: 'ex-b',
-          activityId: 'act-b',
-        },
-      ],
-      by: 's-barry',
-      date: today,
-      at: `${today}T10:00:00.000Z`,
-      whoId: 's-barry',
-    });
-    const after = { ...state, grants: next } as PortalState;
-    expect(transactionAllocations(after, 'tx-new-2')).toHaveLength(2);
-    expect(grantMoney(after, HA).spent).toBe(18240 + 1800);
-    expect(grantMoney(after, LBCF).spent).toBe(2425 + 600);
-    expect(transactionCounts(after)['to-assign']).toBe(13);
+    let current = make();
+    let n = 0;
+    const actions = grantsSlice.createActions(
+      (action: AnyAction) => {
+        current = { ...current, grants: grantsSlice.reducer(current.grants, action) };
+      },
+      () => current,
+      {
+        today,
+        newId: prefix => `${prefix}-split-${(n += 1)}`,
+        user: { id: 's-barry', name: 'Barry Cogert', role: 'director' },
+      },
+    );
+    actions.assignTransaction('tx-new-2', [
+      { grantId: HA, budgetLineId: 'bl-ha-venue', amount: 1800 },
+      { grantId: LBCF, budgetLineId: 'bl-lbcf-venue', amount: 600 },
+    ]);
+    expect(transactionAllocations(current, 'tx-new-2')).toHaveLength(2);
+    expect(grantMoney(current, HA).spent).toBe(18240 + 1800);
+    expect(grantMoney(current, LBCF).spent).toBe(2425 + 600);
+    expect(transactionCounts(current)['to-assign']).toBe(13);
 
-    const undone = reducer(next, {
-      type: 'set-transaction-status',
-      id: 'tx-new-2',
-      status: 'to-assign',
-    });
-    expect(grantMoney({ ...state, grants: undone } as PortalState, HA).spent).toBe(18240);
+    actions.unassignTransaction('tx-new-2');
+    expect(grantMoney(current, HA).spent).toBe(18240);
   });
 
   it('a sync brings in what was waiting in QuickBooks', () => {

@@ -107,7 +107,7 @@ describe('bringing in a grant at Active', () => {
 
   it('writes everything in one change', () => {
     expect(h.sent).toHaveLength(1);
-    expect(h.sent[0].type).toBe('grants/add-grant');
+    expect(h.sent[0].type).toBe('grants/batch');
     expect(h.refused).toEqual([]);
   });
 

@@ -53,7 +53,11 @@ The reducer handles generic changes only: `insert`, `update` and `remove` on a
 collection, and `batch` for several as one change (closing a roll call is the
 present marks and the closed meeting together). The rules that decide what
 follows from an action (a submitted roll is closed, only a draft is submitted)
-live in `createActions`, which reads the state first. Each change is one
+live in `createActions`, which reads the state first and sends every row with
+absolute values (a task ticked is `done: true`, never a flip). `npm run lint`
+refuses any other case in a module's `reducer`; the few changes that are not
+rows with ids (grants' demo QuickBooks sync, its settings, its reminder plans
+by report) say why in an `eslint-disable` comment. Each change is one
 `repository.apply`, handed the rows it changed, worked out in core from the
 slice's `tables` below, so a backend writes it without knowing the module.
 Grants, teaching and timesheets all work this way.

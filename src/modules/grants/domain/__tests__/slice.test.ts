@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnyAction } from '../../../../core/module';
 import { makeCoreSeed } from '../../../../core/seed';
 import { guardActions } from '../../../../core/store';
@@ -14,30 +14,53 @@ const base = (): GrantsState => makeSeed();
 
 const grantOf = (state: GrantsState, id: string): Grant => state.grants.find(g => g.id === id)!;
 
-describe('reducer: add-grant', () => {
-  const state = reducer(base(), {
-    type: 'add-grant',
-    grant: {
-      id: 'g-new',
-      funderId: 'f-new',
-      title: 'Test grant',
-      programs: ['in-school'],
-      restriction: 'restricted',
-      ownerId: 's-barry',
-      phase: 'prospect',
-      loiRequired: false,
-      amountRequested: 9000,
-      dates: { applicationDue: '2026-11-02' },
-      createdAt: '2026-09-13',
-    },
-    funder: { id: 'f-new', name: 'Test Funder', type: 'foundation' },
+const BARRY: SignedInUser = { id: 's-barry', name: 'Barry Cogert', role: 'director' };
+
+/**
+ * The slice's real actions over the seed, signed in as `user`. `ids` hands out
+ * each prefix's ids in turn; past the list, a prefix gets `<prefix>-test-<n>`.
+ * With `times`, every change reaches the reducer that many times, as a retry
+ * after the first save went through would send it again.
+ */
+function slice(user: SignedInUser = BARRY, ids: Record<string, string[]> = {}, times = 1) {
+  let grants = base();
+  let n = 0;
+  const sent: AnyAction[] = [];
+  const portal = () => ({ core: makeCoreSeed(), grants }) as unknown as PortalState;
+  const actionsOn = (today: string) =>
+    grantsSlice.createActions(
+      (action: AnyAction) => {
+        sent.push(action);
+        for (let i = 0; i < times; i += 1) grants = grantsSlice.reducer(grants, action);
+      },
+      portal,
+      { today, newId: prefix => ids[prefix]?.shift() ?? `${prefix}-test-${(n += 1)}`, user },
+    );
+  return {
+    actions: actionsOn('2026-09-13'),
+    actionsOn,
+    grants: () => grants,
+    portal,
+    sent,
+  };
+}
+
+describe('addGrant', () => {
+  const h = slice(BARRY, { g: ['g-new'], f: ['f-new'], act: ['act-new'] });
+  h.actions.addGrant({
+    newFunder: { name: 'Test Funder', type: 'foundation' },
+    title: 'Test grant',
+    programs: ['in-school'],
+    restriction: 'restricted',
+    ownerId: 's-barry',
+    loiRequired: false,
+    amountRequested: 9000,
+    dates: { applicationDue: '2026-11-02' },
     templateId: 'tpl-foundation-standard',
     excludeTemplateItemIds: [],
     includeDocumentRegister: true,
-    activityId: 'act-new',
-    at: '2026-09-13T10:00:00.000Z',
-    whoId: 's-barry',
   });
+  const state = h.grants();
 
   it('adds the funder and the grant', () => {
     expect(state.funders.some(f => f.id === 'f-new')).toBe(true);
@@ -67,19 +90,22 @@ describe('reducer: add-grant', () => {
   });
 });
 
-describe('reducer: transition', () => {
-  const at = '2026-09-13T10:00:00.000Z';
+describe('transition', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-13T10:00:00.000Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  /** The state after one transition, its activity row given `id`. */
+  const moved = (id: string, ...args: Parameters<GrantsActions['transition']>) => {
+    const h = slice(BARRY, { act: [id] });
+    h.actions.transition(...args);
+    return h.grants();
+  };
 
   it('records the submitted date', () => {
-    const next = reducer(base(), {
-      type: 'transition',
-      grantId: 'g-arts-council-lb-2026',
-      to: 'submitted',
-      payload: { date: '2026-09-13' },
-      activityId: 'a1',
-      at,
-      whoId: 's-barry',
-    });
+    const next = moved('a1', 'g-arts-council-lb-2026', 'submitted', { date: '2026-09-13' });
     const grant = grantOf(next, 'g-arts-council-lb-2026');
     expect(grant.phase).toBe('submitted');
     expect(grant.dates.submitted).toBe('2026-09-13');
@@ -87,19 +113,11 @@ describe('reducer: transition', () => {
   });
 
   it('records the award amount and period', () => {
-    const next = reducer(base(), {
-      type: 'transition',
-      grantId: 'g-signal-hill-2026',
-      to: 'awarded',
-      payload: {
-        date: '2026-10-16',
-        amountAwarded: 5500,
-        periodStart: '2026-11-01',
-        periodEnd: '2027-10-31',
-      },
-      activityId: 'a2',
-      at,
-      whoId: 's-denise',
+    const next = moved('a2', 'g-signal-hill-2026', 'awarded', {
+      date: '2026-10-16',
+      amountAwarded: 5500,
+      periodStart: '2026-11-01',
+      periodEnd: '2027-10-31',
     });
     const grant = grantOf(next, 'g-signal-hill-2026');
     expect(grant).toMatchObject({ phase: 'awarded', amountAwarded: 5500 });
@@ -112,14 +130,9 @@ describe('reducer: transition', () => {
   });
 
   it('records a decline with its reason', () => {
-    const next = reducer(base(), {
-      type: 'transition',
-      grantId: 'g-signal-hill-2026',
-      to: 'declined',
-      payload: { date: '2026-10-16', reason: 'Funds went to park programming' },
-      activityId: 'a3',
-      at,
-      whoId: 's-denise',
+    const next = moved('a3', 'g-signal-hill-2026', 'declined', {
+      date: '2026-10-16',
+      reason: 'Funds went to park programming',
     });
     expect(grantOf(next, 'g-signal-hill-2026').dates.decided).toBe('2026-10-16');
     expect(next.activity.find(a => a.id === 'a3')?.text).toBe(
@@ -128,31 +141,15 @@ describe('reducer: transition', () => {
   });
 
   it('falls back to the action timestamp when no date is given', () => {
-    const next = reducer(base(), {
-      type: 'transition',
-      grantId: 'g-port-of-long-beach-2026',
-      to: 'submitted',
-      payload: {},
-      activityId: 'a4',
-      at,
-      whoId: 's-barry',
-    });
+    const next = moved('a4', 'g-port-of-long-beach-2026', 'submitted', {});
     expect(grantOf(next, 'g-port-of-long-beach-2026').dates.submitted).toBe('2026-09-13');
   });
 
   it('leaves an unknown grant alone', () => {
-    const start = base();
-    expect(
-      reducer(start, {
-        type: 'transition',
-        grantId: 'nope',
-        to: 'closed',
-        payload: {},
-        activityId: 'a5',
-        at,
-        whoId: 's-barry',
-      }),
-    ).toBe(start);
+    const h = slice();
+    const start = h.grants();
+    h.actions.transition('nope', 'closed', {});
+    expect(h.grants()).toBe(start);
   });
 });
 
@@ -179,20 +176,24 @@ describe('reducer: collections', () => {
   });
 
   it('toggles a task both ways', () => {
-    const start = base();
-    const id = start.tasks.find(t => !t.done)!.id;
-    const on = reducer(start, { type: 'toggle-task', id, date: '2026-09-13' });
-    expect(on.tasks.find(t => t.id === id)).toMatchObject({ done: true, doneAt: '2026-09-13' });
-    const off = reducer(on, { type: 'toggle-task', id, date: '2026-09-14' });
-    expect(off.tasks.find(t => t.id === id)).toMatchObject({ done: false, doneAt: undefined });
+    const h = slice();
+    const id = h.grants().tasks.find(t => !t.done)!.id;
+    h.actions.toggleTask(id);
+    expect(h.grants().tasks.find(t => t.id === id)).toMatchObject({
+      done: true,
+      doneAt: '2026-09-13',
+    });
+    h.actionsOn('2026-09-14').toggleTask(id);
+    expect(h.grants().tasks.find(t => t.id === id)).toMatchObject({
+      done: false,
+      doneAt: undefined,
+    });
   });
 
   it('duplicates a template with fresh item ids', () => {
-    const state = reducer(base(), {
-      type: 'duplicate-template',
-      id: 'tpl-foundation-standard',
-      newTemplateId: 'tpl-copy',
-    });
+    const h = slice(BARRY, { tpl: ['tpl-copy'] });
+    expect(h.actions.duplicateTemplate('tpl-foundation-standard')).toBe('tpl-copy');
+    const state = h.grants();
     const copy = state.templates.find(t => t.id === 'tpl-copy')!;
     expect(copy.name).toBe('Foundation grant — standard (copy)');
     expect(copy.items).toHaveLength(state.templates[0].items.length);
@@ -246,7 +247,15 @@ describe('the slice', () => {
     expect(name({ type: 'grants/update', key: 'budgetLines', id: 'x', patch: {} })).toBe(
       'the budget line',
     );
-    expect(name({ type: 'grants/assign-transaction', id: 'x' })).toBe('the transaction');
+    expect(
+      name({
+        type: 'grants/batch',
+        actions: [
+          { type: 'remove', key: 'expenses', id: 'x' },
+          { type: 'update', key: 'transactions', id: 't', patch: { status: 'assigned' } },
+        ],
+      }),
+    ).toBe('the transaction');
     expect(name({ type: 'grants/save-reminder-plan' })).toBe('the reminders');
     expect(
       name({
@@ -256,6 +265,158 @@ describe('the slice', () => {
     ).toBe('the expense');
     // Not a grants change: the store falls back to "that change".
     expect(name({ type: 'teaching/insert', key: 'grants', item: {} })).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The compound actions as explicit rows (#127)
+// ---------------------------------------------------------------------------
+
+describe('the compound actions', () => {
+  const HA = 'g-herb-alpert-2026';
+  const LBCF = 'g-lb-community-foundation-2026';
+  const TX = 'tx-ex-ha-2';
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-13T10:00:00.000Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  /** Each action the way a screen calls it, and the words its toast would use. */
+  const CASES: Array<[string, string, (a: GrantsActions, h: ReturnType<typeof slice>) => void]> = [
+    [
+      'addGrant',
+      'the grant',
+      a =>
+        a.addGrant({
+          newFunder: { name: 'Test Funder', type: 'foundation' },
+          title: 'Test grant',
+          programs: ['in-school'],
+          restriction: 'restricted',
+          ownerId: 's-barry',
+          loiRequired: false,
+          templateId: 'tpl-foundation-standard',
+        }),
+    ],
+    [
+      'addGrant, brought in at Active',
+      'the grant',
+      a =>
+        a.addGrant({
+          funderId: 'f-herb-alpert',
+          title: 'Music in the Parks 2026',
+          programs: ['in-school'],
+          restriction: 'restricted',
+          ownerId: 's-barry',
+          phase: 'active',
+          loiRequired: false,
+          templateId: 'tpl-foundation-standard',
+          dates: { decided: '2026-01-20', periodStart: '2026-02-01', periodEnd: '2027-01-31' },
+          inFlight: {
+            amountAwarded: 40000,
+            budgetLines: [{ category: 'Instruments', planned: 40000 }],
+            payments: [{ label: 'Only', expectedDate: '2026-02-01', amount: 40000 }],
+            reports: [{ kind: 'final', dueDate: '2027-03-31', status: 'upcoming' }],
+          },
+        }),
+    ],
+    [
+      'renewGrant',
+      'the grant',
+      a =>
+        a.renewGrant({
+          grantId: HA,
+          title: 'Herb Alpert 2027',
+          programs: ['in-school'],
+          ownerId: 's-barry',
+          dates: {},
+        }),
+    ],
+    ['transition', 'the grant', a => a.transition('g-signal-hill-2026', 'declined', {})],
+    ['toggleTask', 'the task', (a, h) => a.toggleTask(h.grants().tasks.find(t => !t.done)!.id)],
+    [
+      'duplicateTemplate',
+      'the checklist template',
+      a => a.duplicateTemplate('tpl-foundation-standard'),
+    ],
+    ['moveExpenses', 'the moved expenses', a => a.moveExpenses('bl-ha-stipends', 'bl-ha-venue')],
+    [
+      'assignTransaction',
+      'the transaction',
+      a =>
+        a.assignTransaction(TX, [
+          { grantId: LBCF, budgetLineId: 'bl-lbcf-repair', amount: 600 },
+          { grantId: HA, budgetLineId: 'bl-ha-music', amount: 640 },
+        ]),
+    ],
+    ['markNotGrantFunded', 'the transaction', a => a.markNotGrantFunded(TX)],
+    ['unassignTransaction', 'the transaction', a => a.unassignTransaction(TX)],
+    ['deleteExpense, from QuickBooks', 'the transaction', a => a.deleteExpense('ex-ha-2')],
+    [
+      'restoreTransactions',
+      'the transaction',
+      (a, h) => {
+        const before = transactionSnapshot(h.portal(), TX)!;
+        a.unassignTransaction(TX);
+        h.sent.length = 0;
+        a.restoreTransactions([before]);
+      },
+    ],
+    ['acceptSuggestions', 'the transaction', a => a.acceptSuggestions()],
+  ];
+
+  it.each(CASES)('%s sends only rows', (_name, _words, run) => {
+    const h = slice();
+    run(h.actions, h);
+    const generic = new Set(['insert', 'update', 'remove']);
+    const flat = (action: AnyAction): AnyAction[] =>
+      action.type === 'grants/batch' || action.type === 'batch'
+        ? (action.actions as AnyAction[]).flatMap(flat)
+        : [action];
+    for (const row of h.sent.flatMap(flat)) {
+      expect(generic.has(row.type.replace(/^grants\//, ''))).toBe(true);
+    }
+  });
+
+  it.each(CASES)('%s sent twice changes nothing the second time', (_name, _words, run) => {
+    const once = slice();
+    run(once.actions, once);
+    const twice = slice(BARRY, {}, 2);
+    run(twice.actions, twice);
+    expect(twice.grants()).toEqual(once.grants());
+  });
+
+  it.each(CASES)('%s is named %s when it cannot be saved', (_name, words, run) => {
+    const h = slice();
+    run(h.actions, h);
+    expect(h.sent.at(-1) && grantsSlice.describe!(h.sent.at(-1)!)).toBe(words);
+  });
+
+  it('sends nothing for a grant, a task or a template that is gone', () => {
+    const h = slice();
+    h.actions.transition('nope', 'closed', {});
+    h.actions.toggleTask('nope');
+    h.actions.duplicateTemplate('nope');
+    h.actions.assignTransaction('nope', [{ grantId: HA, budgetLineId: 'bl-ha-music', amount: 1 }]);
+    h.actions.unassignTransaction('nope');
+    h.actions.restoreTransactions([]);
+    expect(h.sent).toEqual([]);
+  });
+
+  it('ticks a task with an absolute value, so a retry leaves it ticked', () => {
+    const h = slice(BARRY, {}, 2);
+    const id = h.grants().tasks.find(t => !t.done)!.id;
+    h.actions.toggleTask(id);
+    expect(h.sent).toEqual([
+      {
+        type: 'grants/update',
+        key: 'tasks',
+        id,
+        patch: { done: true, doneAt: '2026-09-13' },
+      },
+    ]);
+    expect(h.grants().tasks.find(t => t.id === id)).toMatchObject({ done: true });
   });
 });
 
@@ -546,16 +707,6 @@ describe("moving a budget line's expenses", () => {
     expect(h.actions.moveExpenses('bl-ha-repair', 'bl-ha-repair')).toBe(false);
     expect(h.actions.moveExpenses('bl-ha-repair', 'bl-nowhere')).toBe(false);
     expect(h.grants()).toBe(start);
-    // The reducer holds the line too, should a stale screen get past the action.
-    const next = reducer(start, {
-      type: 'move-expenses',
-      fromLineId: 'bl-ha-repair',
-      toLineId: 'bl-lbcf-repair',
-      activityId: 'a',
-      at: '2026-09-13T10:00:00.000Z',
-      whoId: 's-keisha',
-    });
-    expect(next).toBe(start);
   });
 
   it('removes the line once its expenses have moved', () => {
