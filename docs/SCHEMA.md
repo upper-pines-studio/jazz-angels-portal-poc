@@ -36,6 +36,10 @@ type turns out to be wrong for a table, file an issue rather than bend the table
   which table each change lands in.
 - **Singletons.** The office's settings, its QuickBooks connection and its reminder defaults are
   one row each.
+- **No list order.** A database gives rows back in no order, so nothing depends on where a row
+  sits in a list (#131). Where order matters it is a column: `sort_order` on the ordered lists,
+  `number` on budget versions and office document versions. A grant's programs have no order
+  column: they are read sorted by program name.
 - **Nullable** is marked `null` in the diagrams and "yes" in the tables below; every other column
   is `not null`. A cleared field is written as `null`: the browser keeps it as a missing field,
   the change sent to the database names the column with `null`, and a `null` read back becomes a
@@ -152,7 +156,8 @@ erDiagram
   }
   office_document_versions {
     text id PK "also the storage key"
-    text office_document_id FK
+    text office_document_id FK "unique with number"
+    int number "1, 2, 3 per document in the order added; breaks a same-day tie"
     text name "the file's name"
     text format "pdf | jpg | png | heic"
     int size_kb
@@ -232,7 +237,7 @@ erDiagram
     text archived_by FK "null; staff"
   }
   grant_programs {
-    text grant_id PK, FK
+    text grant_id PK, FK "no order; read sorted by program name"
     text program_id PK, FK
   }
   grant_shares {
@@ -590,7 +595,7 @@ foreign keys; the modules still read each other only through their `index.ts`.
 | Link today | In the database |
 | --- | --- |
 | `TimeEntry.ensembleId` (timesheets to teaching) | `time_entries.ensemble_id` references `ensembles`, nullable: zero or one ensemble, an ensemble has any number of entries |
-| `Grant.programs` (grants to core) | `grant_programs`, a grant to each of its programs: one or more per grant ("at least one" is checked on write), any number of grants per program |
+| `Grant.programs` (grants to core) | `grant_programs`, a grant to each of its programs: one or more per grant ("at least one" is checked on write), any number of grants per program. No order is kept: the portal shows a grant's programs sorted by name (#131) |
 | `Expense.transactionId` (an expense to the QuickBooks transaction it is a part of) | `expenses.transaction_id` references `transactions`, nullable: a transaction is split into zero (to assign, set aside) or more expenses, and an expense typed in by hand has none |
 | `GrantShare.target` (grants to core's program budgets and projects) | `grant_shares.program_id` with `fiscal_year`, or `project_id`; a check makes it exactly one of the two |
 | `GrantDocument.officeDocumentId` (grants to core) | `grant_documents.office_document_id`, nullable |
@@ -630,7 +635,10 @@ A file's contents are never a column. They live in a storage bucket, keyed by th
   any, who uploaded it and when. The object's key is the row's `id`.
 - **`office_document_versions`**: one row per version of an office document, insert-only. The
   table keeps the file's facts, when it was added and by whom, and when it expires; the object's
-  key is the version's `id` (decision 0005). The current version is the newest added, worked out,
+  key is the version's `id` (decision 0005). Each version has a `number`, 1, 2, 3 within its
+  document and unique with `office_document_id`: the highest held plus one, made in the browser
+  before the insert is first sent, so a resent insert keeps it, and never changed (#131). The
+  current version is the newest added, the higher `number` winning a same-day tie, worked out,
   not stored; a grant's register row stores the document, and the version it sent is the one
   current on the grant's submitted date.
 - **`grant_documents`** keeps no file: a register row is a name, a kind, a status and either a

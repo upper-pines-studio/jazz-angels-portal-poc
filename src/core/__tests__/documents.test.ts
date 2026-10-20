@@ -54,9 +54,10 @@ function core(user: SignedInUser = as('office-manager', 's-keisha'), start = mak
 
 const PDF: FileFacts = { name: 'Certificate 2026-27.pdf', format: 'pdf', sizeKb: 190, pages: 1 };
 
-function version(id: string, addedAt: string, expires?: string): OfficeDocumentVersion {
+function version(id: string, addedAt: string, expires?: string, number = 1): OfficeDocumentVersion {
   return {
     id,
+    number,
     name: `${id}.pdf`,
     format: 'pdf',
     sizeKb: 10,
@@ -80,10 +81,27 @@ describe('the current version', () => {
     expect(versionsNewestFirst(d).map(v => v.id)).toEqual(['b', 'a']);
   });
 
-  it('goes to the later one added the same day', () => {
-    const d = doc([version('a', '2026-05-01'), version('b', '2026-05-01')]);
+  it.each([
+    ['in added order', ['a', 'b']],
+    ['in either order', ['b', 'a']],
+  ])('goes to the higher number of two added the same day, %s (#131)', (_, order) => {
+    const byId = {
+      a: version('a', '2026-05-01', undefined, 1),
+      b: version('b', '2026-05-01', undefined, 2),
+    };
+    const d = doc(order.map(id => byId[id as 'a' | 'b']));
     expect(currentVersion(d)?.id).toBe('b');
+    expect(currentVersion(d, '2026-05-01')?.id).toBe('b');
     expect(versionsNewestFirst(d).map(v => v.id)).toEqual(['b', 'a']);
+  });
+
+  it('goes by the day before the number', () => {
+    const d = doc([
+      version('later', '2026-05-02', undefined, 1),
+      version('a', '2026-05-01', undefined, 2),
+    ]);
+    expect(currentVersion(d)?.id).toBe('later');
+    expect(versionsNewestFirst(d).map(v => v.id)).toEqual(['later', 'a']);
   });
 
   it('can be asked for a past day: the newest added on or before it', () => {
@@ -206,6 +224,7 @@ describe('the actions', () => {
       versions: [
         {
           id: 'docv-2',
+          number: 1,
           name: PDF.name,
           format: 'pdf',
           sizeKb: 190,
@@ -227,9 +246,44 @@ describe('the actions', () => {
     });
     const d = c.state().core.officeDocuments.find(x => x.id === 'doc-insurance')!;
     expect(d.versions.map(v => v.id)).toEqual(['docv-insurance-1', vid]);
-    expect(currentVersion(d)).toMatchObject({ id: vid, addedAt: TODAY, expires: '2027-10-01' });
+    expect(currentVersion(d)).toMatchObject({
+      id: vid,
+      number: 2,
+      addedAt: TODAY,
+      expires: '2027-10-01',
+    });
     expect(officeDocumentStatus(d, TODAY)).toBe('current');
     expect(describeCoreChange(c.sent[0])).toBe('the new version');
+  });
+
+  it('numbers a new version after the highest held, and a retry sends the same number (#131)', () => {
+    const c = core();
+    c.actions.addOfficeDocumentVersion('doc-board-list', { file: PDF });
+    const sent = c.sent[0];
+    expect(sent).toMatchObject({ version: { number: 3 } });
+    // Sent again, as Try again does: the same version with the same number, still one.
+    const once = c.state().core;
+    const again = coreSlice.reducer(once, sent);
+    expect(again).toBe(once);
+    const d = again.officeDocuments.find(x => x.id === 'doc-board-list')!;
+    expect(d.versions.map(v => v.number)).toEqual([1, 2, 3]);
+
+    // The next one counts from the highest, not from how many there are.
+    const gappy = makeCoreSeed();
+    gappy.officeDocuments = gappy.officeDocuments.map(x =>
+      x.id === 'doc-w9' ? { ...x, versions: [{ ...x.versions[0], number: 4 }] } : x,
+    );
+    const g = core(undefined, gappy);
+    const vid = g.actions.addOfficeDocumentVersion('doc-w9', { file: PDF });
+    const w9 = g.state().core.officeDocuments.find(x => x.id === 'doc-w9')!;
+    expect(w9.versions.find(v => v.id === vid)?.number).toBe(5);
+  });
+
+  it('starts a new document at number 1', () => {
+    const c = core();
+    const id = c.actions.addOfficeDocument({ kind: 'w9', name: 'W-9', file: PDF });
+    const d = c.state().core.officeDocuments.find(x => x.id === id)!;
+    expect(d.versions.map(v => v.number)).toEqual([1]);
   });
 
   it('leaves the expiry off a version that has none', () => {
@@ -353,6 +407,27 @@ describe('loading a saved office', () => {
     expect(coreSlice.normalise!(saved, true)?.officeDocuments).toEqual(
       makeCoreSeed().officeDocuments,
     );
+  });
+
+  it('numbers saved versions without numbers in list order, the current one unchanged (#131)', () => {
+    const saved = JSON.parse(JSON.stringify(makeCoreSeed()));
+    for (const d of saved.officeDocuments)
+      for (const v of d.versions) delete (v as Partial<OfficeDocumentVersion>).number;
+    // Two the same day: the later in the list was current before numbers.
+    saved.officeDocuments[0].versions.push({
+      ...saved.officeDocuments[0].versions[0],
+      id: 'docv-irs-letter-2',
+    });
+    const loaded = coreSlice.normalise!(saved, true)!.officeDocuments;
+    expect(loaded.map(d => d.versions.map(v => v.number))).toEqual(
+      saved.officeDocuments.map((d: OfficeDocument) => d.versions.map((_, i) => i + 1)),
+    );
+    expect(currentVersion(loaded[0])?.id).toBe('docv-irs-letter-2');
+    const seed = makeCoreSeed().officeDocuments;
+    expect(loaded.slice(1).map(d => currentVersion(d)?.id)).toEqual(
+      seed.slice(1).map(d => currentVersion(d)?.id),
+    );
+    expect(loaded.slice(1)).toEqual(seed.slice(1));
   });
 
   it('drops a version it cannot read and checks the archive fields', () => {

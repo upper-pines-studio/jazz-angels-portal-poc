@@ -45,6 +45,22 @@ describe('core tables (#121)', () => {
     ).toEqual(doc.versions.map(v => v.id));
   });
 
+  it('writes each version its number, and reads the versions back by it in any row order (#131)', () => {
+    const state = makeCoreSeed();
+    const rows = coreTables.toRows(state);
+    const doc = state.officeDocuments.find(d => d.versions.length > 1)!;
+    expect(
+      rows.office_document_versions
+        .filter(v => v.office_document_id === doc.id)
+        .map(v => [v.id, v.number]),
+    ).toEqual(doc.versions.map(v => [v.id, v.number]));
+    const shuffled = {
+      ...rows,
+      office_document_versions: [...rows.office_document_versions].reverse(),
+    };
+    expect(coreTables.fromRows(shuffled)).toEqual(state);
+  });
+
   it('writes a cleared field as null and reads a null back as a missing field', () => {
     const state = makeCoreSeed();
     const archived = { ...state.staff[0], archivedAt: '2026-09-01', archivedById: 's-gwen' };

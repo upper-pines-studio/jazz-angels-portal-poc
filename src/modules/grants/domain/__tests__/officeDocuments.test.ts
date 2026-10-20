@@ -31,6 +31,7 @@ const as = (role: Role, id = 's-keisha'): SignedInUser => ({ id, name: 'Someone'
 
 const version = (id: string, addedAt: string, expires?: string): OfficeDocumentVersion => ({
   id,
+  number: 1,
   name: `${id}.pdf`,
   format: 'pdf',
   sizeKb: 100,
@@ -44,7 +45,10 @@ const boardList = (): OfficeDocument => ({
   id: 'doc-board',
   kind: 'board-list',
   name: 'Board of directors',
-  versions: [version('old', '2025-07-10', '2026-06-30'), version('new', '2026-07-15')],
+  versions: [
+    version('old', '2025-07-10', '2026-06-30'),
+    { ...version('new', '2026-07-15'), number: 2 },
+  ],
 });
 
 const submittedOn = (submitted?: string) => ({ dates: submitted ? { submitted } : {} });

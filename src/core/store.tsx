@@ -16,7 +16,9 @@ import {
 } from './derive';
 import {
   newOfficeDocumentProblem,
+  nextVersionNumber,
   normaliseOfficeDocument,
+  officeDocumentById,
   officeDocumentProblem,
   officeDocumentVersionProblem,
   versionFields,
@@ -363,7 +365,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
       },
       addOfficeDocument(input) {
         const id = ctx.newId('doc');
-        const version = versionFields(ctx.newId('docv'), input, ctx.today, ctx.user.id);
+        const version = versionFields(ctx.newId('docv'), 1, input, ctx.today, ctx.user.id);
         dispatch({
           type: 'core/add-office-document',
           document: { id, kind: input.kind, name: input.name.trim(), versions: [version] },
@@ -377,7 +379,9 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
         dispatch({ type: 'core/update-office-document', id, patch: fields });
       },
       addOfficeDocumentVersion(id, input) {
-        const version = versionFields(ctx.newId('docv'), input, ctx.today, ctx.user.id);
+        // Numbered here, not in the reducer, so a retry sends the same number (#131).
+        const number = nextVersionNumber(officeDocumentById(getState(), id));
+        const version = versionFields(ctx.newId('docv'), number, input, ctx.today, ctx.user.id);
         dispatch({ type: 'core/add-office-document-version', id, version });
         return version.id;
       },

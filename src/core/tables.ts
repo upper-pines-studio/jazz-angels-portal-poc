@@ -83,6 +83,7 @@ export type OfficeDocumentRow = ArchivedColumns & {
 export type OfficeDocumentVersionRow = {
   id: string;
   office_document_id: string;
+  number: number;
   name: string;
   format: FileFormat;
   size_kb: number;
@@ -206,6 +207,7 @@ export const coreTables: SliceTables<CoreState, CoreTables> = {
         d.versions.map(v => ({
           id: v.id,
           office_document_id: d.id,
+          number: v.number,
           name: v.name,
           format: v.format,
           size_kb: v.sizeKb,
@@ -289,15 +291,19 @@ export const coreTables: SliceTables<CoreState, CoreTables> = {
         id: r.id,
         kind: r.kind,
         name: r.name,
-        versions: (versions.get(r.id) ?? []).map(v => ({
-          id: v.id,
-          name: v.name,
-          format: v.format,
-          sizeKb: v.size_kb,
-          addedAt: v.added_at,
-          addedById: v.added_by,
-          ...withoutNulls({ pages: v.pages, expires: v.expires }),
-        })),
+        // Rows come back in no order: a document keeps its versions oldest first, by number (#131).
+        versions: [...(versions.get(r.id) ?? [])]
+          .sort((a, b) => a.number - b.number)
+          .map(v => ({
+            id: v.id,
+            number: v.number,
+            name: v.name,
+            format: v.format,
+            sizeKb: v.size_kb,
+            addedAt: v.added_at,
+            addedById: v.added_by,
+            ...withoutNulls({ pages: v.pages, expires: v.expires }),
+          })),
         ...archivedFields(r),
       })),
       settings: settings

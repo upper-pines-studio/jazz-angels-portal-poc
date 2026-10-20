@@ -211,6 +211,7 @@ const OFFICE_DOCUMENTS: OfficeDocument[] = [
     versions: [
       {
         id: 'docv-irs-letter-1',
+        number: 1,
         name: 'IRS determination letter 501(c)(3).pdf',
         format: 'pdf',
         sizeKb: 284,
@@ -227,6 +228,7 @@ const OFFICE_DOCUMENTS: OfficeDocument[] = [
     versions: [
       {
         id: 'docv-financials-fy24',
+        number: 1,
         name: 'Audited financial statements FY24.pdf',
         format: 'pdf',
         sizeKb: 1180,
@@ -237,6 +239,7 @@ const OFFICE_DOCUMENTS: OfficeDocument[] = [
       },
       {
         id: 'docv-financials-fy25',
+        number: 2,
         name: 'Audited financial statements FY25.pdf',
         format: 'pdf',
         sizeKb: 1240,
@@ -254,6 +257,7 @@ const OFFICE_DOCUMENTS: OfficeDocument[] = [
     versions: [
       {
         id: 'docv-board-list-2025',
+        number: 1,
         name: 'Board of directors 2025-26.pdf',
         format: 'pdf',
         sizeKb: 92,
@@ -264,6 +268,7 @@ const OFFICE_DOCUMENTS: OfficeDocument[] = [
       },
       {
         id: 'docv-board-list-1',
+        number: 2,
         name: 'Board of directors 2026-27.pdf',
         format: 'pdf',
         sizeKb: 96,
@@ -281,6 +286,7 @@ const OFFICE_DOCUMENTS: OfficeDocument[] = [
     versions: [
       {
         id: 'docv-insurance-1',
+        number: 1,
         name: 'Certificate of liability insurance 2025-26.pdf',
         format: 'pdf',
         sizeKb: 188,
@@ -298,6 +304,7 @@ const OFFICE_DOCUMENTS: OfficeDocument[] = [
     versions: [
       {
         id: 'docv-w9-1',
+        number: 1,
         name: 'W-9 Jazz Angels signed.pdf',
         format: 'pdf',
         sizeKb: 142,
@@ -314,6 +321,7 @@ const OFFICE_DOCUMENTS: OfficeDocument[] = [
     versions: [
       {
         id: 'docv-budget-fy27',
+        number: 1,
         name: 'Jazz Angels budget FY27.pdf',
         format: 'pdf',
         sizeKb: 210,
