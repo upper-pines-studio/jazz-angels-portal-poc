@@ -85,8 +85,15 @@ identity, so nothing else re-renders. `portal/replace` swaps every slice at once
 ```ts
 interface Repository {
   load(slice: ModuleSlice, today: string, demo: boolean): Promise<unknown>; // one per slice
-  apply(sliceId: string, action: AnyAction, next: unknown): Promise<void>;  // one per change
+  apply(change: SliceChange): Promise<void>;                                // one per change
   readonly acceptsReplace: boolean; // whether portal/replace (import, reset) may reach it
+}
+
+interface SliceChange {
+  sliceId: string;
+  action: AnyAction;      // a label, for logs and "Couldn't save …"; never what to write
+  readonly rows: RowDiff; // what the change did to the slice's tables (diff.ts)
+  next: unknown;          // the whole slice after it
 }
 ```
 
@@ -98,10 +105,13 @@ a new live store on the new load. A new day does not load again; a slice reads
 `live.ts`:
 
 1. `dispatch` runs the reducer and the screens see the change at once.
-2. Each slice the change touched is handed to `apply(sliceId, action, next)`:
-   the action as the slice dispatched it, for a backend that writes rows, and
-   the slice's whole new state, for one that writes documents. An import or a
-   reset (`portal/replace`) is one apply per slice.
+2. Each slice the change touched is handed to `apply(change)`: the rows the
+   change inserted, updated and deleted (`change.rows`, see "The row diff"
+   below), for a backend that writes rows, and the slice's whole new state
+   (`change.next`), for one that writes documents. The action rides along as a
+   label only: several grants actions work out their rows from the state, so
+   the action alone does not say what changed. An import or a reset
+   (`portal/replace`) is one apply per slice.
 3. Applies run one at a time per slice, in order. While any is in flight
    `saving.status` is `saving`.
 4. When one rejects, that slice goes back to how it stood before the failed
@@ -137,7 +147,7 @@ a missing key starts fresh: when the key holds data that cannot be read (not
 JSON, or rejected by the slice's `normalise`), `load` copies it to
 `ja-portal:<sliceId>:unreadable-<ISO time>`, leaves the original key alone and
 rejects with an `UnreadableDataError` naming the slice, which `StoreProvider`
-shows in place of the portal. `apply` writes the slice's new state and rejects when the browser will not
+shows in place of the portal. `apply` writes the slice's new state (`next`) whole, never reads the row diff, and rejects when the browser will not
 store it (full, or storage switched off). In `npm run dev`, setting the
 preference `ja-portal:fail-saves` to `1` (`FAIL_SAVES_KEY`; in devtools,
 `localStorage.setItem('ja-portal:fail-saves', '1')`) makes every apply fail,
@@ -176,8 +186,9 @@ carry it. Unset means the seed's day, `SEED_TODAY`; "Use the real date" stores
 | `module.ts` | `insertRow(state, key, row)` (adds a row unless its id is already there, else gives the state back untouched), `ModuleSlice` (`seed(today)` the demo data, `empty()` a new office, `normalise(raw, demo)`, its `rules`: what each action needs, its `tables`: how its state maps onto the tables of `docs/SCHEMA.md`, and an optional `describe(action)`: the change in plain words for a failed save), `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are gated Cards for the Settings screen), `ModuleRoute` (`requires`, `allows`), `Requires`, `NavItem`, `NavSection`, `StatSpec`, `AttentionItem` (its optional `statusLabel` gives the status Badge its own words, "Out of date", while the tone follows `status`, and `statusOutlined` draws it in outlined gold, "Sent back"), `GatedCard`, `FundingContribution` and `FundingSource` (a module's `funding`: what it puts toward a program's year or a project, and optionally its own `panel` for the sheet), `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
 | `rows.ts` | The row mapping of decision 0008 (#121): `Row`, `Tables` (rows by table name), `SliceTables` (a slice's `keys`, `toRows`, `fromRows`), and the helpers the mappings share: `orNull`, `withoutNulls`, `groupBy`. See "Rows by table" below. Loading (decision 0008, 2A, #123): `nullsAsMissing(row, optional)` drops a `null` optional field and rejects a `null` anywhere else; `sliceNullsAsMissing(state, optional)` runs a whole slice through it, collection by collection, with each one's optional fields (`OptionalFields`). |
 | `tables.ts` | `coreTables`, core's own mapping, and what the modules' mappings reuse: `ArchivedColumns`, `archivedColumns` / `archivedFields` (the two archive columns and back), `addressFrom` (an address from its four columns). |
-| `persistence.ts` | The `Repository` interface: `load` one slice, `apply` one change, both promises; `acceptsReplace`, whether import and reset may reach it. |
-| `live.ts` | `createLiveStore`: the state, the per-slice apply queue, the rollback, `Saving` and `whenSaved`. No React, so the tests drive it with a fake repository. |
+| `diff.ts` | The row diff of decision 0008 (#122): `diffSlice(tables, before, next)` and `diffRows(keys, before, next)` give a `RowDiff` (one `TableDiff` per table touched: `inserts`, `updates` with `set` and `was`, `deletes` with `key` and `was`); `writeOrder` (inserts and updates parents first, deletes children first); `applyDiff`, the diff written onto rows in memory as a backend writes it; `sameValue`. See "The row diff" below. |
+| `persistence.ts` | The `Repository` interface: `load` one slice, `apply` one `SliceChange` (its `rows`, its `next`, its `action` as a label), both promises; `acceptsReplace`, whether import and reset may reach it. |
+| `live.ts` | `createLiveStore`: the state, the per-slice apply queue, the rollback, `Saving` and `whenSaved`, and the `SliceChange` each apply is handed (its `slices` give the row mappings). No React, so the tests drive it with a fake repository. |
 | `store.tsx` | `StoreProvider` (its `onRefused` shows a refused action's reason, its `onSaveFailed` a change that could not be saved, its `repository` defaults to localStorage), `useStore`, `useCan`, `coreSlice`, `guardActions` (wraps every slice's actions in its `rules`), `refusalMessage`, `newId`, `resolveToday`, `savedStaff()` (the staff list as saved, which sign-in reads before the store mounts). |
 | `demo.ts` | `isDemo()` (the `VITE_DEMO` switch), `DEMO_TODAY_KEY` and the demo-date preference helpers. |
 | `clock.ts` | The one reading of the device clock for today: `clockToday()`, `msUntilMidnight(now)`, and `watchToday(since, onChange)`, which calls back when the local day changes (at midnight, on `visibilitychange`, on `focus`). `StoreProvider` uses it. |
@@ -207,8 +218,8 @@ manages both on the Partners screen (`src/app/screens/partners/`).
 
 Each slice says how its state maps onto the tables in `docs/SCHEMA.md`, as
 `tables` on its `ModuleSlice` (decision 0008, #121). Core only calls it; the
-row diff a backend `Repository` will be handed is worked out from it (#122).
-Nothing calls it yet, and `localRepository` keeps writing whole slices.
+row diff a backend `Repository` is handed is worked out from it (#122, "The
+row diff" below). `localRepository` keeps writing whole slices.
 
 ```ts
 coreSlice.tables.toRows(state.core);
@@ -239,6 +250,41 @@ Core writes `staff`, `programs`, `program_budgets`, `projects`,
 `office_document_versions` (a document's versions, one row each, read back in `number`
 order) and
 `settings` (one row). `logins` is not core's: the sign-ins live in `auth.ts`.
+
+## The row diff
+
+What `Repository.apply` is handed as `change.rows` (decision 0008, 1A and 2A,
+#122): the slice before and after the change, each through its `toRows`,
+compared table by table on the primary key in `keys`.
+
+```ts
+diffSlice(grantsTables, before, next);
+// [{ table: 'transactions', inserts: [],
+//    updates: [{ key: { id: 'tx-1' }, set: { status: 'to-assign', assigned_by: null },
+//                was: { status: 'assigned', assigned_by: 's-denise' } }], deletes: [] },
+//  { table: 'expenses', inserts: [], updates: [],
+//    deletes: [{ key: { id: 'ex-1' }, was: { id: 'ex-1', … } }] }]
+```
+
+- Only the tables the change touched are listed, in the order of `keys`:
+  parents first. A backend writes inserts and updates in that order and
+  deletes in the reverse one, children first (`writeOrder`), all in one
+  transaction.
+- An insert is the whole row. An update is the row's key, the columns that
+  changed (`set`) and what each was (`was`), so a stale write can be refused
+  (#124). A delete is the row's key and the row as it was read.
+- A column that is missing and one that is `undefined` are the same; either,
+  after a value, goes out as `null`. State keeps `undefined`.
+- Every value is absolute and an insert is a client-made id, so a backend
+  writes an insert as an upsert and a delete of a row already gone as done:
+  the same diff written twice changes nothing (`applyDiff`, #114).
+- It stays cheap: a slice the change did not touch is never diffed, each
+  state is mapped once (a change's `next` is the next change's `before`),
+  rows that are the same object are skipped, and the live store works the
+  diff out only when a repository reads `change.rows`, which
+  `localRepository` never does.
+- Two rows of one table with the same key throw: a mapping bug a backend must
+  not write.
 
 ## Core actions
 

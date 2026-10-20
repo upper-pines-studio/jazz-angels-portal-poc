@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { REPLACE_REFUSED, createLiveStore } from '../live';
 import type { AnyAction, ModuleSlice } from '../module';
-import type { Repository } from '../persistence';
+import type { Repository, SliceChange } from '../persistence';
 import * as repository from '../repository';
 import type { PortalSlice } from '../repository';
 import { venuesForOrganization } from '../derive';
@@ -397,6 +397,7 @@ function fakeRepository(acceptsReplace = true) {
     sliceId: string;
     action: AnyAction;
     next: unknown;
+    change: SliceChange;
     resolve: () => void;
     reject: (e: Error) => void;
   }> = [];
@@ -404,8 +405,17 @@ function fakeRepository(acceptsReplace = true) {
   const repo: Repository = {
     acceptsReplace,
     load: slice => Promise.resolve(slice.seed('2026-09-13')),
-    apply: (sliceId, action, next) =>
-      new Promise((resolve, reject) => pending.push({ sliceId, action, next, resolve, reject })),
+    apply: change =>
+      new Promise((resolve, reject) =>
+        pending.push({
+          sliceId: change.sliceId,
+          action: change.action,
+          next: change.next,
+          change,
+          resolve,
+          reject,
+        }),
+      ),
   };
   const flush = () => new Promise(r => setTimeout(r, 0));
   return {
@@ -431,6 +441,7 @@ function live(repo: Repository, failures: string[] = []) {
   return createLiveStore({
     initial: repository.loadState(SLICES, '2026-09-13', true),
     reducer: makeReducer(SLICES),
+    slices: SLICES,
     repository: repo,
     describe: (sliceId, action) => describeChange(DESCRIBED, sliceId, action),
     onSaveFailed: message => failures.push(message),
@@ -458,6 +469,42 @@ describe('saving through the repository', () => {
     await fake.succeed();
     expect(store.getSaving()).toEqual({ status: 'idle' });
     expect(fake.saved.counter).toEqual({ count: 1 });
+  });
+
+  // Decision 0008, 1A (#122): apply is handed the rows, worked out from before and after.
+  it('hands apply the rows the change made, table by table', async () => {
+    const fake = fakeRepository();
+    const store = live(fake.repo);
+    store.dispatch({ type: 'counter/bump' });
+    store.dispatch({ type: 'notes/add', text: 'first' });
+    store.dispatch({ type: 'counter/bump' });
+
+    expect(fake.pending.map(p => [p.sliceId, p.change.rows])).toEqual([
+      [
+        'counter',
+        [
+          {
+            table: 'counters',
+            inserts: [],
+            updates: [{ key: { id: 1 }, set: { count: 1 }, was: { count: 0 } }],
+            deletes: [],
+          },
+        ],
+      ],
+      [
+        'notes',
+        [{ table: 'notes', inserts: [{ id: 1, text: 'first' }], updates: [], deletes: [] }],
+      ],
+    ]);
+    await fake.succeed();
+    // The second bump waited behind the first, and its rows start where the first ended.
+    expect(fake.pending.map(p => p.change.rows[0].updates)).toEqual([
+      [],
+      [{ key: { id: 1 }, set: { count: 2 }, was: { count: 1 } }],
+    ]);
+    // Read twice, worked out once.
+    const [, second] = fake.pending;
+    expect(second.change.rows).toBe(second.change.rows);
   });
 
   it('rolls the slice back and says what was not saved when the apply fails', async () => {

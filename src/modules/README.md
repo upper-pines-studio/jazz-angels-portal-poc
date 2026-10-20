@@ -54,8 +54,9 @@ collection, and `batch` for several as one change (closing a roll call is the
 present marks and the closed meeting together). The rules that decide what
 follows from an action (a submitted roll is closed, only a draft is submitted)
 live in `createActions`, which reads the state first. Each change is one
-`repository.apply`, so a backend writes rows from it without knowing the
-module. Grants, teaching and timesheets all work this way.
+`repository.apply`, handed the rows it changed, worked out in core from the
+slice's `tables` below, so a backend writes it without knowing the module.
+Grants, teaching and timesheets all work this way.
 
 **The tables.** In `domain/tables.ts`, say how the state maps onto the
 module's tables in `docs/SCHEMA.md`: a `SliceTables` (`src/core/rows.ts`) with

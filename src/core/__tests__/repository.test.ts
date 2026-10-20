@@ -15,6 +15,7 @@ import {
   storageKey,
   UnreadableDataError,
 } from '../repository';
+import type { SliceChange } from '../persistence';
 import type { PortalSlice } from '../repository';
 import { coreSlice } from '../store';
 import type { PortalState } from '../types';
@@ -60,6 +61,18 @@ const TODAY = '2026-09-13';
 /** The demo switch, as `isDemo()` gives it in `npm run dev`. The last block turns it off. */
 const DEMO = true;
 const bag = (state: PortalState) => state as unknown as Record<string, unknown>;
+
+/** A change to hand `apply` whose row diff fails the test if anything reads it. */
+function change(sliceId: string, next: unknown): SliceChange {
+  return {
+    sliceId,
+    action: { type: `${sliceId}/add` },
+    next,
+    get rows(): never {
+      throw new Error('localRepository read the row diff.');
+    },
+  };
+}
 
 beforeEach(() => {
   installStorage();
@@ -246,9 +259,9 @@ describe('the localStorage repository', () => {
     expect([...data.entries()]).toEqual([[storageKey('notes'), '{{{']]);
   });
 
-  it('applies a change by writing the slice it is given, and only that one', async () => {
+  it('applies a change by writing the slice it is given whole, never reading the rows', async () => {
     const { data } = installStorage();
-    await localRepository.apply('notes', { type: 'notes/add' }, { notes: ['applied'] });
+    await localRepository.apply(change('notes', { notes: ['applied'] }));
     expect([...data.keys()]).toEqual([storageKey('notes')]);
     expect(bag(loadState(SLICES, TODAY, DEMO)).notes).toEqual({ notes: ['applied'] });
   });
@@ -258,23 +271,23 @@ describe('the localStorage repository', () => {
     ls.setItem = () => {
       throw new Error('QuotaExceededError');
     };
-    await expect(
-      localRepository.apply('notes', { type: 'notes/add' }, { notes: ['x'] }),
-    ).rejects.toThrow(/no room left/);
+    await expect(localRepository.apply(change('notes', { notes: ['x'] }))).rejects.toThrow(
+      /no room left/,
+    );
     delete (globalThis as { localStorage?: Storage }).localStorage;
-    await expect(
-      localRepository.apply('notes', { type: 'notes/add' }, { notes: ['x'] }),
-    ).rejects.toThrow(/not letting the portal save/);
+    await expect(localRepository.apply(change('notes', { notes: ['x'] }))).rejects.toThrow(
+      /not letting the portal save/,
+    );
   });
 
   it('fails every save on purpose while the development switch is set', async () => {
     savePreference(FAIL_SAVES_KEY, '1');
-    await expect(
-      localRepository.apply('notes', { type: 'notes/add' }, { notes: ['x'] }),
-    ).rejects.toThrow(/switched off/);
+    await expect(localRepository.apply(change('notes', { notes: ['x'] }))).rejects.toThrow(
+      /switched off/,
+    );
     expect(bag(loadState(SLICES, TODAY, DEMO)).notes).toEqual({ notes: ['first'] });
     savePreference(FAIL_SAVES_KEY, '0');
-    await localRepository.apply('notes', { type: 'notes/add' }, { notes: ['x'] });
+    await localRepository.apply(change('notes', { notes: ['x'] }));
     expect(bag(loadState(SLICES, TODAY, DEMO)).notes).toEqual({ notes: ['x'] });
   });
 });

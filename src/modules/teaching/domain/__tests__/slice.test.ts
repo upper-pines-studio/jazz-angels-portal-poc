@@ -469,6 +469,7 @@ describe('a roll call that does not save', () => {
     const live = createLiveStore({
       initial: { teaching: makeSeed() } as unknown as PortalState,
       reducer: makeReducer(slices),
+      slices,
       repository: repo,
       describe: (sliceId, action) => describeChange(slices, sliceId, action),
       onSaveFailed: message => failures.push(message),

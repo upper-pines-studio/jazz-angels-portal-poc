@@ -1,5 +1,7 @@
-import type { AnyAction } from './module';
-import type { Repository } from './persistence';
+import { diffSlice } from './diff';
+import type { RowDiff } from './diff';
+import type { AnyAction, ModuleSlice } from './module';
+import type { Repository, SliceChange } from './persistence';
 import type { PortalState } from './types';
 
 /**
@@ -8,7 +10,9 @@ import type { PortalState } from './types';
  *
  * A change shows at once: `dispatch` runs the reducer and every subscriber
  * sees the new state before anything is saved. Then each slice the change
- * touched is handed to `repository.apply`. Applies run one at a time per
+ * touched is handed to `repository.apply`, with the rows the change inserted,
+ * updated and deleted (`diff.ts`, decision 0008) and the slice's whole new
+ * state. Applies run one at a time per
  * slice, in the order they were made, so a slice's saves never overtake each
  * other. When one fails, that slice goes back to how it stood before the
  * failed change, and the changes queued behind it on the same slice are
@@ -65,6 +69,8 @@ interface Waiter {
 export interface LiveStoreOptions {
   initial: PortalState;
   reducer: (state: PortalState, action: AnyAction) => PortalState;
+  /** Every slice in the state, for its `tables`: how a change becomes the row diff `apply` is handed. */
+  slices: ReadonlyArray<Pick<ModuleSlice<unknown, unknown>, 'id' | 'tables'>>;
   repository: Repository;
   /** Plain words for a change: "the roll call mark". The store adds "Couldn't save". */
   describe?: (sliceId: string, action: AnyAction) => string | undefined;
@@ -89,10 +95,12 @@ const IDLE: Saving = { status: 'idle' };
 export function createLiveStore({
   initial,
   reducer,
+  slices,
   repository,
   describe,
   onSaveFailed,
 }: LiveStoreOptions): LiveStore {
+  const tables = new Map(slices.map(s => [s.id, s.tables]));
   let state = initial;
   let saving: Saving = IDLE;
   /** Per slice, oldest failure first: re-set on each failure, so the last is the most recent. */
@@ -145,11 +153,32 @@ export function createLiveStore({
     if (queue.length === 1) run(sliceId, queue);
   }
 
+  /**
+   * What `apply` is handed. The row diff is worked out from the change's own
+   * `before` and `after` the first time a repository reads it, and kept, so
+   * `localRepository`, which writes `next` whole, never pays for it.
+   */
+  function sliceChange(sliceId: string, change: Change): SliceChange {
+    let rows: RowDiff | undefined;
+    return {
+      sliceId,
+      action: change.action,
+      next: change.after,
+      get rows() {
+        if (rows) return rows;
+        const mapping = tables.get(sliceId);
+        if (!mapping) throw new Error(`The ${sliceId} slice has no row mapping.`);
+        rows = diffSlice(mapping, change.before, change.after);
+        return rows;
+      },
+    };
+  }
+
   function run(sliceId: string, queue: Change[]) {
     const change = queue[0];
     let pending: Promise<void>;
     try {
-      pending = repository.apply(sliceId, change.action, change.after);
+      pending = repository.apply(sliceChange(sliceId, change));
     } catch (e) {
       pending = Promise.reject(e);
     }
