@@ -18,9 +18,11 @@ const BARRY: SignedInUser = { id: 's-barry', name: 'Barry Cogert', role: 'direct
 
 /**
  * The slice's real actions over the seed, signed in as `user`. `ids` hands out
- * each prefix's ids in turn; past the list, a prefix gets `<prefix>-<n>`.
+ * each prefix's ids in turn; past the list, a prefix gets `<prefix>-test-<n>`.
+ * With `times`, every change reaches the reducer that many times, as a retry
+ * after the first save went through would send it again.
  */
-function slice(user: SignedInUser = BARRY, ids: Record<string, string[]> = {}) {
+function slice(user: SignedInUser = BARRY, ids: Record<string, string[]> = {}, times = 1) {
   let grants = base();
   let n = 0;
   const sent: AnyAction[] = [];
@@ -29,12 +31,18 @@ function slice(user: SignedInUser = BARRY, ids: Record<string, string[]> = {}) {
     grantsSlice.createActions(
       (action: AnyAction) => {
         sent.push(action);
-        grants = grantsSlice.reducer(grants, action);
+        for (let i = 0; i < times; i += 1) grants = grantsSlice.reducer(grants, action);
       },
       portal,
-      { today, newId: prefix => ids[prefix]?.shift() ?? `${prefix}-${(n += 1)}`, user },
+      { today, newId: prefix => ids[prefix]?.shift() ?? `${prefix}-test-${(n += 1)}`, user },
     );
-  return { actions: actionsOn('2026-09-13'), actionsOn, grants: () => grants, sent };
+  return {
+    actions: actionsOn('2026-09-13'),
+    actionsOn,
+    grants: () => grants,
+    portal,
+    sent,
+  };
 }
 
 describe('addGrant', () => {
@@ -239,7 +247,15 @@ describe('the slice', () => {
     expect(name({ type: 'grants/update', key: 'budgetLines', id: 'x', patch: {} })).toBe(
       'the budget line',
     );
-    expect(name({ type: 'grants/assign-transaction', id: 'x' })).toBe('the transaction');
+    expect(
+      name({
+        type: 'grants/batch',
+        actions: [
+          { type: 'remove', key: 'expenses', id: 'x' },
+          { type: 'update', key: 'transactions', id: 't', patch: { status: 'assigned' } },
+        ],
+      }),
+    ).toBe('the transaction');
     expect(name({ type: 'grants/save-reminder-plan' })).toBe('the reminders');
     expect(
       name({
@@ -249,6 +265,158 @@ describe('the slice', () => {
     ).toBe('the expense');
     // Not a grants change: the store falls back to "that change".
     expect(name({ type: 'teaching/insert', key: 'grants', item: {} })).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The compound actions as explicit rows (#127)
+// ---------------------------------------------------------------------------
+
+describe('the compound actions', () => {
+  const HA = 'g-herb-alpert-2026';
+  const LBCF = 'g-lb-community-foundation-2026';
+  const TX = 'tx-ex-ha-2';
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-13T10:00:00.000Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  /** Each action the way a screen calls it, and the words its toast would use. */
+  const CASES: Array<[string, string, (a: GrantsActions, h: ReturnType<typeof slice>) => void]> = [
+    [
+      'addGrant',
+      'the grant',
+      a =>
+        a.addGrant({
+          newFunder: { name: 'Test Funder', type: 'foundation' },
+          title: 'Test grant',
+          programs: ['in-school'],
+          restriction: 'restricted',
+          ownerId: 's-barry',
+          loiRequired: false,
+          templateId: 'tpl-foundation-standard',
+        }),
+    ],
+    [
+      'addGrant, brought in at Active',
+      'the grant',
+      a =>
+        a.addGrant({
+          funderId: 'f-herb-alpert',
+          title: 'Music in the Parks 2026',
+          programs: ['in-school'],
+          restriction: 'restricted',
+          ownerId: 's-barry',
+          phase: 'active',
+          loiRequired: false,
+          templateId: 'tpl-foundation-standard',
+          dates: { decided: '2026-01-20', periodStart: '2026-02-01', periodEnd: '2027-01-31' },
+          inFlight: {
+            amountAwarded: 40000,
+            budgetLines: [{ category: 'Instruments', planned: 40000 }],
+            payments: [{ label: 'Only', expectedDate: '2026-02-01', amount: 40000 }],
+            reports: [{ kind: 'final', dueDate: '2027-03-31', status: 'upcoming' }],
+          },
+        }),
+    ],
+    [
+      'renewGrant',
+      'the grant',
+      a =>
+        a.renewGrant({
+          grantId: HA,
+          title: 'Herb Alpert 2027',
+          programs: ['in-school'],
+          ownerId: 's-barry',
+          dates: {},
+        }),
+    ],
+    ['transition', 'the grant', a => a.transition('g-signal-hill-2026', 'declined', {})],
+    ['toggleTask', 'the task', (a, h) => a.toggleTask(h.grants().tasks.find(t => !t.done)!.id)],
+    [
+      'duplicateTemplate',
+      'the checklist template',
+      a => a.duplicateTemplate('tpl-foundation-standard'),
+    ],
+    ['moveExpenses', 'the moved expenses', a => a.moveExpenses('bl-ha-stipends', 'bl-ha-venue')],
+    [
+      'assignTransaction',
+      'the transaction',
+      a =>
+        a.assignTransaction(TX, [
+          { grantId: LBCF, budgetLineId: 'bl-lbcf-repair', amount: 600 },
+          { grantId: HA, budgetLineId: 'bl-ha-music', amount: 640 },
+        ]),
+    ],
+    ['markNotGrantFunded', 'the transaction', a => a.markNotGrantFunded(TX)],
+    ['unassignTransaction', 'the transaction', a => a.unassignTransaction(TX)],
+    ['deleteExpense, from QuickBooks', 'the transaction', a => a.deleteExpense('ex-ha-2')],
+    [
+      'restoreTransactions',
+      'the transaction',
+      (a, h) => {
+        const before = transactionSnapshot(h.portal(), TX)!;
+        a.unassignTransaction(TX);
+        h.sent.length = 0;
+        a.restoreTransactions([before]);
+      },
+    ],
+    ['acceptSuggestions', 'the transaction', a => a.acceptSuggestions()],
+  ];
+
+  it.each(CASES)('%s sends only rows', (_name, _words, run) => {
+    const h = slice();
+    run(h.actions, h);
+    const generic = new Set(['insert', 'update', 'remove']);
+    const flat = (action: AnyAction): AnyAction[] =>
+      action.type === 'grants/batch' || action.type === 'batch'
+        ? (action.actions as AnyAction[]).flatMap(flat)
+        : [action];
+    for (const row of h.sent.flatMap(flat)) {
+      expect(generic.has(row.type.replace(/^grants\//, ''))).toBe(true);
+    }
+  });
+
+  it.each(CASES)('%s sent twice changes nothing the second time', (_name, _words, run) => {
+    const once = slice();
+    run(once.actions, once);
+    const twice = slice(BARRY, {}, 2);
+    run(twice.actions, twice);
+    expect(twice.grants()).toEqual(once.grants());
+  });
+
+  it.each(CASES)('%s is named %s when it cannot be saved', (_name, words, run) => {
+    const h = slice();
+    run(h.actions, h);
+    expect(h.sent.at(-1) && grantsSlice.describe!(h.sent.at(-1)!)).toBe(words);
+  });
+
+  it('sends nothing for a grant, a task or a template that is gone', () => {
+    const h = slice();
+    h.actions.transition('nope', 'closed', {});
+    h.actions.toggleTask('nope');
+    h.actions.duplicateTemplate('nope');
+    h.actions.assignTransaction('nope', [{ grantId: HA, budgetLineId: 'bl-ha-music', amount: 1 }]);
+    h.actions.unassignTransaction('nope');
+    h.actions.restoreTransactions([]);
+    expect(h.sent).toEqual([]);
+  });
+
+  it('ticks a task with an absolute value, so a retry leaves it ticked', () => {
+    const h = slice(BARRY, {}, 2);
+    const id = h.grants().tasks.find(t => !t.done)!.id;
+    h.actions.toggleTask(id);
+    expect(h.sent).toEqual([
+      {
+        type: 'grants/update',
+        key: 'tasks',
+        id,
+        patch: { done: true, doneAt: '2026-09-13' },
+      },
+    ]);
+    expect(h.grants().tasks.find(t => t.id === id)).toMatchObject({ done: true });
   });
 });
 
@@ -539,16 +707,6 @@ describe("moving a budget line's expenses", () => {
     expect(h.actions.moveExpenses('bl-ha-repair', 'bl-ha-repair')).toBe(false);
     expect(h.actions.moveExpenses('bl-ha-repair', 'bl-nowhere')).toBe(false);
     expect(h.grants()).toBe(start);
-    // The reducer holds the line too, should a stale screen get past the action.
-    const next = reducer(start, {
-      type: 'move-expenses',
-      fromLineId: 'bl-ha-repair',
-      toLineId: 'bl-lbcf-repair',
-      activityId: 'a',
-      at: '2026-09-13T10:00:00.000Z',
-      whoId: 's-keisha',
-    });
-    expect(next).toBe(start);
   });
 
   it('removes the line once its expenses have moved', () => {

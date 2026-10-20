@@ -107,76 +107,20 @@ type UpdateAction = {
   [K in CollectionKey]: { type: 'update'; key: K; id: string; patch: Partial<Collections[K]> };
 }[CollectionKey];
 
+/**
+ * Every change the grants slice makes: a row added, changed or taken away, or
+ * several of those as one change. What follows from an action (a new grant's
+ * checklist, the parts a reassigned transaction replaces, the files that move
+ * with them) is worked out in `createActions`, which reads the state and sends
+ * every row it writes, with absolute values (#127). The rest are the demo's
+ * stand-in for the QuickBooks sync, the QuickBooks settings and the report
+ * reminders, which are not rows with ids: see the reducer.
+ */
 export type GrantsAction =
   | InsertAction
   | UpdateAction
   | { type: 'remove'; key: CollectionKey; id: string }
   | { type: 'batch'; actions: GrantsAction[] }
-  | {
-      /**
-       * A new grant with its checklist, documents and one activity row. A grant
-       * brought in already under way (`grant.broughtIn`) carries its budget,
-       * payments and reports too, all in this one change.
-       */
-      type: 'add-grant';
-      grant: Grant;
-      funder?: Funder;
-      templateId?: string | null;
-      excludeTemplateItemIds?: string[];
-      includeDocumentRegister: boolean;
-      /** By kind, the office document a register row uses (#68): see `newRegisterLinks`. */
-      officeDocumentLinks?: Partial<Record<DocumentKind, string>>;
-      budgetLines?: BudgetLine[];
-      payments?: Payment[];
-      reports?: Report[];
-      activityId: string;
-      at: string;
-      whoId: string;
-      /** The activity row's text, when it is not "Grant added" (a renewal's). */
-      text?: string;
-    }
-  | {
-      type: 'transition';
-      grantId: string;
-      to: Phase;
-      payload: TransitionPayload;
-      activityId: string;
-      at: string;
-      whoId: string;
-    }
-  | { type: 'toggle-task'; id: string; date: string }
-  | { type: 'duplicate-template'; id: string; newTemplateId: string }
-  | {
-      /** Put a QuickBooks transaction on one line, or split it across several. */
-      type: 'assign-transaction';
-      id: string;
-      parts: Array<Allocation & { expenseId: string; activityId: string }>;
-      by: string;
-      date: string;
-      at: string;
-      whoId: string;
-    }
-  | {
-      /** Every expense on one budget line moves to another line on the same grant. */
-      type: 'move-expenses';
-      fromLineId: string;
-      toLineId: string;
-      activityId: string;
-      at: string;
-      whoId: string;
-    }
-  | {
-      type: 'set-transaction-status';
-      id: string;
-      status: 'to-assign' | 'not-grant-funded';
-      by?: string;
-      date?: string;
-    }
-  | {
-      /** Put transactions back exactly as they stood: status, parts, notes and backup. */
-      type: 'restore-transactions';
-      snapshots: TransactionSnapshot[];
-    }
   | { type: 'sync'; at: string }
   | { type: 'set-quickbooks'; patch: Partial<GrantsState['quickbooks']> }
   | { type: 'save-reminder-plan'; plan: ReminderPlan }
@@ -187,43 +131,6 @@ const DOLLARS = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
 function withId<T extends { id: string }>(rows: T[], id: string, patch: Partial<T>): T[] {
   return rows.map(row => (row.id === id ? { ...row, ...patch } : row));
-}
-
-/** Whether the activity log already has this row: the change that writes it was applied. */
-function logged(state: GrantsState, activityId: string): boolean {
-  return state.activity.some(a => a.id === activityId);
-}
-
-/**
- * Put one transaction back as the snapshot has it. Backup added to its parts
- * since then follows the same rule as a reassign, so it is not lost; with no
- * parts to go to, it goes, as it does on Send back.
- */
-function restoreTransaction(state: GrantsState, snap: TransactionSnapshot): GrantsState {
-  if (!state.transactions.some(t => t.id === snap.id)) return state;
-  const now = state.expenses.filter(e => e.transactionId === snap.id);
-  const nowIds = new Set(now.map(e => e.id));
-  const back = new Set(snap.files.map(f => f.id));
-  const carry = backupCarry(now, snap.expenses);
-  const target = new Map<string, Expense>();
-  carry.kept.forEach((e, i) => e && target.set(e.id, snap.expenses[i]));
-  carry.moved.forEach(m => target.set(m.from.id, snap.expenses[m.to]));
-  const files = state.files.flatMap(f => {
-    if (back.has(f.id)) return [];
-    if (!f.expenseId || !nowIds.has(f.expenseId)) return [f];
-    const to = target.get(f.expenseId);
-    return to ? [{ ...f, grantId: to.grantId, expenseId: to.id }] : [];
-  });
-  return {
-    ...state,
-    expenses: [...state.expenses.filter(e => !nowIds.has(e.id)), ...snap.expenses],
-    files: [...files, ...snap.files],
-    transactions: withId(state.transactions, snap.id, {
-      status: snap.status,
-      assignedById: snap.assignedById,
-      assignedAt: snap.assignedAt,
-    }),
-  };
 }
 
 /** Why expenses may not move from one line to the other, or undefined when they may. */
@@ -271,233 +178,6 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
       return { ...state, [action.key]: rows.filter(row => row.id !== action.id) } as GrantsState;
     }
 
-    case 'add-grant': {
-      const { grant } = action;
-      // Sent twice (a retry), it is still one grant, with one of everything it brings.
-      if (state.grants.some(g => g.id === grant.id)) return state;
-      const template = action.templateId
-        ? state.templates.find(t => t.id === action.templateId)
-        : undefined;
-
-      // A grant brought in has passed the earlier phases elsewhere: no tasks for them.
-      const tasks: Task[] = template
-        ? instantiateTemplate(
-            template,
-            grant,
-            action.excludeTemplateItemIds,
-            grant.broughtIn?.phase,
-          ).map((task, index) => ({ ...task, id: `${grant.id}-t${index + 1}` }))
-        : [];
-
-      const documents: GrantDocument[] = action.includeDocumentRegister
-        ? instantiateDocumentRegister(
-            grant.id,
-            grant.createdAt,
-            grant.broughtIn ? 'submitted' : 'needed',
-            action.officeDocumentLinks,
-          ).map((doc, index) => ({
-            ...doc,
-            id: `${grant.id}-d${index + 1}`,
-          }))
-        : [];
-
-      return {
-        ...state,
-        funders: action.funder ? insertRow(state, 'funders', action.funder).funders : state.funders,
-        grants: [...state.grants, grant],
-        tasks: [...state.tasks, ...tasks],
-        documents: [...state.documents, ...documents],
-        budgetLines: [...state.budgetLines, ...(action.budgetLines ?? [])],
-        payments: [...state.payments, ...(action.payments ?? [])],
-        reports: [...state.reports, ...(action.reports ?? [])],
-        activity: [
-          ...state.activity,
-          {
-            id: action.activityId,
-            grantId: grant.id,
-            at: action.at,
-            whoId: action.whoId,
-            // One row for a grant brought in, never one per phase it passed.
-            text:
-              action.text ??
-              (grant.broughtIn ? broughtInText(grant.broughtIn.phase) : 'Grant added'),
-          },
-        ],
-      };
-    }
-
-    case 'transition': {
-      const grant = state.grants.find(g => g.id === action.grantId);
-      if (!grant || logged(state, action.activityId)) return state;
-
-      const { to, payload } = action;
-      const date = payload.date ?? action.at.slice(0, 10);
-      const dates = { ...grant.dates };
-      const patch: Partial<Grant> = { phase: to };
-
-      if (to === 'submitted') dates.submitted = date;
-      if (to === 'awarded' || to === 'declined' || to === 'withdrawn') dates.decided = date;
-      if (to === 'awarded') {
-        if (typeof payload.amountAwarded === 'number') patch.amountAwarded = payload.amountAwarded;
-        if (payload.periodStart) dates.periodStart = payload.periodStart;
-        if (payload.periodEnd) dates.periodEnd = payload.periodEnd;
-      }
-      patch.dates = dates;
-
-      const label = availableTransitions(grant).find(t => t.to === to)?.label ?? `Moved to ${to}`;
-      const reason = payload.reason ? ` — ${payload.reason}` : '';
-
-      return {
-        ...state,
-        grants: withId(state.grants, grant.id, patch),
-        activity: [
-          ...state.activity,
-          {
-            id: action.activityId,
-            grantId: grant.id,
-            at: action.at,
-            whoId: action.whoId,
-            text: `${label}${reason}`,
-          },
-        ],
-      };
-    }
-
-    case 'toggle-task': {
-      const task = state.tasks.find(t => t.id === action.id);
-      if (!task) return state;
-      const done = !task.done;
-      return {
-        ...state,
-        tasks: withId(state.tasks, action.id, { done, doneAt: done ? action.date : undefined }),
-      };
-    }
-
-    case 'duplicate-template': {
-      const source = state.templates.find(t => t.id === action.id);
-      if (!source || state.templates.some(t => t.id === action.newTemplateId)) return state;
-      const copy: ChecklistTemplate = {
-        ...source,
-        id: action.newTemplateId,
-        name: `${source.name} (copy)`,
-        items: source.items.map((item, index) => ({
-          ...item,
-          id: `${action.newTemplateId}-i${index + 1}`,
-        })),
-      };
-      return { ...state, templates: [...state.templates, copy] };
-    }
-
-    case 'assign-transaction': {
-      const tx = state.transactions.find(t => t.id === action.id);
-      if (!tx || !action.parts.length) return state;
-      // Sent twice (a retry), it is still one assignment with one row per part.
-      if (action.parts.some(part => logged(state, part.activityId))) return state;
-
-      // Reassigning keeps the backup: a part that stays on its line keeps its
-      // expense, and a part that goes hands its files and note on (`backupCarry`).
-      const old = state.expenses.filter(e => e.transactionId === tx.id);
-      const carry = backupCarry(old, action.parts);
-      const expenses: Expense[] = action.parts.map((part, i) => {
-        const kept = carry.kept[i];
-        const notes = [kept, ...carry.moved.filter(m => m.to === i).map(m => m.from)]
-          .map(e => e?.backupNote?.trim())
-          .filter((n): n is string => !!n);
-        const expense: Expense = {
-          ...(kept ?? { note: tx.memo || undefined }),
-          id: kept?.id ?? part.expenseId,
-          grantId: part.grantId,
-          budgetLineId: part.budgetLineId,
-          date: tx.date,
-          payee: tx.payee,
-          amount: part.amount,
-          transactionId: tx.id,
-        };
-        if (notes.length) expense.backupNote = notes.join('\n');
-        else delete expense.backupNote;
-        return expense;
-      });
-      const movedTo = new Map(carry.moved.map(m => [m.from.id, expenses[m.to]]));
-
-      const split = action.parts.length > 1;
-      const activity: Activity[] = action.parts.map(part => {
-        const line = state.budgetLines.find(l => l.id === part.budgetLineId);
-        return {
-          id: part.activityId,
-          grantId: part.grantId,
-          at: action.at,
-          whoId: action.whoId,
-          text: `Assigned $${DOLLARS.format(part.amount)} from ${tx.payee} to ${line?.category ?? 'a budget line'}${
-            split ? ` (split of $${DOLLARS.format(tx.amount)})` : ''
-          }`,
-        };
-      });
-
-      return {
-        ...state,
-        // Reassigning replaces whatever the transaction was on before.
-        expenses: [...state.expenses.filter(e => e.transactionId !== tx.id), ...expenses],
-        files: state.files.map(f => {
-          const to = f.expenseId ? movedTo.get(f.expenseId) : undefined;
-          return to ? { ...f, grantId: to.grantId, expenseId: to.id } : f;
-        }),
-        transactions: withId(state.transactions, tx.id, {
-          status: 'assigned',
-          assignedById: action.by,
-          assignedAt: action.date,
-        }),
-        activity: [...state.activity, ...activity],
-      };
-    }
-
-    case 'restore-transactions':
-      return action.snapshots.reduce(restoreTransaction, state);
-
-    case 'move-expenses': {
-      if (moveExpensesRefusal(state, action.fromLineId, action.toLineId)) return state;
-      if (logged(state, action.activityId)) return state;
-      const from = state.budgetLines.find(l => l.id === action.fromLineId)!;
-      const to = state.budgetLines.find(l => l.id === action.toLineId)!;
-      const moving = state.expenses.filter(e => e.budgetLineId === from.id);
-      if (moving.length === 0) return state;
-      const total = moving.reduce((sum, e) => sum + e.amount, 0);
-      const n = moving.length;
-      // Only the line changes: ids, notes, backup and transaction links stay as they are.
-      return {
-        ...state,
-        expenses: state.expenses.map(e =>
-          e.budgetLineId === from.id ? { ...e, budgetLineId: to.id } : e,
-        ),
-        activity: [
-          ...state.activity,
-          {
-            id: action.activityId,
-            grantId: from.grantId,
-            at: action.at,
-            whoId: action.whoId,
-            text: `Moved ${n} ${n === 1 ? 'expense' : 'expenses'} ($${DOLLARS.format(total)}) from ${from.category} to ${to.category}`,
-          },
-        ],
-      };
-    }
-
-    case 'set-transaction-status': {
-      const tx = state.transactions.find(t => t.id === action.id);
-      if (!tx) return state;
-      const parts = new Set(state.expenses.filter(e => e.transactionId === tx.id).map(e => e.id));
-      return {
-        ...state,
-        expenses: state.expenses.filter(e => !parts.has(e.id)),
-        // Backup belongs to the expense, so it goes when the expense does.
-        files: state.files.filter(f => !f.expenseId || !parts.has(f.expenseId)),
-        transactions: withId(state.transactions, tx.id, {
-          status: action.status,
-          assignedById: action.status === 'to-assign' ? undefined : action.by,
-          assignedAt: action.status === 'to-assign' ? undefined : action.date,
-        }),
-      };
-    }
-
     case 'sync': {
       // A transaction already pulled is not pulled twice.
       const pulled = new Set(state.transactions.map(t => t.id));
@@ -533,6 +213,366 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
     default:
       return state;
   }
+}
+
+// ---------------------------------------------------------------------------
+// The rows a compound change writes (#127)
+// ---------------------------------------------------------------------------
+
+/** An activity row's id, made before the change is sent, and when and by whom. */
+interface Stamp {
+  id: string;
+  at: string;
+  whoId: string;
+}
+
+const insertOf = <K extends CollectionKey>(key: K, item: Collections[K]): GrantsAction =>
+  ({ type: 'insert', key, item }) as GrantsAction;
+
+const removeOf = (key: CollectionKey, id: string): GrantsAction => ({ type: 'remove', key, id });
+
+const updateOf = <K extends CollectionKey>(
+  key: K,
+  id: string,
+  patch: Partial<Collections[K]>,
+): GrantsAction => ({ type: 'update', key, id, patch }) as GrantsAction;
+
+/** The update, or nothing when the row is gone or already reads so. */
+function updateIfChanged<K extends CollectionKey>(
+  state: GrantsState,
+  key: K,
+  id: string,
+  patch: Partial<Collections[K]>,
+): GrantsAction[] {
+  const row = (state[key] as Array<{ id: string }>).find(r => r.id === id);
+  if (!row) return [];
+  const was = row as unknown as Record<string, unknown>;
+  const same = Object.entries(patch).every(([field, value]) => was[field] === value);
+  return same ? [] : [updateOf(key, id, patch)];
+}
+
+/** The patch that makes `row` read exactly as `next`: `next`'s fields, and any it lacks cleared. */
+function replacing<T extends object>(row: T, next: T): Partial<T> {
+  const cleared = Object.keys(row)
+    .filter(field => !(field in next))
+    .map(field => [field, undefined]);
+  return { ...Object.fromEntries(cleared), ...next };
+}
+
+/**
+ * Several items' rows in one change, each worked out from the state the items
+ * before it leave, as the batch will apply them.
+ */
+function inTurn<T>(
+  state: GrantsState,
+  items: readonly T[],
+  rowsFor: (state: GrantsState, item: T) => GrantsAction[],
+): GrantsAction[] {
+  const all: GrantsAction[] = [];
+  let now = state;
+  for (const item of items) {
+    const rows = rowsFor(now, item);
+    now = rows.reduce(reducer, now);
+    all.push(...rows);
+  }
+  return all;
+}
+
+interface NewGrant {
+  grant: Grant;
+  funder?: Funder;
+  templateId?: string | null;
+  excludeTemplateItemIds?: string[];
+  includeDocumentRegister: boolean;
+  /** By kind, the office document a register row uses (#68): see `newRegisterLinks`. */
+  officeDocumentLinks?: Partial<Record<DocumentKind, string>>;
+  budgetLines?: BudgetLine[];
+  payments?: Payment[];
+  reports?: Report[];
+  activity: Stamp;
+  /** The activity row's text, when it is not "Grant added" (a renewal's). */
+  text?: string;
+}
+
+/**
+ * A new grant's rows: its funder when that is new too, the grant, its
+ * checklist from the template as it stands now (`${grant.id}-t1…`), its
+ * document register (`${grant.id}-d1…`), a grant brought in's budget,
+ * payments and reports, and one activity row.
+ */
+function newGrantRows(state: GrantsState, input: NewGrant): GrantsAction[] {
+  const { grant } = input;
+  const template = input.templateId
+    ? state.templates.find(t => t.id === input.templateId)
+    : undefined;
+
+  // A grant brought in has passed the earlier phases elsewhere: no tasks for them.
+  const tasks: Task[] = template
+    ? instantiateTemplate(
+        template,
+        grant,
+        input.excludeTemplateItemIds,
+        grant.broughtIn?.phase,
+      ).map((task, index) => ({ ...task, id: `${grant.id}-t${index + 1}` }))
+    : [];
+
+  const documents: GrantDocument[] = input.includeDocumentRegister
+    ? instantiateDocumentRegister(
+        grant.id,
+        grant.createdAt,
+        grant.broughtIn ? 'submitted' : 'needed',
+        input.officeDocumentLinks,
+      ).map((doc, index) => ({ ...doc, id: `${grant.id}-d${index + 1}` }))
+    : [];
+
+  return [
+    ...(input.funder ? [insertOf('funders', input.funder)] : []),
+    insertOf('grants', grant),
+    ...tasks.map(task => insertOf('tasks', task)),
+    ...documents.map(doc => insertOf('documents', doc)),
+    ...(input.budgetLines ?? []).map(line => insertOf('budgetLines', line)),
+    ...(input.payments ?? []).map(payment => insertOf('payments', payment)),
+    ...(input.reports ?? []).map(report => insertOf('reports', report)),
+    insertOf('activity', {
+      id: input.activity.id,
+      grantId: grant.id,
+      at: input.activity.at,
+      whoId: input.activity.whoId,
+      // One row for a grant brought in, never one per phase it passed.
+      text: input.text ?? (grant.broughtIn ? broughtInText(grant.broughtIn.phase) : 'Grant added'),
+    }),
+  ];
+}
+
+/**
+ * A move to a new phase: the phase and the dates it implies, merged into the
+ * grant's dates as they stand, and the transition's label in the log.
+ */
+function transitionRows(
+  state: GrantsState,
+  grantId: string,
+  to: Phase,
+  payload: TransitionPayload,
+  activity: Stamp,
+): GrantsAction[] {
+  const grant = state.grants.find(g => g.id === grantId);
+  if (!grant) return [];
+
+  const date = payload.date ?? activity.at.slice(0, 10);
+  const dates = { ...grant.dates };
+  const patch: Partial<Grant> = { phase: to };
+
+  if (to === 'submitted') dates.submitted = date;
+  if (to === 'awarded' || to === 'declined' || to === 'withdrawn') dates.decided = date;
+  if (to === 'awarded') {
+    if (typeof payload.amountAwarded === 'number') patch.amountAwarded = payload.amountAwarded;
+    if (payload.periodStart) dates.periodStart = payload.periodStart;
+    if (payload.periodEnd) dates.periodEnd = payload.periodEnd;
+  }
+  patch.dates = dates;
+
+  const label = availableTransitions(grant).find(t => t.to === to)?.label ?? `Moved to ${to}`;
+  const reason = payload.reason ? ` — ${payload.reason}` : '';
+
+  return [
+    updateOf('grants', grant.id, patch),
+    insertOf('activity', { ...activity, grantId: grant.id, text: `${label}${reason}` }),
+  ];
+}
+
+/**
+ * Every expense on one line moved to another line of the same grant, only
+ * its line changing, and one activity row. Nothing for a refused move or a
+ * line with no expenses.
+ */
+function moveExpensesRows(
+  state: GrantsState,
+  fromLineId: string,
+  toLineId: string,
+  activity: Stamp,
+): GrantsAction[] {
+  if (moveExpensesRefusal(state, fromLineId, toLineId)) return [];
+  const from = state.budgetLines.find(l => l.id === fromLineId)!;
+  const to = state.budgetLines.find(l => l.id === toLineId)!;
+  const moving = state.expenses.filter(e => e.budgetLineId === from.id);
+  if (moving.length === 0) return [];
+  const total = moving.reduce((sum, e) => sum + e.amount, 0);
+  const n = moving.length;
+  return [
+    // Only the line changes: ids, notes, backup and transaction links stay as they are.
+    ...moving.map(e => updateOf('expenses', e.id, { budgetLineId: to.id })),
+    insertOf('activity', {
+      ...activity,
+      grantId: from.grantId,
+      text: `Moved ${n} ${n === 1 ? 'expense' : 'expenses'} ($${DOLLARS.format(total)}) from ${from.category} to ${to.category}`,
+    }),
+  ];
+}
+
+/** One part of an assignment, with the ids made for it before the change is sent. */
+type AssignedPart = Allocation & { expenseId: string; activityId: string };
+
+/** Who assigned a transaction, on what day, and when the log rows say it happened. */
+interface Assigner {
+  by: string;
+  date: string;
+  at: string;
+  whoId: string;
+}
+
+/**
+ * A QuickBooks transaction put on one line, or split across several. The
+ * transaction's row says who assigned it. Reassigning keeps the backup
+ * (`backupCarry`): a part that stays on its line keeps its expense, updated;
+ * every other old part is removed, and its files move and its note goes to
+ * the part that takes them. Each new part is a new expense, with the
+ * transaction's memo as its note, and each part logs one row.
+ */
+function assignRows(
+  state: GrantsState,
+  id: string,
+  parts: AssignedPart[],
+  who: Assigner,
+): GrantsAction[] {
+  const tx = state.transactions.find(t => t.id === id);
+  if (!tx || !parts.length) return [];
+
+  const old = state.expenses.filter(e => e.transactionId === tx.id);
+  const carry = backupCarry(old, parts);
+  const expenses: Expense[] = parts.map((part, i) => {
+    const kept = carry.kept[i];
+    const notes = [kept, ...carry.moved.filter(m => m.to === i).map(m => m.from)]
+      .map(e => e?.backupNote?.trim())
+      .filter((n): n is string => !!n);
+    const expense: Expense = {
+      ...(kept ?? { note: tx.memo || undefined }),
+      id: kept?.id ?? part.expenseId,
+      grantId: part.grantId,
+      budgetLineId: part.budgetLineId,
+      date: tx.date,
+      payee: tx.payee,
+      amount: part.amount,
+      transactionId: tx.id,
+    };
+    if (notes.length) expense.backupNote = notes.join('\n');
+    else delete expense.backupNote;
+    return expense;
+  });
+  const movedTo = new Map(carry.moved.map(m => [m.from.id, expenses[m.to]]));
+
+  const split = parts.length > 1;
+  const activity: Activity[] = parts.map(part => {
+    const line = state.budgetLines.find(l => l.id === part.budgetLineId);
+    return {
+      id: part.activityId,
+      grantId: part.grantId,
+      at: who.at,
+      whoId: who.whoId,
+      text: `Assigned $${DOLLARS.format(part.amount)} from ${tx.payee} to ${line?.category ?? 'a budget line'}${
+        split ? ` (split of $${DOLLARS.format(tx.amount)})` : ''
+      }`,
+    };
+  });
+
+  return [
+    updateOf('transactions', tx.id, {
+      status: 'assigned',
+      assignedById: who.by,
+      assignedAt: who.date,
+    }),
+    // Reassigning replaces whatever the transaction was on before.
+    ...old.filter(e => !carry.kept.includes(e)).map(e => removeOf('expenses', e.id)),
+    ...expenses.flatMap((expense, i) => {
+      const kept = carry.kept[i];
+      return kept
+        ? updateIfChanged(state, 'expenses', kept.id, replacing(kept, expense))
+        : [insertOf('expenses', expense)];
+    }),
+    ...state.files.flatMap(f => {
+      const to = f.expenseId ? movedTo.get(f.expenseId) : undefined;
+      return to
+        ? updateIfChanged(state, 'files', f.id, { grantId: to.grantId, expenseId: to.id })
+        : [];
+    }),
+    ...activity.map(row => insertOf('activity', row)),
+  ];
+}
+
+/**
+ * A transaction set aside or sent back: its status, who did it (cleared on
+ * Send back), and its parts removed with the files that back them up, since
+ * backup belongs to the expense.
+ */
+function transactionStatusRows(
+  state: GrantsState,
+  id: string,
+  status: 'to-assign' | 'not-grant-funded',
+  by?: string,
+  date?: string,
+): GrantsAction[] {
+  const tx = state.transactions.find(t => t.id === id);
+  if (!tx) return [];
+  const parts = state.expenses.filter(e => e.transactionId === tx.id);
+  const ids = new Set(parts.map(e => e.id));
+  return [
+    updateOf('transactions', tx.id, {
+      status,
+      assignedById: status === 'to-assign' ? undefined : by,
+      assignedAt: status === 'to-assign' ? undefined : date,
+    }),
+    ...state.files
+      .filter(f => f.expenseId && ids.has(f.expenseId))
+      .map(f => removeOf('files', f.id)),
+    ...parts.map(e => removeOf('expenses', e.id)),
+  ];
+}
+
+/**
+ * One transaction put back as the snapshot has it: its status, its parts and
+ * their files as they were. A part it has now that the snapshot lacks is
+ * removed. Backup added to its parts since then follows the same rule as a
+ * reassign, so it is not lost; with no part to go to, it goes, as it does on
+ * Send back.
+ */
+function restoreTransactionRows(state: GrantsState, snap: TransactionSnapshot): GrantsAction[] {
+  if (!state.transactions.some(t => t.id === snap.id)) return [];
+  const now = state.expenses.filter(e => e.transactionId === snap.id);
+  const nowIds = new Set(now.map(e => e.id));
+  const back = new Map(snap.files.map(f => [f.id, f]));
+  const backIds = new Set(snap.expenses.map(e => e.id));
+  const carry = backupCarry(now, snap.expenses);
+  const target = new Map<string, Expense>();
+  carry.kept.forEach((e, i) => e && target.set(e.id, snap.expenses[i]));
+  carry.moved.forEach(m => target.set(m.from.id, snap.expenses[m.to]));
+
+  const expenses = snap.expenses.flatMap(e => {
+    const row = state.expenses.find(x => x.id === e.id);
+    return row
+      ? updateIfChanged(state, 'expenses', e.id, replacing(row, e))
+      : [insertOf('expenses', e)];
+  });
+  const files = state.files.flatMap(f => {
+    const was = back.get(f.id);
+    if (was) return updateIfChanged(state, 'files', f.id, replacing(f, was));
+    if (!f.expenseId || !nowIds.has(f.expenseId)) return [];
+    const to = target.get(f.expenseId);
+    return to
+      ? updateIfChanged(state, 'files', f.id, { grantId: to.grantId, expenseId: to.id })
+      : [removeOf('files', f.id)];
+  });
+  const gone = snap.files.filter(f => !state.files.some(x => x.id === f.id));
+
+  return [
+    updateOf('transactions', snap.id, {
+      status: snap.status,
+      assignedById: snap.assignedById,
+      assignedAt: snap.assignedAt,
+    }),
+    ...now.filter(e => !backIds.has(e.id)).map(e => removeOf('expenses', e.id)),
+    ...expenses,
+    ...files,
+    ...gone.map(f => insertOf('files', f)),
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -721,15 +761,22 @@ function createActions(
   };
   const remove = (key: CollectionKey, id: string) => send({ type: 'remove', key, id });
 
-  const assignAction = (id: string, parts: Allocation[]): GrantsAction => ({
-    type: 'assign-transaction',
-    id,
-    parts: parts.map(part => ({ ...part, expenseId: newId('ex'), activityId: newId('act') })),
-    by: user.id,
-    date: today,
-    at: now(),
-    whoId,
-  });
+  /** Several rows as one change, saved together or not at all; nothing to send when there are none. */
+  const sendRows = (actions: GrantsAction[]) => {
+    if (actions.length) send({ type: 'batch', actions });
+  };
+
+  /** An activity row's id and when, for a change that logs one. */
+  const stamp = (): Stamp => ({ id: newId('act'), at: now(), whoId });
+
+  /** An assignment's rows, its ids made now so Try again sends the same ones. */
+  const assignment = (state: GrantsState, id: string, parts: Allocation[]) =>
+    assignRows(
+      state,
+      id,
+      parts.map(part => ({ ...part, expenseId: newId('ex'), activityId: newId('act') })),
+      { by: user.id, date: today, at: now(), whoId },
+    );
 
   return {
     addFunder(input) {
@@ -779,14 +826,14 @@ function createActions(
         grant.broughtIn = { phase, on: today };
       }
 
-      send({
-        type: 'add-grant',
+      const state = getState();
+      const rows = newGrantRows(state.grants, {
         grant,
         funder,
         templateId: input.templateId,
         excludeTemplateItemIds: input.excludeTemplateItemIds,
         includeDocumentRegister: input.includeDocumentRegister ?? true,
-        officeDocumentLinks: newRegisterLinks(getState(), grant),
+        officeDocumentLinks: newRegisterLinks(state, grant),
         budgetLines: flight?.budgetLines?.map(line => ({
           id: newId('bl'),
           grantId,
@@ -809,10 +856,9 @@ function createActions(
           status: r.status,
           ...(r.submittedDate ? { submittedDate: r.submittedDate } : {}),
         })),
-        activityId: newId('act'),
-        at: now(),
-        whoId,
+        activity: stamp(),
       });
+      sendRows(rows);
       return grantId;
     },
     renewGrant(input) {
@@ -852,34 +898,24 @@ function createActions(
       // Two rows in one change: the renewal's a moment later, so it reads first, newest first.
       const at = now();
       const later = new Date(Date.parse(at) + 1).toISOString();
-      send({
-        type: 'batch',
-        actions: [
-          {
-            type: 'add-grant',
-            grant,
-            templateId: renewalTemplateId(state.templates),
-            includeDocumentRegister: true,
-            officeDocumentLinks: newRegisterLinks(getState(), grant),
-            budgetLines,
-            activityId: newId('act'),
-            at: later,
-            whoId,
-            text: renewalStartedText(last.title),
-          },
-          {
-            type: 'insert',
-            key: 'activity',
-            item: {
-              id: newId('act'),
-              grantId: last.id,
-              at,
-              whoId,
-              text: renewedAsText(grant.title),
-            },
-          },
-        ],
-      });
+      sendRows([
+        ...newGrantRows(state, {
+          grant,
+          templateId: renewalTemplateId(state.templates),
+          includeDocumentRegister: true,
+          officeDocumentLinks: newRegisterLinks(getState(), grant),
+          budgetLines,
+          activity: { id: newId('act'), at: later, whoId },
+          text: renewalStartedText(last.title),
+        }),
+        insertOf('activity', {
+          id: newId('act'),
+          grantId: last.id,
+          at,
+          whoId,
+          text: renewedAsText(grant.title),
+        }),
+      ]);
       return grantId;
     },
     updateGrant(id, patch) {
@@ -913,15 +949,7 @@ function createActions(
       });
     },
     transition(grantId, to, payload = {}) {
-      send({
-        type: 'transition',
-        grantId,
-        to,
-        payload,
-        activityId: newId('act'),
-        at: now(),
-        whoId,
-      });
+      sendRows(transitionRows(getState().grants, grantId, to, payload, stamp()));
     },
 
     addTask(input) {
@@ -933,7 +961,11 @@ function createActions(
       update('tasks', id, patch);
     },
     toggleTask(id) {
-      send({ type: 'toggle-task', id, date: today });
+      const task = getState().grants.tasks.find(t => t.id === id);
+      if (!task) return;
+      // Sent as the value it is ticked to, never as a flip, so sent twice it stays ticked.
+      const done = !task.done;
+      update('tasks', id, { done, doneAt: done ? today : undefined });
     },
     deleteTask(id) {
       remove('tasks', id);
@@ -991,15 +1023,9 @@ function createActions(
       remove('budgetLines', id);
     },
     moveExpenses(fromLineId, toLineId) {
-      if (moveExpensesRefusal(getState().grants, fromLineId, toLineId)) return false;
-      send({
-        type: 'move-expenses',
-        fromLineId,
-        toLineId,
-        activityId: newId('act'),
-        at: now(),
-        whoId,
-      });
+      const state = getState().grants;
+      if (moveExpensesRefusal(state, fromLineId, toLineId)) return false;
+      sendRows(moveExpensesRows(state, fromLineId, toLineId, stamp()));
       return true;
     },
 
@@ -1014,7 +1040,7 @@ function createActions(
     deleteExpense(id) {
       const expense = getState().grants.expenses.find(e => e.id === id);
       if (expense?.transactionId) {
-        send({ type: 'set-transaction-status', id: expense.transactionId, status: 'to-assign' });
+        sendRows(transactionStatusRows(getState().grants, expense.transactionId, 'to-assign'));
         return;
       }
       // Backup belongs to the expense, so it goes when the expense does.
@@ -1039,28 +1065,23 @@ function createActions(
       send({ type: 'set-quickbooks', patch: { connected } });
     },
     assignTransaction(id, parts) {
-      send(assignAction(id, parts));
+      sendRows(assignment(getState().grants, id, parts));
     },
     markNotGrantFunded(id) {
-      send({
-        type: 'set-transaction-status',
-        id,
-        status: 'not-grant-funded',
-        by: user.id,
-        date: today,
-      });
+      sendRows(transactionStatusRows(getState().grants, id, 'not-grant-funded', user.id, today));
     },
     unassignTransaction(id) {
-      send({ type: 'set-transaction-status', id, status: 'to-assign' });
+      sendRows(transactionStatusRows(getState().grants, id, 'to-assign'));
     },
     restoreTransactions(snapshots) {
-      if (snapshots.length) send({ type: 'restore-transactions', snapshots });
+      sendRows(inTurn(getState().grants, snapshots, restoreTransactionRows));
     },
     acceptSuggestions() {
       const waiting = acceptableSuggestions(getState() as PortalState);
-      const actions: GrantsAction[] = waiting.map(({ tx, suggestion }) => {
+      // Each proposal's rows read the state the ones before it leave, in one change.
+      const rows = inTurn(getState().grants, waiting, (state, { tx, suggestion }) => {
         if (suggestion.kind === 'line') {
-          return assignAction(tx.id, [
+          return assignment(state, tx.id, [
             {
               grantId: suggestion.grantId,
               budgetLineId: suggestion.budgetLineId,
@@ -1073,7 +1094,8 @@ function createActions(
             tx.amount,
             suggestion.rule.parts.map(p => p.percent),
           );
-          return assignAction(
+          return assignment(
+            state,
             tx.id,
             suggestion.rule.parts.map((p, i) => ({
               grantId: p.grantId,
@@ -1082,16 +1104,10 @@ function createActions(
             })),
           );
         }
-        return {
-          type: 'set-transaction-status',
-          id: tx.id,
-          status: 'not-grant-funded',
-          by: user.id,
-          date: today,
-        };
+        return transactionStatusRows(state, tx.id, 'not-grant-funded', user.id, today);
       });
-      if (actions.length) send({ type: 'batch', actions });
-      return actions.length;
+      sendRows(rows);
+      return waiting.length;
     },
     saveSplitRule(input) {
       const existing = getState().grants.splitRules.find(r => r.payee === input.payee);
@@ -1266,7 +1282,18 @@ function createActions(
     },
     duplicateTemplate(id) {
       const newTemplateId = newId('tpl');
-      send({ type: 'duplicate-template', id, newTemplateId });
+      const source = getState().grants.templates.find(t => t.id === id);
+      if (!source) return newTemplateId;
+      // The copy's items get ids of its own: `${newTemplateId}-i1…`.
+      insert('templates', {
+        ...source,
+        id: newTemplateId,
+        name: `${source.name} (copy)`,
+        items: source.items.map((item, index) => ({
+          ...item,
+          id: `${newTemplateId}-i${index + 1}`,
+        })),
+      });
       return newTemplateId;
     },
   };
@@ -1541,26 +1568,27 @@ const ROW_WORDS: Record<CollectionKey, string> = {
 /** A change in plain words, for "Couldn't save …". */
 export function describeChange(action: GrantsAction): string | undefined {
   switch (action.type) {
-    case 'batch':
-      return action.actions[0] && describeChange(action.actions[0]);
+    case 'batch': {
+      const rows = action.actions;
+      // A new grant, its funder first when that is new too.
+      if (rows.some(a => a.type === 'insert' && a.key === 'grants')) return 'the grant';
+      // Assigning, setting aside, sending back and Undo all write the transaction's own row.
+      if (rows.some(a => a.type === 'update' && a.key === 'transactions')) {
+        return 'the transaction';
+      }
+      // Expenses moved to another line, and the row that logs it.
+      const moved = (a: GrantsAction) => a.type === 'update' && a.key === 'expenses';
+      const logged = (a: GrantsAction) => a.type === 'insert' && a.key === 'activity';
+      if (rows.some(moved) && rows.every(a => moved(a) || logged(a))) {
+        return 'the moved expenses';
+      }
+      return rows[0] && describeChange(rows[0]);
+    }
     case 'update':
       return 'archivedAt' in action.patch ? 'the archive change' : ROW_WORDS[action.key];
     case 'insert':
     case 'remove':
       return ROW_WORDS[action.key];
-    case 'add-grant':
-    case 'transition':
-      return 'the grant';
-    case 'toggle-task':
-      return 'the task';
-    case 'duplicate-template':
-      return 'the checklist template';
-    case 'assign-transaction':
-    case 'set-transaction-status':
-    case 'restore-transactions':
-      return 'the transaction';
-    case 'move-expenses':
-      return 'the moved expenses';
     case 'sync':
     case 'set-quickbooks':
       return 'the QuickBooks settings';
