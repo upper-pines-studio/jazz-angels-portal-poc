@@ -11,26 +11,61 @@ import { MODULES } from '../../modules';
  * so a table or column added to one and not the other fails here.
  */
 
-/** The tables in SCHEMA.md's diagrams, each with its columns. */
-function schemaTables(text: string): Map<string, string[]> {
+/**
+ * The tables in SCHEMA.md's diagrams, each with its columns, and the columns
+ * marked nullable (`table.column`): a note that starts with "null", as
+ * Conventions says.
+ */
+function schemaTables(text: string): {
+  tables: Map<string, string[]>;
+  nullable: Set<string>;
+} {
   const tables = new Map<string, string[]>();
-  let current: string[] | undefined;
+  const nullable = new Set<string>();
+  let table: string | undefined;
   for (const line of text.split('\n')) {
     const open = /^ {2}(\w+) \{$/.exec(line);
     if (open) {
-      current = [];
-      tables.set(open[1], current);
+      table = open[1];
+      tables.set(table, []);
     } else if (/^ {2}\}$/.test(line)) {
-      current = undefined;
-    } else if (current) {
-      const column = /^ {4}\S+ (\w+)/.exec(line);
-      if (column) current.push(column[1]);
+      table = undefined;
+    } else if (table) {
+      const column = /^ {4}\S+ (\w+)[^"]*(?:"([^"]*)")?/.exec(line);
+      if (column) {
+        tables.get(table)?.push(column[1]);
+        if (/^null\b/.test(column[2] ?? '')) nullable.add(`${table}.${column[1]}`);
+      }
     }
   }
-  return tables;
+  return { tables, nullable };
 }
 
-const SCHEMA = schemaTables(schemaText);
+/**
+ * The columns SCHEMA.md says the database sets, from its "Who did it" and
+ * "When" notes: a bare name (`added_by`) is that column on every table, a
+ * dotted one (`activity.who_id`) the one column.
+ */
+function databaseSet(text: string): string[] {
+  const names: string[] = [];
+  let reading = false;
+  for (const line of text.split('\n')) {
+    if (/^- \*\*(Who did it|When)\.\*\*/.test(line)) reading = true;
+    else if (!/^ {2}\S/.test(line)) reading = false;
+    if (!reading) continue;
+    for (const [, name] of line.matchAll(/`([^`]+)`/g)) {
+      if (/^\w+(\.\w+)?$/.test(name)) names.push(name);
+    }
+  }
+  return names;
+}
+
+const { tables: SCHEMA, nullable: NULLABLE } = schemaTables(schemaText);
+const DATABASE_SET = databaseSet(schemaText);
+
+/** Whether `table.column` is one SCHEMA.md says the database sets. */
+const setByDatabase = (column: string) =>
+  DATABASE_SET.some(name => name === column || column.endsWith(`.${name}`));
 
 const SLICES = [coreSlice, ...MODULES.map(m => m.slice)] as PortalSlice[];
 
@@ -60,6 +95,20 @@ describe('the slices against SCHEMA.md (#121)', () => {
   it('reads the schema', () => {
     expect(SCHEMA.size).toBeGreaterThan(40);
     expect(SCHEMA.get('grants')).toContain('amount_awarded');
+    expect(NULLABLE).toContain('grants.amount_awarded');
+    expect(NULLABLE).not.toContain('grants.funder_id');
+    expect(DATABASE_SET).toContain('archived_by');
+    expect(DATABASE_SET).toContain('activity.who_id');
+  });
+
+  it('names only columns the schema has as set by the database', () => {
+    const columns = [...SCHEMA].flatMap(([table, cs]) => cs.map(c => `${table}.${c}`));
+    for (const name of DATABASE_SET) {
+      expect(
+        columns.some(c => c === name || c.endsWith(`.${name}`)),
+        name,
+      ).toBe(true);
+    }
   });
 
   it('writes every table in the schema, bar the ones named with why', () => {
@@ -120,6 +169,13 @@ describe('the slices against SCHEMA.md (#121)', () => {
       .flatMap(([table, columns]) => columns.map(c => `${table}.${c}`))
       .filter(c => !written.has(c));
     expect(unwritten.sort()).toEqual([...COLUMNS_NOT_WRITTEN].sort());
+  });
+
+  // A not-null column that nobody sends makes the backend refuse the insert
+  // (#137), so the database fills it and SCHEMA.md says so.
+  it('leaves out a not-null column only when the database sets it', () => {
+    const unfilled = COLUMNS_NOT_WRITTEN.filter(c => !NULLABLE.has(c) && !setByDatabase(c));
+    expect(unfilled).toEqual([]);
   });
 
   it.each(SLICES.map(s => [s.id, s] as const))(

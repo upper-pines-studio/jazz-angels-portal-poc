@@ -373,7 +373,7 @@ erDiagram
     date approved_on "null"
     text note "null"
     text added_by FK "staff"
-    date added_at
+    date added_at "set by the database: default current_date"
   }
   budget_lines {
     text id PK
@@ -731,6 +731,11 @@ submitted (the store ignores a mark then; reopening the roll is the way to chang
   `uploaded_by`, `charged_by`, `photo_release_recorded_by`, `activity.who_id`) is set by the
   database from the signed-in person, never sent by the screen (decision 0001: every change
   records who made it).
+- **When.** `budget_versions.added_at` is set by the database too: `default current_date`,
+  overwritten on insert like the "by" columns, never sent by the screen. The browser build has no
+  field for it, and every grant inserts its version-1 row in the change that adds the grant, so
+  the insert must not need it. A not-null column that no slice writes is either here or in "Who
+  did it" (`src/app/__tests__/tables.test.ts` checks).
 - **One change, one transaction.** Today each slice saves on its own, so the grants log stays in
   the grants slice where a change and its activity line save together (decision 0005, "One
   activity log"), and a time entry's steps stay on the entry for the same reason (#95). With the backend, a change and its `activity` row are written in one
@@ -774,7 +779,8 @@ submitted (the store ignores a mark then; reopening the roll is the way to chang
     `roll_submitted_at` is set.
   - **Operations:** `general-operating` is never archived, renamed or made in-school.
   - **The "by" columns:** every column in "Who did it" above is overwritten with the signed-in
-    person's staff id, whatever the change sent.
+    person's staff id, whatever the change sent; the column in "When" above with the current
+    date, on insert.
 - **Sessions on one line never overlap (decision 0007, #83).** A term's line is its `program_id`,
   with null (a session for all programs) treated as one value of its own. Two current terms on
   one line may not share a day; terms on different lines may. An archived term counts toward no
