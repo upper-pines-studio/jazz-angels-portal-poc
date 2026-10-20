@@ -385,7 +385,10 @@ Each follow-up is its own issue.
 3. #123: loading from rows, where `null` becomes a missing field in every slice's `normalise`,
    not only the archive fields.
 4. #124: refuse a stale write. Updates and deletes carry the old values of the columns they
-   change, and the server refuses on a mismatch; no version column.
+   change, and the server refuses on a mismatch; no version column. Built on the client side:
+   the rule is `checkStale` in `src/core/diff.ts` and SCHEMA.md ("A stale write is refused").
+   An update already written (its new values stored) still goes through, so a resend is safe,
+   and an insert whose id holds a different row is refused rather than upserted over it.
 5. #125: keep `REPLACE` off the backend. The repository says whether it accepts a whole-state
    replace, Settings hides Import JSON when it does not, Reset stays demo-only, Export stays.
 6. #126: full-length ids. `newId` keeps the whole UUID and drops the fallback; core's actions take

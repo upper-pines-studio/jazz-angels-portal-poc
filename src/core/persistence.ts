@@ -1,5 +1,25 @@
-import type { RowDiff } from './diff';
+import type { RowDiff, StaleWrite } from './diff';
 import type { AnyAction, ModuleSlice } from './module';
+
+/**
+ * What `apply` rejects with when the change was made on rows someone else has
+ * changed since they were read (decision 0008, #124; the rule is `checkStale`
+ * in `diff.ts`). Nothing of the change was written. The live store rolls the
+ * slice back as for any failure, says someone else changed it first, and
+ * loads the slice again so the screen shows their change before Try again.
+ */
+export class StaleWriteError extends Error {
+  readonly table: string;
+  readonly key: StaleWrite['key'];
+  readonly reason: StaleWrite['reason'];
+  constructor({ table, key, reason }: StaleWrite) {
+    super(`The ${table} row ${JSON.stringify(key)} changed since it was read (${reason}).`);
+    this.name = 'StaleWriteError';
+    this.table = table;
+    this.key = key;
+    this.reason = reason;
+  }
+}
 
 /** One change to one slice, as the store hands it to `Repository.apply`. */
 export interface SliceChange {
@@ -45,7 +65,10 @@ export interface Repository {
    * `change.next` is the whole slice after it, for one that writes documents,
    * as `localRepository` does. `change.action` is only a label, for logs.
    * Rejects with an Error when the change was not saved; the store then puts
-   * the slice back as it was (decision 0003).
+   * the slice back as it was (decision 0003). A backend checks the diff with
+   * `checkStale` against the rows as stored and rejects with a
+   * `StaleWriteError` when an update or delete no longer matches what it
+   * names, or an insert's key holds a different row (#124).
    */
   apply(change: SliceChange): Promise<void>;
   /**

@@ -2,6 +2,7 @@
 import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createLiveStore } from '../live';
 import type { ModuleSlice } from '../module';
 import type { Repository } from '../persistence';
 import type { PortalSlice } from '../repository';
@@ -9,10 +10,14 @@ import { SEED_TODAY } from '../seed';
 import {
   NO_REPLACE,
   StoreProvider,
+  coreSlice,
+  makeReducer,
   useStore,
   type StoreProviderProps,
   type StoreValue,
 } from '../store';
+import type { PortalState } from '../types';
+import { refusingRepository } from './refusing';
 
 /**
  * StoreProvider rendered for real (#113): the clock moves on with no `today`
@@ -230,5 +235,61 @@ describe('a repository that refuses a replace (decision 0008, 3C)', () => {
     act(() => core().importJson(file));
     expect(count()).toBe(8);
     expect(fake.applies.map(a => a.sliceId)).toContain('counter');
+  });
+});
+
+describe('a stale write refused by the repository (decision 0008, #124)', () => {
+  type Staff = { id: string; title: string }[];
+  const staff = (state: unknown) => (state as { core: { staff: Staff } }).core.staff;
+  const title = (id: string) => staff(store!.state).find(s => s.id === id)?.title;
+
+  it('rolls back, says so, shows the colleague’s change, and Try again saves on top of it', async () => {
+    const server = refusingRepository([coreSlice as PortalSlice, ...SLICES], SEED_TODAY);
+    const failures: string[] = [];
+    await render({
+      today: SEED_TODAY,
+      demo: true,
+      repository: server.repo,
+      onSaveFailed: m => failures.push(m),
+    });
+    expect(title('s-devon')).toBe('Teaching Artist');
+
+    // A colleague, on the same repository, retitles Devon first.
+    const colleague = createLiveStore({
+      initial: {
+        core: await server.repo.load(coreSlice as never, SEED_TODAY, true),
+      } as unknown as PortalState,
+      reducer: makeReducer([coreSlice as PortalSlice]),
+      slices: [coreSlice as PortalSlice],
+      repository: server.repo,
+    });
+    colleague.dispatch({
+      type: 'core/update-staff',
+      id: 's-devon',
+      patch: { title: 'Lead Teaching Artist' },
+    });
+    expect(await colleague.whenSaved()).toBe(true);
+
+    const actions = store!.actions.core as unknown as {
+      updateStaff(id: string, patch: { title: string }): void;
+    };
+    await act(async () => actions.updateStaff('s-devon', { title: 'Senior Teaching Artist' }));
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    expect(failures).toEqual(["Couldn't save the person: someone else changed it first"]);
+    expect(store!.saving.status).toBe('error');
+    expect(title('s-devon')).toBe('Lead Teaching Artist');
+    const staffRow = () => server.rows('core').staff.find(r => r.id === 's-devon');
+    expect(staffRow()?.title).toBe('Lead Teaching Artist');
+
+    await act(async () => store!.saving.retry!());
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 0));
+    });
+    expect(store!.saving.status).toBe('idle');
+    expect(title('s-devon')).toBe('Senior Teaching Artist');
+    expect(staffRow()?.title).toBe('Senior Teaching Artist');
   });
 });

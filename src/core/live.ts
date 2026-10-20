@@ -1,6 +1,7 @@
 import { diffSlice } from './diff';
 import type { RowDiff } from './diff';
 import type { AnyAction, ModuleSlice } from './module';
+import { StaleWriteError } from './persistence';
 import type { Repository, SliceChange } from './persistence';
 import type { PortalState } from './types';
 
@@ -18,6 +19,9 @@ import type { PortalState } from './types';
  * failed change, and the changes queued behind it on the same slice are
  * dropped with it: each was made on top of the one that failed. Other slices
  * keep going. `onSaveFailed` gets one sentence saying what was not saved.
+ * When the repository refused it as stale (`StaleWriteError`: someone else
+ * changed those rows since they were read, #124) the sentence says so, and
+ * the slice is loaded again (`reload`) so the screen shows their change.
  *
  * Each slice keeps its own failure until it next saves, so a success on one
  * slice never hides another's: the top bar reports an error while any slice
@@ -76,6 +80,12 @@ export interface LiveStoreOptions {
   describe?: (sliceId: string, action: AnyAction) => string | undefined;
   /** Called once per failed apply, with the sentence the toast shows. */
   onSaveFailed?: (message: string) => void;
+  /**
+   * One slice as the repository holds it now (`repository.load`). Read after
+   * a `StaleWriteError`, so the slice shows the change someone else made
+   * before the person tries again. Without it the slice only rolls back.
+   */
+  reload?: (sliceId: string) => Promise<unknown>;
 }
 
 export interface LiveStore {
@@ -99,6 +109,7 @@ export function createLiveStore({
   repository,
   describe,
   onSaveFailed,
+  reload,
 }: LiveStoreOptions): LiveStore {
   const tables = new Map(slices.map(s => [s.id, s.tables]));
   let state = initial;
@@ -184,7 +195,7 @@ export function createLiveStore({
     }
     pending.then(
       () => saved(sliceId, queue),
-      () => failed(sliceId, queue, change),
+      (error: unknown) => failed(sliceId, queue, change, error),
     );
   }
 
@@ -199,14 +210,18 @@ export function createLiveStore({
     emit();
   }
 
-  function failed(sliceId: string, queue: Change[], change: Change) {
+  function failed(sliceId: string, queue: Change[], change: Change, reason: unknown) {
     const dropped = queue.splice(0);
     state = {
       ...(state as unknown as Record<string, unknown>),
       [sliceId]: change.before,
     } as unknown as PortalState;
     const what = describe?.(sliceId, change.action) || 'that change';
-    const error = `Couldn't save ${what}`;
+    const stale = reason instanceof StaleWriteError;
+    const error = stale
+      ? `Couldn't save ${what}: someone else changed it first`
+      : `Couldn't save ${what}`;
+    if (stale) refetch(sliceId, change.before);
     const earlier = failures.get(sliceId)?.unsaved ?? [];
     failures.delete(sliceId);
     failures.set(sliceId, {
@@ -218,6 +233,26 @@ export function createLiveStore({
     onSaveFailed?.(error);
     settle();
     emit();
+  }
+
+  /**
+   * After a stale write: load the slice as the repository holds it now and
+   * show that, so Try again works on what someone else saved. Only while the
+   * slice still stands as the rollback left it and nothing is queued on it; a
+   * change made in the meantime goes on as it is (and is refused in turn if
+   * it is stale too). A reload that fails leaves the rollback.
+   */
+  function refetch(sliceId: string, rolledBack: unknown) {
+    if (!reload) return;
+    reload(sliceId).then(
+      fresh => {
+        const now = state as unknown as Record<string, unknown>;
+        if (now[sliceId] !== rolledBack || queues.get(sliceId)?.length) return;
+        state = { ...now, [sliceId]: fresh } as unknown as PortalState;
+        emit();
+      },
+      () => undefined,
+    );
   }
 
   /**

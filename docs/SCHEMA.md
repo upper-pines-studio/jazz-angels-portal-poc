@@ -740,10 +740,27 @@ submitted (the store ignores a mark then; reopening the roll is the way to chang
   deleted, per table, worked out from the slice before and after (#122). The backend writes all
   of it, across the slice's tables, in one transaction, or none of it. Import and reset (the
   whole portal replaced) never reach the database (#125).
-- **A stale write is refused (decision 0008, #124).** An update names the old values of the
-  columns it changes, and a delete the row as it was read; the database refuses the write when
-  the row no longer matches, and the browser rolls the change back and says so (decision 0003).
-  There is no version column.
+- **A stale write is refused (decision 0008, #124).** An update or delete names what it expects
+  to find; on a mismatch it is refused. There is no version column. Inside the apply's
+  transaction, before anything is written, every row the diff touches is checked against the
+  row as stored (`checkStale` in `src/core/diff.ts` is the rule, for the backend to port):
+  - an **update** carries the old value of each column it changes (`was`). It goes ahead when
+    each of those columns still holds its old value, or already holds the new one (the same
+    diff sent again, or a colleague who made the same change). Columns it does not change are
+    not compared, so a colleague's edit to another column of the row stands. An update to a row
+    that is gone is refused;
+  - a **delete** carries the row as it was read. It goes ahead when the stored row is the same,
+    column by column, or already gone;
+  - an **insert** goes ahead when its id is free, or already holds the very same row (a
+    resend). An id that holds a different row is refused, not written over: it is a collision
+    or someone else's row, and an upsert would silently replace it.
+
+  `null` and a missing value compare equal; arrays and `jsonb` compare by content. One refused
+  row refuses the whole apply, and nothing of it is written. The backend answers with a
+  `StaleWriteError` (`src/core/persistence.ts`); the browser rolls the change back, says so
+  ("Couldn't save the person: someone else changed it first"), loads that slice again so the
+  screen shows the other person's change, and Try again makes the change afresh on top of it
+  (decision 0003).
 - **Triggers for what a row policy cannot express.** A policy sees the old row or the new one,
   never both, so these are `before update` (or `before insert`) triggers, refusing with a
   sentence the screen can show:

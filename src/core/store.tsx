@@ -857,6 +857,8 @@ function LiveProvider({
 }: LiveProviderProps) {
   const failedRef = React.useRef(onSaveFailed);
   failedRef.current = onSaveFailed;
+  const clockRef = React.useRef(clock);
+  clockRef.current = clock;
   const [live] = React.useState(() =>
     createLiveStore({
       initial,
@@ -865,6 +867,12 @@ function LiveProvider({
       repository: repo,
       describe: (sliceId, action) => describeChange(all, sliceId, action),
       onSaveFailed: message => failedRef.current?.(message),
+      // After a stale write, the slice as the repository holds it now (#124).
+      reload: sliceId => {
+        const slice = all.find(s => s.id === sliceId);
+        if (!slice) return Promise.reject(new Error(`No ${sliceId} slice.`));
+        return repo.load(slice, clockRef.current, demo);
+      },
     }),
   );
   whenSavedRef.current = live.whenSaved;
