@@ -126,6 +126,14 @@ a new live store on the new load. A new day does not load again; a slice reads
    and `saving.retry` dispatches every slice's dropped changes again, in the
    order they were made (an import goes again for the slices that failed
    only).
+5. When the rejection is a `StaleWriteError` (`persistence.ts`: someone else
+   changed those rows since this browser read them, #124), the sentence is
+   "Couldn't save <what>: someone else changed it first", and the store loads
+   that slice again (`reload`, which `StoreProvider` wires to
+   `repository.load`) and shows it, as long as nothing was changed on the
+   slice in the meantime. So the screen shows the other person's change, and
+   Try again makes the change again on top of it, with a diff taken against
+   what is stored now.
 
 **Import and reset stay off a backend** (decision 0008, 3C). A whole-portal
 replace would delete rows, which decision 0002 forbids, so a repository says
@@ -138,7 +146,9 @@ before anything changes, as the bug it is.
 
 There is no offline queue and nothing retries on its own (decision 0003).
 `StoreProvider` takes the repository as a prop (`repository`), defaulting to
-`localRepository`; the tests pass a fake that fails on demand.
+`localRepository`; the tests pass a fake that fails on demand, and
+`__tests__/refusing.ts`, a repository that holds rows by table and refuses a
+stale write as a backend will (see "The row diff").
 
 `localRepository` in `repository.ts` is the first implementation and the only
 one: one localStorage key per slice, `ja-portal:<sliceId>:v1`. `load` reads the
@@ -186,9 +196,9 @@ carry it. Unset means the seed's day, `SEED_TODAY`; "Use the real date" stores
 | `module.ts` | `insertRow(state, key, row)` (adds a row unless its id is already there, else gives the state back untouched), `ModuleSlice` (`seed(today)` the demo data, `empty()` a new office, `normalise(raw, demo)`, its `rules`: what each action needs, its `tables`: how its state maps onto the tables of `docs/SCHEMA.md`, and an optional `describe(action)`: the change in plain words for a failed save), `ModuleManifest` (its `nav` is one `NavSection` or several, its optional `settings` are gated Cards for the Settings screen), `ModuleRoute` (`requires`, `allows`), `Requires`, `NavItem`, `NavSection`, `StatSpec`, `AttentionItem` (its optional `statusLabel` gives the status Badge its own words, "Out of date", while the tone follows `status`, and `statusOutlined` draws it in outlined gold, "Sent back"), `GatedCard`, `FundingContribution` and `FundingSource` (a module's `funding`: what it puts toward a program's year or a project, and optionally its own `panel` for the sheet), `DashboardContribution` (whose optional `subtitle(state, today)` is joined onto the dashboard's own "Sunday, September 13 · FY27" with ` · `). |
 | `rows.ts` | The row mapping of decision 0008 (#121): `Row`, `Tables` (rows by table name), `SliceTables` (a slice's `keys`, `toRows`, `fromRows`), and the helpers the mappings share: `orNull`, `withoutNulls`, `groupBy`. See "Rows by table" below. Loading (decision 0008, 2A, #123): `nullsAsMissing(row, optional)` drops a `null` optional field and rejects a `null` anywhere else; `sliceNullsAsMissing(state, optional)` runs a whole slice through it, collection by collection, with each one's optional fields (`OptionalFields`). |
 | `tables.ts` | `coreTables`, core's own mapping, and what the modules' mappings reuse: `ArchivedColumns`, `archivedColumns` / `archivedFields` (the two archive columns and back), `addressFrom` (an address from its four columns). |
-| `diff.ts` | The row diff of decision 0008 (#122): `diffSlice(tables, before, next)` and `diffRows(keys, before, next)` give a `RowDiff` (one `TableDiff` per table touched: `inserts`, `updates` with `set` and `was`, `deletes` with `key` and `was`); `writeOrder` (inserts and updates parents first, deletes children first); `applyDiff`, the diff written onto rows in memory as a backend writes it; `sameValue`. See "The row diff" below. |
-| `persistence.ts` | The `Repository` interface: `load` one slice, `apply` one `SliceChange` (its `rows`, its `next`, its `action` as a label), both promises; `acceptsReplace`, whether import and reset may reach it. |
-| `live.ts` | `createLiveStore`: the state, the per-slice apply queue, the rollback, `Saving` and `whenSaved`, and the `SliceChange` each apply is handed (its `slices` give the row mappings). No React, so the tests drive it with a fake repository. |
+| `diff.ts` | The row diff of decision 0008 (#122): `diffSlice(tables, before, next)` and `diffRows(keys, before, next)` give a `RowDiff` (one `TableDiff` per table touched: `inserts`, `updates` with `set` and `was`, `deletes` with `key` and `was`); `writeOrder` (inserts and updates parents first, deletes children first); `applyDiff`, the diff written onto rows in memory as a backend writes it; `checkStale`, the stale-write rule (#124), giving a `StaleWrite`; `sameValue`. See "The row diff" below. |
+| `persistence.ts` | The `Repository` interface: `load` one slice, `apply` one `SliceChange` (its `rows`, its `next`, its `action` as a label), both promises; `acceptsReplace`, whether import and reset may reach it; `StaleWriteError`, what `apply` rejects with when `checkStale` refuses the change (#124). |
+| `live.ts` | `createLiveStore`: the state, the per-slice apply queue, the rollback, `Saving` and `whenSaved`, and the `SliceChange` each apply is handed (its `slices` give the row mappings), and after a `StaleWriteError` the slice loaded again through `reload`. No React, so the tests drive it with a fake repository. |
 | `store.tsx` | `StoreProvider` (its `onRefused` shows a refused action's reason, its `onSaveFailed` a change that could not be saved, its `repository` defaults to localStorage), `useStore`, `useCan`, `coreSlice`, `guardActions` (wraps every slice's actions in its `rules`), `refusalMessage`, `newId`, `resolveToday`, `savedStaff()` (the staff list as saved, which sign-in reads before the store mounts). |
 | `demo.ts` | `isDemo()` (the `VITE_DEMO` switch), `DEMO_TODAY_KEY` and the demo-date preference helpers. |
 | `clock.ts` | The one reading of the device clock for today: `clockToday()`, `msUntilMidnight(now)`, and `watchToday(since, onChange)`, which calls back when the local day changes (at midnight, on `visibilitychange`, on `focus`). `StoreProvider` uses it. |
@@ -285,6 +295,20 @@ diffSlice(grantsTables, before, next);
   `localRepository` never does.
 - Two rows of one table with the same key throw: a mapping bug a backend must
   not write.
+
+**A stale write is refused** (decision 0008, #124). `checkStale(keys, stored,
+diff)` is the rule a backend runs inside its transaction before it writes:
+it returns the first write that no longer fits the rows as stored, or
+`undefined`. An update fits when each column it changes holds its `was` or
+already its `set`; a delete when the row is as it was read or already gone;
+an insert when its key is free or already holds the very same row. An insert
+whose key holds a different row is refused rather than upserted over it: an
+id collision or someone else's row, not a resend. So the same diff sent twice
+still fits. On a refusal the repository rejects with
+`new StaleWriteError(stale)` and writes nothing. `docs/SCHEMA.md` ("Things to
+know when building it") states the rule for the database.
+`__tests__/refusing.ts` is a test repository built on `checkStale` and
+`applyDiff`.
 
 ## Core actions
 

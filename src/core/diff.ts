@@ -242,3 +242,74 @@ export function applyDiff(
   }
   return out;
 }
+
+/** The first write a stale check refused: which row, and why. */
+export interface StaleWrite {
+  table: string;
+  key: RowKey;
+  /**
+   * `changed`: the row is there but not as the change read it. `gone`: an
+   * update to a row that is no longer there. `taken`: an insert under a key
+   * that already holds a different row.
+   */
+  reason: 'changed' | 'gone' | 'taken';
+}
+
+/** Two rows the same, column by column, a missing column and `null` alike. */
+function sameRow(a: Row, b: Row): boolean {
+  const columns = new Set([...Object.keys(a), ...Object.keys(b)]);
+  return [...columns].every(c => sameValue(a[c], b[c]));
+}
+
+/**
+ * Whether a diff may be written onto the rows as they are stored now, or the
+ * first write it would make on a row that changed since the person read it
+ * (decision 0008, #124). The rule a backend applies inside its transaction
+ * before it writes anything: one refused write refuses the whole diff.
+ *
+ * - An update goes ahead when each column it changes still holds its `was`,
+ *   or already holds its `set` (a resend, or a colleague who made the same
+ *   change). Any other value is someone else's change, and it is refused. A
+ *   column the update does not change is never looked at, so a colleague's
+ *   edit to another column of the same row stands. An update to a row that is
+ *   gone is refused.
+ * - A delete goes ahead when the row is as it was read, or already gone. A
+ *   row that changed since is refused.
+ * - An insert goes ahead when its key is free, or already holds the very same
+ *   row (a resend: ids are made on the client before the first send, #114).
+ *   A key holding a different row is refused rather than written over: it is
+ *   an id collision or a row someone else wrote, and an upsert would silently
+ *   replace their row with this one.
+ *
+ * So the same diff sent twice is accepted the second time too, and changes
+ * nothing (`applyDiff`).
+ */
+export function checkStale(
+  keys: { readonly [table: string]: readonly string[] },
+  stored: Tables,
+  diff: RowDiff,
+): StaleWrite | undefined {
+  for (const { table, inserts, updates, deletes } of diff) {
+    const columns = keys[table];
+    if (!columns) throw new Error(`The diff names ${table}, which has no key.`);
+    const rows = new Map((stored[table] ?? []).map(r => [keyString(r, columns), r]));
+    const find = (row: Row) => rows.get(keyString(row, columns));
+    for (const row of inserts) {
+      const now = find(row);
+      if (now && !sameRow(now, row)) return { table, key: keyOf(row, columns), reason: 'taken' };
+    }
+    for (const { key, set, was } of updates) {
+      const now = find(key);
+      if (!now) return { table, key, reason: 'gone' };
+      const fresh = Object.keys(set).every(
+        c => sameValue(now[c], was[c]) || sameValue(now[c], set[c]),
+      );
+      if (!fresh) return { table, key, reason: 'changed' };
+    }
+    for (const { key, was } of deletes) {
+      const now = find(key);
+      if (now && !sameRow(now, was)) return { table, key, reason: 'changed' };
+    }
+  }
+  return undefined;
+}
