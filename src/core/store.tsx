@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
-import { archiveFields, isArchived, normaliseArchived, restoreFields } from './archive';
+import {
+  ARCHIVE_FIELDS,
+  archiveFields,
+  isArchived,
+  normaliseArchived,
+  restoreFields,
+} from './archive';
 import { clockToday, watchToday } from './clock';
 import { DEMO_TODAY_KEY, demoTodayFrom, demoTodayToStore, isDemo } from './demo';
 import {
@@ -34,6 +40,8 @@ import * as repository from './repository';
 import { localRepository, UnreadableDataError } from './repository';
 import type { PortalSlice } from './repository';
 import { ROLE_LABELS, isRole } from './roles';
+import { sliceNullsAsMissing } from './rows';
+import type { OptionalFields } from './rows';
 import { coreTables } from './tables';
 import { DEFAULT_ENABLED_MODULES, loginStaff, makeCoreEmpty, makeCoreSeed } from './seed';
 import type {
@@ -210,6 +218,38 @@ function withOperations(programs: Program[]): Program[] {
   if (!programs.some(p => isOperations(p.id))) return [...programs, operationsRecord()];
   return programs.map(p => (isOperations(p.id) ? operationsRecord() : p));
 }
+
+/** Core's state as saved: any part of it may be missing, and older settings carry `demoToday`. */
+type SavedCore = Partial<CoreState> & { settings?: { demoToday?: string } };
+
+/**
+ * The fields core's records may leave out. Stored as `null`, each loads as a
+ * missing field; a `null` in any other field rejects the slice (decision 0008, 2A).
+ */
+const CORE_OPTIONAL: OptionalFields<SavedCore> = {
+  staff: ARCHIVE_FIELDS,
+  programs: ARCHIVE_FIELDS,
+  organizations: [
+    'contactName',
+    'contactEmail',
+    'contactPhone',
+    'website',
+    'notes',
+    ...ARCHIVE_FIELDS,
+  ],
+  venues: [
+    'organizationId',
+    'address',
+    'contactName',
+    'contactEmail',
+    'contactPhone',
+    'notes',
+    ...ARCHIVE_FIELDS,
+  ],
+  projects: ARCHIVE_FIELDS,
+  officeDocuments: ARCHIVE_FIELDS,
+  settings: ['demoToday'],
+};
 
 /** A program's budget as saved, or undefined when the row is not one. */
 function normaliseBudget(raw: Partial<ProgramBudget>): ProgramBudget | undefined {
@@ -487,8 +527,8 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
   },
   normalise(raw, demo = false) {
     if (!raw || typeof raw !== 'object') return undefined;
-    const c = raw as Partial<CoreState>;
-    if (!Array.isArray(c.staff) || !Array.isArray(c.programs)) return undefined;
+    const c = sliceNullsAsMissing(raw as SavedCore, CORE_OPTIONAL);
+    if (!c || !Array.isArray(c.staff) || !Array.isArray(c.programs)) return undefined;
     // An older save may carry `demoToday`; the demo date is a browser
     // preference now (demo.ts), so it is dropped here.
     const settings: Partial<CoreState['settings']> = c.settings ?? {};

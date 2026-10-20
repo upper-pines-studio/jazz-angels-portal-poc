@@ -1,14 +1,17 @@
 import { insertRow } from '../../../core/module';
 import type { AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
 import {
+  ARCHIVE_FIELDS,
   PARAMOUNT_MS_VENUE_ID,
   can,
+  sliceNullsAsMissing,
   STUDIO_VENUE_ID,
   archiveFields,
   isArchived,
   normaliseArchived,
   restoreFields,
 } from '../../../core';
+import type { OptionalFields } from '../../../core';
 import {
   ensembleRefusal,
   mayTakeRoll,
@@ -376,6 +379,18 @@ const COLLECTIONS: Array<keyof TeachingState> = [
 ];
 
 /**
+ * The fields each teaching record may leave out. Stored as `null`, each loads
+ * as a missing field; a `null` in any other field rejects the slice (decision
+ * 0008, 2A). A photo release's date and recorder are checked with the release.
+ */
+const OPTIONAL: OptionalFields<TeachingState> = {
+  terms: ['programId', ...ARCHIVE_FIELDS],
+  ensembles: ARCHIVE_FIELDS,
+  meetings: ['rollSubmittedAt', 'notes'],
+  students: ['guardianPhone', 'guardianEmail', 'guardianAddress', 'ensembleId', ...ARCHIVE_FIELDS],
+};
+
+/**
  * A payload saved before venues existed named the place with `room` alone,
  * and wrote "Off-site" for the one in-school ensemble. Give it a venue.
  */
@@ -464,7 +479,9 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
   },
   normalise(raw) {
     if (!raw || typeof raw !== 'object') return undefined;
-    const candidate = raw as Record<string, unknown>;
+    const loaded = sliceNullsAsMissing(raw as TeachingState, OPTIONAL);
+    if (!loaded) return undefined;
+    const candidate = loaded as unknown as Record<string, unknown>;
     for (const key of COLLECTIONS) {
       if (!Array.isArray(candidate[key])) return undefined;
     }

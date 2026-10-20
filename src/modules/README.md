@@ -40,7 +40,10 @@ export const teachingSlice: ModuleSlice<TeachingState, TeachingActions> = {
   },
   // The state as the rows of its tables in docs/SCHEMA.md, and back (domain/tables.ts).
   tables: teachingTables,
-  normalise(raw) { /* validate a loaded payload, or return undefined */ },
+  // Validate a loaded payload, or return undefined. Start with
+  // sliceNullsAsMissing(raw, OPTIONAL): a null optional field loads as a
+  // missing one, a null required one rejects the slice (decision 0008, 2A).
+  normalise(raw) { /* ... */ },
   // The change in plain words, for "Couldn't save the roll call mark".
   describe(action) { /* 'the roll call mark', or undefined for "that change" */ },
 };

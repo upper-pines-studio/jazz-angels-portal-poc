@@ -1,6 +1,13 @@
 import { insertRow } from '../../../core/module';
 import type { ActionRule, AnyAction, ModuleSlice, SliceContext } from '../../../core/module';
-import { archiveFields, normaliseArchived, restoreFields } from '../../../core/archive';
+import {
+  ARCHIVE_FIELDS,
+  archiveFields,
+  normaliseArchived,
+  restoreFields,
+} from '../../../core/archive';
+import { sliceNullsAsMissing, withoutNulls } from '../../../core/rows';
+import type { OptionalFields } from '../../../core/rows';
 import { can } from '../../../core/permissions';
 import { makeCoreSeed } from '../../../core/seed';
 import { programName, targetName } from '../../../core/derive';
@@ -1265,6 +1272,47 @@ function createActions(
   };
 }
 
+/** A grants payload as saved: an older grant may carry `program` in place of `programs`. */
+type SavedGrants = Omit<GrantsState, 'grants'> & { grants: Array<Grant & { program?: ProgramId }> };
+
+/**
+ * The fields each grants record may leave out. Stored as `null`, each loads as
+ * a missing field; a `null` in any other field rejects the slice (decision
+ * 0008, 2A). A grant's dates are all optional, so a `null` date is dropped too.
+ */
+const OPTIONAL: OptionalFields<SavedGrants> = {
+  funders: [
+    'contactName',
+    'contactEmail',
+    'contactPhone',
+    'website',
+    'cycleNotes',
+    'notes',
+    ...ARCHIVE_FIELDS,
+  ],
+  grants: [
+    'amountRequested',
+    'amountAwarded',
+    'notes',
+    'broughtIn',
+    'renewsGrantId',
+    'program',
+    ...ARCHIVE_FIELDS,
+  ],
+  tasks: ['dueDate', 'assigneeId', 'doneAt'],
+  documents: ['url', 'officeDocumentId'],
+  payments: ['receivedDate', 'sourcePage'],
+  budgetLines: ['accountCodes', 'classId'],
+  expenses: ['note', 'transactionId', 'backupNote'],
+  reports: ['submittedDate'],
+  activity: ['whoId', 'who'],
+  templates: ['description'],
+  transactions: ['classId', 'assignedById', 'assignedAt'],
+  incoming: ['classId', 'assignedById', 'assignedAt'],
+  files: ['pages', 'expenseId'],
+  terms: ['page'],
+};
+
 /**
  * The collections a grants payload must carry. A payload saved before the
  * money side existed lacks the last six, so it is rejected and reseeded.
@@ -1545,7 +1593,9 @@ export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
   },
   normalise(raw) {
     if (!raw || typeof raw !== 'object') return undefined;
-    const candidate = raw as Record<string, unknown>;
+    const loaded = sliceNullsAsMissing(raw as SavedGrants, OPTIONAL);
+    if (!loaded) return undefined;
+    const candidate = loaded as unknown as Record<string, unknown>;
     for (const key of COLLECTIONS) {
       if (!Array.isArray(candidate[key])) return undefined;
     }
@@ -1556,7 +1606,9 @@ export const grantsSlice: ModuleSlice<GrantsState, GrantsActions> = {
       ...state,
       funders: state.funders.map(normaliseArchived),
       // A renewal whose last year's grant is no longer saved loads as a plain grant.
-      grants: withRenewalLinks(state.grants.map(g => normaliseArchived(withPrograms(g)))),
+      grants: withRenewalLinks(
+        state.grants.map(g => normaliseArchived(withPrograms(withDates(g)))),
+      ),
       activity: state.activity.map(row => creditActivity(row, staff)),
       // Saved before shares existed: none (decision 0006).
       grantShares: Array.isArray(candidate.grantShares)
@@ -1576,6 +1628,13 @@ function isGrantShare(raw: unknown): raw is GrantShare {
     return typeof t.programId === 'string' && typeof t.fiscalYear === 'string';
   }
   return t?.kind === 'project' && typeof t.projectId === 'string';
+}
+
+/** A grant with its `null` dates left out: every date is optional. */
+function withDates(saved: Grant): Grant {
+  const dates: unknown = saved.dates;
+  if (!dates || typeof dates !== 'object' || !Object.values(dates).includes(null)) return saved;
+  return { ...saved, dates: withoutNulls(saved.dates) };
 }
 
 /**
