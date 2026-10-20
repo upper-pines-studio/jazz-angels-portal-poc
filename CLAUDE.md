@@ -41,3 +41,17 @@ per module.
 - Dialog renders `position:absolute`; the scrolling `main` in Shell is `position:relative` so dialogs scope to it.
 - A dialog is `AppDialog` from `src/app/components/AppDialog.tsx`, never the design-system `Dialog` (lint): same props and look, plus focus in, Tab trapped, Escape, focus back, `role="dialog"`.
 - Lucide icons come from the CDN tag in `index.html` via the `Icon` component; call `window.lucide.createIcons()` after renders that add icons (App does this in an effect).
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues, used through the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default triage labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` at the root once the first term is settled (`/domain-modeling` creates it; until then, carry on without it), and the decisions in `docs/decisions/`. A decision always goes in `docs/decisions/` with the next number and a row in its README, never in `docs/adr/`, whatever a skill says. See `docs/agents/domain.md`.
