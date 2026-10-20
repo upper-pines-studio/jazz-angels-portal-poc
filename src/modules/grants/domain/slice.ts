@@ -178,6 +178,8 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
       return { ...state, [action.key]: rows.filter(row => row.id !== action.id) } as GrantsState;
     }
 
+    // The rest are not rows with ids, so the guard in eslint.config.js lets them through by name.
+    // eslint-disable-next-line no-restricted-syntax -- the demo's stand-in for the QuickBooks sync; with the backend the sync writes transactions itself (decision 0008)
     case 'sync': {
       // A transaction already pulled is not pulled twice.
       const pulled = new Set(state.transactions.map(t => t.id));
@@ -189,9 +191,11 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
       };
     }
 
+    // eslint-disable-next-line no-restricted-syntax -- one settings object, not rows with ids: the patch is the change
     case 'set-quickbooks':
       return { ...state, quickbooks: { ...state.quickbooks, ...action.patch } };
 
+    // eslint-disable-next-line no-restricted-syntax -- a report has at most one plan, found by its reportId, not an id of its own
     case 'save-reminder-plan':
       return {
         ...state,
@@ -201,12 +205,14 @@ export function reducer(state: GrantsState, action: GrantsAction): GrantsState {
         ],
       };
 
+    // eslint-disable-next-line no-restricted-syntax -- as save-reminder-plan: by reportId
     case 'reset-reminder-plan':
       return {
         ...state,
         reminderPlans: state.reminderPlans.filter(p => p.reportId !== action.reportId),
       };
 
+    // eslint-disable-next-line no-restricted-syntax -- one settings object, not rows with ids: the patch is the change
     case 'set-reminder-defaults':
       return { ...state, reminderDefaults: { ...state.reminderDefaults, ...action.patch } };
 

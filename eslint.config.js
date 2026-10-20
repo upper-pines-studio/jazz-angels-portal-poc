@@ -61,6 +61,15 @@ const NO_BARE_NEW_DATE = {
   message:
     'Screens use `today` from useStore() rather than `new Date()`. `new Date(value)` is fine.',
 };
+// A module's reducer handles only the generic changes (decision 0008, 1B, #127). What follows
+// from an action is worked out in createActions, which reads the state and sends the rows, so
+// the action says every row it writes. An exception carries an eslint-disable comment saying why.
+const ONLY_GENERIC_CASES = {
+  selector:
+    "FunctionDeclaration[id.name='reducer'] > BlockStatement > SwitchStatement > SwitchCase[test.type='Literal'][test.value!=/^(insert|update|remove|batch)$/]",
+  message:
+    'A slice reducer handles only insert, update, remove and batch. Work the rows out in createActions and send them as a batch (src/modules/README.md).',
+};
 // Every dialog goes through AppDialog, which adds focus, Escape and the dialog role.
 const NO_BARE_DIALOG = {
   patterns: [
@@ -73,6 +82,7 @@ const NO_BARE_DIALOG = {
   ],
 };
 const SCREENS = ['src/app/**/*.{ts,tsx}', 'src/modules/*/screens/**/*.{ts,tsx}'];
+const SLICES = 'src/modules/*/domain/slice.ts';
 const STORAGE_OWNERS = ['src/core/repository.ts', 'src/core/auth.ts'];
 // Tests stand up a fake localStorage to exercise the two owners.
 const TESTS = ['src/**/__tests__/**'];
@@ -108,6 +118,11 @@ export default tseslint.config(
   {
     files: SCREENS,
     rules: { 'no-restricted-syntax': ['error', NO_LOCAL_STORAGE, NO_BARE_NEW_DATE] },
+  },
+
+  {
+    files: [SLICES],
+    rules: { 'no-restricted-syntax': ['error', NO_LOCAL_STORAGE, ONLY_GENERIC_CASES] },
   },
 
   // The wrapper itself is the one file that imports Dialog.
