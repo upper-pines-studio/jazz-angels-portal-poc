@@ -74,7 +74,7 @@ login's `staffId`); if that id names nobody in the staff list, or someone
 archived, it renders nothing and calls `onUnknownUser('no-staff' | 'archived')`,
 and App signs the person out with that refusal message.
 
-**Routing.** An action's type is `<sliceId>/<name>`, so `grants/toggle-task`
+**Routing.** An action's type is `<sliceId>/<name>`, so `grants/update`
 only ever reaches the grants reducer. A slice that was not addressed keeps its
 identity, so nothing else re-renders. `portal/replace` swaps every slice at once
 (reset and import).

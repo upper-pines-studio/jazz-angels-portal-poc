@@ -66,6 +66,15 @@ ISO `YYYY-MM-DD` strings (`Activity.at` is the one ISO date-time). The DOM's
 
 Add/update actions that create something return its new id.
 
+Every action reaches the reducer as `insert`, `update` and `remove` rows, or a
+`batch` of them for one change (#127). An action whose rows follow from the
+state (a new grant's checklist, the parts a reassigned transaction replaces)
+reads the state in `createActions` and sends each row with absolute values, so
+the action says every row it writes, as the row diff does, and sent twice it
+changes nothing the second time. Only `syncQuickBooks`, the QuickBooks setting,
+the reminder plans and the reminder defaults have actions of their own: they
+are not rows with ids. `npm run lint` refuses any other case in the reducer.
+
 | Action | What it does |
 |---|---|
 | `addFunder(input)` | Creates a funder. Returns the id. |
@@ -77,7 +86,7 @@ Add/update actions that create something return its new id.
 | `updateGrant(id, patch)` | Patches a grant, `dates` included (pass the whole `dates` object). |
 | `transition(grantId, to, payload?)` | Moves the phase, writes the dates that phase implies, logs activity. `payload: { date?, amountAwarded?, periodStart?, periodEnd?, reason? }`. |
 | `addTask(input)` / `updateTask(id, patch)` / `deleteTask(id)` | Checklist rows. |
-| `toggleTask(id)` | Flips `done` and stamps/clears `doneAt`. |
+| `toggleTask(id)` | Ticks or unticks a task, stamping or clearing `doneAt`. Sent as the value it is ticked to (`update` with `done` and `doneAt`), never as a flip. |
 | `addDocument(input)` / `updateDocument(id, patch)` / `deleteDocument(id)` | Document register. `updatedAt` is stamped for you. An `officeDocumentId` in the input or patch is checked as `linkDocument` checks it. |
 | `linkDocument(id, officeDocumentId)` / `unlinkDocument(id)` | Point a register row at an office document, or stop (#68). Refused, with why, for a document of another kind (any is fine on Other), an archived one, or one no longer there; a link to a document archived since is kept while the row changes. The row's own `url` stays, hidden, for when it is unlinked. |
 | `addPayment(input)` / `updatePayment(id, patch)` / `deletePayment(id)` | Installments from the funder. A payment that has arrived is not deleted (`PAYMENT_RECEIVED_REFUSAL`); clear its received date first if it was a mistake. |
@@ -119,7 +128,7 @@ Staff, settings, export, import and reset are core's, not this module's:
 ### Bringing in a grant already under way (decision 0004)
 
 `addGrant` with `phase` at `'awarded'`, `'active'` or `'reporting'` (`IN_FLIGHT_PHASES`)
-and `inFlight` set writes, in one change (one `add-grant` action, so one save):
+and `inFlight` set writes, in one change (one `batch` of inserts, so one save):
 
 ```ts
 inFlight: {
@@ -152,7 +161,7 @@ inFlight: {
 ### Renewals (`renewals.ts`, decision 0005, #67)
 
 `renewGrant({ grantId, title, amountRequested?, dates, ownerId, programs })` writes, in one
-change (a `batch` of one `add-grant` and one activity insert, so one save):
+change (one `batch`: the new grant's inserts, as `addGrant` sends them, and one activity insert on last year's grant, so one save):
 
 - a grant at `'prospect'` with last year's `funderId`, `restriction` and `loiRequired`, the
   input's title, amount, owner and programs, the input's dates through `renewalDates` (only
@@ -450,6 +459,9 @@ the next `syncQuickBooks()`, and nothing is ever written back.
   `unassignTransaction(id)` takes them off again, backup included.
   `markNotGrantFunded(id)` sets overhead aside. `restoreTransactions(snapshots)`
   is Undo: it puts back what `transactionSnapshot` saw, files and notes included.
+  Each sends the transaction's row first, then a `remove` for every part and
+  file it drops, an `update` for every part it keeps and file it moves, and an
+  `insert` for every new part and log row.
 - **A budget line matches a transaction** when the transaction's account is one
   of the line's `accountCodes` and, if QuickBooks gave it a class, the class is
   the line's `classId`. `suggestionFor(state, tx)` returns the one line that
@@ -490,8 +502,8 @@ the next `syncQuickBooks()`, and nothing is ever written back.
     date). Undefined for an unlinked row or a document no longer there.
   - `newRegisterLinks(state, grant?)`: the first current office document of
     each of `NEW_GRANT_LINKED_KINDS` (IRS letter, board list, financials),
-    which `addGrant` and `renewGrant` put on the `add-grant` change as
-    `officeDocumentLinks`. A grant brought in with a submitted date links only
+    which `addGrant` and `renewGrant` give the new register rows as their
+    `officeDocumentId`. A grant brought in with a submitted date links only
     where `versionShown` finds a version on file by then; the rest stay rows of
     their own.
   - `officeLinkProblem(state, kind, id, previousId?)`: why a row may not use
