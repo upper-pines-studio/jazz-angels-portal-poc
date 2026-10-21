@@ -78,7 +78,6 @@ const NOT_WRITTEN: Record<string, string> = {
 
 /** The columns no slice writes, because the type has no field for them yet. */
 const COLUMNS_NOT_WRITTEN = [
-  'staff.email',
   'payments.deposit_id',
   'budget_versions.approved_on',
   'budget_versions.note',

@@ -43,6 +43,7 @@ import { ROLE_LABELS, isRole } from './roles';
 import { sliceNullsAsMissing } from './rows';
 import type { OptionalFields } from './rows';
 import { coreTables } from './tables';
+import { staffEmailProblem, tidyEmail } from './staff';
 import { DEFAULT_ENABLED_MODULES, loginStaff, makeCoreEmpty, makeCoreSeed } from './seed';
 import type {
   AppSettings,
@@ -173,13 +174,16 @@ function normaliseStaff(raw: Partial<StaffMember>, seeded: StaffMember[]): Staff
       : typeof raw.role === 'string' && !isRole(raw.role)
         ? raw.role
         : (seed?.title ?? '');
+  const { email: rawEmail, ...rest } = raw;
+  const email = tidyEmail(rawEmail);
   return normaliseArchived({
-    ...raw,
+    ...rest,
     id: String(raw.id ?? ''),
     name: String(raw.name ?? ''),
     title,
     role,
     teaches: raw.teaches ?? false,
+    ...(email ? { email } : {}),
   });
 }
 
@@ -319,11 +323,14 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     return {
       addStaff(input) {
         const id = ctx.newId('s');
-        dispatch({ type: 'core/add-staff', member: { ...input, id } });
+        const member = { ...input, id };
+        if ('email' in input) member.email = tidyEmail(input.email);
+        dispatch({ type: 'core/add-staff', member });
         return id;
       },
       updateStaff(id, patch) {
-        dispatch({ type: 'core/update-staff', id, patch });
+        const tidy = 'email' in patch ? { ...patch, email: tidyEmail(patch.email) } : patch;
+        dispatch({ type: 'core/update-staff', id, patch: tidy });
       },
       addProgram(input) {
         const id = ctx.newId('p');
@@ -442,14 +449,19 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
     };
   },
   rules: {
-    addStaff: (user, _state, input) => mayChangeStaff(user.role, undefined, input.role),
+    addStaff: (user, state, input) => {
+      const may = mayChangeStaff(user.role, undefined, input.role);
+      return may === true ? (staffEmailProblem(state.core.staff, input.email) ?? true) : may;
+    },
     updateStaff: (user, state, id, patch) => {
       const from = state.core.staff.find(s => s.id === id)?.role;
       const to = patch.role ?? from;
       // Nobody changes their own role, Admin included (decision 0001); the
       // rest of their own record follows the staff rule like anyone's.
       if (id === user.id && to !== from) return OWN_ROLE_REFUSAL;
-      return mayChangeStaff(user.role, from, to);
+      const may = mayChangeStaff(user.role, from, to);
+      if (may !== true || !('email' in patch)) return may;
+      return staffEmailProblem(state.core.staff, patch.email, id) ?? true;
     },
     // Whoever may edit a person may archive them (decision 0002), but not themself.
     archiveStaff: mayArchiveStaff,

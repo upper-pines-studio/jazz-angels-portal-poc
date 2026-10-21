@@ -12,6 +12,7 @@ export * from './store';
 export * from './roles';
 export * from './permissions';
 export * from './archive';
+export * from './staff';
 export * from './documents';
 export * from './rows';
 export * from './tables';

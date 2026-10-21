@@ -28,6 +28,8 @@ import {
   isArchived,
   isRole,
   mayChangeStaff,
+  staffEmailProblem,
+  tidyEmail,
   meetsAny,
   programsList,
   useCan,
@@ -63,6 +65,7 @@ interface PersonDraft {
   title: string;
   role: Role;
   teaches: boolean;
+  email: string;
 }
 
 export default function Settings() {
@@ -77,7 +80,13 @@ export default function Settings() {
   const toast = useToast();
   const nav = useNavigate();
   const loc = useLocation();
-  const [person, setPerson] = React.useState<PersonDraft | null>(null);
+  const [person, setPersonDraft] = React.useState<PersonDraft | null>(null);
+  const [personEmailError, setPersonEmailError] = React.useState<string | undefined>();
+  // A new draft starts without a refusal; typing in the email clears it.
+  const setPerson = (next: PersonDraft | null) => {
+    setPersonEmailError(undefined);
+    setPersonDraft(next);
+  };
   const [confirmReset, setConfirmReset] = React.useState(false);
   // Show archived on the staff list: this card's own, so local state.
   const [showArchived, setShowArchived] = React.useState(false);
@@ -134,16 +143,22 @@ export default function Settings() {
     const name = person.name.trim();
     const title = person.title.trim() || 'Staff';
     const { role, teaches } = person;
+    const email = tidyEmail(person.email);
+    const emailProblem = staffEmailProblem(state.core.staff, person.email, person.id);
+    if (emailProblem) {
+      setPersonEmailError(emailProblem);
+      return;
+    }
     const message = `${name} · ${ROLE_LABELS[role]}`;
     if (person.id === user.id) {
       // Your own role is not yours to change, so it stays out of the patch.
-      actions.core.updateStaff(person.id, { name, title, teaches });
+      actions.core.updateStaff(person.id, { name, title, teaches, email });
       toast({ tone: 'success', title: 'Person updated', message });
     } else if (person.id) {
-      actions.core.updateStaff(person.id, { name, title, role, teaches });
+      actions.core.updateStaff(person.id, { name, title, role, teaches, email });
       toast({ tone: 'success', title: 'Person updated', message });
     } else {
-      actions.core.addStaff({ name, title, role, teaches });
+      actions.core.addStaff({ name, title, role, teaches, ...(email ? { email } : {}) });
       toast({ tone: 'success', title: 'Person added', message });
     }
     setPerson(null);
@@ -280,6 +295,7 @@ export default function Settings() {
                               title: row.title,
                               role: row.role,
                               teaches: row.teaches,
+                              email: row.email ?? '',
                             });
                           }}
                         >
@@ -314,7 +330,7 @@ export default function Settings() {
                   size="sm"
                   iconLeft={<Icon name="plus" size={15} />}
                   onClick={() =>
-                    setPerson({ name: '', title: '', role: 'read-only', teaches: false })
+                    setPerson({ name: '', title: '', role: 'read-only', teaches: false, email: '' })
                   }
                 >
                   Add person
@@ -337,7 +353,7 @@ export default function Settings() {
                 size="sm"
                 iconLeft={<Icon name="plus" size={15} />}
                 onClick={() =>
-                  setPerson({ name: '', title: '', role: 'read-only', teaches: false })
+                  setPerson({ name: '', title: '', role: 'read-only', teaches: false, email: '' })
                 }
               >
                 Add person
@@ -610,9 +626,9 @@ export default function Settings() {
           title={person.id ? 'Edit person' : 'Add person'}
           description={
             person.id === user.id
-              ? 'Change your name, your title or whether you teach.'
+              ? 'Change your name, your title, your email or whether you teach.'
               : person.id
-                ? 'Change the name, the title, the role or whether they teach.'
+                ? 'Change the name, the title, the email, the role or whether they teach.'
                 : 'Someone who works here.'
           }
           onClose={() => setPerson(null)}
@@ -643,6 +659,21 @@ export default function Settings() {
                 value={person.title}
                 placeholder="Program Director"
                 onChange={e => setPerson({ ...person, title: e.target.value })}
+              />
+            </Field>
+            <Field
+              label="Email"
+              error={personEmailError}
+              hint="Optional. Where their invitation will go, and the name they sign in with. Each person needs their own."
+            >
+              <Input
+                type="email"
+                value={person.email}
+                placeholder="dana@example.org"
+                onChange={e => {
+                  setPersonEmailError(undefined);
+                  setPersonDraft({ ...person, email: e.target.value });
+                }}
               />
             </Field>
             {/* Nobody changes their own role, Admin included (decision 0001). */}

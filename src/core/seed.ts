@@ -26,6 +26,7 @@ const STAFF: StaffMember[] = [
     title: 'Program Director',
     role: 'director',
     teaches: true,
+    email: 'barry.cogert@example.org',
   },
   {
     id: 's-denise',
@@ -33,6 +34,7 @@ const STAFF: StaffMember[] = [
     title: 'Office Administrator',
     role: 'director',
     teaches: false,
+    email: 'denise.moreno@example.org',
   },
   {
     id: 's-albert',
@@ -40,15 +42,31 @@ const STAFF: StaffMember[] = [
     title: 'Co-founder / Artistic Director',
     role: 'teacher',
     teaches: true,
+    email: 'albert.alva@example.org',
   },
-  { id: 's-devon', name: 'Devon Price', title: 'Teaching Artist', role: 'teacher', teaches: true },
-  { id: 's-renee', name: 'Renee Cole', title: 'Teaching Artist', role: 'teacher', teaches: true },
+  {
+    id: 's-devon',
+    name: 'Devon Price',
+    title: 'Teaching Artist',
+    role: 'teacher',
+    teaches: true,
+    email: 'devon.price@example.org',
+  },
+  {
+    id: 's-renee',
+    name: 'Renee Cole',
+    title: 'Teaching Artist',
+    role: 'teacher',
+    teaches: true,
+    email: 'renee.cole@example.org',
+  },
   {
     id: 's-tess',
     name: 'Tess Holloway',
     title: 'Office Intern',
     role: 'assistant',
     teaches: false,
+    email: 'tess.holloway@example.org',
   },
   {
     id: 's-gwen',
@@ -56,6 +74,7 @@ const STAFF: StaffMember[] = [
     title: 'Systems Administrator',
     role: 'admin',
     teaches: false,
+    email: 'gwen.kimura@example.org',
   },
   {
     id: 's-keisha',
@@ -63,6 +82,7 @@ const STAFF: StaffMember[] = [
     title: 'Office Manager',
     role: 'office-manager',
     teaches: false,
+    email: 'keisha.monroe@example.org',
   },
   {
     id: 's-walt',
@@ -70,6 +90,7 @@ const STAFF: StaffMember[] = [
     title: 'Bookkeeper (contract)',
     role: 'bookkeeper',
     teaches: false,
+    email: 'walt.brennan@example.org',
   },
   {
     id: 's-margaret',
@@ -77,6 +98,7 @@ const STAFF: StaffMember[] = [
     title: 'Board Treasurer',
     role: 'read-only',
     teaches: false,
+    email: 'margaret.lowe@example.org',
   },
 ];
 
