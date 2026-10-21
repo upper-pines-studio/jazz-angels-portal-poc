@@ -7,7 +7,7 @@
 
 begin;
 
-select plan(157);
+select plan(160);
 
 -- Signing in as someone ---------------------------------------------------------------------------
 
@@ -311,6 +311,14 @@ select is(tests.attempt($$insert into storage.objects (bucket_id, name) values (
 select is(tests.attempt($$insert into storage.objects (bucket_id, name) values ('grant-files', 'file-letter/x.pdf')$$), 'refused', 'no-login: cannot add a folder path');
 select is(tests.attempt($$insert into storage.objects (bucket_id, name) values ('grant-files', 'odv1')$$), 'refused', 'no-login: cannot add an office version id in the grant bucket');
 select is(tests.attempt($$insert into storage.objects (bucket_id, name) values ('office-documents', 'file-letter')$$), 'refused', 'no-login: cannot add a grant file id in the office bucket');
+select tests.sign_out();
+select tests.sign_in('bookkeeper');
+insert into public.office_document_versions values ('stamped-v', 'od1', 4, 'w9.pdf', 'pdf', 40, 1, '2026-10-03', 'admin', null);
+select is((select added_by from public.office_document_versions where id = 'stamped-v'), 'bookkeeper', 'a money role naming someone else in added_by is recorded as the adder');
+select is(tests.attempt($$insert into storage.objects (bucket_id, name) values ('office-documents', 'stamped-v')$$), '1', 'so the person who inserted the row may add its object');
+select tests.sign_out();
+select tests.sign_in('admin');
+select is(tests.attempt($$insert into storage.objects (bucket_id, name) values ('office-documents', 'stamped-v')$$), 'refused', 'and the person it named may not');
 select tests.sign_out();
 select set_config('role', 'anon', true);
 select is(tests.attempt($$select 1 from storage.objects where name = 'file-letter'$$), '0', 'the signed-out cannot read');
