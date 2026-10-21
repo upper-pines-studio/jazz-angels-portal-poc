@@ -21,10 +21,12 @@ import { timesheetsTables } from '../src/modules/timesheets/domain/tables';
  * and the database must agree with `checkStale`: refused with the same table,
  * key and reason, or written as `applyDiff` writes it.
  *
- * The calls run as `service_role`, which bypasses row level security: no
- * policies exist yet, so every other role is refused everything. The per-role
- * tests come with the policies (#154). One test runs as `authenticated` to see
- * a policy's refusal come back as one, not as a stale write.
+ * Most calls run as `service_role`, which bypasses row level security, so
+ * they test the stale check alone. The last tests sign in as staff of
+ * different roles (`authenticated` with a Supabase user's claims and a
+ * `logins` row) and send their changes through `apply` under the row policies
+ * (#154): a permitted change is written, a forbidden one comes back as 42501
+ * with nothing written.
  *
  * Every test runs in a transaction that is rolled back. Run by `npm run test:db`.
  */
@@ -538,5 +540,170 @@ describe('apply, as the caller', () => {
               has_function_privilege('authenticated', 'public.apply(text, jsonb)', 'execute') as authenticated`,
     );
     expect(privileged).toEqual([{ anon: false, authenticated: true }]);
+  });
+});
+
+// --- Signed in, under the row policies (#154) ---------------------------------
+
+describe('apply, signed in as a role', () => {
+  const USERS = {
+    director: '00000000-0000-4000-8000-0000000000d1',
+    teacher: '00000000-0000-4000-8000-0000000000d2',
+    other: '00000000-0000-4000-8000-0000000000d3',
+  } as const;
+  type Who = keyof typeof USERS;
+
+  const ENTRIES = { time_entries: ['id'], activity: ['id'] };
+  const entry = (id: string, staffId: string, extra: Partial<Row> = {}): Row => ({
+    id,
+    staff_id: staffId,
+    date: '2026-09-14',
+    program_id: 'p-test',
+    ensemble_id: null,
+    activity: 'teaching',
+    hours: 2,
+    status: 'draft',
+    approved_by: null,
+    approved_at: null,
+    sent_back_by: null,
+    sent_back_at: null,
+    sent_back_reason: null,
+    ...extra,
+  });
+  const logged = (id: string, entryId: string, who: string): Row => ({
+    id,
+    subject_kind: 'time-entry',
+    subject_id: entryId,
+    at: '2026-09-14T17:00:00+00:00',
+    who_id: who,
+    who: null,
+    text: 'Logged 2 hours',
+    kind: 'logged',
+    detail: null,
+  });
+
+  /** Staff of three roles with their logins, written as postgres, around the bypass. */
+  beforeEach(async () => {
+    await client.query('reset role');
+    await client.query(
+      `insert into auth.users (id, email) select id::uuid, id || '@example.org'
+         from unnest($1::text[]) id`,
+      [Object.values(USERS)],
+    );
+    await client.query(
+      `insert into public.staff (id, name, title, role, teaches) values
+         ('s-dir', 'Dina', 'Director', 'director', false),
+         ('s-tea', 'Theo', 'Teaching artist', 'teacher', true),
+         ('s-oth', 'Omar', 'Teaching artist', 'teacher', true);
+       insert into public.programs (id, name, short, in_school) values ('p-test', 'Test', 'T', false);`,
+    );
+    await client.query(
+      `insert into public.logins (auth_user_id, staff_id, invited_by, invited_at, accepted_at)
+       values ($1, 's-dir', 's-dir', now(), now()), ($2, 's-tea', 's-dir', now(), now()),
+              ($3, 's-oth', 's-dir', now(), now())`,
+      [USERS.director, USERS.teacher, USERS.other],
+    );
+  });
+
+  /** The request as PostgREST makes it: the `authenticated` role and the user's claims. */
+  async function signIn(who: Who) {
+    await client.query('reset role');
+    await client.query(`select set_config('request.jwt.claims', $1, true)`, [
+      JSON.stringify({ sub: USERS[who], role: 'authenticated' }),
+    ]);
+    await client.query('set local role authenticated');
+  }
+
+  /** Rows as stored, read past the policies. */
+  async function stored(keys: { readonly [table: string]: readonly string[] }) {
+    await client.query('reset role');
+    const rows = await read(keys);
+    await client.query('set local role authenticated');
+    return rows;
+  }
+
+  const staffRow = async (id: string) => {
+    await client.query('reset role');
+    const row = await storedStaff(id);
+    await client.query('set local role authenticated');
+    return row;
+  };
+
+  it('writes a Director’s change to a staff record, and refuses a Teacher’s with 42501', async () => {
+    const before = await staffRow('s-oth');
+    const rename = diffRows(STAFF, { staff: [before] }, { staff: [{ ...before, title: 'Lead' }] });
+
+    await signIn('teacher');
+    const error = await apply('core', rename);
+    expect(error?.code).toBe('42501');
+    expect(staleOf(error)).toBeUndefined();
+    expect((await staffRow('s-oth')).title).toBe('Teaching artist');
+
+    await signIn('director');
+    await applied('core', rename);
+    expect((await staffRow('s-oth')).title).toBe('Lead');
+  });
+
+  it('refuses a delete no policy allows (staff are archived, never deleted) as 42501', async () => {
+    const before = await staffRow('s-oth');
+    await signIn('director');
+    const error = await apply('core', diffRows(STAFF, { staff: [before] }, { staff: [] }));
+    expect(error?.code).toBe('42501');
+    expect(error?.message).toBe('You may not delete the staff row {"id": "s-oth"}.');
+    expect(await staffRow('s-oth')).toEqual(before);
+  });
+
+  it('writes a Teacher’s own hours with their activity line, parent first, in one apply', async () => {
+    await signIn('teacher');
+    const next = {
+      time_entries: [entry('te-1', 's-tea')],
+      activity: [logged('a-1', 'te-1', 's-tea')],
+    };
+    await applied('timesheets', diffRows(ENTRIES, {}, next));
+    expect(await stored(ENTRIES)).toEqual(sortedTables(next));
+
+    // Submitting it is theirs to do too.
+    const submit = diffRows(ENTRIES, next, {
+      ...next,
+      time_entries: [entry('te-1', 's-tea', { status: 'submitted' })],
+    });
+    await applied('timesheets', submit);
+    expect((await stored(ENTRIES)).time_entries[0].status).toBe('submitted');
+  });
+
+  it('refuses hours logged for someone else, and writes neither the entry nor its line', async () => {
+    await signIn('teacher');
+    const next = {
+      time_entries: [entry('te-2', 's-oth')],
+      activity: [logged('a-2', 'te-2', 's-tea')],
+    };
+    const error = await apply('timesheets', diffRows(ENTRIES, {}, next));
+    expect(error?.code).toBe('42501');
+    expect(staleOf(error)).toBeUndefined();
+    expect(await stored(ENTRIES)).toEqual({ time_entries: [], activity: [] });
+  });
+
+  it('refuses a change to an approved entry of one’s own as 42501, though it can be read', async () => {
+    const approved = entry('te-3', 's-tea', {
+      status: 'approved',
+      approved_by: 's-dir',
+      approved_at: '2026-09-15',
+    });
+    await client.query('reset role');
+    await client.query(
+      `insert into public.time_entries
+         select * from jsonb_populate_record(null::public.time_entries, $1)`,
+      [JSON.stringify(approved)],
+    );
+    await signIn('teacher');
+    const change = diffRows(
+      ENTRIES,
+      { time_entries: [approved] },
+      { time_entries: [{ ...approved, hours: 3 }] },
+    );
+    const error = await apply('timesheets', change);
+    expect(error?.code).toBe('42501');
+    expect(error?.message).toBe('You may not change the time_entries row {"id": "te-3"}.');
+    expect((await stored(ENTRIES)).time_entries[0].hours).toBe(2);
   });
 });
