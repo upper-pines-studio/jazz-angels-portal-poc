@@ -13,3 +13,6 @@ playwright/.cache/
 # Claude Code: agent worktrees and personal settings stay local; .claude/settings.json is shared.
 .claude/worktrees/
 .claude/settings.local.json
+# Supabase CLI: its local state (supabase/.gitignore lists the rest)
+supabase/.temp/
+supabase/.branches/
