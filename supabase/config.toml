@@ -245,6 +245,11 @@ otp_expiry = 3600
 subject = "You're invited to the Jazz Angels portal"
 content_path = "./supabase/templates/invite.html"
 
+# "Forgot your password?" on the sign-in screen (#160).
+[auth.email.template.recovery]
+subject = "Choose a new password for the Jazz Angels portal"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

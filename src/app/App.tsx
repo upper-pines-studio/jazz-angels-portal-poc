@@ -7,6 +7,7 @@ import { CORE_REQUIRES, mayOpenRoute, moduleRoutes } from './access';
 import { AuthProvider, useAuth } from './AuthGate';
 import { Shell } from './Shell';
 import { ToastHost, useToast } from './ToastHost';
+import ChoosePassword from './screens/ChoosePassword';
 import Dashboard from './screens/Dashboard';
 import Login from './screens/Login';
 import NoAccess from './screens/NoAccess';
@@ -100,8 +101,11 @@ function Frame() {
 }
 
 function Gate() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, ready, choosing } = useAuth();
   const refuse = React.useCallback((reason: 'no-staff' | 'archived') => signOut(reason), [signOut]);
+  // Restoring a Supabase session: a moment, then sign-in or the portal.
+  if (!ready) return null;
+  if (choosing) return <ChoosePassword />;
   if (!user) return <Login />;
   return (
     <ToastHost>
