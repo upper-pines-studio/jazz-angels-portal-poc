@@ -9,14 +9,15 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p e2e && tsc --noEmit -p db",
     "lint": "eslint src && npm run format:check",
-    "format": "prettier --write 'src/**/*.{ts,tsx}' 'e2e/**/*.ts' 'db/**/*.ts' '*.{js,ts}'",
-    "format:check": "prettier --check 'src/**/*.{ts,tsx}' 'e2e/**/*.ts' 'db/**/*.ts' '*.{js,ts}'",
+    "format": "prettier --write 'src/**/*.{ts,tsx}' 'e2e/**/*.ts' 'db/**/*.ts' 'supabase/functions/**/*.ts' '*.{js,ts}'",
+    "format:check": "prettier --check 'src/**/*.{ts,tsx}' 'e2e/**/*.ts' 'db/**/*.ts' 'supabase/functions/**/*.ts' '*.{js,ts}'",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:db": "supabase db reset && supabase test db db/policies && vitest run --config vitest.db.config.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
     "date-fns": "^4.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

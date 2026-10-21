@@ -176,7 +176,7 @@ erDiagram
   }
   activity {
     text id PK
-    text subject_kind "grant, funder, time-entry; later student, ensemble, program, project"
+    text subject_kind "grant, funder, time-entry, staff (a sign-in, #157); later student, ensemble, program, project"
     text subject_id
     timestamptz at
     text who_id FK "null; staff"
@@ -675,6 +675,19 @@ change, is left to triggers (#155, "Triggers for what a row policy cannot expres
 Operations, the closed roll, which columns a Teacher or a sync may change, and the "by" columns.
 The migration is `supabase/migrations/*_row_rules.sql`; `db/policies/row-rules.test.sql` signs in
 as each role, an archived person and a user with no login, and reads and writes every table.
+
+**Invitations, as built (#157).** `supabase/migrations/*_invitations.sql` and the `invite-staff`
+Edge Function. The function checks 0001's rules for the caller and the record, sends Supabase's
+invitation email, and calls `public.record_invitation(auth_user_id, staff_id, invited_by)`, which
+inserts the `logins` row (`invited_at` now) and an `activity` row with subject kind `staff`,
+`subject_id` the invited record, `who_id` the sender and `detail.event` `invited`. Only
+`service_role` (the secret key) may execute it. A trigger on `auth.users`
+(`private.accept_invitation`) sets `accepted_at` the first time `last_sign_in_at` is set for a
+user whose login is not yet accepted (following the invitation's link signs them in), and writes
+a second `staff` line, `who_id` the person and `detail.event` `accepted`. A `staff` line is read by
+whoever reads `logins` (Admin, Director) and written by nobody signed in. `staff.email` is
+required for a login (a trigger on `logins` insert) and cannot change while one exists (a trigger
+on `staff` update, refused with a sentence); changing a signed-in person's email waits.
 
 **The own-rows rules.**
 

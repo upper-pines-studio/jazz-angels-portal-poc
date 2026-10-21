@@ -582,7 +582,10 @@ describe('apply, signed in as a role', () => {
     detail: null,
   });
 
-  /** Staff of three roles with their logins, written as postgres, around the bypass. */
+  /**
+   * Staff of three roles with their logins, written as postgres, around the bypass. Each has an
+   * email, which a login needs (#157).
+   */
   beforeEach(async () => {
     await client.query('reset role');
     await client.query(
@@ -591,10 +594,10 @@ describe('apply, signed in as a role', () => {
       [Object.values(USERS)],
     );
     await client.query(
-      `insert into public.staff (id, name, title, role, teaches) values
-         ('s-dir', 'Dina', 'Director', 'director', false),
-         ('s-tea', 'Theo', 'Teaching artist', 'teacher', true),
-         ('s-oth', 'Omar', 'Teaching artist', 'teacher', true);
+      `insert into public.staff (id, name, title, role, teaches, email) values
+         ('s-dir', 'Dina', 'Director', 'director', false, 'dina@example.org'),
+         ('s-tea', 'Theo', 'Teaching artist', 'teacher', true, 'theo@example.org'),
+         ('s-oth', 'Omar', 'Teaching artist', 'teacher', true, 'omar@example.org');
        insert into public.programs (id, name, short, in_school) values ('p-test', 'Test', 'T', false);`,
     );
     await client.query(

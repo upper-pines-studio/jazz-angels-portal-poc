@@ -6,5 +6,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['db/**/*.test.ts'],
+    // One database for every file: run them one at a time, so none reads another's rows.
+    fileParallelism: false,
   },
 });

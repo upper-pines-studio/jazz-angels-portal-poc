@@ -26,6 +26,9 @@ export {
   makeCoreSeed,
 } from './seed';
 export { DEMO_TODAY_KEY, isDemo } from './demo';
+export { browserKeyProblem, supabase, supabaseFromEnv } from './supabase';
+export type { SupabaseConfig } from './supabase';
+export * from './invitations';
 
 // Namespaced: screens go through `useStore().actions`, but Settings and the
 // tests need the raw storage helpers.

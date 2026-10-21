@@ -2,6 +2,7 @@ import React from 'react';
 import { matchPath, useLocation, useNavigate } from 'react-router';
 import { TableScroll } from '../components/TableScroll';
 import {
+  Badge,
   Button,
   Card,
   DataTable,
@@ -16,11 +17,13 @@ import { AppDialog } from '../components/AppDialog';
 import { usePageHeader } from '../Shell';
 import { ArchiveDialog, ArchivedName, ShowArchivedSwitch } from '../components/archive';
 import { useToast } from '../ToastHost';
+import { useSignIns } from '../components/signIns';
 import {
   ROLES,
   ROLE_LABELS,
   SEED_TODAY,
   dateLong,
+  dateShort,
   activeOnly,
   archivedOnly,
   dateRange,
@@ -28,6 +31,7 @@ import {
   isArchived,
   isRole,
   mayChangeStaff,
+  mayInvite,
   staffEmailProblem,
   tidyEmail,
   meetsAny,
@@ -91,6 +95,12 @@ export default function Settings() {
   // Show archived on the staff list: this card's own, so local state.
   const [showArchived, setShowArchived] = React.useState(false);
   const [archiving, setArchiving] = React.useState<StaffMember | null>(null);
+  // Sign-ins, when the portal runs on Supabase (#157); `off` in the demo.
+  const signIns = useSignIns(mayStaff);
+  const showSignIns = signIns.status === 'ready';
+  const [inviting, setInviting] = React.useState<StaffMember | null>(null);
+  const [inviteError, setInviteError] = React.useState<string | undefined>();
+  const [inviteBusy, setInviteBusy] = React.useState(false);
   const fileInput = React.useRef<HTMLInputElement>(null);
 
   usePageHeader({ title: 'Settings', subtitle: 'People, programs, modules and your data' });
@@ -125,6 +135,60 @@ export default function Settings() {
       title: `${row.name} is restored`,
       message: 'They are back on the staff list and can sign in again.',
     });
+  }
+
+  function openInvite(row: StaffMember) {
+    setInviteError(undefined);
+    setInviting(row);
+  }
+
+  async function sendInvite(row: StaffMember) {
+    setInviteBusy(true);
+    const refused = await signIns.invite(row.id);
+    setInviteBusy(false);
+    if (refused) {
+      setInviteError(refused);
+      return;
+    }
+    setInviting(null);
+    toast({
+      tone: 'success',
+      title: `Invitation sent to ${row.name}`,
+      message: `It went to ${row.email}. They choose their own password when they accept.`,
+    });
+  }
+
+  /** The Sign-in cell: what the record has, or the button to send its invitation. */
+  function signInCell(row: StaffMember) {
+    if (isArchived(row)) return null;
+    const signIn = signIns.byStaff.get(row.id);
+    if (signIn?.acceptedAt) {
+      return <Badge tone="teal">Signed in</Badge>;
+    }
+    if (signIn) {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <Badge tone="neutral">Invited</Badge>
+          <span style={MUTED_SM}>{dateShort(signIn.invitedAt)}</span>
+        </span>
+      );
+    }
+    if (mayInvite(user.role, row, signIn)) {
+      return (
+        <a
+          href="#"
+          onClick={e => {
+            e.preventDefault();
+            openInvite(row);
+          }}
+        >
+          Send invitation
+        </a>
+      );
+    }
+    if (!row.email) return <span style={MUTED_SM}>Needs an email</span>;
+    if (row.role === 'admin') return <span style={MUTED_SM}>An Admin invites</span>;
+    return null;
   }
 
   function setDemoToday(iso: string | undefined) {
@@ -223,7 +287,7 @@ export default function Settings() {
             />
           }
         >
-          <TableScroll minWidth={640}>
+          <TableScroll minWidth={showSignIns ? 820 : 640}>
             <DataTable
               rows={staffRows}
               columns={[
@@ -239,6 +303,16 @@ export default function Settings() {
                   label: 'Role',
                   render: (row: StaffMember) => ROLE_LABELS[row.role],
                 },
+                ...(showSignIns
+                  ? [
+                      {
+                        key: 'signIn',
+                        label: 'Sign-in',
+                        width: '180px',
+                        render: signInCell,
+                      },
+                    ]
+                  : []),
                 {
                   key: 'teaches',
                   label: 'Teaches',
@@ -319,6 +393,20 @@ export default function Settings() {
               ]}
             />
           </TableScroll>
+          {(signIns.status === 'signed-out' || signIns.status === 'failed') && (
+            <p
+              style={{
+                ...MUTED_SM,
+                margin: 0,
+                padding: 'var(--space-3) var(--space-4)',
+                borderTop: '1px solid var(--border-subtle)',
+              }}
+            >
+              {signIns.status === 'signed-out'
+                ? 'Who has a sign-in, and Send invitation, show here once you sign in with your email.'
+                : "Who has a sign-in couldn't be read just now. Reload the page to try again."}
+            </p>
+          )}
           {onlyYou && (
             <EmptyState
               icon={<Icon name="users" size={22} />}
@@ -620,6 +708,46 @@ export default function Settings() {
         />
       )}
 
+      {inviting && mayStaff && (
+        <AppDialog
+          open
+          busy={inviteBusy}
+          title={`Invite ${inviting.name}?`}
+          description={`We email ${inviting.email} a link to the portal. They choose their own password; nobody else sets or knows it.`}
+          onClose={() => setInviting(null)}
+          footer={
+            <>
+              <Button variant="secondary" disabled={inviteBusy} onClick={() => setInviting(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                disabled={inviteBusy}
+                onClick={() => void sendInvite(inviting)}
+              >
+                {inviteBusy ? 'Sending…' : 'Send invitation'}
+              </Button>
+            </>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            <p style={{ margin: 0, font: 'var(--type-body-sm)', color: 'var(--text-body)' }}>
+              Once they accept, they sign in as {ROLE_LABELS[inviting.role]}, which is what they may
+              see and do here. Every Admin sees the invitation, and the first sign-in, on their
+              dashboard.
+            </p>
+            {inviteError && (
+              <p
+                role="alert"
+                style={{ margin: 0, font: 'var(--type-body-sm)', color: 'var(--danger-600)' }}
+              >
+                {inviteError}
+              </p>
+            )}
+          </div>
+        </AppDialog>
+      )}
+
       {person && mayStaff && (
         <AppDialog
           open
@@ -664,10 +792,15 @@ export default function Settings() {
             <Field
               label="Email"
               error={personEmailError}
-              hint="Optional. Where their invitation will go, and the name they sign in with. Each person needs their own."
+              hint={
+                person.id && signIns.byStaff.has(person.id)
+                  ? "Their sign-in uses this address, so it can't change for now."
+                  : 'Optional. Where their invitation will go, and the name they sign in with. Each person needs their own.'
+              }
             >
               <Input
                 type="email"
+                disabled={!!person.id && signIns.byStaff.has(person.id)}
                 value={person.email}
                 placeholder="dana@example.org"
                 onChange={e => {

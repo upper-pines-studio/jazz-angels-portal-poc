@@ -75,12 +75,12 @@ async function refused(text: string, values: unknown[], sentence: string) {
   await sql('rollback to savepoint attempt');
 }
 
-/** Everything the tests stand on, written with nobody signed in. */
+/** Everything the tests stand on, written with nobody signed in. Each person has an email, which a login needs (#157). */
 async function setUp() {
   for (const u of Object.values(USERS)) {
     await sql(
-      `insert into public.staff (id, name, title, role, teaches) values ($1, $1, 'T', $2, false)`,
-      [u.staff, u.role],
+      `insert into public.staff (id, name, title, role, teaches, email) values ($1, $1, 'T', $2, false, $3)`,
+      [u.staff, u.role, `${u.staff}@example.org`],
     );
     await sql(
       `insert into auth.users (id, aud, role, email) values ($1, 'authenticated', 'authenticated', $2)`,
