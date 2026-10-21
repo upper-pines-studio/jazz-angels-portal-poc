@@ -10,12 +10,15 @@ import type { AttentionItem, StatSpec } from '../../core';
 import { MODULES } from '../../modules';
 import { mayOpen } from '../access';
 import { officeDocumentAttention } from './documents/status';
+import { useSignInLines } from '../components/signIns';
 
 /**
  * The dashboard is composed, not written: every enabled module contributes its
  * stats, its attention rows and its panels, and core arranges them. Core's one
  * contribution of its own is the office's documents that are out of date or
- * expire soon (decision 0005), added here for the roles that may open them.
+ * expire soon (decision 0005), added here for the roles that may open them,
+ * and, when the portal runs on Supabase, the invitations sent and accepted,
+ * which every Admin sees (decision 0001, "Sign-ins are by invitation").
  */
 
 /** Overdue first, then by date, then by what it is. */
@@ -186,11 +189,54 @@ export default function Dashboard() {
         </Card>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {user.role === 'admin' && <SignInsCard />}
           {panels.map((Panel, i) => (
             <Panel key={i} />
           ))}
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * The newest invitations and first sign-ins, from the activity log, for an Admin (#157). Shows
+ * only when the portal runs on Supabase and there is something to say.
+ */
+function SignInsCard() {
+  const { state } = useStore();
+  const { status, lines } = useSignInLines(true);
+  if (status !== 'ready' || lines.length === 0) return null;
+  const nameOf = (id: string | null) => state.core.staff.find(s => s.id === id)?.name ?? 'Someone';
+  return (
+    <Card title="Sign-ins" subtitle="Invitations sent and accepted, newest first">
+      <ul
+        style={{
+          listStyle: 'none',
+          margin: 0,
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-3)',
+        }}
+      >
+        {lines.map(line => (
+          <li key={line.id} style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <Icon
+              name={line.event === 'accepted' ? 'log-in' : 'mail'}
+              size={16}
+              style={{ color: 'var(--text-muted)', marginTop: 3, flexShrink: 0 }}
+            />
+            <span style={{ font: 'var(--type-body-sm)', color: 'var(--text-body)' }}>
+              <strong style={{ color: 'var(--text-strong)' }}>{nameOf(line.whoId)}</strong>{' '}
+              {line.text.charAt(0).toLowerCase() + line.text.slice(1)}.{' '}
+              <span style={{ color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                {dateShort(line.at)}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

@@ -121,7 +121,11 @@ is not offered to anyone, the Admin included, because it would delete rows (deci
     an Admin; an Admin invites them.
   - Every new sign-in shows to every Admin, with who sent the invitation: a row in the activity
     log and a line on their dashboard.
-  - A staff record needs an email for this, which it does not have today (`docs/SCHEMA.md`).
+  - A staff record needs an email for this (added in #152), and keeps it while it has a sign-in.
+  - Built for the backend in #157: the `invite-staff` Edge Function, the trigger that marks an
+    invitation accepted on the first sign-in, Settings' Send invitation, and the Admin's
+    Sign-ins card on the dashboard (`docs/SCHEMA.md`, "Invitations, as built"). A Director also
+    reads the activity lines, as they already read `logins`; only an Admin's dashboard shows them.
 - Answered by the client in October 2026, from the schema (#22, `docs/SCHEMA.md`): charging hours
   to a grant (decision [0005](0005-roadmap-items-that-shape-the-schema.md)) follows "Award,
   budget, reports", since it is grant money; a person may delete their own time entries while
