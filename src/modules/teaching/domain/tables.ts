@@ -1,5 +1,5 @@
 import type { SliceTables } from '../../../core/rows';
-import { orNull, withoutNulls } from '../../../core/rows';
+import { instantFrom, orNull, timeOfDayFrom, withoutNulls } from '../../../core/rows';
 import { addressFrom, archivedColumns, archivedFields } from '../../../core/tables';
 import type { ArchivedColumns } from '../../../core/tables';
 import type { EnsembleTone, Mark, PhotoReleaseStatus, StudentStatus, TeachingState } from './types';
@@ -177,11 +177,14 @@ export const teachingTables: SliceTables<TeachingState, TeachingTables> = {
         id: r.id,
         ensembleId: r.ensemble_id,
         date: r.date,
-        start: r.start_time,
-        end: r.end_time,
+        start: timeOfDayFrom(r.start_time),
+        end: timeOfDayFrom(r.end_time),
         venueId: r.venue_id,
         room: r.room,
-        ...withoutNulls({ rollSubmittedAt: r.roll_submitted_at, notes: r.notes }),
+        ...withoutNulls({
+          rollSubmittedAt: r.roll_submitted_at && instantFrom(r.roll_submitted_at),
+          notes: r.notes,
+        }),
       })),
       students: tables.students.map(r => {
         // A student read without their private row (someone the rule keeps it

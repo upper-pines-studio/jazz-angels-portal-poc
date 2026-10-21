@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, Route, Routes, useParams } from 'react-router';
-import { StoreProvider, useStore } from '../core';
+import { StoreProvider, portalRepository, useStore } from '../core';
 import type { ModuleRoute } from '../core';
 import { MODULES } from '../modules';
 import { CORE_REQUIRES, mayOpenRoute, moduleRoutes } from './access';
@@ -19,6 +19,9 @@ import VenueDetail from './screens/partners/VenueDetail';
 
 /** Every registered module's slice, in registry order. Core is added by the store. */
 const SLICES = MODULES.map(m => m.slice);
+
+/** On Supabase when the build is given a project and the demo is off; else this browser. */
+const REPOSITORY = portalRepository();
 
 /** The store, with a refused change and a change that could not be saved shown as toasts. */
 function Store({
@@ -41,6 +44,7 @@ function Store({
   return (
     <StoreProvider
       slices={SLICES}
+      repository={REPOSITORY}
       userId={userId}
       onUnknownUser={onUnknownUser}
       onRefused={refused}

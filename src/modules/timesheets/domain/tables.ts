@@ -1,5 +1,5 @@
 import type { SliceTables } from '../../../core/rows';
-import { groupBy, orNull, withoutNulls } from '../../../core/rows';
+import { dayFrom, groupBy, orNull, withoutNulls } from '../../../core/rows';
 import type {
   TimeEntry,
   TimeEntryEvent,
@@ -121,7 +121,7 @@ function stepFrom(row: TimeEntryActivityRow): TimeEntryEvent {
     id: row.id,
     kind: row.kind,
     whoId: row.who_id,
-    ...(detail.undated ? {} : { at: row.at }),
+    ...(detail.undated ? {} : { at: dayFrom(row.at) }),
     ...withoutNulls({ reason: detail.reason, changes: detail.changes, rebuilt: detail.rebuilt }),
   };
 }

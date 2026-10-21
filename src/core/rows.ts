@@ -139,3 +139,44 @@ export function groupBy<R extends Row>(rows: readonly R[], column: keyof R): Map
   }
   return groups;
 }
+
+/*
+ * A `timestamptz` or `time` column comes back from the database in its own
+ * form, not the one the state wrote: `2026-02-10T09:00:00+00:00` for
+ * `2026-02-10T09:00:00.000Z`, `15:00:00` for `15:00`. Each slice's `fromRows`
+ * reads such a column through the helper for the form its state keeps, so a
+ * slice loaded from the database equals the slice that was saved (#159). Each
+ * gives a value already in the state's form back unchanged, and one it cannot
+ * read as it was.
+ */
+
+/** A zone-less date and time is UTC, as the database (whose zone is UTC) stores it. */
+function utcMillis(value: string): number {
+  const zoned = /T.*(Z|[+-]\d{2}(:?\d{2})?)$/.test(value) || !value.includes('T');
+  return Date.parse(zoned ? value : `${value}Z`);
+}
+
+/** A `timestamptz` the state keeps as an ISO instant: `2026-02-10T09:00:00.000Z`. */
+export function instantFrom(value: string): string {
+  const ms = utcMillis(value);
+  return Number.isNaN(ms) ? value : new Date(ms).toISOString();
+}
+
+/** A `timestamptz` the state keeps as a day: `2026-03-01`. */
+export function dayFrom(value: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const ms = utcMillis(value);
+  return Number.isNaN(ms) ? value : new Date(ms).toISOString().slice(0, 10);
+}
+
+/** A `timestamptz` the state keeps as a zone-less day and time: `2026-09-13T08:40`. */
+export function minuteFrom(value: string): string {
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return value;
+  const ms = utcMillis(value);
+  return Number.isNaN(ms) ? value : new Date(ms).toISOString().slice(0, 16);
+}
+
+/** A `time` the state keeps as hours and minutes: `15:00`. */
+export function timeOfDayFrom(value: string): string {
+  return /^\d{2}:\d{2}:00(\.0+)?$/.test(value) ? value.slice(0, 5) : value;
+}

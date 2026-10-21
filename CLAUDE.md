@@ -8,6 +8,7 @@ per module.
 ## Commands
 - The demo switch is `VITE_DEMO` (`src/core/demo.ts`): on, the portal starts from the sample data with the demo date and Reset demo data in Settings; off, it starts empty as a new office would (decision 0004). Unset, it is on in dev and off in a production build
 - `npm run dev` — demo on, http://localhost:5181; set `PORT` to use another (`PORT=5190 npm run dev`, or `PORT=` in `.env.local`) so worktrees run side by side. `VITE_DEMO=0 npm run dev` starts empty
+- On the local Supabase (`supabase start`): `VITE_DEMO=0 VITE_SUPABASE_URL=http://127.0.0.1:54521 VITE_SUPABASE_PUBLISHABLE_KEY=<PUBLISHABLE_KEY from supabase status> npm run dev` reads and writes the database through `supabaseRepository` (#159); the API port is `[api] port` in `supabase/config.toml`. With either variable unset, or the demo on, it is localStorage as before. Until the sign-in screen (#160) a Supabase session has to be put in the browser by hand (the PR for #159 says how). Only the publishable key goes in a `VITE_` variable, never the secret one
 - `npm run build` — typecheck + vite build, demo off (empty) unless `VITE_DEMO=1 npm run build`. Netlify runs it with `VITE_DEMO = "1"` from `netlify.toml`, so the published site is the demo
 - `npm run preview` — serves the last `dist/` build on http://localhost:4173 (`npx vite preview --port 5318` for another port), to check a production build
 - `npm test` — vitest (core and module domain layers, and the dialog focus helper)
