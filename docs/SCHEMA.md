@@ -716,6 +716,15 @@ whoever reads `logins` (Admin, Director) and written by nobody signed in. `staff
 required for a login (a trigger on `logins` insert) and cannot change while one exists (a trigger
 on `staff` update, refused with a sentence); changing a signed-in person's email waits.
 
+**Who signed in, as built (#160).** `supabase/migrations/*_signed_in_staff.sql`:
+`public.signed_in_staff()` returns the caller's `staff_id` through `logins` and whether that record
+is archived, one row, or none for an account with no login. It takes no argument and asks
+`auth.uid()`, so it answers only for the caller; security definer (it reads `logins`, which only
+an Admin or a Director may) with an empty search_path, executable by `authenticated` only. The
+browser calls it after Supabase Auth accepts a password, on a restored session and on each token
+refresh, to tell decision 0001's two refusals apart, which `current_staff_id()` (null for both)
+cannot. The reset email uses `supabase/templates/recovery.html`.
+
 **The own-rows rules.**
 
 - **Own classes** (Teacher): the ensembles whose `lead_staff_id` is the person, their

@@ -7,7 +7,7 @@ import type { SignIn, SignInLine } from '../../core';
  *
  * - `off`: not on Supabase (the demo, or no project given): nothing about sign-ins shows.
  * - `signed-out`: on Supabase, but this browser has no Supabase session yet, so the database
- *   answers nothing. Signing in with an email comes with the sign-in screen (#160).
+ *   answers nothing. The sign-in screen (#160) makes the session, so this shows only if it ends.
  * - `loading`, `ready`, `failed`: reading what the session may read.
  */
 export type SignInsStatus = 'off' | 'signed-out' | 'loading' | 'ready' | 'failed';

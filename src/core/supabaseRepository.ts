@@ -5,6 +5,7 @@ import type { Repository } from './persistence';
 import { localRepository } from './repository';
 import type { Row, Tables } from './rows';
 import { supabase } from './supabase';
+import { sessionRefused } from './supabaseAuth';
 
 /**
  * The second `Repository` (decision 0009, #159): the portal's data in the
@@ -53,6 +54,15 @@ function asError(error: DatabaseError): Error {
   return new Error(error.message);
 }
 
+/**
+ * A refusal, after ending a session the database no longer takes: signing out locally tells
+ * the sign-in gate (#160), which goes back to the sign-in screen.
+ */
+async function refusal(client: SupabaseLike, error: DatabaseError): Promise<Error> {
+  if (sessionRefused(error)) await client.auth.signOut({ scope: 'local' }).catch(() => undefined);
+  return error.code === STALE_CODE ? staleFrom(error) : asError(error);
+}
+
 /** The `StaleWriteError` a `PT409` stands for, from the `{table, key, reason}` in its detail. */
 export function staleFrom(error: DatabaseError): StaleWriteError {
   let detail: Partial<StaleWrite> = {};
@@ -76,7 +86,7 @@ async function selectAll(client: SupabaseLike, table: string, key: readonly stri
     let query = client.from(table).select('*');
     for (const column of key) query = query.order(column);
     const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
-    if (error) throw asError(error);
+    if (error) throw await refusal(client, error);
     const page = (data ?? []) as Row[];
     rows.push(...page);
     if (page.length < PAGE_SIZE) return rows;
@@ -111,7 +121,7 @@ export function supabaseRepository(client: SupabaseLike): Repository {
       if (rows.length === 0) return;
       const { error } = await client.rpc('apply', { slice_id: sliceId, diff: rows });
       if (!error) return;
-      throw error.code === STALE_CODE ? staleFrom(error) : asError(error);
+      throw await refusal(client, error);
     },
   };
 }

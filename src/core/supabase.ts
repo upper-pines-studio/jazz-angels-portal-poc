@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isDemo } from './demo';
+import { arrivalFrom } from './supabaseAuth';
+import type { Arrival } from './supabaseAuth';
 
 /**
  * The portal on Supabase (decision 0009). The build is given the project's address and its
@@ -47,6 +49,7 @@ export function supabaseFromEnv(
 }
 
 let client: SupabaseClient | null | undefined;
+let arrival: Arrival = null;
 
 /** The browser's Supabase client, or null when the portal does not run on Supabase. */
 export function supabase(): SupabaseClient | null {
@@ -59,7 +62,20 @@ export function supabase(): SupabaseClient | null {
       );
     }
     const config = supabaseFromEnv(import.meta.env.VITE_SUPABASE_URL, key, isDemo());
+    // Read before the client does: it takes the session out of an emailed link's address and
+    // clears it, and only the address says whether the link was an invitation or a reset.
+    if (config && typeof location !== 'undefined')
+      arrival = arrivalFrom(location.hash, location.search);
     client = config ? createClient(config.url, config.key) : null;
   }
   return client;
+}
+
+/**
+ * How this page was reached: by an invitation's or a reset's link, by one that failed, or null
+ * (typed in, a reload, the demo). Read once, as `supabase()` makes the client.
+ */
+export function linkArrival(): Arrival {
+  supabase();
+  return arrival;
 }

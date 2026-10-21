@@ -335,6 +335,8 @@
  * Sign-in screen: a centred card on the paper page, 16px gutters on a phone.
  * ------------------------------------------------------------------------ */
 .ja-login {
+  /* Positioned so the reset dialog (AppDialog renders absolute) covers the screen. */
+  position: relative;
   min-height: 100%;
   box-sizing: border-box;
   display: flex;
@@ -378,6 +380,18 @@
   padding: var(--space-6);
 }
 .ja-login__form > button { margin-top: var(--space-2); }
+/* "Forgot your password?": a link under the button, centred. */
+.ja-login__form > button + button { align-self: center; margin-top: 0; }
+/* A session that ended, or an emailed link that did not work: said before the fields. */
+.ja-login__note {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--gold-500);
+  background: var(--neutral-50);
+  border-radius: var(--radius-sm);
+  font: var(--type-body-sm);
+  color: var(--text-body);
+}
 @media (max-width: 640px) {
   .ja-login__head { padding: var(--space-4) var(--space-5); }
   .ja-login__form { padding: var(--space-5); }

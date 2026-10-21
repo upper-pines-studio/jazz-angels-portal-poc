@@ -355,10 +355,22 @@ awaiting approval" as `info` when > 0; no panel.
 
 ### 2.4 Core screens
 
-- **Sign in** (a gate, no route of its own) — A username and password field and a Sign in button; the whole portal
+- **Sign in** (a gate, no route of its own) — A username (an email on Supabase) and password field and a Sign in button; the whole portal
   sits behind it, so nothing else renders until the check passes. Credentials are never shown on
   the page — no hint, no autofill of a real account. A wrong username or password gives one plain
   error and clears the password field.
+  - In the demo (or with no Supabase project in the build) the fields are Username and Password,
+    checked against the fixed logins in the browser (`core/auth.ts`).
+  - On Supabase (#160) the fields are Email and Password, checked by Supabase Auth; the person
+    is the staff record behind their `logins` row. An account with no login, or whose record is
+    archived, is refused with the same sentences as the demo's and signed straight out. Below
+    the button, "Forgot your password?" opens a dialog that sends Supabase's reset email ("If …
+    has a sign-in, a link to choose a new password is on its way", whether or not it has one).
+    An invitation's or a reset's link lands on **Choose a password** (Password, Password again,
+    Save password; Sign out under it) in the same card, then the portal; it asks again after a
+    reload until a password is saved. A session that ends without the person signing out comes
+    back to Sign in with a note above the fields, "You were signed out because your session
+    ended. Sign in again to carry on.", and a used or out-of-date link with its own note.
 - **Dashboard** `/` — Composed. Title "Dashboard", subtitle "Sunday, September 13 · FY27 · Fall
   session week 1". Stat row: up to four StatCards in module order (grants 2, teaching 2; timesheets'
   stat appears when a slot is free, otherwise as a footnote in the Attention header). Left column

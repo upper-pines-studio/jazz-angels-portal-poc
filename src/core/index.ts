@@ -34,9 +34,17 @@ export {
   SIGNED_URL_SECONDS,
 } from './fileContents';
 export type { FileBucket } from './fileContents';
-export { browserKeyProblem, supabase, supabaseFromEnv } from './supabase';
+export { browserKeyProblem, linkArrival, supabase, supabaseFromEnv } from './supabase';
 export type { SupabaseConfig } from './supabase';
 export * from './invitations';
+export {
+  arrivalFrom,
+  choosePassword,
+  sendPasswordReset,
+  signInWithEmail,
+  whoSignedIn,
+} from './supabaseAuth';
+export type { Arrival, AuthClient, EmailSignIn, SupabaseRefusal, Who } from './supabaseAuth';
 export { portalRepository, supabaseRepository } from './supabaseRepository';
 
 // Namespaced: screens go through `useStore().actions`, but Settings and the
