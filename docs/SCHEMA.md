@@ -786,6 +786,17 @@ submitted (the store ignores a mark then; reopening the roll is the way to chang
   ("Couldn't save the person: someone else changed it first"), loads that slice again so the
   screen shows the other person's change, and Try again makes the change afresh on top of it
   (decision 0003).
+
+  In the database this is `public.apply(slice_id text, diff jsonb)` (#156, decision 0009), run
+  as the caller (`security invoker`, so every write meets the policies and triggers). `diff` is
+  the `RowDiff` unchanged, and only the tables of the slice `slice_id` names are accepted; an
+  unknown table or column, or a key that is not the primary key, is refused (SQLSTATE `22023`).
+  Only the columns the diff names are compared, each read through its column's type, so a
+  column no slice writes (`budget_versions.added_at`) is left to the database. A row that
+  already holds what the diff writes is left alone, so a resend changes nothing. A stale row
+  raises SQLSTATE `PT409` (HTTP 409 through the API) with the `StaleWriteError` message and
+  `{"table", "key", "reason"}` as JSON in its detail; an update or delete the caller's policy
+  skips is refused as `42501`.
 - **Triggers for what a row policy cannot express.** A policy sees the old row or the new one,
   never both, so these are `before update` (or `before insert`) triggers, refusing with a
   sentence the screen can show:
