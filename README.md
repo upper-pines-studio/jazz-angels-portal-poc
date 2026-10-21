@@ -16,6 +16,16 @@ npm test         # core and domain-layer tests
 npm run build    # typecheck + production build (what Netlify runs)
 ```
 
+The database the backend will use (decision 0009) is a local Supabase, built from the migrations
+in `supabase/migrations/`. It needs Docker and the Supabase CLI; the browser build does not use it
+yet.
+
+```bash
+supabase start   # the local Supabase (ports 54521-54529, see supabase/config.toml)
+npm run test:db  # rebuild it from the migrations and check it against docs/SCHEMA.md
+supabase stop
+```
+
 ## What it does
 
 | Screen | Purpose |

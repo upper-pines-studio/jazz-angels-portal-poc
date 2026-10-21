@@ -3,7 +3,10 @@
 The tables the backend starts from, derived from the domain types each part of the portal already
 has (`src/core/types.ts`, `src/core/auth.ts`, and each module's `domain/types.ts`) and from the
 decisions in `docs/decisions/`. It is a design, not a migration: no SQL. The product is Postgres on Supabase, with Supabase sign-in
-and Supabase Storage for file contents (decision 0009); the migrations are built from this.
+and Supabase Storage for file contents (decision 0009); the migrations in `supabase/migrations/`
+are built from this, one per diagram (#153), and `npm run test:db` checks the database they build
+against the diagrams: the same tables and columns, each column's type, and `null` exactly where a
+diagram says so. A change to a diagram comes with a migration.
 Where a table differs from its type, the table says why; no type in `src/` changes for it. If a
 type turns out to be wrong for a table, file an issue rather than bend the table.
 
@@ -334,7 +337,7 @@ erDiagram
     text phase
     text title
     int offset_days "negative is before"
-    text anchor "a grant date column"
+    text anchor "a grant date, as the type names it: startBy | loiDue | applicationDue | submitted | decisionExpected | decided | periodStart | periodEnd"
     int sort_order
   }
 

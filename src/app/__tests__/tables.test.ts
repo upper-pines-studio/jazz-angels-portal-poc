@@ -3,6 +3,7 @@ import schemaText from '../../../docs/SCHEMA.md?raw';
 import { coreSlice } from '../../core';
 import type { PortalSlice } from '../../core/repository';
 import { MODULES } from '../../modules';
+import { schemaTables } from './schemaDoc';
 
 /**
  * The slices' row mappings against `docs/SCHEMA.md` (#121): every table the
@@ -10,36 +11,6 @@ import { MODULES } from '../../modules';
  * column a slice writes is one the schema draws. Read from the document itself,
  * so a table or column added to one and not the other fails here.
  */
-
-/**
- * The tables in SCHEMA.md's diagrams, each with its columns, and the columns
- * marked nullable (`table.column`): a note that starts with "null", as
- * Conventions says.
- */
-function schemaTables(text: string): {
-  tables: Map<string, string[]>;
-  nullable: Set<string>;
-} {
-  const tables = new Map<string, string[]>();
-  const nullable = new Set<string>();
-  let table: string | undefined;
-  for (const line of text.split('\n')) {
-    const open = /^ {2}(\w+) \{$/.exec(line);
-    if (open) {
-      table = open[1];
-      tables.set(table, []);
-    } else if (/^ {2}\}$/.test(line)) {
-      table = undefined;
-    } else if (table) {
-      const column = /^ {4}\S+ (\w+)[^"]*(?:"([^"]*)")?/.exec(line);
-      if (column) {
-        tables.get(table)?.push(column[1]);
-        if (/^null\b/.test(column[2] ?? '')) nullable.add(`${table}.${column[1]}`);
-      }
-    }
-  }
-  return { tables, nullable };
-}
 
 /**
  * The columns SCHEMA.md says the database sets, from its "Who did it" and
