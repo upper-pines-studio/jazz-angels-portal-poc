@@ -652,6 +652,33 @@ The bucket follows the row: whoever may read the row may read its object, and wh
 the row may add its object. The browser build keeps only the facts (a known gap,
 `docs/FEATURES.md`).
 
+### Buckets and object names (#158)
+
+| Bucket | Object name | Row |
+|---|---|---|
+| `grant-files` | `<grant_files.id>` | `grant_files` |
+| `office-documents` | `<office_document_versions.id>` | `office_document_versions` |
+
+Both are private (never public), hold at most 25 MiB an object, and take `application/pdf`,
+`image/jpeg`, `image/png`, `image/heic` and `image/heif`, the `FileFormat`s. The name is the id
+alone: no folder, no extension (a name that is not a row's id is refused). The browser writes the
+row first, then uploads to `<bucket>/<id>`, and opens it by the same name; the file's display name
+and format live on the row.
+
+The rules on `storage.objects` ask the row tables, as the caller, so the row policies decide and
+no role is named:
+
+- **Read** (both buckets): the row is visible to the caller.
+- **Grant files, add, replace, delete**: the caller can update the row, tested with
+  `select ... for update` on it, so a grant's own file and an expense's backup follow the row's
+  update rule. Insert, select and update are all given, so an upsert works. An object is deleted
+  while its row still exists; deleting the row first leaves the object for a later clean-up.
+- **Office document versions**: the object is added once, by the person who added the row (the
+  row's insert policy limits that to the money roles). There is no update or delete rule, so a
+  version's object is never overwritten or deleted.
+
+An archived person or a user with no login reads and writes nothing, as in the tables.
+
 ## Row-level security
 
 Decision 0001 becomes the database's rules: the screens hide what the database would refuse
