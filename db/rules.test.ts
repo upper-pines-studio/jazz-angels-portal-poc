@@ -459,6 +459,8 @@ describe('the closed roll (#155)', () => {
          ('att-open', 'm-open', 'st', 'present'), ('att-closed', 'm-closed', 'st', 'present')`,
     );
     await sql(`update public.class_meetings set roll_submitted_at = now() where id = 'm-closed'`);
+    // The roll was closed by an earlier change: what a new transaction would see.
+    await sql(`select set_config('ja.rolls_closed_now', '', true)`);
     await signIn('teacher');
   });
 
@@ -479,6 +481,18 @@ describe('the closed roll (#155)', () => {
     // Nor moved onto, or off, a closed roll.
     await refused(
       `update public.attendance set meeting_id = 'm-closed' where id = 'att-open'`,
+      [],
+      CLOSED,
+    );
+  });
+
+  it('takes marks in the same change that closes the roll, as Submit roll call sends them', async () => {
+    await sql(`update public.class_meetings set roll_submitted_at = now() where id = 'm-open'`);
+    await sql(`insert into public.attendance values ('att-4', 'm-open', 'st2', 'late')`);
+    await sql(`update public.attendance set mark = 'absent' where id = 'att-open'`);
+    // A roll closed earlier stays closed in the same transaction.
+    await refused(
+      `insert into public.attendance values ('att-5', 'm-closed', 'st2', 'absent')`,
       [],
       CLOSED,
     );

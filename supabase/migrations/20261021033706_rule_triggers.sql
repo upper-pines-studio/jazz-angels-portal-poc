@@ -365,19 +365,58 @@ create trigger b_payment_delete_rule before delete on public.payments
 
 -- A mark is written only while its meeting's roll is open: the old meeting's and the new one's
 -- on a change. The store has no sentence (`setMark` does nothing on a closed roll); this one is
--- its comment's. Submit roll call inserts the last marks and closes the roll in one change, so
--- the apply (#156) writes the marks before it updates the meeting.
-create or replace function private.attendance_roll_rule()
+-- its comment's.
+--
+-- Submit roll call is one change: the last marks and the closed roll together, saved or not at
+-- all (`submitRollCall`). `apply` (#156) writes parents first, so the meeting is closed before
+-- its marks are written. A roll closed in this same transaction is therefore still open to
+-- marks until the transaction ends: `private.note_roll_closed` keeps the ids of the meetings
+-- closed (or added already closed) in it, in a setting local to the transaction (rolled back
+-- with a savepoint, gone at commit). A roll closed by an earlier change takes no marks. The
+-- setting is only a way to let more marks in during the closing change: the REST API cannot
+-- set it, since nothing it exposes calls `set_config`.
+create or replace function private.note_roll_closed()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
 begin
+  if new.roll_submitted_at is null
+     or (tg_op = 'UPDATE' and old.roll_submitted_at is not null) then
+    return null;
+  end if;
+  perform set_config(
+    'ja.rolls_closed_now',
+    (coalesce(nullif(current_setting('ja.rolls_closed_now', true), ''), '[]')::jsonb
+      || to_jsonb(new.id))::text,
+    true
+  );
+  return null;
+end;
+$$;
+revoke execute on function private.note_roll_closed() from public, anon;
+grant execute on function private.note_roll_closed() to authenticated;
+
+create trigger note_roll_closed after insert or update of roll_submitted_at
+  on public.class_meetings
+  for each row execute function private.note_roll_closed();
+
+create or replace function private.attendance_roll_rule()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  closed_now jsonb :=
+    coalesce(nullif(current_setting('ja.rolls_closed_now', true), ''), '[]')::jsonb;
+begin
   if exists (
     select 1
       from public.class_meetings m
      where m.roll_submitted_at is not null
+       and not closed_now ? m.id
        and m.id in (
          case when tg_op <> 'INSERT' then old.meeting_id end,
          case when tg_op <> 'DELETE' then new.meeting_id end

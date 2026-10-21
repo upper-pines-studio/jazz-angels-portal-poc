@@ -489,19 +489,19 @@ describe('apply, the diff it accepts', () => {
         ['teaching', SLICES.teaching, teachingSeed.makeSeed()],
         ['timesheets', SLICES.timesheets, timesheetsSeed.makeSeed()],
       ];
-      const diffs = slices.map(
-        ([sliceId, tables, seed]) =>
-          [sliceId, diffRows(tables.keys, {}, tables.toRows(seed as never))] as const,
-      );
-      // `budget_versions.added_by` is the database's to set (SCHEMA.md, "Who did it"), by a
-      // trigger that comes in #155; until then a stand-in, for this transaction only.
-      await client.query('reset role');
-      await client.query(`
-      create function pg_temp.added_by() returns trigger language plpgsql as $$
-      begin new.added_by := coalesce(new.added_by, 's-barry'); return new; end $$;
-      create trigger zz_added_by before insert on public.budget_versions
-        for each row execute function pg_temp.added_by();`);
-      await client.query('set local role service_role');
+      // A budget version's `added_by` is the database's to set for a signed-in change (SCHEMA.md,
+      // "Who did it", #155). These go in as `service_role`, nobody signed in, so they say who,
+      // as the switch-over will.
+      const diffs = slices.map(([sliceId, tables, seed]) => {
+        const all = tables.toRows(seed as never);
+        const rows = all.budget_versions
+          ? {
+              ...all,
+              budget_versions: all.budget_versions.map(v => ({ ...v, added_by: 's-barry' })),
+            }
+          : all;
+        return [sliceId, diffRows(tables.keys, {}, rows)] as const;
+      });
       for (const [sliceId, diff] of diffs) await applied(sliceId, diff);
       const everything = async () => {
         const out: Tables[] = [];

@@ -827,8 +827,10 @@ submitted (the store ignores a mark then; reopening the roll is the way to chang
   `quickbooks_connection.connected` or `company`; a Teacher changes only `roll_submitted_at`
   and `notes` on a meeting; nobody signed in changes a transaction's QuickBooks columns. A
   refusal of who may do it is errcode 42501, one of the row's state 23514; either way the
-  message is the store's sentence. The closed roll means `apply` (#156) writes Submit roll
-  call's marks before it closes the meeting.
+  message is the store's sentence. `apply` (#156) writes parents first, so Submit roll call
+  closes the meeting before its marks are written: a roll closed in the same transaction (or a
+  meeting added already closed) still takes marks until it commits, and one closed by an
+  earlier change takes none.
 - **Sessions on one line never overlap (decision 0007, #83).** A term's line is its `program_id`,
   with null (a session for all programs) treated as one value of its own. Two current terms on
   one line may not share a day; terms on different lines may. An archived term counts toward no
