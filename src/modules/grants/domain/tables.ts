@@ -1,5 +1,5 @@
 import type { SliceTables } from '../../../core/rows';
-import { groupBy, orNull, withoutNulls } from '../../../core/rows';
+import { groupBy, instantFrom, minuteFrom, orNull, withoutNulls } from '../../../core/rows';
 import { archivedColumns, archivedFields } from '../../../core/tables';
 import type { ArchivedColumns } from '../../../core/tables';
 import type { FileFormat, FundingTarget } from '../../../core/types';
@@ -674,7 +674,7 @@ export const grantsTables: SliceTables<GrantsState, GrantsTables> = {
         .map(r => ({
           id: r.id,
           grantId: r.subject_id,
-          at: r.at,
+          at: instantFrom(r.at),
           text: r.text,
           ...withoutNulls({ whoId: r.who_id, who: r.who }),
         })),
@@ -694,7 +694,7 @@ export const grantsTables: SliceTables<GrantsState, GrantsTables> = {
         ? {
             connected: qb.connected,
             company: qb.company ?? '',
-            lastSyncedAt: qb.last_synced_at ?? '',
+            lastSyncedAt: qb.last_synced_at ? minuteFrom(qb.last_synced_at) : '',
           }
         : fallback.quickbooks,
       accounts: tables.qb_accounts.map(r => ({ code: r.code, name: r.name })),

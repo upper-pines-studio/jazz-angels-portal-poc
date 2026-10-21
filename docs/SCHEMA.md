@@ -15,7 +15,7 @@ type turns out to be wrong for a table, file an issue rather than bend the table
 - **Money is integer dollars and dates are ISO**, as everywhere in the portal: every amount is an
   `int` of whole US dollars, every date a `date` (`YYYY-MM-DD`). The few instants are
   `timestamptz`: an activity row's `at`, a roll call's `roll_submitted_at`, the last QuickBooks
-  sync. Hours are `numeric(5,2)` in quarter-hour steps; a class's start and end are `time`.
+  sync. Hours are `numeric(5,2)` in quarter-hour steps; a class's start and end are `time`. Read back, an instant or a time comes in the database's own form (`2026-02-10T09:00:00+00:00`, `15:00:00`); each slice's `fromRows` reads it back into the form its state keeps (`instantFrom`, `dayFrom`, `minuteFrom`, `timeOfDayFrom` in `src/core/rows.ts`, #159). A zone-less value the state keeps, such as the last QuickBooks sync, is stored as UTC.
 - **Names.** Tables and columns are `snake_case` of the type's fields: `Grant.amountAwarded` is
   `grants.amount_awarded`, `archivedById` is `archived_by`.
 - **Ids** are `text`, as today. The seeded ids stay (`studio-sessions`; Operations keeps
