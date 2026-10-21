@@ -26,6 +26,7 @@ export type StaffRow = ArchivedColumns & {
   title: string;
   role: Role;
   teaches: boolean;
+  email: string | null;
 };
 
 export type ProgramRow = ArchivedColumns & {
@@ -148,6 +149,7 @@ export const coreTables: SliceTables<CoreState, CoreTables> = {
         title: s.title,
         role: s.role,
         teaches: s.teaches,
+        email: s.email ?? null,
         ...archivedColumns(s),
       })),
       programs: state.programs.map(p => ({
@@ -237,6 +239,7 @@ export const coreTables: SliceTables<CoreState, CoreTables> = {
         title: r.title,
         role: r.role,
         teaches: r.teaches,
+        ...(r.email === null ? {} : { email: r.email }),
         ...archivedFields(r),
       })),
       programs: tables.programs.map(r => ({

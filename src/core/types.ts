@@ -39,6 +39,8 @@ export interface StaffMember extends Archivable {
   role: Role;
   /** Leads ensembles and logs teaching hours. */
   teaches: boolean;
+  /** Where an invitation goes, and later the sign-in name. Optional; stored lower-case, unique among current staff. */
+  email?: string;
 }
 
 /** The person signed in, as every slice action sees them. */

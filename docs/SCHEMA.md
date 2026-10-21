@@ -85,7 +85,7 @@ erDiagram
     text title
     text role "admin | director | office-manager | bookkeeper | teacher | assistant | read-only"
     bool teaches
-    text email "null; required once the record has a login; where the invitation goes (not on the type yet)"
+    text email "null; required once the record has a login; where the invitation goes; stored lower-case, unique among current staff"
     date archived_at "null"
     text archived_by FK "null; staff"
   }
