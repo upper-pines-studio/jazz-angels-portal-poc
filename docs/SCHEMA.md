@@ -661,6 +661,21 @@ for an archived person, who is shut out at once (decision 0009). Below, a role i
 table's own words; "Read" is any of View, View all, Edit, Yes, Any class, Own, Own classes;
 "Write" is Edit, Yes, Any class, Own, Own classes.
 
+**As built (#154).** The two functions are `private.current_staff_id()` and
+`private.current_role()`, in a schema the REST API does not expose, executable only by
+`authenticated`; nothing in the token (`user_metadata`) is read. Every table has one policy per
+command, all `to authenticated`, and each names its roles: "everyone signed in" means
+`current_role()` is not null, so an archived person or a user with no `logins` row reads nothing.
+`anon` is granted nothing, and nobody signed in may truncate. "Write" means insert and update; a
+delete policy exists only where a row may be deleted (above, "Archive, and no cascading
+deletes"): none on the eleven archivable tables, the singletons, `transactions`, `qb_accounts`,
+`qb_classes`, `office_document_versions` or `activity`. `logins` has no write policy: only the
+invitation writes it, with the secret key (#157). What a policy cannot see, the row before the
+change, is left to triggers (#155): the moves between statuses, nobody changing their own role,
+Operations, the closed roll, which columns a Teacher or a sync may change, and the "by" columns.
+The migration is `supabase/migrations/*_row_rules.sql`; `db/policies/row-rules.test.sql` signs in
+as each role, an archived person and a user with no login, and reads and writes every table.
+
 **The own-rows rules.**
 
 - **Own classes** (Teacher): the ensembles whose `lead_staff_id` is the person, their

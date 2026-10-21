@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:db": "supabase db reset && vitest run --config vitest.db.config.ts"
+    "test:db": "supabase db reset && supabase test db db/policies && vitest run --config vitest.db.config.ts"
   },
   "dependencies": {
     "date-fns": "^4.1.0",
