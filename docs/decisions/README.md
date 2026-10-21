@@ -14,3 +14,4 @@ change; do not leave a stale one behind.
 | [0006](0006-programs-projects-and-shares.md) | Programs, projects and how a grant's money is shared | Decided, spending by program open |
 | [0007](0007-sessions-per-program.md) | Sessions for one program never overlap; each program has its own current session | Decided |
 | [0008](0008-backend-repository-contract.md) | How the backend Repository writes rows: the apply payload, cleared fields, import and reset, id format | Decided |
+| [0009](0009-backend-on-supabase.md) | The backend is Postgres on Supabase, with Supabase sign-in and file storage | Decided; email service, plan and region open |

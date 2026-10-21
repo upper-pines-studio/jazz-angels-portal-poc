@@ -2,7 +2,8 @@
 
 The tables the backend starts from, derived from the domain types each part of the portal already
 has (`src/core/types.ts`, `src/core/auth.ts`, and each module's `domain/types.ts`) and from the
-decisions in `docs/decisions/`. It is a design, not a migration: no SQL, no product chosen (#22).
+decisions in `docs/decisions/`. It is a design, not a migration: no SQL. The product is Postgres on Supabase, with Supabase sign-in
+and Supabase Storage for file contents (decision 0009); the migrations are built from this.
 Where a table differs from its type, the table says why; no type in `src/` changes for it. If a
 type turns out to be wrong for a table, file an issue rather than bend the table.
 
@@ -84,14 +85,13 @@ erDiagram
     text title
     text role "admin | director | office-manager | bookkeeper | teacher | assistant | read-only"
     bool teaches
-    text email "null; where a sign-in invitation goes (not on the type yet)"
+    text email "null; required once the record has a login; where the invitation goes (not on the type yet)"
     date archived_at "null"
     text archived_by FK "null; staff"
   }
   logins {
-    text username PK "lowercase"
-    text staff_id FK
-    uuid auth_user_id UK "null until accepted; the auth provider's user, credentials live there"
+    uuid auth_user_id PK "the Supabase user (auth.users), made by the invitation; the email and password live there"
+    text staff_id FK,UK "one sign-in per person"
     text invited_by FK "staff"
     timestamptz invited_at
     timestamptz accepted_at "null"
@@ -183,7 +183,7 @@ erDiagram
     jsonb detail "null; a step's reason, changed fields, rebuilt and undated flags"
   }
 
-  staff ||--o{ logins : "signs in as"
+  staff ||--o| logins : "signs in as"
   staff ||--o{ logins : "invited"
   programs ||--o{ program_budgets : "costs, per year"
   programs ||--o{ projects : "has"
@@ -627,7 +627,8 @@ same change, with its stored contents; that is the change doing it, not a cascad
 
 ## Files
 
-A file's contents are never a column. They live in a storage bucket, keyed by the row's id:
+A file's contents are never a column. They live in a private Supabase Storage bucket (decision
+0009), one for grant files and one for office document versions, keyed by the row's id:
 
 - **`grant_files`**: the award letter, a signed agreement, and the backup (receipt, invoice,
   timesheet) for one expense. The table keeps what `GrantFile` has: the file's facts (core's
@@ -651,8 +652,9 @@ the row may add its object. The browser build keeps only the facts (a known gap,
 ## Row-level security
 
 Decision 0001 becomes the database's rules: the screens hide what the database would refuse
-anyway. Every request carries the signed-in person's staff id and their `staff.role`; an archived
-person cannot sign in. Below, a role is in a cell when the 0001 table gives it that, in the
+anyway. Every request carries the signed-in person's Supabase user; `current_staff_id()` and
+`current_role()` turn it into their staff id and `staff.role` through `logins`, and return nothing
+for an archived person, who is shut out at once (decision 0009). Below, a role is in a cell when the 0001 table gives it that, in the
 table's own words; "Read" is any of View, View all, Edit, Yes, Any class, Own, Own classes;
 "Write" is Edit, Yes, Any class, Own, Own classes.
 
