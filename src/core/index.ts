@@ -26,6 +26,14 @@ export {
   makeCoreSeed,
 } from './seed';
 export { DEMO_TODAY_KEY, isDemo } from './demo';
+export {
+  filesOnSupabase,
+  removeContents,
+  signedUrl,
+  uploadContents,
+  SIGNED_URL_SECONDS,
+} from './fileContents';
+export type { FileBucket } from './fileContents';
 export { browserKeyProblem, supabase, supabaseFromEnv } from './supabase';
 export type { SupabaseConfig } from './supabase';
 export * from './invitations';

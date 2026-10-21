@@ -3,9 +3,9 @@ import { dateLong, money, staffById, useStore } from '../../../../core';
 import {
   PaperRules,
   StoredFileDialog,
-  downloadStoredFile,
-  fileUrl,
   useAddedLine,
+  useDownloadStoredFile,
+  useFileSource,
 } from '../../../../app/components/files';
 import { funderById, grantById } from '../../domain';
 import type { GrantFile, GrantFileFormat, GrantFileKind } from '../../domain';
@@ -26,9 +26,10 @@ export {
   PageTurner,
   describeFile,
   fileFacts,
-  fileUrl,
   forgetFile,
   rememberFile,
+  useKeepFile,
+  useRemoveContents,
 } from '../../../../app/components/files';
 
 export const FILE_KIND_LABEL: Record<GrantFileKind, string> = {
@@ -64,7 +65,11 @@ export function FilePaper({
   style?: React.CSSProperties;
 }) {
   const { state } = useStore();
-  const url = fileUrl(file.id);
+  const { url } = useFileSource(
+    file.id,
+    'grant-files',
+    file.format === 'jpg' || file.format === 'png',
+  );
   const grant = grantById(state, file.grantId);
   const funder = grant && funderById(state, grant.funderId);
   const expense = file.expenseId
@@ -197,9 +202,16 @@ export function useUploadedLine(file: GrantFile, verb = 'Uploaded'): string {
 // Open and download
 // ---------------------------------------------------------------------------
 
-/** Save a stored file: itself when added this session, else a note of what the portal holds. */
-export function downloadFile(file: GrantFile) {
-  downloadStoredFile(file.id, file, file.uploadedAt);
+/**
+ * Save a stored file: itself when added this session or kept on Supabase, else a note of what the
+ * portal holds. `const download = useDownloadFile(); download(file)`.
+ */
+export function useDownloadFile() {
+  const download = useDownloadStoredFile('grant-files');
+  return React.useCallback(
+    (file: GrantFile) => download(file.id, file, file.uploadedAt),
+    [download],
+  );
 }
 
 /** The file, a page at a time, with what the portal knows about it alongside. */
@@ -217,6 +229,7 @@ export function FileViewerDialog({
     <StoredFileDialog
       id={file.id}
       file={file}
+      bucket="grant-files"
       kindLabel={FILE_KIND_LABEL[file.kind]}
       addedLine={uploaded}
       storedOn={file.uploadedAt}

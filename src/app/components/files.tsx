@@ -1,8 +1,18 @@
 import React from 'react';
 import { Button, Icon, IconButton } from '../../design-system';
+import { useToast } from '../ToastHost';
 import { AppDialog } from './AppDialog';
-import { dateLong, fileSize, staffById, useStore } from '../../core';
-import type { FileFacts, FileFormat } from '../../core';
+import {
+  dateLong,
+  fileSize,
+  filesOnSupabase,
+  removeContents,
+  signedUrl,
+  staffById,
+  uploadContents,
+  useStore,
+} from '../../core';
+import type { FileBucket, FileFacts, FileFormat } from '../../core';
 import { KV } from './badges';
 import './files.css';
 
@@ -11,7 +21,10 @@ import './files.css';
  * receipts, an office document's versions. The portal keeps what describes a
  * file (core's `FileFacts`) in the store; the bytes of a file added in this
  * session are held in memory, so it opens and downloads until the page is
- * reloaded. A seeded file has no bytes, so the portal draws a page instead:
+ * reloaded. On Supabase (#161) the bytes also go to Storage under the row's id
+ * (`useKeepFile`), and a file opens from a short-lived signed link
+ * (`useFileSource`), so it survives a reload and opens from another browser.
+ * A seeded file has no bytes, so the portal draws a page instead:
  * `PlainPaper` here, or a richer one a module draws from its own records
  * (the grants module's `FilePaper`).
  */
@@ -36,6 +49,93 @@ export function forgetFile(id: string) {
 /** The object URL of a file added in this session, or undefined for a seeded one. */
 export function fileUrl(id: string): string | undefined {
   return BLOBS.get(id)?.url;
+}
+
+/** Where a stored file's contents can be read from, for a file that may not be in memory. */
+export interface FileSource {
+  /** An object URL or a signed link; undefined when there is none (yet, or at all). */
+  url?: string;
+  /** Why there is no link, in a plain sentence: the rules refused it, or nothing was uploaded. */
+  error?: string;
+}
+
+/**
+ * The link to a file's contents: the object URL of one added in this session, else on Supabase a
+ * signed link to its object in `bucket`. Off Supabase, or with `enabled` false, only the former.
+ */
+export function useFileSource(id: string, bucket?: FileBucket, enabled = true): FileSource {
+  const local = fileUrl(id);
+  const remote = !local && enabled && !!bucket && filesOnSupabase();
+  const [fetched, setFetched] = React.useState<{ id: string } & FileSource>();
+  React.useEffect(() => {
+    if (!remote || !bucket) return;
+    let live = true;
+    void signedUrl(bucket, id).then(r => {
+      if (live) setFetched('url' in r ? { id, url: r.url } : { id, error: r.error });
+    });
+    return () => {
+      live = false;
+    };
+  }, [remote, bucket, id]);
+  if (local) return { url: local };
+  if (!remote || fetched?.id !== id) return {};
+  return { url: fetched.url, error: fetched.error };
+}
+
+/**
+ * Keep a picked file's contents once its row is added. In memory always; on Supabase also in
+ * Storage, after the row has saved (the bucket's rules ask the row). If the row did not save,
+ * nothing is uploaded. If the upload fails the person is told, and `onFailed` takes back what
+ * can be taken back (a grant file's row; an office document version cannot be deleted).
+ */
+export function useKeepFile(bucket: FileBucket) {
+  const { whenSaved } = useStore();
+  const toast = useToast();
+  return React.useCallback(
+    (id: string, file: File, format: FileFormat, onFailed?: () => void) => {
+      rememberFile(id, file);
+      if (!filesOnSupabase()) return;
+      void (async () => {
+        if (!(await whenSaved())) {
+          forgetFile(id);
+          return;
+        }
+        const problem = await uploadContents(bucket, id, file, format);
+        if (!problem) return;
+        forgetFile(id);
+        onFailed?.();
+        toast({
+          tone: 'info',
+          title: 'File not uploaded',
+          message: `${file.name}: ${problem}${onFailed ? ' It was not added.' : ' It was added without its contents; add the version again.'}`,
+        });
+      })();
+    },
+    [bucket, whenSaved, toast],
+  );
+}
+
+/**
+ * Remove grant files' contents from Storage before their rows go (a grant file's object can be
+ * deleted only while its row exists). `then` runs when it is safe to delete the rows: at once off
+ * Supabase, else after the objects are gone. If they cannot be removed the rows stay and the
+ * person is told.
+ */
+export function useRemoveContents() {
+  const toast = useToast();
+  return React.useCallback(
+    (ids: string[], then: () => void) => {
+      if (!filesOnSupabase() || ids.length === 0) {
+        then();
+        return;
+      }
+      void removeContents(ids).then(problem => {
+        if (problem) toast({ tone: 'info', title: 'File not removed', message: problem });
+        else then();
+      });
+    },
+    [toast],
+  );
 }
 
 export const ACCEPTED_FILES = '.pdf,.jpg,.jpeg,.png,.heic,application/pdf,image/*';
@@ -116,18 +216,21 @@ export function PaperRules({ widths }: { widths: Array<'full' | 'mid' | 'short'>
 export function PlainPaper({
   id,
   file,
+  bucket,
   title,
   page = 1,
   style,
 }: {
   id: string;
   file: FileFacts;
+  /** Where the contents live on Supabase; unset for a file that only lives in this session. */
+  bucket?: FileBucket;
   /** The heading drawn on the first page; the file name when unset. */
   title?: string;
   page?: number;
   style?: React.CSSProperties;
 }) {
-  const url = fileUrl(id);
+  const { url } = useFileSource(id, bucket, file.format === 'jpg' || file.format === 'png');
   if (url && file.format !== 'pdf' && file.format !== 'heic') {
     return (
       <div className="ja-paper" style={style}>
@@ -224,32 +327,49 @@ export function downloadText(filename: string, text: string, mime = 'text/csv;ch
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function saveLink(url: string, name: string) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 /**
- * Save a stored file. A file added in this session downloads as itself; a
- * seeded one has no bytes, so what downloads is a plain-text note of what the
- * portal holds about it.
+ * Save a stored file. A file added in this session downloads as itself; on Supabase one is
+ * fetched through a signed link, and the person is told plainly when that is refused; a seeded
+ * one has no bytes, so what downloads is a plain-text note of what the portal holds about it.
  */
-export function downloadStoredFile(id: string, file: FileFacts, storedOn: string) {
-  const url = fileUrl(id);
-  if (url) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    return;
-  }
-  downloadText(
-    `${file.name}.txt`,
-    [
-      file.name,
-      fileFacts(file),
-      `Stored ${dateLong(storedOn)}`,
-      '',
-      'This is a demo file. The portal holds its details, not its contents.',
-    ].join('\n'),
-    'text/plain;charset=utf-8',
+export function useDownloadStoredFile(bucket?: FileBucket) {
+  const toast = useToast();
+  return React.useCallback(
+    (id: string, file: FileFacts, storedOn: string) => {
+      const url = fileUrl(id);
+      if (url) {
+        saveLink(url, file.name);
+        return;
+      }
+      if (bucket && filesOnSupabase()) {
+        void signedUrl(bucket, id, { download: file.name }).then(r => {
+          if ('url' in r) saveLink(r.url, file.name);
+          else toast({ tone: 'info', title: 'File not downloaded', message: r.error });
+        });
+        return;
+      }
+      downloadText(
+        `${file.name}.txt`,
+        [
+          file.name,
+          fileFacts(file),
+          `Stored ${dateLong(storedOn)}`,
+          '',
+          'This is a demo file. The portal holds its details, not its contents.',
+        ].join('\n'),
+        'text/plain;charset=utf-8',
+      );
+    },
+    [bucket, toast],
   );
 }
 
@@ -260,6 +380,7 @@ export function downloadStoredFile(id: string, file: FileFacts, storedOn: string
 export function StoredFileDialog({
   id,
   file,
+  bucket,
   kindLabel,
   addedLine,
   storedOn,
@@ -270,6 +391,8 @@ export function StoredFileDialog({
 }: {
   id: string;
   file: FileFacts;
+  /** Where the contents live on Supabase; unset for a file that only lives in this session. */
+  bucket?: FileBucket;
   /** "Award letter", "Insurance certificate". */
   kindLabel: string;
   /** "Uploaded by Denise Moreno on May 26, 2026", from `useAddedLine`. */
@@ -283,7 +406,8 @@ export function StoredFileDialog({
   onClose: () => void;
 }) {
   const [page, setPage] = React.useState(Math.min(startPage, file.pages ?? 1));
-  const url = fileUrl(id);
+  const { url, error } = useFileSource(id, bucket);
+  const download = useDownloadStoredFile(bucket);
   const pages = file.pages ?? 1;
 
   return (
@@ -301,7 +425,7 @@ export function StoredFileDialog({
           <Button
             variant="primary"
             iconLeft={<Icon name="download" size={15} />}
-            onClick={() => downloadStoredFile(id, file, storedOn)}
+            onClick={() => download(id, file, storedOn)}
           >
             Download
           </Button>
@@ -310,7 +434,11 @@ export function StoredFileDialog({
     >
       <div className="ja-file-viewer">
         <div className="ja-file-viewer__stage">
-          {url && file.format === 'pdf' ? (
+          {error ? (
+            <p role="alert" style={{ margin: 0, color: 'var(--text-strong)' }}>
+              {error}
+            </p>
+          ) : url && file.format === 'pdf' ? (
             <iframe
               title={file.name}
               src={url}

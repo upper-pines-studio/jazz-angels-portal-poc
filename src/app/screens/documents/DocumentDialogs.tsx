@@ -11,7 +11,7 @@ import {
   officeDocumentVersionProblem,
   useStore,
 } from '../../../core';
-import type { FileFacts, OfficeDocument, OfficeDocumentKind } from '../../../core';
+import type { FileFacts, FileFormat, OfficeDocument, OfficeDocumentKind } from '../../../core';
 
 /**
  * The dialogs of Office › Documents: Add document (the document and its first
@@ -198,7 +198,7 @@ export function AddVersionDialog({
   document: OfficeDocument;
   onClose: () => void;
   /** The new version's id, and the file whose bytes to keep for this session. */
-  onAdded: (versionId: string, file: File) => void;
+  onAdded: (versionId: string, file: File, format: FileFormat) => void;
 }) {
   const { actions } = useStore();
   const toast = useToast();
@@ -217,7 +217,7 @@ export function AddVersionDialog({
       title: 'Version added',
       message: `${document.name} now shows the version added today.`,
     });
-    onAdded(versionId, picked.file);
+    onAdded(versionId, picked.file, picked.facts.format);
     onClose();
   }
 
