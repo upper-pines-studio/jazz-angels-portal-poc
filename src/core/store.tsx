@@ -31,7 +31,7 @@ import {
 } from './documents';
 import { insertRow } from './module';
 import type { ActionRules, AnyAction, ModuleSlice } from './module';
-import { OWN_ROLE_REFUSAL, can, mayChangeStaff } from './permissions';
+import { OWN_ROLE_REFUSAL, can, mayChangeStaff, refusalMessage } from './permissions';
 import type { Need, Subject } from './permissions';
 import { REPLACE, createLiveStore } from './live';
 import type { Saving } from './live';
@@ -39,7 +39,7 @@ import type { Repository } from './persistence';
 import * as repository from './repository';
 import { localRepository, UnreadableDataError } from './repository';
 import type { PortalSlice } from './repository';
-import { ROLE_LABELS, isRole } from './roles';
+import { isRole } from './roles';
 import { sliceNullsAsMissing } from './rows';
 import type { OptionalFields } from './rows';
 import { coreTables } from './tables';
@@ -585,12 +585,7 @@ export const coreSlice: ModuleSlice<CoreState, CoreDataActions> = {
 // The permission check on every action
 // ---------------------------------------------------------------------------
 
-/** "You can't do that as a Teacher." The words a refused change shows. */
-export function refusalMessage(role: Role): string {
-  const noun = role === 'read-only' ? `${ROLE_LABELS[role]} user` : ROLE_LABELS[role];
-  const article = /^[AEIOU]/.test(noun) ? 'an' : 'a';
-  return `You can't do that as ${article} ${noun}.`;
-}
+export { refusalMessage };
 
 /**
  * Wrap a slice's actions so each one runs only when its rule lets the
