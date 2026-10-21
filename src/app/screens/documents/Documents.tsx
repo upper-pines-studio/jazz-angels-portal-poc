@@ -14,9 +14,9 @@ import {
 import {
   PlainPaper,
   StoredFileDialog,
-  downloadStoredFile,
+  useDownloadStoredFile,
+  useKeepFile,
   fileFacts,
-  rememberFile,
   useAddedLine,
 } from '../../components/files';
 import {
@@ -75,6 +75,7 @@ export default function Documents() {
   // A new document's first version gets its id in the store; its bytes are
   // kept for this session once the document is there.
   const [pending, setPending] = React.useState<{ id: string; file: File } | null>(null);
+  const keep = useKeepFile('office-documents');
 
   const all = state.core.officeDocuments;
   const rows = officeDocumentsList(state, showArchived);
@@ -88,10 +89,10 @@ export default function Documents() {
     const added = officeDocumentById(state, pending.id);
     const first = added && currentVersion(added);
     if (first) {
-      rememberFile(first.id, pending.file);
+      keep(first.id, pending.file, first.format);
       setPending(null);
     }
-  }, [pending, state]);
+  }, [pending, state, keep]);
 
   usePageHeader({
     title: 'Documents',
@@ -247,7 +248,7 @@ export default function Documents() {
         <AddVersionDialog
           document={addingVersion}
           onClose={() => setAddingVersion(null)}
-          onAdded={(versionId, file) => rememberFile(versionId, file)}
+          onAdded={(versionId, file, format) => keep(versionId, file, format)}
         />
       )}
       {editing && mayEdit && (
@@ -399,6 +400,7 @@ function VersionRow({
   onOpen: () => void;
 }) {
   const { today } = useStore();
+  const download = useDownloadStoredFile('office-documents');
   const added = useAddedLine(version.addedById, version.addedAt, 'Added');
   const status = versionStatus(version, today);
   return (
@@ -416,7 +418,7 @@ function VersionRow({
           cursor: 'pointer',
         }}
       >
-        <PlainPaper id={version.id} file={version} title={documentName} />
+        <PlainPaper id={version.id} file={version} bucket="office-documents" title={documentName} />
       </button>
       <div style={{ minWidth: 0, flex: 1 }}>
         <div
@@ -447,7 +449,7 @@ function VersionRow({
             label={`Download ${version.name}`}
             variant="ghost"
             size="sm"
-            onClick={() => downloadStoredFile(version.id, version, version.addedAt)}
+            onClick={() => download(version.id, version, version.addedAt)}
           >
             <Icon name="download" size={15} />
           </IconButton>
@@ -473,11 +475,20 @@ function VersionViewer({
     <StoredFileDialog
       id={version.id}
       file={version}
+      bucket="office-documents"
       kindLabel={kindLabel}
       addedLine={added}
       storedOn={version.addedAt}
       details={<KV k="Expires" v={version.expires ? dateLong(version.expires) : 'Never'} />}
-      paper={page => <PlainPaper id={version.id} file={version} title={documentName} page={page} />}
+      paper={page => (
+        <PlainPaper
+          id={version.id}
+          file={version}
+          bucket="office-documents"
+          title={documentName}
+          page={page}
+        />
+      )}
       onClose={onClose}
     />
   );

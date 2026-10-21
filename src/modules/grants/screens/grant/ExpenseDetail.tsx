@@ -19,10 +19,11 @@ import {
   FilePaper,
   FileViewerDialog,
   describeFile,
-  downloadFile,
+  useDownloadFile,
   forgetFile,
   guessKind,
-  rememberFile,
+  useKeepFile,
+  useRemoveContents,
 } from '../money/files';
 import { useSendBack } from '../money/sendBack';
 import { fileSize } from '../../domain';
@@ -144,6 +145,8 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
   const mayEdit = allowed('award', 'edit');
   const maySendBack = mayEdit && allowed('transactions', 'edit');
   const toast = useToast();
+  const keep = useKeepFile('grant-files');
+  const removeContents = useRemoveContents();
   const [reassigning, setReassigning] = React.useState(false);
   const [confirming, setConfirming] = React.useState(false);
   // The same confirm and Undo as Send back on Transactions.
@@ -178,7 +181,7 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
         format: d.format,
         sizeKb: d.sizeKb,
       });
-      rememberFile(id, file);
+      keep(id, file, d.format, () => actions.grants.deleteFile(id));
       added.push(d.name);
     }
     if (!added.length) return;
@@ -202,16 +205,21 @@ function ExpenseCard({ grant, expense, view }: { grant: Grant; expense: Expense;
     }
   };
 
-  const deleteByHand = () => {
-    removeAll([expense.id]);
-    view.select(null);
-    actions.grants.deleteExpense(expense.id);
-    toast({
-      tone: 'success',
-      title: 'Expense deleted',
-      message: `${expense.payee}, ${money(expense.amount)}, is off ${line?.category ?? 'the budget'}.`,
-    });
-  };
+  const deleteByHand = () =>
+    // On Supabase the backup's objects go first: they can only be deleted while their rows exist.
+    removeContents(
+      state.grants.files.filter(f => f.expenseId === expense.id).map(f => f.id),
+      () => {
+        removeAll([expense.id]);
+        view.select(null);
+        actions.grants.deleteExpense(expense.id);
+        toast({
+          tone: 'success',
+          title: 'Expense deleted',
+          message: `${expense.payee}, ${money(expense.amount)}, is off ${line?.category ?? 'the budget'}.`,
+        });
+      },
+    );
 
   const partsNote =
     parts.length > 1 ? ` for ${money(tx?.amount)}, split across ${parts.length} budget lines` : '';
@@ -481,21 +489,24 @@ function FileRow({
 }) {
   const { state, actions } = useStore();
   const toast = useToast();
+  const download = useDownloadFile();
+  const removeContents = useRemoveContents();
   const [viewing, setViewing] = React.useState(false);
   const [removing, setRemoving] = React.useState(false);
   const who = staffById(state, file.uploadedById)?.name ?? 'someone';
   const kind =
     file.kind === 'receipt' && file.format !== 'pdf' ? 'Receipt photo' : FILE_KIND_LABEL[file.kind];
 
-  const remove = () => {
-    actions.grants.deleteFile(file.id);
-    forgetFile(file.id);
-    toast({
-      tone: 'success',
-      title: 'File removed',
-      message: `${file.name} is gone. ${remaining ? `${expense.payee} has ${filesLabel(remaining)} left.` : `${expense.payee} is missing its backup now.`}`,
+  const remove = () =>
+    removeContents([file.id], () => {
+      actions.grants.deleteFile(file.id);
+      forgetFile(file.id);
+      toast({
+        tone: 'success',
+        title: 'File removed',
+        message: `${file.name} is gone. ${remaining ? `${expense.payee} has ${filesLabel(remaining)} left.` : `${expense.payee} is missing its backup now.`}`,
+      });
     });
-  };
 
   return (
     <div className="ja-exp-file">
@@ -545,7 +556,7 @@ function FileRow({
               size="sm"
               iconLeft={<Icon name="download" size={13} />}
               style={TIGHT}
-              onClick={() => downloadFile(file)}
+              onClick={() => download(file)}
             >
               Download
             </Button>

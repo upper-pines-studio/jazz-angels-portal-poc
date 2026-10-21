@@ -3,7 +3,13 @@ import { Input, Select } from '../../../../design-system';
 import { useStore } from '../../../../core';
 import type { GrantFile, GrantFileKind } from '../../domain';
 import { countPdfPages } from '../../../../app/components/files';
-import { describeFile, FILE_KIND_LABEL, forgetFile, rememberFile } from '../money/files';
+import {
+  describeFile,
+  FILE_KIND_LABEL,
+  forgetFile,
+  useKeepFile,
+  useRemoveContents,
+} from '../money/files';
 
 /**
  * Pieces the Award and Documents tabs share: storing a picked file with the
@@ -28,11 +34,12 @@ export function guessGrantKind(name: string, hasLetter: boolean): GrantFileKind 
 
 /**
  * Store a picked file with a grant: check it, add it to the store, keep its
- * bytes for this session and, for a PDF, count its pages. Returns the new id
+ * bytes (in memory, and on Supabase in Storage) and, for a PDF, count its pages. Returns the new id
  * or the sentence saying why the file was refused.
  */
 export function useStoreGrantFile() {
   const { actions } = useStore();
+  const keep = useKeepFile('grant-files');
   return React.useCallback(
     (grantId: string, file: File, kind: GrantFileKind): { id: string } | { error: string } => {
       const described = describeFile(file);
@@ -45,7 +52,7 @@ export function useStoreGrantFile() {
         sizeKb: described.sizeKb,
         pages: described.format === 'pdf' ? undefined : 1,
       });
-      rememberFile(id, file);
+      keep(id, file, described.format, () => actions.grants.deleteFile(id));
       if (described.format === 'pdf') {
         void countPdfPages(file).then(pages => {
           if (pages) actions.grants.updateFile(id, { pages });
@@ -53,19 +60,22 @@ export function useStoreGrantFile() {
       }
       return { id };
     },
-    [actions],
+    [actions, keep],
   );
 }
 
 /** Remove a stored file and let go of its bytes. */
 export function useRemoveGrantFile() {
   const { actions } = useStore();
+  const removeContents = useRemoveContents();
   return React.useCallback(
-    (file: GrantFile) => {
-      actions.grants.deleteFile(file.id);
-      forgetFile(file.id);
-    },
-    [actions],
+    (file: GrantFile) =>
+      // On Supabase the object goes first: it can only be deleted while its row exists.
+      removeContents([file.id], () => {
+        actions.grants.deleteFile(file.id);
+        forgetFile(file.id);
+      }),
+    [actions, removeContents],
   );
 }
 

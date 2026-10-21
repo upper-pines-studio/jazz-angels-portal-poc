@@ -8,7 +8,7 @@ import { useToast } from '../../../../app/ToastHost';
 import { DialogFields, InlineConfirm, SectionBand } from './parts';
 import {
   describeFile,
-  downloadFile,
+  useDownloadFile,
   FileDrop,
   FilePaper,
   FileViewerDialog,
@@ -233,6 +233,7 @@ function StoredRow({
   onRemove: () => void;
 }) {
   const uploaded = useUploadedLine(file);
+  const download = useDownloadFile();
   return (
     <div className="ja-stored">
       <button
@@ -270,7 +271,7 @@ function StoredRow({
               label={`Download ${file.name}`}
               size="sm"
               variant="ghost"
-              onClick={() => downloadFile(file)}
+              onClick={() => download(file)}
             >
               <Icon name="download" size={15} />
             </IconButton>

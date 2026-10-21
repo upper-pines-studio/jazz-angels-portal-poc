@@ -20,7 +20,7 @@ import { EditRecordDialog, PaymentDialog, TermDialog } from './AwardDialogs';
 import type { PaymentValues } from './AwardDialogs';
 import {
   ACCEPTED_FILES,
-  downloadFile,
+  useDownloadFile,
   FileDrop,
   FilePaper,
   FileViewerDialog,
@@ -650,6 +650,7 @@ function LetterView({
   const [page, setPage] = React.useState(1);
   const input = React.useRef<HTMLInputElement | null>(null);
   const uploaded = useUploadedLine(letter);
+  const download = useDownloadFile();
   const pages = letter.pages ?? 1;
   const shown = Math.min(page, pages);
 
@@ -695,7 +696,7 @@ function LetterView({
           variant="secondary"
           size="sm"
           iconLeft={<Icon name="download" size={14} />}
-          onClick={() => downloadFile(letter)}
+          onClick={() => download(letter)}
         >
           Download
         </Button>
@@ -732,6 +733,7 @@ function LetterView({
 /** Another file kept with the grant, such as the signed agreement. */
 function OtherFile({ file, onOpen }: { file: GrantFile; onOpen: () => void }) {
   const uploaded = useUploadedLine(file);
+  const download = useDownloadFile();
   return (
     <div className="ja-file-row">
       <div className="ja-file-row__text">
@@ -753,7 +755,7 @@ function OtherFile({ file, onOpen }: { file: GrantFile; onOpen: () => void }) {
           label={`Download ${file.name}`}
           size="sm"
           variant="outline"
-          onClick={() => downloadFile(file)}
+          onClick={() => download(file)}
         >
           <Icon name="download" size={14} />
         </IconButton>
