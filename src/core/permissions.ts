@@ -1,4 +1,4 @@
-import { ROLES } from './roles';
+import { ROLES, ROLE_LABELS } from './roles';
 import type { Role } from './types';
 
 /**
@@ -154,6 +154,16 @@ export function mayChangeStaff(role: Role, from: Role | undefined, to: Role | un
 /** What the store says when someone tries to change their own role, Admin included. */
 export const OWN_ROLE_REFUSAL =
   "You can't change your own role. Ask someone else who manages staff.";
+
+/**
+ * "You can't do that as a Teacher." The words a refused change shows. The
+ * database's `private.role_refusal` says the same (#155).
+ */
+export function refusalMessage(role: Role): string {
+  const noun = role === 'read-only' ? `${ROLE_LABELS[role]} user` : ROLE_LABELS[role];
+  const article = /^[AEIOU]/.test(noun) ? 'an' : 'a';
+  return `You can't do that as ${article} ${noun}.`;
+}
 
 /** `can` for a `Requirement`. */
 export function meets(role: Role, requirement: Requirement): boolean {

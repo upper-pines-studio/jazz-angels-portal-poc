@@ -671,7 +671,7 @@ delete policy exists only where a row may be deleted (above, "Archive, and no ca
 deletes"): none on the eleven archivable tables, the singletons, `transactions`, `qb_accounts`,
 `qb_classes`, `office_document_versions` or `activity`. `logins` has no write policy: only the
 invitation writes it, with the secret key (#157). What a policy cannot see, the row before the
-change, is left to triggers (#155): the moves between statuses, nobody changing their own role,
+change, is left to triggers (#155, "Triggers for what a row policy cannot express" below): the moves between statuses, nobody changing their own role,
 Operations, the closed roll, which columns a Teacher or a sync may change, and the "by" columns.
 The migration is `supabase/migrations/*_row_rules.sql`; `db/policies/row-rules.test.sql` signs in
 as each role, an archived person and a user with no login, and reads and writes every table.
@@ -747,7 +747,7 @@ submitted (the store ignores a mark then; reopening the roll is the way to chang
   dates and outcome: every date, both amounts and the notes are nullable, and `brought_in_phase`
   with `brought_in_on` says it arrived mid-life. It still needs an owner, at least one program
   and a restriction, which the person entering it chooses.
-- **Who did it.** Every "by" column (`archived_by`, `assigned_by`, `approved_by`, `added_by`, `invited_by`,
+- **Who did it.** Every "by" column (`archived_by`, `assigned_by`, `approved_by`, `sent_back_by`, `added_by`, `invited_by`,
   `uploaded_by`, `charged_by`, `photo_release_recorded_by`, `activity.who_id`) is set by the
   database from the signed-in person, never sent by the screen (decision 0001: every change
   records who made it).
@@ -812,6 +812,23 @@ submitted (the store ignores a mark then; reopening the roll is the way to chang
   - **The "by" columns:** every column in "Who did it" above is overwritten with the signed-in
     person's staff id, whatever the change sent; the column in "When" above with the current
     date, on insert.
+
+  **As built (#155).** `supabase/migrations/*_rule_triggers.sql`, functions in `private`. A
+  "by" column moves with the column that dates the act (`archived_at`, `approved_at`,
+  `sent_back_at`, `assigned_at`, `added_at`, `invited_at`, `uploaded_at`, `charged_at`,
+  `activity.at`, a photo release's answer and date): set to the signed-in person when that
+  changes, null when it is cleared, kept as stored otherwise, so the value sent is never read.
+  With nobody signed in (the service role: the switch-over, the sync) rows are written as
+  sent. A time entry may also go back to draft from approved only as a send back (it sets
+  `sent_back_at` or the reason), whoever approves changes nothing of what was worked
+  (`staff_id`, `date`, `program_id`, `ensemble_id`, `activity`, `hours`), and the same row
+  sent again is never refused. Also, because #154's policies need the old row for them:
+  nobody changes their own role or archives themself; only an Admin changes
+  `quickbooks_connection.connected` or `company`; a Teacher changes only `roll_submitted_at`
+  and `notes` on a meeting; nobody signed in changes a transaction's QuickBooks columns. A
+  refusal of who may do it is errcode 42501, one of the row's state 23514; either way the
+  message is the store's sentence. The closed roll means `apply` (#156) writes Submit roll
+  call's marks before it closes the meeting.
 - **Sessions on one line never overlap (decision 0007, #83).** A term's line is its `program_id`,
   with null (a session for all programs) treated as one value of its own. Two current terms on
   one line may not share a day; terms on different lines may. An archived term counts toward no

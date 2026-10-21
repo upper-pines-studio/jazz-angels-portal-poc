@@ -335,13 +335,14 @@ select results_eq($$ select id from public.attendance $$, array['a-own'],
   'a Teacher reads only the attendance at their own classes');
 select results_eq($$ select count(*)::int from public.ensembles $$, array[2],
   'a Teacher reads the whole schedule');
+select lives_ok(
+  $$ insert into public.attendance values ('a-own-2', 'm-own', 'st-wait', 'present') $$,
+  'a Teacher marks a student at their own class');
+-- Marked before the roll closes: a closed roll takes no marks (#155).
 select results_eq(
   $$ with u as (update public.class_meetings set roll_submitted_at = now()
                  where id in ('m-own', 'm-other') returning id) select id from u $$,
   array['m-own'], 'a Teacher closes the roll on their own class only');
-select lives_ok(
-  $$ insert into public.attendance values ('a-own-2', 'm-own', 'st-wait', 'present') $$,
-  'a Teacher marks a student at their own class');
 select throws_ok(
   $$ insert into public.attendance values ('a-other-2', 'm-other', 'st-own', 'present') $$,
   '42501', null, 'a Teacher may not mark at someone else''s class');
