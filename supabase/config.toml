@@ -421,3 +421,12 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/invite-staff/deno.json"
 entrypoint = "./functions/invite-staff/index.ts"
+
+# Removes grant-file objects no row points to (#175). Called by the pg_cron job with the secret
+# key, never by a signed-in person, so the platform's JWT check is off and the function checks the
+# key itself.
+[functions.clean-grant-files]
+enabled = true
+verify_jwt = false
+import_map = "./functions/clean-grant-files/deno.json"
+entrypoint = "./functions/clean-grant-files/index.ts"

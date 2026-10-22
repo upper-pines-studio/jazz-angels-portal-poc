@@ -673,10 +673,22 @@ no role is named:
 - **Grant files, add, replace, delete**: the caller can update the row, tested with
   `select ... for update` on it, so a grant's own file and an expense's backup follow the row's
   update rule. Insert, select and update are all given, so an upsert works. An object is deleted
-  while its row still exists; deleting the row first leaves the object for a later clean-up.
+  while its row still exists; deleting the row first leaves the object for the clean-up below.
 - **Office document versions**: the object is added once, by the person who added the row (the
   row's insert policy limits that to the money roles). There is no update or delete rule, so a
   version's object is never overwritten or deleted.
+
+**Clean-up of grant-file objects (#175).** A `grant-files` object whose name is no
+`grant_files.id` (a transaction sent back, an expense removed without its backup, an upload that
+landed after its row was deleted) is removed once a day by the `clean-grant-files` Edge Function,
+when it is more than a day old: the row is saved before its bytes, so a younger object may belong
+to a row still on its way. An object with a row is never touched, and `office-documents` never.
+The function deletes through the Storage API with the secret key, which only it holds, and answers
+only a caller with that key: Storage refuses a `delete` on `storage.objects` in SQL, which would
+leave the bytes in the storage backend. The pg_cron job `clean-grant-files` (03:17 UTC) runs
+`jobs.clean_grant_files()`, which posts to the function through pg_net with the project's
+address and secret key from the Vault secrets `project_url` and `secret_key`; without both it does
+nothing. They are set per project, never in a migration (hosted: #162).
 
 An archived person or a user with no login reads and writes nothing, as in the tables.
 
