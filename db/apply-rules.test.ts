@@ -18,7 +18,8 @@ import { timesheetsSlice, makeSeed as timesheetsSeed } from '../src/modules/time
  * the row policies (#154). `apply` writes parents first (`writeOrder`), so a
  * change that closes or moves a parent and writes its children in the same
  * apply must still go through: Submit roll call above all, and submitting,
- * approving and sending back hours with their activity lines, adding a grant
+ * approving and sending back hours with their activity lines, deleting a
+ * draft with its activity lines (#174), adding a grant
  * with its first budget, assigning a transaction, and taking away an open
  * report or a payment not yet received.
  *
@@ -296,6 +297,79 @@ describe('the triggers under apply (#155, #156)', () => {
     const approve = change('timesheets', 's-albert', a => a.approveEntry(own!.id as never));
     const error = await apply('timesheets', approve);
     expect(error?.message).toBe('Nobody approves their own hours.');
+  });
+
+  it('saves the Teacher deleting their own draft, with its activity lines (#174)', async () => {
+    const own = state.timesheets.entries.find(
+      e => e.staffId === 's-albert' && e.status === 'draft' && !e.sentBackBy,
+    );
+    expect(own).toBeDefined();
+    const id = own!.id;
+    expect(
+      await asOwner(`select 1 from public.activity where subject_id = $1`, [id]),
+    ).not.toHaveLength(0);
+
+    await signIn('s-albert');
+    const remove = change('timesheets', 's-albert', a => a.deleteEntry(id as never));
+    expect(remove.map(t => t.table).sort()).toEqual(['activity', 'time_entries']);
+    await applied('timesheets', remove);
+
+    expect(await asOwner(`select 1 from public.time_entries where id = $1`, [id])).toHaveLength(0);
+    expect(await asOwner(`select 1 from public.activity where subject_id = $1`, [id])).toHaveLength(
+      0,
+    );
+  });
+
+  it('refuses deleting somebody else’s draft, or a submitted entry, through apply (#174)', async () => {
+    const albertsDraft = state.timesheets.entries.find(
+      e => e.staffId === 's-albert' && e.status === 'draft' && !e.sentBackBy,
+    )!;
+    const stays = async (id: string) => {
+      expect(await asOwner(`select 1 from public.time_entries where id = $1`, [id])).toHaveLength(
+        1,
+      );
+      expect(
+        await asOwner(`select 1 from public.activity where subject_id = $1`, [id]),
+      ).not.toHaveLength(0);
+    };
+
+    // The Office manager reads the Teacher's draft but may not delete it.
+    await signIn('s-keisha');
+    const others = change('timesheets', 's-keisha', a => a.deleteEntry(albertsDraft.id as never));
+    expect(others.length).toBeGreaterThan(0);
+    expect((await apply('timesheets', others))?.code).toBe('42501');
+    await stays(albertsDraft.id);
+
+    // Somebody else's draft the Teacher may not even read: to them it is not there, so `apply`
+    // has nothing to delete (#156), and nothing of it goes.
+    state = demo();
+    const othersDraft = state.timesheets.entries.find(
+      e => e.staffId !== 's-albert' && e.status === 'draft',
+    )!;
+    await signIn('s-albert');
+    const unseen = change('timesheets', 's-albert', a => a.deleteEntry(othersDraft.id as never));
+    expect(unseen.length).toBeGreaterThan(0);
+    await apply('timesheets', unseen);
+    await stays(othersDraft.id);
+
+    // The Teacher's own entry once submitted: the diff, made as if it were still a draft, is
+    // refused, the entry and its lines staying.
+    state = demo();
+    await signIn('s-albert');
+    await applied(
+      'timesheets',
+      change('timesheets', 's-albert', a => a.submitEntry(albertsDraft.id as never)),
+    );
+    const stale = diffSlice(
+      timesheetsSlice.tables as never,
+      state.timesheets as never,
+      {
+        ...state.timesheets,
+        entries: state.timesheets.entries.filter(e => e.id !== albertsDraft.id),
+      } as never,
+    );
+    expect((await apply('timesheets', stale))?.code).toBe('42501');
+    await stays(albertsDraft.id);
   });
 
   it('saves a new grant with its first budget version, the database setting who added it', async () => {
