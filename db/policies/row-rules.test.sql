@@ -10,7 +10,7 @@
 
 begin;
 
-select plan(914);
+select plan(923);
 
 -- Signing in as someone ---------------------------------------------------------------------------
 
@@ -456,6 +456,63 @@ select tests.sign_in('admin');
 select lives_ok(
   $$ update public.settings set fiscal_year_start_month = 1 $$, 'an Admin changes the settings');
 select tests.sign_out();
+
+-- Deleting activity lines (#174): only a draft time entry's, by its own person ----------------------
+--
+-- Each person deletes every activity line they can, and the delete is undone; the lines that went
+-- are the answer. A line for each kind of entry: own drafts (Admin, Teacher, Office assistant),
+-- a draft sent back, a submitted and an approved entry, and a Read-only person's draft.
+
+insert into public.time_entries (id, staff_id, date, program_id, activity, hours, status, sent_back_by, sent_back_at, sent_back_reason) values
+  ('te-teacher-sent-back', 'teacher', '2026-09-22', 'studio', 'Teaching', 1, 'draft', 'director', '2026-10-02', 'Wrong day'),
+  ('te-read-only-draft', 'read-only', '2026-10-06', 'studio', 'Board', 1, 'draft', null, null, null);
+insert into public.activity (id, subject_kind, subject_id, at, who_id, text, kind) values
+  ('act-admin', 'time-entry', 'te-admin-draft', now(), 'admin', 'Logged', 'logged'),
+  ('act-teacher-sent-back', 'time-entry', 'te-teacher-sent-back', now(), 'director', 'Sent back: Wrong day', 'sent-back'),
+  ('act-teacher-submitted', 'time-entry', 'te-teacher-submitted', now(), 'teacher', 'Submitted', 'submitted'),
+  ('act-teacher-approved', 'time-entry', 'te-teacher-approved', now(), 'director', 'Approved', 'approved'),
+  ('act-bookkeeper', 'time-entry', 'te-bookkeeper-submitted', now(), 'bookkeeper', 'Submitted', 'submitted'),
+  ('act-read-only', 'time-entry', 'te-read-only-draft', now(), 'read-only', 'Logged', 'logged');
+
+create function tests.activity_deletes(who text) returns text[] language plpgsql as $$
+declare
+  gone text[];
+begin
+  perform tests.sign_in(who);
+  begin
+    with d as (delete from public.activity returning id)
+    select coalesce(array_agg(id order by id), '{}') into gone from d;
+    raise exception using errcode = 'PT174', message = 'undo';
+  exception when sqlstate 'PT174' then
+    null;
+  end;
+  perform tests.sign_out();
+  return gone;
+end;
+$$;
+
+select is(tests.activity_deletes('admin'), array['act-admin'],
+  'an Admin deletes only their own draft''s lines');
+select is(tests.activity_deletes('director'), '{}'::text[],
+  'a Director deletes no activity line, not the lines of hours they approve or send back');
+select is(tests.activity_deletes('office-manager'), '{}'::text[],
+  'an Office manager deletes no activity line, not a grant''s or a funder''s');
+select is(tests.activity_deletes('bookkeeper'), '{}'::text[],
+  'a Bookkeeper does not delete their own submitted entry''s lines');
+select is(tests.activity_deletes('teacher'), array['act-teacher'],
+  'a Teacher deletes their own draft''s lines, not a sent-back, submitted or approved entry''s');
+select is(tests.activity_deletes('assistant'), array['act-assistant'],
+  'an Office assistant deletes their own draft''s lines, not a grant''s');
+select is(tests.activity_deletes('read-only'), '{}'::text[],
+  'Read-only deletes no activity line, not even their own draft''s');
+select is(tests.activity_deletes('archived'), '{}'::text[],
+  'an archived person deletes no activity line');
+select is(tests.activity_deletes('no-login'), '{}'::text[],
+  'a user with no login deletes no activity line');
+
+delete from public.activity where id in ('act-admin', 'act-teacher-sent-back', 'act-teacher-submitted',
+  'act-teacher-approved', 'act-bookkeeper', 'act-read-only');
+delete from public.time_entries where id in ('te-teacher-sent-back', 'te-read-only-draft');
 
 -- Own hours ------------------------------------------------------------------------------------------
 

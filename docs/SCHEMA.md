@@ -626,7 +626,8 @@ a budget line with no expenses, an expense, a file, an award term, a report not 
 rule, a checklist template, a grant share (Take back), a time entry while it is a draft, and a
 transaction's parts when it is sent back or reassigned. A file that backs up an expense goes with its expense, in the
 same change, with its stored contents; that is the change doing it, not a cascade.
-`office_document_versions` and `activity` are insert-only.
+`office_document_versions` is insert-only, and so is `activity`, but for a draft time entry's
+steps, which go with the draft when its person deletes it (#174).
 
 ## Files
 
@@ -696,7 +697,8 @@ command, all `to authenticated`, and each names its roles: "everyone signed in" 
 `anon` is granted nothing, and nobody signed in may truncate. "Write" means insert and update; a
 delete policy exists only where a row may be deleted (above, "Archive, and no cascading
 deletes"): none on the eleven archivable tables, the singletons, `transactions`, `qb_accounts`,
-`qb_classes`, `office_document_versions` or `activity`. `logins` has no write policy: only the
+`qb_classes` or `office_document_versions`; on `activity`, only for a draft time entry's own lines
+(#174). `logins` has no write policy: only the
 invitation writes it, with the secret key (#157). What a policy cannot see, the row before the
 change, is left to triggers (#155, "Triggers for what a row policy cannot express" below): the moves between statuses, nobody changing their own role,
 Operations, the closed roll, which columns a Teacher or a sync may change, and the "by" columns.
@@ -753,7 +755,7 @@ core's `Address`, so it becomes four columns, all four or none, as on a venue.
 | `organizations`, `venues` | Everyone signed in | Admin, Director, Office manager | Partners and venues |
 | `office_documents`, `office_document_versions` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper (versions: insert only) | Office documents |
 | `settings` | Everyone signed in | Admin | Modules, import, export |
-| `activity` | Whoever may read the subject's row; the sign-in lines (subject kind `staff`) only an Admin, not a Director (#176) | Inserted with the change it records, by whoever may make that change; never updated or deleted | The subject's row |
+| `activity` | Whoever may read the subject's row; the sign-in lines (subject kind `staff`) only an Admin, not a Director (#176) | Inserted with the change it records, by whoever may make that change; never updated. Deleted only with a draft time entry its person deletes (#174): a `time-entry` line whose entry is the caller's own (not Read-only), a draft, and never sent back. A grant's, a funder's or a sign-in's line, and the lines of a submitted, approved or sent-back entry, are never deleted | The subject's row |
 | `funders`, `grants`, `grant_programs`, `tasks`, `grant_documents`, `checklist_templates`, `checklist_template_items`, `reminder_plans`, `reminder_plan_recipients`, `reminder_defaults`, `reminder_default_recipients` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Office assistant; the award amount and a move into Awarded and after also need "Award, budget, reports" | Grants: pipeline, checklist, deadlines |
 | `payments`, `award_terms`, `reports`, `budget_versions`, `budget_lines`, `budget_line_amounts`, `budget_line_accounts`, `expenses`, `grant_targets` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper | Award, budget, reports |
 | `grant_shares` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper | Grant shares |
@@ -764,7 +766,7 @@ core's `Address`, so it becomes four columns, all four or none, as on a venue.
 | `students` | Admin, Director, Office manager, Office assistant; Teacher: own classes. Read-only: counts only, through a counting function, never the rows. Bookkeeper: none | Admin, Director, Office manager | Students: names, attendance |
 | `student_private` | Admin, Director, Office manager; Teacher: own classes. Never the Office assistant, the Bookkeeper or Read-only | Admin, Director, Office manager (whoever edits the student); `photo_release_recorded_by` is always the person writing | Guardian contact details |
 | `attendance` | Admin, Director, Office manager, Office assistant; Teacher: own classes. Read-only: counts only | Admin, Director, Office manager (any class); Teacher: own classes; none once the meeting's roll is submitted | Roll call |
-| `time_entries` | Own hours, for every role but Read-only; all rows for Admin, Director, Office manager, Bookkeeper | Insert: own hours, as a draft. Change and delete: own hours, only while a draft. Submit (draft to submitted) and recall (submitted to draft): own hours. Approve (submitted to approved): Admin, Director, Office manager, Bookkeeper, never their own. Send back (approved to draft, with `sent_back_reason` required; sets `sent_back_by` to the writer and `sent_back_at`, clears `approved_by` and `approved_at`): the same roles, never their own. Submitting clears `sent_back_reason` and keeps `sent_back_by` and `sent_back_at`. Nobody changes or deletes an approved entry; it is sent back to its person to change. Each of these writes its `activity` row (subject kind `time-entry`) in the same transaction, so an approval sent back stays on the record (#95); the history is read by whoever may read the entry | Timesheets: log hours, Timesheets: approve |
+| `time_entries` | Own hours, for every role but Read-only; all rows for Admin, Director, Office manager, Bookkeeper | Insert: own hours, as a draft. Change and delete: own hours, only while a draft; a delete takes the entry's `activity` lines with it, and a draft that was sent back is not deleted, since its lines are kept (#174). Submit (draft to submitted) and recall (submitted to draft): own hours. Approve (submitted to approved): Admin, Director, Office manager, Bookkeeper, never their own. Send back (approved to draft, with `sent_back_reason` required; sets `sent_back_by` to the writer and `sent_back_at`, clears `approved_by` and `approved_at`): the same roles, never their own. Submitting clears `sent_back_reason` and keeps `sent_back_by` and `sent_back_at`. Nobody changes or deletes an approved entry; it is sent back to its person to change. Each of these writes its `activity` row (subject kind `time-entry`) in the same transaction, so an approval sent back stays on the record (#95); the history is read by whoever may read the entry | Timesheets: log hours, Timesheets: approve |
 | `time_charges` | Admin, Director, Office manager, Bookkeeper, Office assistant, Read-only | Admin, Director, Office manager, Bookkeeper: it is grant money, as "Award, budget, reports" (0001, answered October 2026) | Award, budget, reports |
 
 The client answered the schema's questions in October 2026 (decision 0001): `time_charges`
