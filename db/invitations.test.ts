@@ -354,12 +354,12 @@ describe('who sees the sign-in lines', () => {
     return (await res.json()) as unknown[];
   };
 
-  it('every Admin, and the Director, who has "Staff and roles"', async () => {
+  it('every Admin', async () => {
     expect(await staffLines('admin')).toHaveLength(2);
-    expect(await staffLines('director')).toHaveLength(2);
   });
 
-  it('nobody else', async () => {
+  it('nobody else, not even a Director, who still invites and reads the logins', async () => {
+    expect(await staffLines('director')).toEqual([]);
     expect(await staffLines('office')).toEqual([]);
     expect(await staffLines('teacher')).toEqual([]);
   });

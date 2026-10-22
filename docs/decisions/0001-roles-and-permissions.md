@@ -120,7 +120,8 @@ is not offered to anyone, the Admin included, because it would delete rows (deci
   - Only an Admin sends the invitation for an Admin's record. A Director may still make someone
     an Admin; an Admin invites them.
   - Every new sign-in shows to every Admin, with who sent the invitation: a row in the activity
-    log and a line on their dashboard.
+    log and a line on their dashboard. Only an Admin reads these lines (#176); a Director
+    still reads the logins and sends invitations.
   - A staff record needs an email for this (added in #152), and keeps it while it has a sign-in.
   - Built for the backend in #157: the `invite-staff` Edge Function, the trigger that marks an
     invitation accepted on the first sign-in, Settings' Send invitation, and the Admin's

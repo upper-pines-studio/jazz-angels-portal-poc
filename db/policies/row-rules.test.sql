@@ -146,7 +146,8 @@ insert into public.activity (id, subject_kind, subject_id, at, who_id, text, kin
   ('act-grant', 'grant', 'g1', now(), 'admin', 'Moved to Active', null),
   ('act-funder', 'funder', 'f1', now(), 'admin', 'Called', null),
   ('act-teacher', 'time-entry', 'te-teacher-draft', now(), 'teacher', 'Logged', 'logged'),
-  ('act-assistant', 'time-entry', 'te-assistant-draft', now(), 'assistant', 'Logged', 'logged');
+  ('act-assistant', 'time-entry', 'te-assistant-draft', now(), 'assistant', 'Logged', 'logged'),
+  ('act-signin', 'staff', 'teacher', now(), 'admin', 'Invited a teacher', null);
 
 -- Nothing for anon, no truncate for anyone signed in ---------------------------------------------
 
@@ -227,7 +228,7 @@ insert into tests.expected values
   ('office_documents',           'AAAA-AA', 'AAAA---'),
   ('office_document_versions',   'AAAA-AA', '-------'),
   ('settings',                   'AAAAAAA', 'A------'),
-  ('activity',                   'AAAASSS', '-------'),
+  ('activity',                   'ASSSSSS', '-------'),
   ('funders',                    'AAAA-AA', 'AAA--A-'),
   ('grants',                     'AAAA-AA', 'AAA--A-'),
   ('grant_programs',             'AAAA-AA', 'AAA--A-'),
