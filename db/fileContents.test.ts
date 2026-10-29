@@ -13,6 +13,7 @@ import type { PortalState, Role } from '../src/core/types';
 import { grantsSlice, makeSeed as grantsSeed } from '../src/modules/grants/domain';
 import { teachingSlice, makeSeed as teachingSeed } from '../src/modules/teaching/domain';
 import { timesheetsSlice, makeSeed as timesheetsSeed } from '../src/modules/timesheets/domain';
+import { freshTables, restoreStartingRows, startingRowsOf } from './startingRows';
 
 /**
  * File contents in Storage (#161) against the local Supabase: a permitted role uploads a grant
@@ -22,7 +23,7 @@ import { timesheetsSlice, makeSeed as timesheetsSeed } from '../src/modules/time
  * removed while its row still exists, before the row is deleted.
  *
  * As in db/repository.test.ts the rows are committed (the REST API answers on its own
- * connections), so the demo goes in first and every table is emptied after.
+ * connections), so the demo goes in first and every table is left as a reset leaves it after.
  */
 
 const ROOT = new URL('..', import.meta.url);
@@ -142,16 +143,10 @@ async function addVersionRow(who: Who): Promise<string> {
 
 beforeAll(async () => {
   await db.connect();
-  const { rows: found } = await db.query<{ name: string }>(
-    `select format('public.%I', tablename) as name from pg_tables where schemaname = 'public'`,
-  );
-  for (const { name } of found) {
-    const { rows } = await db.query(`select count(*)::int as n from ${name}`);
-    if (rows[0].n > 0) throw new Error(`${name} is not empty: run \`supabase db reset\`.`);
-  }
+  const found = await freshTables(text => db.query(text));
   const { rows: objects } = await db.query(`select count(*)::int as n from storage.objects`);
   if (objects[0].n > 0) throw new Error('storage.objects is not empty: run `supabase db reset`.');
-  tables = found.map(t => t.name);
+  tables = found;
   await db.query('begin');
   await db.query('set local role service_role');
   const start = demo() as unknown as Record<string, unknown>;
@@ -162,7 +157,7 @@ beforeAll(async () => {
       : all;
     await db.query('select public.apply($1, $2::jsonb)', [
       slice.id,
-      JSON.stringify(diffRows(slice.tables.keys, {}, rows as never)),
+      JSON.stringify(diffRows(slice.tables.keys, startingRowsOf(slice.id), rows as never)),
     ]);
   }
   await db.query('commit');
@@ -185,12 +180,13 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (tables.length) {
-    // Objects go through Storage's own API; the tables are then emptied.
+    // Objects go through Storage's own API; the tables then hold only the starting rows.
     for (const bucket of ['grant-files', 'office-documents']) {
       const { data } = await admin.storage.from(bucket).list('', { limit: 1000 });
       if (data?.length) await admin.storage.from(bucket).remove(data.map(o => o.name));
     }
     await db.query(`truncate ${tables.join(', ')}`);
+    await restoreStartingRows((text, values) => db.query(text, values));
   }
   for (const id of userIds) await admin.auth.admin.deleteUser(id);
   await db.end();

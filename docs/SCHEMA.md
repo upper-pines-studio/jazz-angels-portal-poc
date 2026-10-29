@@ -806,6 +806,16 @@ submitted (the store ignores a mark then; reopening the roll is the way to chang
 
 ## Things to know when building it
 
+- **A new office's starting rows (#177, decision 0004).** A database fresh from the migrations
+  already holds what the browser's `empty()` gives a new office, but for the staff: the five
+  programs and Operations, `settings`, `reminder_defaults`, `quickbooks_connection` (not
+  connected) and the default playbook (`checklist_templates`, `checklist_template_items`). The
+  `*_starting_rows.sql` migration writes them; `db/startingRows.test.ts` checks they still match
+  `empty()`, so changing one means a new migration for the other. The staff and `logins` start
+  empty: the first Admin is invited from the Supabase dashboard, then
+  `setup.add_first_admin(email, name, title)`, run in its SQL editor, makes their staff record and
+  their login (invited by themself). It is refused once any login exists, and only the database's
+  owner may run it; everyone else is invited from Settings (#157).
 - **Missing history (decision 0004).** A grant brought in later may have only its funder, amount,
   dates and outcome: every date, both amounts and the notes are nullable, and `brought_in_phase`
   with `brought_in_on` says it arrived mid-life. It still needs an owner, at least one program

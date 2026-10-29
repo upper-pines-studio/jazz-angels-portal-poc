@@ -48,6 +48,15 @@ end;
 $$;
 
 -- The fixture, written as postgres (which bypasses the row rules) -----------------------------------
+--
+-- In place of a new office's starting rows (#177): this fixture holds one of each, its own.
+
+delete from public.checklist_template_items;
+delete from public.checklist_templates;
+delete from public.settings;
+delete from public.reminder_defaults;
+delete from public.quickbooks_connection;
+delete from public.programs;
 
 insert into auth.users (id, email)
 select ('00000000-0000-4000-8000-00000000000' || n)::uuid, 'user' || n || '@example.org'

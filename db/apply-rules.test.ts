@@ -10,6 +10,7 @@ import type { PortalState, Role } from '../src/core/types';
 import { grantsSlice, makeSeed as grantsSeed } from '../src/modules/grants/domain';
 import { teachingSlice, makeSeed as teachingSeed } from '../src/modules/teaching/domain';
 import { timesheetsSlice, makeSeed as timesheetsSeed } from '../src/modules/timesheets/domain';
+import { startingRowsOf } from './startingRows';
 
 /**
  * The triggers (#155) under `apply` (#156): real changes, made by the slices'
@@ -135,19 +136,21 @@ beforeEach(async () => {
   await sql('begin');
   ids = 0;
   state = demo();
-  // The demo rows, as the switch-over loads them: nobody signed in, every column as sent. A
-  // budget version's `added_by` is the database's to set for a signed-in change; a load with
-  // nobody signed in says who, as the switch-over will.
+  // The demo rows, as the switch-over loads them on top of the starting rows (#177): nobody
+  // signed in, every column as sent. A budget version's `added_by` is the database's to set for a
+  // signed-in change; a load with nobody signed in says who, as the switch-over will.
   await sql('set local role service_role');
   const core = coreTables.toRows((state as unknown as { core: never }).core);
-  expect(await apply('core', diffRows(coreTables.keys, {}, core))).toBeUndefined();
+  expect(
+    await apply('core', diffRows(coreTables.keys, startingRowsOf('core'), core)),
+  ).toBeUndefined();
   for (const sliceId of ['grants', 'teaching', 'timesheets'] as const) {
     const tables = SLICES[sliceId].tables;
     const all = tables.toRows((state as unknown as Record<string, never>)[sliceId]);
     const rows = all.budget_versions
       ? { ...all, budget_versions: all.budget_versions.map(v => ({ ...v, added_by: 's-barry' })) }
       : all;
-    const error = await apply(sliceId, diffRows(tables.keys, {}, rows));
+    const error = await apply(sliceId, diffRows(tables.keys, startingRowsOf(sliceId), rows));
     expect(error?.message, sliceId).toBeUndefined();
   }
   await sql('reset role');

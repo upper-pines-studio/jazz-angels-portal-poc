@@ -10,6 +10,7 @@ import type { PortalState } from '../src/core/types';
 import { grantsSlice, makeSeed as grantsSeed } from '../src/modules/grants/domain';
 import { teachingSlice, makeSeed as teachingSeed } from '../src/modules/teaching/domain';
 import { timesheetsSlice, makeSeed as timesheetsSeed } from '../src/modules/timesheets/domain';
+import { freshTables, restoreStartingRows, startingRowsOf } from './startingRows';
 
 /**
  * The clean-up of grant-file objects no row points to (#175), against the local Supabase: the
@@ -20,7 +21,7 @@ import { timesheetsSlice, makeSeed as timesheetsSeed } from '../src/modules/time
  *
  * Objects are uploaded with the secret key (past the row rules) and aged by moving their
  * `created_at` back, the time the clean-up judges by. As in db/fileContents.test.ts, the demo's
- * rows go in first and everything is emptied after.
+ * rows go in first and everything is left as a reset leaves it after.
  */
 
 const ROOT = new URL('..', import.meta.url);
@@ -99,16 +100,10 @@ async function empty(): Promise<void> {
 
 beforeAll(async () => {
   await db.connect();
-  const { rows: found } = await db.query<{ name: string }>(
-    `select format('public.%I', tablename) as name from pg_tables where schemaname = 'public'`,
-  );
-  for (const { name } of found) {
-    const { rows } = await db.query(`select count(*)::int as n from ${name}`);
-    if (rows[0].n > 0) throw new Error(`${name} is not empty: run \`supabase db reset\`.`);
-  }
+  const found = await freshTables(text => db.query(text));
   const { rows: objects } = await db.query(`select count(*)::int as n from storage.objects`);
   if (objects[0].n > 0) throw new Error('storage.objects is not empty: run `supabase db reset`.');
-  tables = found.map(t => t.name);
+  tables = found;
   await db.query('begin');
   await db.query('set local role service_role');
   const start = demo() as unknown as Record<string, unknown>;
@@ -119,7 +114,7 @@ beforeAll(async () => {
       : all;
     await db.query('select public.apply($1, $2::jsonb)', [
       slice.id,
-      JSON.stringify(diffRows(slice.tables.keys, {}, rows as never)),
+      JSON.stringify(diffRows(slice.tables.keys, startingRowsOf(slice.id), rows as never)),
     ]);
   }
   await db.query('commit');
@@ -132,6 +127,7 @@ afterAll(async () => {
   if (tables.length) {
     await empty();
     await db.query(`truncate ${tables.join(', ')}`);
+    await restoreStartingRows((text, values) => db.query(text, values));
   }
   await db.end();
 });

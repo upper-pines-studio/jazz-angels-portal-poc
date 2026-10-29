@@ -91,9 +91,9 @@ async function setUp() {
       [u.auth, u.staff],
     );
   }
+  // Operations and the QuickBooks connection are among the starting rows (#177).
   await sql(
-    `insert into public.programs (id, name, short, in_school) values
-       ('general-operating', 'Operations', 'Operations', false), ('p', 'Program', 'P', false)`,
+    `insert into public.programs (id, name, short, in_school) values ('p', 'Program', 'P', false)`,
   );
 }
 
@@ -553,7 +553,6 @@ describe('what the row policies (#154) leave to a trigger', () => {
   });
 
   it('lets only an Admin connect QuickBooks; a sync is anyone who may sync', async () => {
-    await sql(`insert into public.quickbooks_connection values (1, false, null, null)`);
     await signIn('office');
     await refused(
       `update public.quickbooks_connection set connected = true, company = 'JA'`,
