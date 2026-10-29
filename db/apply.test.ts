@@ -12,6 +12,7 @@ import * as teachingSeed from '../src/modules/teaching/domain/seed';
 import { teachingTables } from '../src/modules/teaching/domain/tables';
 import * as timesheetsSeed from '../src/modules/timesheets/domain/seed';
 import { timesheetsTables } from '../src/modules/timesheets/domain/tables';
+import { clearStartingRows } from './startingRows';
 
 /**
  * `public.apply(slice_id, diff)` (#156, decision 0009): the row diff the
@@ -48,10 +49,14 @@ const client = new pg.Client({ connectionString: databaseUrl() });
 
 beforeAll(() => client.connect());
 afterAll(() => client.end());
-beforeEach(async () => {
+/** A transaction on an empty office: the starting rows (#177) go, for each test's own. */
+async function start() {
   await client.query('begin');
+  await clearStartingRows(q => client.query(q));
   await client.query('set local role service_role');
-});
+}
+
+beforeEach(start);
 afterEach(() => client.query('rollback'));
 
 /** One apply, as its own step: its error, or undefined when it went through. */
@@ -238,7 +243,8 @@ describe('apply, against checkStale (#124, #156)', () => {
       { settings: [{ ...row, enabled_modules: ['grants'] }] },
     );
     expect(await agrees('core', keys, { settings: [row] }, diff)).toBeUndefined();
-    await client.query('rollback; begin; set local role service_role');
+    await client.query('rollback');
+    await start();
     const other = { ...row, enabled_modules: ['timesheets'] };
     expect((await agrees('core', keys, { settings: [other] }, diff))?.reason).toBe('changed');
   });
@@ -266,7 +272,8 @@ describe('apply, against checkStale (#124, #156)', () => {
       { activity: [{ ...read, text: 'Fixed the hours' }] },
     );
     expect(await agrees('timesheets', keys, { activity: [row] }, diff)).toBeUndefined();
-    await client.query('rollback; begin; set local role service_role');
+    await client.query('rollback');
+    await start();
     const del = diffRows(keys, { activity: [read] }, { activity: [] });
     const changed = { ...row, detail: { reason: 'typo', changes: [] } };
     expect((await agrees('timesheets', keys, { activity: [changed] }, del))?.reason).toBe(

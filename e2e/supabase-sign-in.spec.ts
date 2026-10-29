@@ -40,6 +40,8 @@ const GWEN = { email: 'gwen.kimura@example.org', password: 'gwen-e2e-160' };
 const KEISHA = 'keisha.monroe@example.org';
 let db: pg.Client;
 let tables: string[] = [];
+/** The starting rows found before the test, by table. */
+const starting = new Map<string, unknown[]>();
 
 /** The newest email Mailpit caught for an address with this subject. */
 async function linkIn(to: string, subject: string): Promise<string> {
@@ -72,21 +74,27 @@ async function signOut(page: Page) {
 test.beforeAll(async () => {
   db = new pg.Client({ connectionString: stack.DB_URL });
   await db.connect();
+  // As `supabase db reset` leaves it: nobody on the staff yet, only a new office's starting rows
+  // (#177), which are kept to write back afterwards.
   const { rows: found } = await db.query<{ name: string }>(
     `select format('public.%I', tablename) as name from pg_tables where schemaname = 'public'`,
   );
-  for (const { name } of found) {
-    const { rows } = await db.query(`select count(*)::int as n from ${name}`);
-    if (rows[0].n > 0) throw new Error(`${name} is not empty: run \`supabase db reset\`.`);
-  }
   tables = found.map(t => t.name);
-  // A new office's starting rows (decision 0004), and Gwen's accepted sign-in.
+  for (const name of tables) {
+    const { rows } = await db.query(`select coalesce(jsonb_agg(t), '[]') as rows from ${name} t`);
+    if (rows[0].rows.length > 0) starting.set(name, rows[0].rows);
+  }
+  for (const name of ['public.staff', 'public.logins']) {
+    if (starting.has(name)) throw new Error(`${name} is not empty: run \`supabase db reset\`.`);
+  }
+  // The browser's empty office (decision 0004) on top of the starting rows, which are its rows but
+  // for the staff: its sign-in people, Gwen and Keisha among them, and Gwen's accepted sign-in.
   await db.query('begin');
   await db.query('set local role service_role');
   const rows = coreTables.toRows(makeCoreEmpty());
   await db.query('select public.apply($1, $2::jsonb)', [
     'core',
-    JSON.stringify(diffRows(coreTables.keys, {}, rows)),
+    JSON.stringify(diffRows(coreTables.keys, { ...rows, staff: [] }, rows)),
   ]);
   await db.query('commit');
   const res = await fetch(`${stack.API_URL}/auth/v1/admin/users`, {
@@ -108,7 +116,20 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   if (!db) return;
-  if (tables.length) await db.query(`truncate ${tables.join(', ')}`);
+  if (tables.length) {
+    // Every table emptied, then the starting rows written back as they were found, with the
+    // triggers and links off so the order does not matter.
+    await db.query('begin');
+    await db.query(`truncate ${tables.join(', ')}`);
+    await db.query('set local session_replication_role = replica');
+    for (const [name, rows] of starting) {
+      await db.query(
+        `insert into ${name} select * from jsonb_populate_recordset(null::${name}, $1)`,
+        [JSON.stringify(rows)],
+      );
+    }
+    await db.query('commit');
+  }
   await db.query('delete from auth.users where email in ($1, $2)', [GWEN.email, KEISHA]);
   await db.end();
 });

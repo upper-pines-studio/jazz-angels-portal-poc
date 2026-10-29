@@ -15,6 +15,7 @@ import type { PortalState, Role } from '../src/core/types';
 import { grantsSlice, makeSeed as grantsSeed } from '../src/modules/grants/domain';
 import { teachingSlice, makeSeed as teachingSeed } from '../src/modules/teaching/domain';
 import { timesheetsSlice, makeSeed as timesheetsSeed } from '../src/modules/timesheets/domain';
+import { freshTables, restoreStartingRows, startingRowsOf } from './startingRows';
 
 /**
  * The Supabase repository (#159) against the local Supabase, through its REST
@@ -26,8 +27,9 @@ import { timesheetsSlice, makeSeed as timesheetsSeed } from '../src/modules/time
  *
  * Unlike the other database tests, the REST API answers on its own
  * connections, so the rows are committed: the demo goes in as `service_role`
- * before the tests, and every table the slices write is emptied after them,
- * as it was before (the test checks it was).
+ * on top of the starting rows (#177) before the tests, and afterwards every
+ * table holds only the starting rows again, as it did before (the test checks
+ * it did).
  */
 
 const ROOT = new URL('..', import.meta.url);
@@ -67,7 +69,7 @@ const SLICES = {
 } as unknown as Record<SliceId, ModuleSlice<unknown, unknown>>;
 const ALL = Object.values(SLICES);
 
-/** Every table in `public`, read in `beforeAll`: empty before the test, and emptied after it. */
+/** Every table in `public`, read in `beforeAll`: as a reset leaves it before the test, and after. */
 let tables: string[] = [];
 
 const TODAY = '2026-09-20';
@@ -141,14 +143,8 @@ const apart = (sliceId: SliceId, a: unknown, b: unknown) =>
 
 beforeAll(async () => {
   await db.connect();
-  const { rows: found } = await db.query<{ name: string }>(
-    `select format('public.%I', tablename) as name from pg_tables where schemaname = 'public'`,
-  );
-  for (const { name } of found) {
-    const { rows } = await db.query(`select count(*)::int as n from ${name}`);
-    if (rows[0].n > 0) throw new Error(`${name} is not empty: run \`supabase db reset\`.`);
-  }
-  tables = found.map(t => t.name);
+  const found = await freshTables(text => db.query(text));
+  tables = found;
   // The demo, as the switch-over loads it: nobody signed in.
   await db.query('begin');
   await db.query('set local role service_role');
@@ -160,7 +156,7 @@ beforeAll(async () => {
       : all;
     await db.query('select public.apply($1, $2::jsonb)', [
       slice.id,
-      JSON.stringify(diffRows(slice.tables.keys, {}, rows as never)),
+      JSON.stringify(diffRows(slice.tables.keys, startingRowsOf(slice.id), rows as never)),
     ]);
   }
   await db.query('commit');
@@ -182,8 +178,11 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
-  // Only once the tables were found empty, so a database someone else filled is left alone.
-  if (tables.length) await db.query(`truncate ${tables.join(', ')}`);
+  // Only once the tables were found fresh, so a database someone else filled is left alone.
+  if (tables.length) {
+    await db.query(`truncate ${tables.join(', ')}`);
+    await restoreStartingRows((text, values) => db.query(text, values));
+  }
   for (const id of userIds) await admin.auth.admin.deleteUser(id);
   await db.end();
 });
