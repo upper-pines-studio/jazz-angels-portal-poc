@@ -1,8 +1,8 @@
 # 0009 The backend is Postgres on Supabase, with Supabase sign-in and file storage
 
 **Status:** Decided by the owner, October 2026. How a login is tied to a staff record was left to
-the build, which chose the standard Supabase setup below. The plan was answered in October
-2026 (below); the email service and the region are still open.
+the build, which chose the standard Supabase setup below. The plan, the region and the
+email service were answered in October 2026 (below).
 
 ## Why
 
@@ -20,10 +20,19 @@ for file contents, which the browser build does not keep at all (`docs/FEATURES.
   OneDrive, so a link to a file kept there is welcome later.
 - **History** (decision 0004) waits: the owner will share some of the office's spreadsheets, and
   the import is designed from them then.
+- **The email service: Resend for testing, then Microsoft 365.** Supabase's built-in email only
+  reaches the members of the Supabase team and sends a few messages an hour, so invitations and
+  password resets go through the project's custom SMTP: host `smtp.resend.com`, port 465 (or
+  587), user `resend`, a Resend API key as the password, and a sender on a domain verified in
+  Resend. Moving to Microsoft 365, which the office has, changes only these settings.
 - **The plan: free while it is built, paid once it is done.** The hosted project starts on
   Supabase's free plan and moves to a paid one when the build is complete, before the office
   relies on it. A free project has no daily backups and pauses after a week without use, so it
   holds no data the office cannot lose until then.
+- **The region: Southern California, so West US (North California), `us-west-1`.** The office
+  is in Southern California, and this is Supabase's nearest region. It keeps the student and
+  guardian data (0001) in the United States. A project's region is chosen when it is created
+  and cannot be changed afterwards.
 
 ## Decision
 
@@ -86,12 +95,6 @@ The standard Supabase setup, shaped to decision 0001's "Sign-ins are by invitati
 
 ## Still open
 
-- **The email service.** Supabase's built-in email only reaches the members of the Supabase team
-  and sends a few messages an hour, so invitations and password resets to the office need the
-  project to send through a real email service (Microsoft 365, which the office has, or a
-  sending service). The office chooses which.
-- **The region.** Near the office. The portal holds student and guardian data, the most
-  protected data in the portal (0001), so the client confirms it.
 - **History** (decision 0004), from the office's spreadsheets.
 
 ## What it means for the build
